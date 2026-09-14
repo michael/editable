@@ -837,7 +837,92 @@
 					</div>
 				</div>
 			</section>
-
+		</div>
+		<section id="carousel" aria-labelledby="carousel-heading" class="@container my-16 space-y-8">
+			<div class="mx-auto max-w-7xl space-y-2 px-5 sm:px-7">
+				<h2 id="carousel-heading" class="text-xl font-medium">Card carousel</h2>
+				<p class="body-sm text-(--muted-foreground)">
+					A full-width scroll area with gutters aligned to the page content. Cards keep their size
+					and remain visible beyond the page limiter when there is space. Inner gutters leave room
+					for editor edge gaps. The track includes both gutters, so the first and last cards align
+					with the page limiter at either end. Matching scroll padding preserves snap alignment.
+					Navigation sits below, aligned to the end. These buttons illustrate disabled and enabled
+					states; the gallery updates them as you scroll.
+				</p>
+			</div>
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex (Scrollable region needs keyboard access.) -->
+			<div
+				tabindex="0"
+				role="region"
+				aria-label="Card carousel example"
+				class="[scrollbar-none] focus-visible:-out line-offset-2 relative snap-x snap-mandatory scroll-px-(--ew-carousel-inset) overflow-x-auto overscroll-x-contain [--ew-carousel-card-width:calc(var(--ew-carousel-content)*0.85)] [--ew-carousel-content:calc(min(100cqw,80rem)-2*var(--ew-carousel-gutter))] [--ew-carousel-gutter:1.25rem] [--ew-carousel-inset:max(var(--ew-carousel-gutter),calc((100cqw-80rem)/2+var(--ew-carousel-gutter)))] focus-visible:outline-2 focus-visible:outline-(--editing) sm:[--ew-carousel-gutter:1.75rem] md:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-1.75rem)/2)] xl:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-3.5rem)/3)] [&::-webkit-scrollbar]:hidden"
+			>
+				<div
+					class="grid w-max min-w-full auto-cols-(--ew-carousel-card-width) grid-flow-col gap-5 px-(--ew-carousel-inset) sm:gap-7"
+				>
+					<article class="min-w-0 snap-start">
+						<div class="aspect-4/3 rounded-(--image-border-radius) bg-(--muted)"></div>
+						<h3 class="pt-4 body-base">First card</h3>
+						<p class="pt-1 body-base text-(--muted-foreground)">
+							Existing card proportions and typography.
+						</p>
+					</article>
+					<article class="min-w-0 snap-start">
+						<div class="aspect-4/3 rounded-(--image-border-radius) bg-(--muted)"></div>
+						<h3 class="pt-4 body-base">Second card</h3>
+						<p class="pt-1 body-base text-(--muted-foreground)">
+							Cards stay in one horizontal row.
+						</p>
+					</article>
+					<article class="min-w-0 snap-start">
+						<div class="aspect-4/3 rounded-(--image-border-radius) bg-(--muted)"></div>
+						<h3 class="pt-4 body-base">Third card</h3>
+						<p class="pt-1 body-base text-(--muted-foreground)">Scroll to explore more items.</p>
+					</article>
+					<article class="min-w-0 snap-start">
+						<div class="aspect-4/3 rounded-(--image-border-radius) bg-(--muted)"></div>
+						<h3 class="pt-4 body-base">Fourth card</h3>
+						<p class="pt-1 body-base text-(--muted-foreground)">
+							The carousel stops at the final card.
+						</p>
+					</article>
+				</div>
+			</div>
+			<div class="mx-auto flex max-w-7xl justify-end gap-3 px-5 sm:px-7">
+				<button
+					type="button"
+					aria-label="Previous gallery item (appearance example)"
+					disabled
+					class="inline-flex size-11 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+					><svg
+						class="size-5 rtl:rotate-180"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"><path d="m14 7-5 5 5 5" /></svg
+					></button
+				>
+				<button
+					type="button"
+					aria-label="Next gallery item (appearance example)"
+					class="inline-flex size-11 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+					><svg
+						class="size-5 rtl:rotate-180"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"><path d="m10 7 5 5-5 5" /></svg
+					></button
+				>
+			</div>
+		</section>
+		<div class="mx-auto max-w-7xl space-y-16 px-5 sm:px-7">
 			<section id="buttons" aria-labelledby="buttons-heading" class="space-y-8">
 				<div class="space-y-2">
 					<h2 id="buttons-heading" class="text-xl font-medium">Buttons</h2>

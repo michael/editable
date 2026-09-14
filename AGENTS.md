@@ -42,6 +42,12 @@ Svedit is a Svelte 5 rich content editor built around a graph-based document mod
 - Selection supports text, node, and property selections and maps between the model and the DOM.
 - `Svedit.svelte` manages the editor and selection; `NodeArrayProperty.svelte` renders node sequences; `TextProperty.svelte` renders editable text with marks and annotations.
 
+## Scrollable editor layouts
+
+- Give wrappers that scroll editable node arrays `relative` positioning, as in `Nav.svelte`. Svedit's absolutely positioned node gaps and markers need a containing block that moves with the scrolling content. Keep the `Node` elements themselves static.
+- Put horizontal gutters inside the scroll container so the first and last node gaps have space outside the content. Match `scroll-padding` to those gutters so snapped cards retain their alignment.
+- Do not add `tabindex` to scroll wrappers in editing mode: taking focus from Svedit's canvas prevents it from processing text selections. A focusable scroll region is appropriate in viewing mode.
+
 ## Schema changes
 
 When adding a property to a node type, update both:
