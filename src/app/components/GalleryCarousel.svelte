@@ -37,7 +37,7 @@
 	function scroll_carousel(direction: number) {
 		if (!viewport) return;
 		const items = viewport.querySelectorAll<HTMLElement>(
-			':scope > [data-type="node_array"] > [data-type="node"]'
+			':scope > .ew-carousel-track > [data-type="node_array"] > [data-type="node"]'
 		);
 		if (items.length < 2) return;
 		const step = items[1].getBoundingClientRect().left - items[0].getBoundingClientRect().left;
@@ -49,6 +49,7 @@
 </script>
 
 <div class="@container w-full">
+	<!-- Editing uses free scrolling so selection and node gap updates do not trigger snapping. -->
 	<!-- Full-width scrolling with page-aligned gutters inside leaves room for edge gaps. -->
 	<!-- Keep node gap positioning local to the scrolling container, as in Nav. -->
 	<!-- Keep editing focus on Svedit's canvas so it can process text selections. -->
@@ -59,14 +60,18 @@
 		aria-label="Gallery"
 		aria-roledescription="carousel"
 		tabindex={svedit.editable ? undefined : 0}
-		class="relative snap-x snap-mandatory scroll-px-(--ew-carousel-inset) [scrollbar-none] overflow-x-auto overscroll-x-contain [--ew-carousel-card-width:calc(var(--ew-carousel-content)*0.85)] [--ew-carousel-content:calc(min(100cqw,80rem)-2*var(--ew-carousel-gutter))] [--ew-carousel-gutter:1.25rem] [--ew-carousel-inset:max(var(--ew-carousel-gutter),calc((100cqw-80rem)/2+var(--ew-carousel-gutter)))] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing) sm:[--ew-carousel-gutter:1.75rem] md:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-1.75rem)/2)] xl:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-3.5rem)/3)] [&::-webkit-scrollbar]:hidden"
+		class="[scrollbar-none] relative {svedit.editable
+			? 'snap-none'
+			: 'snap-x snap-mandatory'} scroll-px-(--ew-carousel-inset) overflow-x-auto overscroll-x-contain [--ew-carousel-card-width:calc(var(--ew-carousel-content)*0.85)] [--ew-carousel-content:calc(min(100cqw,80rem)-2*var(--ew-carousel-gutter))] [--ew-carousel-gutter:1.25rem] [--ew-carousel-inset:max(var(--ew-carousel-gutter),calc((100cqw-80rem)/2+var(--ew-carousel-gutter)))] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing) sm:[--ew-carousel-gutter:1.75rem] md:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-1.75rem)/2)] xl:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-3.5rem)/3)] [&::-webkit-scrollbar]:hidden"
 		{@attach track_carousel}
 	>
-		<!-- Intrinsic track width includes both gutters in the scroll range. -->
-		<NodeArrayProperty
-			class="grid w-max min-w-full auto-cols-(--ew-carousel-card-width) grid-flow-col gap-5 px-(--ew-carousel-inset) [--row:1] sm:gap-7"
-			{path}
-		/>
+		<!-- Keep gutters outside the node array so its trailing anchor ends at the last card. -->
+		<div class="ew-carousel-track w-max min-w-full px-(--ew-carousel-inset)">
+			<NodeArrayProperty
+				class="grid auto-cols-(--ew-carousel-card-width) grid-flow-col gap-5 [--row:1] sm:gap-7"
+				{path}
+			/>
+		</div>
 	</div>
 	<div class="mx-auto flex max-w-7xl justify-end gap-3 px-5 pt-5 sm:px-7" contenteditable="false">
 		<button

@@ -46,6 +46,7 @@ Svedit is a Svelte 5 rich content editor built around a graph-based document mod
 
 - Give wrappers that scroll editable node arrays `relative` positioning, as in `Nav.svelte`. Svedit's absolutely positioned node gaps and markers need a containing block that moves with the scrolling content. Keep the `Node` elements themselves static.
 - Put horizontal gutters inside the scroll container so the first and last node gaps have space outside the content. Match `scroll-padding` to those gutters so snapped cards retain their alignment.
+- Put carousel gutters on a track wrapper around `NodeArrayProperty`, not on the node array itself. Padding after the final node can trigger Svedit's trailing-gap fill/clamp calculations and place the marker over earlier cards.
 - Do not add `tabindex` to scroll wrappers in editing mode: taking focus from Svedit's canvas prevents it from processing text selections. A focusable scroll region is appropriate in viewing mode.
 
 ## Schema changes
