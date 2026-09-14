@@ -17,9 +17,12 @@
 	function track_carousel(element: HTMLDivElement) {
 		viewport = element;
 		function update_navigation() {
-			const position = Math.abs(element.scrollLeft);
+			const direction = getComputedStyle(element).direction === 'rtl' ? -1 : 1;
+			const max_position = Math.max(0, element.scrollWidth - element.clientWidth);
+			// Clamp mobile overscroll without turning negative start positions into forward progress.
+			const position = Math.max(0, Math.min(direction * element.scrollLeft, max_position));
 			can_go_previous = position > 1;
-			can_go_next = position < element.scrollWidth - element.clientWidth - 1;
+			can_go_next = position < max_position - 1;
 		}
 		const resize_observer = new ResizeObserver(update_navigation);
 		resize_observer.observe(element);
