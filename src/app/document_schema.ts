@@ -512,7 +512,7 @@ export const document_schema = define_document_schema({
 	titled_gallery: {
 		kind: 'block',
 		properties: {
-			layout: { type: 'string', values: ['cards', 'compact'], default: 'cards' },
+			layout: { type: 'string', values: ['cards', 'compact', 'carousel'], default: 'cards' },
 			items: {
 				type: 'node_array',
 				node_types: ['titled_gallery_item']

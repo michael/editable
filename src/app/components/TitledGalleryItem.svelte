@@ -71,7 +71,10 @@
 	</svelte:element>
 {/snippet}
 
-<Node class="titled-gallery-item group" {path}>
+<Node
+	class="ew-titled-gallery-item group min-w-0 {layout === 'carousel' ? 'snap-start' : ''}"
+	{path}
+>
 	{#if layout === 'compact'}
 		{@render compact()}
 	{:else}

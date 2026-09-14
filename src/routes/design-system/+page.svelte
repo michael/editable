@@ -842,12 +842,13 @@
 			<div class="mx-auto max-w-7xl space-y-2 px-5 sm:px-7">
 				<h2 id="carousel-heading" class="text-xl font-medium">Card carousel</h2>
 				<p class="body-sm text-(--muted-foreground)">
-					A full-width scroll area with gutters aligned to the page content. Cards keep their size
-					and remain visible beyond the page limiter when there is space. Inner gutters leave room
-					for editor edge gaps. The track includes both gutters, so the first and last cards align
-					with the page limiter at either end. Matching scroll padding preserves snap alignment.
-					Navigation sits below, aligned to the end. These buttons illustrate disabled and enabled
-					states; the gallery updates them as you scroll.
+					Shared by TitledGallery and DescriptiveGallery. A full-width scroll area with gutters
+					aligned to the page content. Cards keep their size and remain visible beyond the page
+					limiter when there is space. Inner gutters leave room for editor edge gaps. The track
+					includes both gutters, so the first and last cards align with the page limiter at either
+					end. Matching scroll padding preserves snap alignment. Navigation sits below, aligned to
+					the end. These buttons illustrate disabled and enabled states; the gallery updates them as
+					you scroll.
 				</p>
 			</div>
 			<!-- svelte-ignore a11y_no_noninteractive_tabindex (Scrollable region needs keyboard access.) -->
