@@ -29,9 +29,9 @@ Repository-specific guidance for coding agents working on Svedit.
 - Inline formatting styles (emphasis, strong, link, code, and highlight) are mutually exclusive. Never nest them or apply multiple styles to the same text.
 
 - Consult the [design system source](src/routes/design-system/+page.svelte) before styling UI. With the development server running, the user can open [the design system in a browser](http://localhost:5173/design-system) to inspect typography, spacing, buttons, and editor pills, and inspect the source for their recipes. Shared tokens and typography utilities live in `src/app.css`. Follow the UI verification rules above for agent browser use.
-- When customizing an Editable site, prefer updating the design system first, then adopting those changes in the actual site components. This gives agents and people working manually a concrete reference to implement consistently.
+- Keep the design system focused on reusable primitives, such as typography, spacing, colors, controls, and cards. Higher-level compositions and behavior belong in application code and components: for example, document the reusable Card primitive in the design system, while galleries and carousels compose it in application components.
 - Keep reference examples as explicit HTML, SVG, and Tailwind classes. Repetition is intentional; application components own behavior and may adapt the recipes when their interaction requires it.
-- Document new visual patterns in the reference page so future changes have a concrete example to follow.
+- Update existing primitive examples when component changes affect those primitives. Do not automatically add examples for every new component or layout. If unsure whether a new example belongs in the design system, ask the user before adding it.
 
 ## Architecture
 

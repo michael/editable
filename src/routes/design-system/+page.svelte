@@ -837,93 +837,46 @@
 					</div>
 				</div>
 			</section>
-		</div>
-		<section id="carousel" aria-labelledby="carousel-heading" class="@container my-16 space-y-8">
-			<div class="mx-auto max-w-7xl space-y-2 px-5 sm:px-7">
-				<h2 id="carousel-heading" class="text-xl font-medium">Card carousel</h2>
-				<p class="body-sm text-(--muted-foreground)">
-					Shared by TitledGallery and DescriptiveGallery. A full-width scroll area with gutters
-					aligned to the page content. Cards keep their size and remain visible beyond the page
-					limiter when there is space. Inner gutters leave room for editor edge gaps. The track
-					includes both gutters, so the first and last cards align with the page limiter at either
-					end. Matching scroll padding preserves snap alignment. Navigation sits below, aligned to
-					the end. These buttons illustrate disabled and enabled states; the gallery updates them as
-					you scroll.
-				</p>
-			</div>
-			<!-- svelte-ignore a11y_no_noninteractive_tabindex (Scrollable region needs keyboard access.) -->
-			<div
-				tabindex="0"
-				role="region"
-				aria-label="Card carousel example"
-				class="[scrollbar-none] focus-visible:-out line-offset-2 relative snap-x snap-mandatory scroll-px-(--ew-carousel-inset) overflow-x-auto overscroll-x-contain [--ew-carousel-card-width:calc(var(--ew-carousel-content)*0.85)] [--ew-carousel-content:calc(min(100cqw,80rem)-2*var(--ew-carousel-gutter))] [--ew-carousel-gutter:1.25rem] [--ew-carousel-inset:max(var(--ew-carousel-gutter),calc((100cqw-80rem)/2+var(--ew-carousel-gutter)))] focus-visible:outline-2 focus-visible:outline-(--editing) sm:[--ew-carousel-gutter:1.75rem] md:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-1.75rem)/2)] xl:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-3.5rem)/3)] [&::-webkit-scrollbar]:hidden"
-			>
-				<div
-					class="grid w-max min-w-full auto-cols-(--ew-carousel-card-width) grid-flow-col gap-5 px-(--ew-carousel-inset) sm:gap-7"
-				>
-					<article class="min-w-0 snap-start">
-						<div class="aspect-4/3 rounded-(--image-border-radius) bg-(--muted)"></div>
-						<h3 class="pt-4 body-base">First card</h3>
-						<p class="pt-1 body-base text-(--muted-foreground)">
-							Existing card proportions and typography.
-						</p>
-					</article>
-					<article class="min-w-0 snap-start">
-						<div class="aspect-4/3 rounded-(--image-border-radius) bg-(--muted)"></div>
-						<h3 class="pt-4 body-base">Second card</h3>
-						<p class="pt-1 body-base text-(--muted-foreground)">
-							Cards stay in one horizontal row.
-						</p>
-					</article>
-					<article class="min-w-0 snap-start">
-						<div class="aspect-4/3 rounded-(--image-border-radius) bg-(--muted)"></div>
-						<h3 class="pt-4 body-base">Third card</h3>
-						<p class="pt-1 body-base text-(--muted-foreground)">Scroll to explore more items.</p>
-					</article>
-					<article class="min-w-0 snap-start">
-						<div class="aspect-4/3 rounded-(--image-border-radius) bg-(--muted)"></div>
-						<h3 class="pt-4 body-base">Fourth card</h3>
-						<p class="pt-1 body-base text-(--muted-foreground)">
-							The carousel stops at the final card.
-						</p>
-					</article>
+
+			<section id="card" aria-labelledby="card-heading" class="space-y-8">
+				<div class="space-y-2">
+					<h2 id="card-heading" class="text-xl font-medium">Card</h2>
+					<p class="body-sm text-(--muted-foreground)">
+						A 4:3 media area, title, and optional description. Shared by gallery cards; width and
+						arrangement belong to the surrounding layout. Linked cards underline the title and make
+						the whole card clickable. Use a div and omit the underline for an unlinked card.
+					</p>
 				</div>
-			</div>
-			<div class="mx-auto flex max-w-7xl justify-end gap-3 px-5 sm:px-7">
-				<button
-					type="button"
-					aria-label="Previous gallery item (appearance example)"
-					disabled
-					class="inline-flex size-11 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
-					><svg
-						class="size-5 rtl:rotate-180"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						aria-hidden="true"><path d="m14 7-5 5 5 5" /></svg
-					></button
-				>
-				<button
-					type="button"
-					aria-label="Next gallery item (appearance example)"
-					class="inline-flex size-11 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
-					><svg
-						class="size-5 rtl:rotate-180"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						aria-hidden="true"><path d="m10 7 5 5-5 5" /></svg
-					></button
-				>
-			</div>
-		</section>
-		<div class="mx-auto max-w-7xl space-y-16 px-5 sm:px-7">
+				<div class="max-w-sm">
+					<a
+						href="#card"
+						class="ew-card group/card block min-w-0 outline-1 outline-transparent focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-(--editing)"
+					>
+						<div class="aspect-4/3 overflow-hidden rounded-(--image-border-radius) bg-(--muted)">
+							<svg
+								class="h-full w-full text-(--stroke)"
+								viewBox="0 0 400 300"
+								fill="currentColor"
+								aria-hidden="true"
+							>
+								<circle cx="285" cy="85" r="28" />
+								<path d="M0 300V250L125 105L240 245L300 175L400 280V300Z" />
+							</svg>
+						</div>
+						<div class="pt-4">
+							<h3
+								class="body-base underline decoration-[0.0625em] underline-offset-[0.125em] group-hover/card:decoration-[0.125em] group-active/card:decoration-[0.125em]"
+							>
+								Card title
+							</h3>
+							<p class="pt-1 body-base text-(--muted-foreground)">
+								An optional description adds context below the title.
+							</p>
+						</div>
+					</a>
+				</div>
+			</section>
+
 			<section id="buttons" aria-labelledby="buttons-heading" class="space-y-8">
 				<div class="space-y-2">
 					<h2 id="buttons-heading" class="text-xl font-medium">Buttons</h2>
