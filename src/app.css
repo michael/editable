@@ -99,12 +99,12 @@
 
 /* Heading3 */
 @utility display-4 {
-	@apply font-sans text-3xl leading-tight font-semibold tracking-tight text-balance lg:text-4xl;
+	@apply font-sans text-3xl leading-tight font-medium tracking-tight text-balance lg:text-4xl;
 }
 
 /* Heading4 and gallery titles */
 @utility display-5 {
-	@apply font-sans text-2xl leading-tight font-semibold tracking-tight text-balance lg:text-3xl;
+	@apply font-sans text-2xl leading-tight font-medium tracking-tight text-balance lg:text-3xl;
 }
 
 /* Body text uses regular weight and a consistent 1.5 line height. */
