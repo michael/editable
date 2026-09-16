@@ -16,8 +16,26 @@ const key_names: Record<string, string> = {
 	'⎋': 'Escape',
 	'↵': 'Enter',
 	'⏎': 'Enter',
-	'⌫': 'Backspace'
+	'⌫': 'Backspace',
+	Ctrl: 'Control'
 };
+
+function get_display_key(key: string) {
+	if (/Mac|iPhone|iPad/.test(navigator.platform)) return key;
+
+	return (
+		{
+			'⌘': 'Ctrl',
+			'⌃': 'Ctrl',
+			'⇧': 'Shift',
+			'⌥': 'Alt',
+			'⎋': 'Esc',
+			'↵': 'Enter',
+			'⏎': 'Enter',
+			'⌫': 'Backspace'
+		}[key] ?? key
+	);
+}
 
 /** A tooltip in the top layer, so scrolling toolbars cannot clip it. */
 export function tooltip(trigger: HTMLElement, options: TooltipOptions) {
@@ -56,7 +74,10 @@ export function tooltip(trigger: HTMLElement, options: TooltipOptions) {
 		shortcut_description.textContent = ` ${keys
 			.map((key_group) => {
 				const keys = Array.isArray(key_group) ? key_group : [key_group];
-				return keys.map((key) => key_names[key] ?? key).join(' or ');
+				return keys
+					.map((key) => get_display_key(key))
+					.map((key) => key_names[key] ?? key)
+					.join(' or ');
 			})
 			.join(' + ')}`;
 		shortcut_keys.append(shortcut_description);
@@ -68,7 +89,7 @@ export function tooltip(trigger: HTMLElement, options: TooltipOptions) {
 			for (const key of group_keys) {
 				const keycap = document.createElement('kbd');
 				keycap.className = 'ew-shortcut-key';
-				keycap.textContent = key;
+				keycap.textContent = get_display_key(key);
 				keycap.setAttribute('aria-hidden', 'true');
 				keycaps.append(keycap);
 			}
