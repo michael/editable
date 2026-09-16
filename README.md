@@ -49,13 +49,13 @@ Open [http://localhost:5173](http://localhost:5173), press `⌘` or `Ctrl` + `E`
 
 You can also use `Ctrl` + `Shift` + `E` to edit. In read mode, admins can create a new page with `Ctrl` + `Shift` + `N`.
 
-To keep the **Edit** button visible to unauthenticated visitors — useful for a demo site — set this build-time flag before starting the dev server or deploying:
+To keep the **Edit** button visible to unauthenticated visitors — useful for a demo site — set this environment variable:
 
 ```sh
 DEMO_MODE=true
 ```
 
-Visitors enter local editing immediately, but cannot save changes or access admin tools. Rebuild or restart after changing the flag.
+Visitors enter local editing immediately, but cannot save changes or access admin tools. Restart the app after changing the flag.
 
 ## Make it yours
 

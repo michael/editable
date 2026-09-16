@@ -67,9 +67,8 @@ export const variables = defineEnvVars({
 	},
 	DEMO_MODE: {
 		public: true,
-		static: true,
 		description:
-			'Set to true or 1 at build time to show the Edit button to unauthenticated visitors.',
+			'Set to true or 1 to show the Edit button to unauthenticated visitors.',
 		schema: optional((value) => value === 'true' || value === '1')
 	}
 });
