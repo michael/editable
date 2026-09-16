@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { serialize_path } from 'svedit';
 	import { get_selection_node_ancestors } from '#app/app_utils.js';
+	import { tooltip } from '#app/tooltip.js';
 
 	let { session, focus_canvas } = $props();
 
@@ -135,9 +136,6 @@
 			1
 				? 'cursor-pointer hover:bg-(--muted) active:bg-(--foreground)/10'
 				: ''}"
-			title={variant_item.option_count > 1
-				? 'Choose variant · Type ⌃⇧↑/↓ · Layout ⌃⇧←/→'
-				: undefined}
 		>
 			<span class="flex min-w-0 items-center whitespace-nowrap" aria-hidden="true">
 				<span class="truncate whitespace-nowrap max-sm:min-w-24">
@@ -167,7 +165,12 @@
 					class="variant-select absolute inset-0 size-full cursor-pointer opacity-0"
 					value={variant_item.current_value}
 					aria-label="Choose variant; current variant is {variant_item.label}"
-					title="Choose variant · Type ⌃⇧↑/↓ · Layout ⌃⇧←/→"
+					use:tooltip={{
+						shortcuts: [
+							{ label: 'Change type', keys: ['⌃', '⇧', ['↑', '↓']] },
+							{ label: 'Change layout', keys: ['⌃', '⇧', ['←', '→']] }
+						]
+					}}
 					onchange={(event) => handle_variant_change(event, variant_item)}
 					onblur={restore_canvas_selection}
 					onkeydown={handle_variant_keydown}

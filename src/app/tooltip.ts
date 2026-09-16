@@ -1,4 +1,9 @@
-type TooltipOptions = { label: string; keys?: string[] };
+type TooltipKey = string | string[];
+type TooltipShortcut = { label: string; keys: TooltipKey[] };
+
+type TooltipOptions =
+	| { label: string; keys?: string[]; shortcuts?: never }
+	| { label?: never; keys?: never; shortcuts: TooltipShortcut[] };
 
 let tooltip_id = 0;
 
@@ -34,27 +39,60 @@ export function tooltip(trigger: HTMLElement, options: TooltipOptions) {
 	const events = new AbortController();
 	const listener_options = { signal: events.signal };
 
-	function render(next: TooltipOptions) {
-		popup.replaceChildren();
-		const label = document.createElement('span');
-		label.textContent = next.label;
-		popup.append(label);
-		if (next.keys?.length) {
-			const shortcut = document.createElement('span');
-			shortcut.className = 'inline-flex gap-1';
-			const shortcut_description = document.createElement('span');
-			shortcut_description.className = 'sr-only';
-			shortcut_description.textContent = ` ${next.keys.map((key) => key_names[key] ?? key).join(' + ')}`;
-			shortcut.append(shortcut_description);
-			for (const key of next.keys) {
+	function render_shortcut({ label, keys }: TooltipShortcut) {
+		const shortcut_row = document.createElement('div');
+		shortcut_row.className = 'flex items-center justify-between gap-4';
+		const shortcut_label = document.createElement('span');
+		shortcut_label.textContent = label;
+		shortcut_row.append(shortcut_label);
+
+		const shortcut_keys = document.createElement('span');
+		shortcut_keys.className = 'inline-flex shrink-0 gap-1';
+		const shortcut_description = document.createElement('span');
+		shortcut_description.className = 'sr-only';
+		shortcut_description.textContent = ` ${keys
+			.map((key_group) => {
+				const keys = Array.isArray(key_group) ? key_group : [key_group];
+				return keys.map((key) => key_names[key] ?? key).join(' or ');
+			})
+			.join(' + ')}`;
+		shortcut_keys.append(shortcut_description);
+		for (const key_group of keys) {
+			const has_alternatives = Array.isArray(key_group);
+			const group_keys = has_alternatives ? key_group : [key_group];
+			const keycaps = document.createElement('span');
+			keycaps.className = has_alternatives ? 'ew-shortcut-alternatives' : 'contents';
+			for (const key of group_keys) {
 				const keycap = document.createElement('kbd');
 				keycap.className = 'ew-shortcut-key';
 				keycap.textContent = key;
 				keycap.setAttribute('aria-hidden', 'true');
-				shortcut.append(keycap);
+				keycaps.append(keycap);
 			}
-			popup.append(shortcut);
+			shortcut_keys.append(keycaps);
 		}
+		shortcut_row.append(shortcut_keys);
+		return shortcut_row;
+	}
+
+	function render(next: TooltipOptions) {
+		popup.replaceChildren();
+		if ('shortcuts' in next) {
+			const shortcuts = document.createElement('div');
+			shortcuts.className = 'flex flex-col gap-1';
+			for (const shortcut of next.shortcuts) shortcuts.append(render_shortcut(shortcut));
+			popup.append(shortcuts);
+			return;
+		}
+
+		if (next.keys?.length) {
+			popup.append(render_shortcut({ label: next.label, keys: next.keys }));
+			return;
+		}
+
+		const label = document.createElement('span');
+		label.textContent = next.label;
+		popup.append(label);
 	}
 
 	function hide() {
