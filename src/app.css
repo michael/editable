@@ -241,7 +241,7 @@
 
 /* Tooltips share the editor surface and stay above scrollable toolbars. */
 .ew-tooltip {
-	@apply fixed inset-auto m-0 max-w-[calc(100vw-1rem)] items-center gap-3 rounded-[min(0.75rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) px-3 py-2 font-sans text-sm leading-5 font-normal text-(--foreground);
+	@apply fixed inset-auto m-0 max-w-[calc(100vw-1rem)] items-center gap-2 rounded-[min(0.75rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) px-2 py-1.5 font-sans text-[0.8125rem] leading-4 font-normal text-(--foreground);
 }
 
 .ew-tooltip:popover-open {
@@ -249,5 +249,5 @@
 }
 
 .ew-shortcut-key {
-	@apply inline-flex min-h-6 min-w-6 items-center justify-center rounded border border-(--stroke) bg-(--muted) px-1 font-sans text-xs leading-4 text-(--foreground);
+	@apply inline-flex min-h-5 min-w-5 items-center justify-center rounded border border-(--stroke) bg-(--muted) px-1 font-sans text-xs leading-4 text-(--foreground);
 }

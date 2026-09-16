@@ -1368,19 +1368,19 @@ Use a group here; production toolbar keyboard behavior belongs to the consuming 
 							shortcut key. Mac shortcuts are shown for now.
 						</p>
 						<div
-							class="inline-flex max-w-full items-center gap-3 rounded-[min(0.75rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) px-3 py-2 text-sm leading-5 text-(--foreground)"
+							class="inline-flex max-w-full items-center gap-2 rounded-[min(0.75rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) px-2 py-1.5 text-[0.8125rem] leading-4 text-(--foreground)"
 						>
 							<span>Edit</span>
 							<span class="inline-flex gap-1">
 								<span class="sr-only">Command + E</span>
 								<kbd
 									aria-hidden="true"
-									class="inline-flex min-h-6 min-w-6 items-center justify-center rounded border border-(--stroke) bg-(--muted) px-1 font-sans text-xs leading-4 text-(--foreground)"
+									class="inline-flex min-h-5 min-w-5 items-center justify-center rounded border border-(--stroke) bg-(--muted) px-1 font-sans text-xs leading-4 text-(--foreground)"
 									>⌘</kbd
 								>
 								<kbd
 									aria-hidden="true"
-									class="inline-flex min-h-6 min-w-6 items-center justify-center rounded border border-(--stroke) bg-(--muted) px-1 font-sans text-xs leading-4 text-(--foreground)"
+									class="inline-flex min-h-5 min-w-5 items-center justify-center rounded border border-(--stroke) bg-(--muted) px-1 font-sans text-xs leading-4 text-(--foreground)"
 									>E</kbd
 								>
 							</span>
