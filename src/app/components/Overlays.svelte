@@ -189,20 +189,15 @@
 
 	{#if !file_drag_active}
 		{#if svedit.session.selection?.type === 'property'}
+			{@const anchor_style = `position-anchor: --${serialize_path(svedit.session.selection.path)};`}
 			{#if is_media_selected}
-				<div
-					class="media-controls-overlay property-selection-overlay"
-					style="position-anchor: --{serialize_path(svedit.session.selection.path)};"
-				>
-					{#if selected_property.src}
-						<MediaControls path={svedit.session.selection.path} {is_mouse_down} />
-					{/if}
-				</div>
+				<div class="media-controls-overlay property-selection-overlay" style={anchor_style}></div>
+				<!-- Keep controls beside the anchored overlay to avoid Safari positioning bugs. -->
+				{#if selected_property.src}
+					<MediaControls path={svedit.session.selection.path} {is_mouse_down} {anchor_style} />
+				{/if}
 			{:else}
-				<div
-					class="property-selection-overlay"
-					style="position-anchor: --{serialize_path(svedit.session.selection.path)};"
-				></div>
+				<div class="property-selection-overlay" style={anchor_style}></div>
 			{/if}
 		{/if}
 

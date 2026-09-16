@@ -311,10 +311,12 @@
 							{@render selection_leading_contents()}
 						</div>
 					{/if}
-					<!-- Not a scroll container: long labels truncate. min-w-0 lets it shrink. -->
-					<div class="variant-slot min-w-0" class:mobile-hidden={!is_single_node_selected}>
-						<NodeNavigator {session} {focus_canvas} />
-					</div>
+					{#if can_show_variant_selector}
+						<!-- Not a scroll container: long labels truncate. min-w-0 lets it shrink. -->
+						<div class="variant-slot min-w-0" class:mobile-hidden={!is_single_node_selected}>
+							<NodeNavigator {session} {focus_canvas} />
+						</div>
+					{/if}
 				</div>
 			{/if}
 

@@ -9,7 +9,7 @@
 	const MAX_SCALE = 5.0;
 	const ZOOM_STEP = 0.05;
 
-	let { path, is_mouse_down } = $props();
+	let { path, is_mouse_down, anchor_style } = $props();
 
 	let media_node = $derived(svedit.session.get(path));
 	let controls_ref = $state(null);
@@ -132,6 +132,7 @@
 	<div
 		bind:this={controls_ref}
 		class="media-controls"
+		style={anchor_style}
 		oncontextmenu={(e) => e.preventDefault()}
 		ondblclick={handle_double_click}
 		onwheel={handle_wheel}
@@ -151,10 +152,10 @@
 <style>
 	.media-controls {
 		position: absolute;
-		top: 0;
-		left: 0;
-		bottom: 0;
-		right: 0;
+		top: anchor(top);
+		left: anchor(left);
+		bottom: anchor(bottom);
+		right: anchor(right);
 
 		pointer-events: auto;
 		cursor: grab;

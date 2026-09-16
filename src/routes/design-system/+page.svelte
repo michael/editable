@@ -838,6 +838,45 @@
 				</div>
 			</section>
 
+			<section id="card" aria-labelledby="card-heading" class="space-y-8">
+				<div class="space-y-2">
+					<h2 id="card-heading" class="text-xl font-medium">Card</h2>
+					<p class="body-sm text-(--muted-foreground)">
+						A 4:3 media area, title, and optional description. Shared by gallery cards; width and
+						arrangement belong to the surrounding layout. Linked cards underline the title and make
+						the whole card clickable. Use a div and omit the underline for an unlinked card.
+					</p>
+				</div>
+				<div class="max-w-sm">
+					<a
+						href="#card"
+						class="ew-card group/card block min-w-0 outline-1 outline-transparent focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-(--editing)"
+					>
+						<div class="aspect-4/3 overflow-hidden rounded-(--image-border-radius) bg-(--muted)">
+							<svg
+								class="h-full w-full text-(--stroke)"
+								viewBox="0 0 400 300"
+								fill="currentColor"
+								aria-hidden="true"
+							>
+								<circle cx="285" cy="85" r="28" />
+								<path d="M0 300V250L125 105L240 245L300 175L400 280V300Z" />
+							</svg>
+						</div>
+						<div class="pt-4">
+							<h3
+								class="body-base underline decoration-[0.0625em] underline-offset-[0.125em] group-hover/card:decoration-[0.125em] group-active/card:decoration-[0.125em]"
+							>
+								Card title
+							</h3>
+							<p class="pt-1 body-base text-(--muted-foreground)">
+								An optional description adds context below the title.
+							</p>
+						</div>
+					</a>
+				</div>
+			</section>
+
 			<section id="buttons" aria-labelledby="buttons-heading" class="space-y-8">
 				<div class="space-y-2">
 					<h2 id="buttons-heading" class="text-xl font-medium">Buttons</h2>

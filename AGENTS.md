@@ -29,9 +29,9 @@ Repository-specific guidance for coding agents working on Svedit.
 - Inline formatting styles (emphasis, strong, link, code, and highlight) are mutually exclusive. Never nest them or apply multiple styles to the same text.
 
 - Consult the [design system source](src/routes/design-system/+page.svelte) before styling UI. With the development server running, the user can open [the design system in a browser](http://localhost:5173/design-system) to inspect typography, spacing, buttons, and editor pills, and inspect the source for their recipes. Shared tokens and typography utilities live in `src/app.css`. Follow the UI verification rules above for agent browser use.
-- When customizing an Editable site, prefer updating the design system first, then adopting those changes in the actual site components. This gives agents and people working manually a concrete reference to implement consistently.
+- Keep the design system focused on reusable primitives, such as typography, spacing, colors, controls, and cards. Higher-level compositions and behavior belong in application code and components: for example, document the reusable Card primitive in the design system, while galleries and carousels compose it in application components.
 - Keep reference examples as explicit HTML, SVG, and Tailwind classes. Repetition is intentional; application components own behavior and may adapt the recipes when their interaction requires it.
-- Document new visual patterns in the reference page so future changes have a concrete example to follow.
+- Update existing primitive examples when component changes affect those primitives. Do not automatically add examples for every new component or layout. If unsure whether a new example belongs in the design system, ask the user before adding it.
 
 ## Architecture
 
@@ -41,6 +41,13 @@ Svedit is a Svelte 5 rich content editor built around a graph-based document mod
 - Documents are graphs of nodes with properties and references.
 - Selection supports text, node, and property selections and maps between the model and the DOM.
 - `Svedit.svelte` manages the editor and selection; `NodeArrayProperty.svelte` renders node sequences; `TextProperty.svelte` renders editable text with marks and annotations.
+
+## Scrollable editor layouts
+
+- Give wrappers that scroll editable node arrays `relative` positioning, as in `Nav.svelte`. Svedit's absolutely positioned node gaps and markers need a containing block that moves with the scrolling content. Keep the `Node` elements themselves static.
+- Put horizontal gutters inside the scroll container so the first and last node gaps have space outside the content. Match `scroll-padding` to those gutters so snapped cards retain their alignment.
+- Put carousel gutters on a track wrapper around `NodeArrayProperty`, not on the node array itself. Padding after the final node can trigger Svedit's trailing-gap fill/clamp calculations and place the marker over earlier cards.
+- Do not add `tabindex` to scroll wrappers in editing mode: taking focus from Svedit's canvas prevents it from processing text selections. A focusable scroll region is appropriate in viewing mode.
 
 ## Schema changes
 

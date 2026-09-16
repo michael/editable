@@ -4,6 +4,7 @@
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { Node, TextProperty } from 'svedit';
 	import MediaProperty from './MediaProperty.svelte';
+	import Card from './Card.svelte';
 	import { reveal } from '#app/reveal.js';
 
 	const svedit = get_svedit_context();
@@ -13,40 +14,6 @@
 	let layout = $derived(gallery?.layout || 'cards');
 	let render_as_link = $derived(!svedit.editable && node.href);
 </script>
-
-{#snippet card()}
-	<svelte:element
-		this={render_as_link ? 'a' : 'div'}
-		href={render_as_link ? node.href : undefined}
-		target={render_as_link ? node.target : undefined}
-		class="group/gallery-link block outline-1 outline-transparent focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-(--editing)"
-		use:reveal
-	>
-		<div
-			class="overflow-hidden"
-			style:aspect-ratio="4/3"
-			style:border-radius="var(--image-border-radius)"
-		>
-			<MediaProperty path={[...path, 'media']} />
-		</div>
-		<div class="pt-4">
-			<TextProperty
-				class="body-base {node.href
-					? 'underline decoration-[0.0625em] underline-offset-[0.125em]'
-					: ''} {render_as_link
-					? 'group-hover/gallery-link:decoration-[0.125em] group-active/gallery-link:decoration-[0.125em]'
-					: ''}"
-				path={[...path, 'title']}
-				placeholder="Title"
-			/>
-			<TextProperty
-				class="pt-1 body-base text-(--muted-foreground)"
-				path={[...path, 'description']}
-				placeholder="Description"
-			/>
-		</div>
-	</svelte:element>
-{/snippet}
 
 {#snippet compact()}
 	<svelte:element
@@ -81,10 +48,23 @@
 	</svelte:element>
 {/snippet}
 
-<Node class="descriptive-gallery-item group" {path}>
+<Node
+	class="ew-descriptive-gallery-item group min-w-0 {layout === 'carousel' ? 'snap-start' : ''}"
+	{path}
+>
 	{#if layout === 'compact'}
 		{@render compact()}
 	{:else}
-		{@render card()}
+		<Card href={node.href} target={node.target} editable={svedit.editable}>
+			{#snippet media()}
+				<MediaProperty path={[...path, 'media']} />
+			{/snippet}
+			{#snippet title()}
+				<TextProperty path={[...path, 'title']} placeholder="Title" />
+			{/snippet}
+			{#snippet description()}
+				<TextProperty path={[...path, 'description']} placeholder="Description" />
+			{/snippet}
+		</Card>
 	{/if}
 </Node>
