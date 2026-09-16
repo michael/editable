@@ -3,6 +3,7 @@
 	import { dev } from '$app/env';
 	import { goto, invalidate, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import { Svedit, KeyMapper, Command, define_keymap } from 'svedit';
 	import Toolbar from './Toolbar.svelte';
 	import SaveProgressModal from './SaveProgressModal.svelte';
@@ -51,6 +52,7 @@
 
 	let app_el = $state<HTMLElement>();
 	let svedit_ref = $state<{ focus_canvas: () => void }>();
+	let toolbar_ref = $state<{ open_page_menu: () => void; close_page_menu: () => void }>();
 	let editable = $state(false);
 	let current_is_new = $state(false);
 	let edit_for_fun_saved_doc = $state<{ document_id: string; doc_json: string } | null>(null);
@@ -120,7 +122,8 @@
 
 	set_page_browser(page_browser);
 
-	set_page_url_dialog(create_page_url_dialog());
+	const page_url_dialog = create_page_url_dialog();
+	set_page_url_dialog(page_url_dialog);
 
 	set_page_delete_dialog(create_page_delete_dialog());
 
@@ -506,7 +509,60 @@
 		}
 	}
 
+	class NewPageCommand extends Command {
+		is_enabled() {
+			return has_backend && is_admin && !this.context.editable;
+		}
+
+		execute() {
+			return goto(resolve('/new'));
+		}
+	}
+
+	let is_home_page = $derived(page.url.pathname === '/');
+	let duplicate_source = $derived(is_home_page ? '/' : slug);
+
+	class DuplicatePageCommand extends Command {
+		is_enabled() {
+			return has_backend && is_admin && can_edit && !editable && !!duplicate_source;
+		}
+
+		execute() {
+			if (!duplicate_source) return;
+			toolbar_ref?.close_page_menu();
+			return goto(`${resolve('/new')}?from=${encodeURIComponent(duplicate_source)}`);
+		}
+	}
+
+	class EditPageUrlCommand extends Command {
+		is_enabled() {
+			return has_backend && is_admin && can_edit && !editable && !is_home_page;
+		}
+
+		execute() {
+			toolbar_ref?.close_page_menu();
+			page_url_dialog.open({
+				document_id: session.doc.document_id,
+				page_href: slug ? `/${slug}` : null
+			});
+		}
+	}
+
+	class PageMenuCommand extends Command {
+		is_enabled() {
+			return has_backend && is_admin && !editable;
+		}
+
+		execute() {
+			toolbar_ref?.open_page_menu();
+		}
+	}
+
 	const app_commands = {
+		duplicate_page: new DuplicatePageCommand(app_command_context),
+		edit_page_url: new EditPageUrlCommand(app_command_context),
+		page_menu: new PageMenuCommand(app_command_context),
+		new_page: new NewPageCommand(app_command_context),
 		edit_document: new EditCommand(app_command_context),
 		cancel_editing: new CancelCommand(app_command_context),
 		save_document: new SaveCommand(app_command_context),
@@ -516,7 +572,11 @@
 
 	const app_key_map = define_keymap({
 		'ctrl+escape': [app_commands.cancel_editing],
-		'meta+e,ctrl+e': [app_commands.edit_document],
+		'meta+e,ctrl+e,ctrl+shift+e': [app_commands.edit_document],
+		'ctrl+shift+n': [app_commands.new_page],
+		'meta+d,ctrl+d': [app_commands.duplicate_page],
+		'ctrl+shift+u': [app_commands.edit_page_url],
+		'ctrl+shift+m': [app_commands.page_menu],
 		'meta+p,ctrl+p': [app_commands.browse_pages],
 		'meta+s,ctrl+s': [app_commands.save_document]
 	});
@@ -549,7 +609,7 @@
 />
 
 <div class="antialiased" bind:this={app_el}>
-	<Toolbar {session} {app_commands} {editable} {focus_canvas} />
+	<Toolbar bind:this={toolbar_ref} {session} {app_commands} {editable} {focus_canvas} />
 	<Svedit {session} bind:editable bind:this={svedit_ref} path={[session.doc.document_id]} />
 
 	{#if has_backend}

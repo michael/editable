@@ -1,13 +1,11 @@
 <script lang="ts">
 	import { get_app_context } from '#app/app_context.js';
-	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { get_page_browser } from '#app/page_browser_context.svelte.js';
-	import { get_page_url_dialog } from '#app/page_url_dialog_context.svelte.js';
 	import { get_page_delete_dialog } from '#app/page_delete_dialog_context.svelte.js';
 	import { extract_page_metadata } from '#app/page_metadata.js';
-	import { untrack } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { get_selection_node_ancestors } from '#app/app_utils.js';
 	import NodeNavigator from './NodeNavigator.svelte';
 	import { tooltip } from '#app/tooltip.js';
@@ -16,8 +14,57 @@
 
 	const page_browser = get_page_browser();
 	const app = get_app_context();
-	const page_url_dialog = get_page_url_dialog();
 	const page_delete_dialog = get_page_delete_dialog();
+
+	let page_menu = $state<HTMLDivElement>();
+	let page_menu_trigger = $state<HTMLButtonElement>();
+	let page_menu_open = $state(false);
+	let is_mac = $state(true);
+
+	export function open_page_menu() {
+		page_menu?.showPopover();
+		page_menu?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus();
+	}
+
+	export function close_page_menu() {
+		page_menu?.hidePopover();
+	}
+
+	function handle_page_menu_toggle(event: ToggleEvent) {
+		page_menu_open = event.newState === 'open';
+		if (page_menu_open) {
+			page_menu?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus();
+		}
+	}
+
+	function handle_page_menu_keydown(event: KeyboardEvent) {
+		if (event.key === 'Escape' || event.key === 'Tab') {
+			if (event.key === 'Escape') event.preventDefault();
+			event.stopPropagation();
+			page_menu?.hidePopover();
+			page_menu_trigger?.focus();
+			return;
+		}
+		if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+		event.preventDefault();
+		event.stopPropagation();
+		const items = Array.from(
+			page_menu?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? []
+		);
+		if (!items.length) return;
+		const index = items.findIndex((item) => item === document.activeElement);
+		const next =
+			event.key === 'Home'
+				? 0
+				: event.key === 'End'
+					? items.length - 1
+					: (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+		items[next].focus();
+	}
+
+	onMount(() => {
+		is_mac = /Mac|iPhone|iPad/.test(navigator.platform);
+	});
 
 	let cancel_command = $derived(app_commands.cancel_editing ?? null);
 	let cancel_button_label = $derived(cancel_command?.label || 'Cancel');
@@ -38,24 +85,6 @@
 
 	// Home is served from `/` and has no editable slug.
 	let is_home_page = $derived(page.url.pathname === '/');
-
-	function open_page_url_dialog() {
-		if (is_home_page) return;
-		page_url_dialog.open({
-			document_id: session.doc.document_id,
-			page_href: app.slug ? `/${app.slug}` : null
-		});
-	}
-
-	// Home has no slug row, so it is addressed as `/`. Keyed on the route, not on a
-	// null slug, so a non-home page never resolves to home.
-	let duplicate_source = $derived(is_home_page ? '/' : app.slug);
-	let can_duplicate_page = $derived(!!duplicate_source);
-
-	function duplicate_page() {
-		if (!duplicate_source) return;
-		void goto(`${resolve('/new')}?from=${encodeURIComponent(duplicate_source)}`);
-	}
 
 	function open_page_delete_dialog() {
 		if (is_home_page) return;
@@ -189,7 +218,7 @@
 	const tw_toolbar_btn_disabled = 'cursor-default opacity-40';
 	const tw_toolbar_btn_hover = 'cursor-pointer hover:bg-(--muted) active:bg-(--foreground)/10';
 	const tw_page_actions_item =
-		'flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11';
+		'flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal whitespace-nowrap text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11';
 
 	// preventDefault keeps focus and selection in the canvas; the command runs on
 	// click, which fires for both mouse and keyboard.
@@ -221,6 +250,14 @@
 		if (!opens_anchored_prompt(command)) restore_canvas_focus(event);
 	}
 </script>
+
+{#snippet menu_shortcut(keys: string[])}
+	<span class="ml-auto inline-flex shrink-0 gap-1 pl-5" aria-hidden="true">
+		{#each keys as key (key)}
+			<kbd class="ew-shortcut-key">{key}</kbd>
+		{/each}
+	</span>
+{/snippet}
 
 {#snippet selection_leading_contents()}
 	<button
@@ -264,7 +301,7 @@
 		<button
 			class="pointer-events-auto inline-flex min-h-9 w-9 min-w-9 shrink-0 cursor-pointer items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 text-sm leading-5 font-medium text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 sm:w-auto sm:px-3 sm:py-2"
 			onclick={() => cancel_command.execute()}
-			use:tooltip={{ label: 'Cancel', keys: ['⌃', '⎋'] }}
+			use:tooltip={{ label: 'Cancel editing', keys: ['⌃', '⎋'] }}
 			aria-label={cancel_button_label}
 		>
 			<svg class="size-6 sm:hidden" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -279,8 +316,8 @@
 		<button
 			class="pointer-events-auto inline-flex min-h-9 w-9 min-w-9 shrink-0 cursor-pointer items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 text-sm leading-5 font-medium text-(--editing) hover:bg-(--editing-muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--editing)/15 sm:w-auto sm:px-3 sm:py-2"
 			onclick={() => app_commands.save_document.execute()}
-			use:tooltip={{ label: 'Save', keys: ['⌘', 'S'] }}
-			aria-label="Save"
+			use:tooltip={{ label: 'Save changes', keys: ['⌘', 'S'] }}
+			aria-label="Save changes"
 		>
 			<svg class="size-6 sm:hidden" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 				<path d="M4 3.5H16.5L20 7V20.5H4V3.5Z" stroke="currentColor" />
@@ -335,7 +372,8 @@
 									<a
 										class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
 										href={resolve('/new')}
-										use:tooltip={{ label: 'New page' }}
+										use:tooltip={{ label: 'New page', keys: ['⌃', '⇧', 'N'] }}
+										aria-keyshortcuts="Control+Shift+N"
 										aria-label="New page"
 									>
 										<svg
@@ -354,8 +392,8 @@
 									<button
 										class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
 										onclick={() => page_browser?.open_navigate()}
-										use:tooltip={{ label: 'Browse', keys: ['⌘', 'P'] }}
-										aria-label="Browse"
+										use:tooltip={{ label: 'Browse pages', keys: ['⌘', 'P'] }}
+										aria-label="Browse pages"
 									>
 										<svg
 											class="size-6"
@@ -377,6 +415,7 @@
 										class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
 										onclick={() => app_commands.edit_document.execute()}
 										use:tooltip={{ label: 'Edit', keys: ['⌘', 'E'] }}
+										aria-keyshortcuts="Meta+E Control+E Control+Shift+E"
 										aria-label="Edit"
 									>
 										<svg
@@ -398,9 +437,14 @@
 
 								{#if can_logout}
 									<button
+										bind:this={page_menu_trigger}
 										class="page-actions-trigger {tw_toolbar_btn} {tw_toolbar_btn_hover}"
+										aria-haspopup="menu"
+										aria-expanded={page_menu_open}
+										aria-controls="toolbar-page-actions-menu"
+										aria-keyshortcuts="Control+Shift+M"
 										popovertarget="toolbar-page-actions-menu"
-										use:tooltip={{ label: 'Page actions' }}
+										use:tooltip={{ label: 'Page actions', keys: ['⌃', '⇧', 'M'] }}
 										aria-label="Page actions"
 									>
 										<svg
@@ -417,9 +461,13 @@
 									</button>
 									<div
 										id="toolbar-page-actions-menu"
-										class="page-actions-menu min-w-44 rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-1 text-(--foreground)"
+										bind:this={page_menu}
+										ontoggle={handle_page_menu_toggle}
+										onkeydown={handle_page_menu_keydown}
+										class="page-actions-menu w-max min-w-44 rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-1 text-(--foreground)"
 										popover="auto"
 										role="menu"
+										tabindex="-1"
 										aria-label="Page actions"
 									>
 										{#if can_manage_current_page}
@@ -428,18 +476,28 @@
 												class={tw_page_actions_item}
 												popovertarget="toolbar-page-actions-menu"
 												popovertargetaction="hide"
-												onclick={duplicate_page}
-												disabled={!can_duplicate_page}
-												role="menuitem">Duplicate page</button
+												onclick={() => app_commands.duplicate_page.execute()}
+												disabled={app_commands.duplicate_page.disabled}
+												aria-keyshortcuts="Meta+D Control+D"
+												role="menuitem"
+												>Duplicate page
+												{@render menu_shortcut([is_mac ? '⌘' : 'Ctrl', 'D'])}</button
 											>
 											<button
 												type="button"
 												class={tw_page_actions_item}
 												popovertarget="toolbar-page-actions-menu"
 												popovertargetaction="hide"
-												onclick={open_page_url_dialog}
+												onclick={() => app_commands.edit_page_url.execute()}
 												disabled={is_home_page}
-												role="menuitem">Edit URL</button
+												aria-keyshortcuts="Control+Shift+U"
+												role="menuitem"
+												>Edit URL
+												{@render menu_shortcut([
+													is_mac ? '⌃' : 'Ctrl',
+													is_mac ? '⇧' : 'Shift',
+													'U'
+												])}</button
 											>
 											<button
 												type="button"
