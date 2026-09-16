@@ -341,6 +341,8 @@ Updated: ${updated_at_label}`;
 	}
 
 	function handle_page_click(event, document_id) {
+		// Preserve the browser's background-tab behavior for Command-clicks.
+		if (event.metaKey) return;
 		event.preventDefault();
 		select_page(document_id);
 	}
