@@ -10,6 +10,7 @@
 	import { untrack } from 'svelte';
 	import { get_selection_node_ancestors } from '#app/app_utils.js';
 	import NodeNavigator from './NodeNavigator.svelte';
+	import { tooltip } from '#app/tooltip.js';
 
 	let { session, app_commands, editable, focus_canvas } = $props();
 
@@ -228,7 +229,7 @@
 			: tw_toolbar_btn_hover}"
 		onmousedown={handle_btn_mousedown}
 		onclick={(e) => handle_btn_click(e, session.commands.select_parent)}
-		title="Select parent (Esc)"
+		use:tooltip={{ label: 'Select parent', keys: ['⎋'] }}
 		aria-label="Select parent"
 	>
 		<svg
@@ -263,7 +264,7 @@
 		<button
 			class="pointer-events-auto inline-flex min-h-9 w-9 min-w-9 shrink-0 cursor-pointer items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 text-sm leading-5 font-medium text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 sm:w-auto sm:px-3 sm:py-2"
 			onclick={() => cancel_command.execute()}
-			title="Cancel (⌃ ⎋)"
+			use:tooltip={{ label: 'Cancel', keys: ['⌃', '⎋'] }}
 			aria-label={cancel_button_label}
 		>
 			<svg class="size-6 sm:hidden" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -278,7 +279,7 @@
 		<button
 			class="pointer-events-auto inline-flex min-h-9 w-9 min-w-9 shrink-0 cursor-pointer items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 text-sm leading-5 font-medium text-(--editing) hover:bg-(--editing-muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--editing)/15 sm:w-auto sm:px-3 sm:py-2"
 			onclick={() => app_commands.save_document.execute()}
-			title="Save (⌘ S)"
+			use:tooltip={{ label: 'Save', keys: ['⌘', 'S'] }}
 			aria-label="Save"
 		>
 			<svg class="size-6 sm:hidden" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -334,7 +335,7 @@
 									<a
 										class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
 										href={resolve('/new')}
-										title="New page"
+										use:tooltip={{ label: 'New page' }}
 										aria-label="New page"
 									>
 										<svg
@@ -353,7 +354,7 @@
 									<button
 										class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
 										onclick={() => page_browser?.open_navigate()}
-										title="Browse (⌘ P)"
+										use:tooltip={{ label: 'Browse', keys: ['⌘', 'P'] }}
 										aria-label="Browse"
 									>
 										<svg
@@ -375,7 +376,7 @@
 									<button
 										class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
 										onclick={() => app_commands.edit_document.execute()}
-										title="Edit (⌘ E)"
+										use:tooltip={{ label: 'Edit', keys: ['⌘', 'E'] }}
 										aria-label="Edit"
 									>
 										<svg
@@ -399,7 +400,7 @@
 									<button
 										class="page-actions-trigger {tw_toolbar_btn} {tw_toolbar_btn_hover}"
 										popovertarget="toolbar-page-actions-menu"
-										title="Page actions"
+										use:tooltip={{ label: 'Page actions' }}
 										aria-label="Page actions"
 									>
 										<svg
@@ -476,7 +477,8 @@
 										class:!bg-(--editing-muted)={session.commands.toggle_strong?.active}
 										onmousedown={handle_btn_mousedown}
 										onclick={(e) => handle_btn_click(e, session.commands.toggle_strong)}
-										title="Bold (⌘ B)"
+										aria-label="Bold"
+										use:tooltip={{ label: 'Bold', keys: ['⌘', 'B'] }}
 									>
 										<svg
 											class="size-6"
@@ -502,7 +504,8 @@
 										class:!bg-(--editing-muted)={session.commands.toggle_emphasis?.active}
 										onmousedown={handle_btn_mousedown}
 										onclick={(e) => handle_btn_click(e, session.commands.toggle_emphasis)}
-										title="Italic (⌘ I)"
+										aria-label="Italic"
+										use:tooltip={{ label: 'Italic', keys: ['⌘', 'I'] }}
 									>
 										<svg
 											class="size-6"
@@ -527,7 +530,7 @@
 										class:!bg-(--editing-muted)={session.commands.toggle_code?.active}
 										onmousedown={handle_btn_mousedown}
 										onclick={(e) => handle_btn_click(e, session.commands.toggle_code)}
-										title="Code (⌘ ⇧ C)"
+										use:tooltip={{ label: 'Code', keys: ['⌘', '⇧', 'C'] }}
 										aria-label="Code"
 									>
 										<svg
@@ -561,7 +564,8 @@
 										class:!bg-(--editing-muted)={session.commands.toggle_highlight?.active}
 										onmousedown={handle_btn_mousedown}
 										onclick={(e) => handle_btn_click(e, session.commands.toggle_highlight)}
-										title="Highlight (⌘ U)"
+										aria-label="Highlight"
+										use:tooltip={{ label: 'Highlight', keys: ['⌘', 'U'] }}
 									>
 										<svg
 											class="size-6"
@@ -590,7 +594,8 @@
 										class:!bg-(--editing-muted)={session.commands.toggle_link?.active}
 										onmousedown={handle_btn_mousedown}
 										onclick={(e) => handle_btn_click(e, session.commands.toggle_link)}
-										title="Link (⌘ K)"
+										aria-label="Link"
+										use:tooltip={{ label: 'Link', keys: ['⌘', 'K'] }}
 									>
 										<svg
 											class="size-6"
@@ -622,7 +627,7 @@
 											: tw_toolbar_btn_hover}"
 										onmousedown={handle_btn_mousedown}
 										onclick={handle_edit_image_click}
-										title="Alt text"
+										use:tooltip={{ label: 'Alt text' }}
 										aria-label="Alt text"
 									>
 										<span
@@ -636,7 +641,7 @@
 										class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
 										onmousedown={handle_btn_mousedown}
 										onclick={handle_replace_image_click}
-										title="Replace image (⏎)"
+										use:tooltip={{ label: 'Replace image', keys: ['⏎'] }}
 										aria-label="Replace image"
 									>
 										<svg
@@ -665,7 +670,7 @@
 											class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
 											onmousedown={handle_btn_mousedown}
 											onclick={handle_insert_default_node_click}
-											title="Insert (↵)"
+											use:tooltip={{ label: 'Insert', keys: ['↵'] }}
 											aria-label="Insert"
 										>
 											<svg
@@ -690,7 +695,7 @@
 											class:!bg-(--editing-muted)={session.commands.toggle_section?.active}
 											onmousedown={handle_btn_mousedown}
 											onclick={(e) => handle_btn_click(e, session.commands.toggle_section)}
-											title="Toggle section (⌘ ⇧ S)"
+											use:tooltip={{ label: 'Toggle section', keys: ['⌘', '⇧', 'S'] }}
 											aria-label="Toggle section"
 										>
 											<svg
@@ -719,7 +724,7 @@
 										class="{tw_toolbar_btn} aspect-square {tw_toolbar_btn_hover}"
 										onmousedown={handle_btn_mousedown}
 										onclick={handle_delete_selection_click}
-										title="Delete backwards (⌫)"
+										use:tooltip={{ label: 'Delete backwards', keys: ['⌫'] }}
 										aria-label="Delete backwards"
 									>
 										<svg
@@ -762,7 +767,8 @@
 										: tw_toolbar_btn_hover}"
 									onmousedown={handle_btn_mousedown}
 									onclick={(e) => handle_btn_click(e, session.commands.undo)}
-									title="Undo (⌘ Z)"
+									aria-label="Undo"
+									use:tooltip={{ label: 'Undo', keys: ['⌘', 'Z'] }}
 								>
 									<svg
 										class="size-6"
@@ -784,7 +790,8 @@
 										: tw_toolbar_btn_hover}"
 									onmousedown={handle_btn_mousedown}
 									onclick={(e) => handle_btn_click(e, session.commands.redo)}
-									title="Redo (⌘ ⇧ Z)"
+									aria-label="Redo"
+									use:tooltip={{ label: 'Redo', keys: ['⌘', '⇧', 'Z'] }}
 								>
 									<svg
 										class="size-6"

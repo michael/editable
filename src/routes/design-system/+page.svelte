@@ -1361,6 +1361,31 @@ Use a group here; production toolbar keyboard behavior belongs to the consuming 
 							>
 						</div>
 					</div>
+					<div id="pill-tooltip" class="space-y-4">
+						<h3 class="text-sm text-(--muted-foreground)">Tooltips and shortcut keys</h3>
+						<p class="text-sm text-(--muted-foreground)">
+							Show on hover and keyboard focus; Escape dismisses. Use separate keycaps for each
+							shortcut key. Mac shortcuts are shown for now.
+						</p>
+						<div
+							class="inline-flex max-w-full items-center gap-3 rounded-[min(0.75rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) px-3 py-2 text-sm leading-5 text-(--foreground)"
+						>
+							<span>Edit</span>
+							<span class="inline-flex gap-1">
+								<span class="sr-only">Command + E</span>
+								<kbd
+									aria-hidden="true"
+									class="inline-flex min-h-6 min-w-6 items-center justify-center rounded border border-(--stroke) bg-(--muted) px-1 font-sans text-xs leading-4 text-(--foreground)"
+									>⌘</kbd
+								>
+								<kbd
+									aria-hidden="true"
+									class="inline-flex min-h-6 min-w-6 items-center justify-center rounded border border-(--stroke) bg-(--muted) px-1 font-sans text-xs leading-4 text-(--foreground)"
+									>E</kbd
+								>
+							</span>
+						</div>
+					</div>
 					<div id="pill-inline-action" class="space-y-4">
 						<h3 class="text-sm text-(--muted-foreground)">Inline call to action</h3>
 						<!-- A single editing action gets wider label padding, while retaining the shared shell and height. -->
