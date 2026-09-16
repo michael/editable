@@ -10,6 +10,6 @@
 <code
 	id={node.id}
 	data-node-id={node.id}
-	class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-sm text-[0.9em] subpixel-antialiased"
+	class="rounded border border-(--stroke) bg-(--muted) px-1 box-decoration-clone font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 	>{content}</code
 >
