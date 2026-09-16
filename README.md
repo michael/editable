@@ -55,7 +55,7 @@ To keep the **Edit** button visible to unauthenticated visitors — useful for a
 DEMO_MODE=true
 ```
 
-Visitors enter local editing immediately, but cannot save changes or access admin tools. Restart the app after changing the flag.
+Clicking the Edit button enters local editing immediately, but visitors cannot save changes or access admin tools. Keyboard editing shortcuts still open the login dialog. Restart the app after changing the flag.
 
 ## Make it yours
 

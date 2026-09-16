@@ -183,6 +183,14 @@
 		handle_btn_click(event, session.commands.edit_image);
 	}
 
+	function handle_edit_document_click() {
+		if (app.is_demo_mode && app.has_backend && !app.is_admin) {
+			app.edit_for_fun();
+			return;
+		}
+		app_commands.edit_document.execute();
+	}
+
 	function handle_replace_image_click() {
 		if (session.selection?.type !== 'property') return;
 		cache_replace_media_path(session.selection.path);
@@ -413,7 +421,7 @@
 								{#if can_edit_document}
 									<button
 										class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
-										onclick={() => app_commands.edit_document.execute()}
+										onclick={handle_edit_document_click}
 										use:tooltip={{ label: 'Edit', keys: ['⌘', 'E'] }}
 										aria-keyshortcuts="Meta+E Control+E Control+Shift+E"
 										aria-label="Edit"

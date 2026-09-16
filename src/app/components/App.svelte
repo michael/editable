@@ -309,7 +309,7 @@
 				);
 			}
 
-			if (!has_backend || is_admin || is_demo_mode) {
+			if (!has_backend || is_admin) {
 				enter_edit_mode();
 				return;
 			}
