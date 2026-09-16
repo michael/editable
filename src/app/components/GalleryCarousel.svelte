@@ -73,44 +73,46 @@
 			/>
 		</div>
 	</div>
-	<div class="mx-auto flex max-w-7xl justify-end gap-3 px-5 pt-5 sm:px-7" contenteditable="false">
-		<button
-			type="button"
-			aria-label="Previous gallery item"
-			aria-controls={carousel_id}
-			disabled={!can_go_previous}
-			onclick={() => scroll_carousel(-1)}
-			class="inline-flex size-11 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
-		>
-			<svg
-				class="size-5 rtl:rotate-180"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				aria-hidden="true"><path d="m14 7-5 5 5 5" /></svg
+	{#if can_go_previous || can_go_next}
+		<div class="mx-auto flex max-w-7xl justify-end gap-3 px-5 pt-5 sm:px-7" contenteditable="false">
+			<button
+				type="button"
+				aria-label="Previous gallery item"
+				aria-controls={carousel_id}
+				disabled={!can_go_previous}
+				onclick={() => scroll_carousel(-1)}
+				class="inline-flex size-11 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 			>
-		</button>
-		<button
-			type="button"
-			aria-label="Next gallery item"
-			aria-controls={carousel_id}
-			disabled={!can_go_next}
-			onclick={() => scroll_carousel(1)}
-			class="inline-flex size-11 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
-		>
-			<svg
-				class="size-5 rtl:rotate-180"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				aria-hidden="true"><path d="m10 7 5 5-5 5" /></svg
+				<svg
+					class="size-5 rtl:rotate-180"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					aria-hidden="true"><path d="m14 7-5 5 5 5" /></svg
+				>
+			</button>
+			<button
+				type="button"
+				aria-label="Next gallery item"
+				aria-controls={carousel_id}
+				disabled={!can_go_next}
+				onclick={() => scroll_carousel(1)}
+				class="inline-flex size-11 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 			>
-		</button>
-	</div>
+				<svg
+					class="size-5 rtl:rotate-180"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					aria-hidden="true"><path d="m10 7 5 5-5 5" /></svg
+				>
+			</button>
+		</div>
+	{/if}
 </div>
