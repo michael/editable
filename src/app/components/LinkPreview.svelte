@@ -72,6 +72,7 @@
 						href={get_preview_href(internal_page_href)}
 						target="_blank"
 						rel="noopener noreferrer"
+						use:tooltip={{ label: 'Open link in new tab' }}
 						class="inline-flex min-h-9 max-w-70 min-w-0 flex-1 items-center gap-2 rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] text-sm leading-5 font-medium text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
 					>
 						{#if resolved_page_preview.preview_media_node?.src}
@@ -95,6 +96,7 @@
 						href={get_preview_href(internal_page_href)}
 						target="_blank"
 						rel="noopener noreferrer"
+						use:tooltip={{ label: 'Open link in new tab' }}
 						class="inline-flex min-h-9 max-w-70 min-w-0 flex-1 items-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] px-3 text-sm leading-5 font-medium text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
 					>
 						<span class="min-w-0 truncate">{error_message || internal_page_href}</span>
@@ -105,6 +107,7 @@
 					href={get_preview_href(node.href)}
 					target="_blank"
 					rel="noopener noreferrer"
+					use:tooltip={{ label: 'Open link in new tab' }}
 					class="inline-flex min-h-9 max-w-70 min-w-0 flex-1 items-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] px-3 text-sm leading-5 font-medium text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
 				>
 					<span class="min-w-0 truncate">{get_preview_label(node.href)}</span>
