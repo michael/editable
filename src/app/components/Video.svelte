@@ -153,21 +153,7 @@
 		disablepictureinpicture
 		preload="auto"
 		onclick={enter_fullscreen}
-		class:cursor-fullscreen={!editable && !is_fullscreen}
+		class="block size-full"
+		class:cursor-zoom-in={!editable && !is_fullscreen}
 	></video>
 {/if}
-
-<style>
-	video {
-		width: 100%;
-		height: 100%;
-		transform-origin: center center;
-	}
-
-	/* Fullscreen playback cursor with a contrasting outline over video. */
-	.cursor-fullscreen {
-		cursor:
-			url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22120%22%20height%3D%2264%22%20viewBox%3D%220%200%20120%2064%22%3E%3Cg%20fill%3D%22none%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M56%206H48V14M64%206H72V14M72%2022V30H64M56%2030H48V22%22%20stroke%3D%22white%22%20stroke-width%3D%225%22%2F%3E%3Cpath%20d%3D%22M56%206H48V14M64%206H72V14M72%2022V30H64M56%2030H48V22%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%2F%3E%3Cpath%20d%3D%22M57%2012L65%2018L57%2024Z%22%20fill%3D%22black%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%2F%3E%3C%2Fg%3E%3Ctext%20x%3D%2260%22%20y%3D%2252%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2C%20sans-serif%22%20font-size%3D%2212%22%20font-weight%3D%22600%22%20fill%3D%22black%22%20stroke%3D%22white%22%20stroke-width%3D%223%22%20stroke-linejoin%3D%22round%22%20paint-order%3D%22stroke%22%3EWatch%20Fullscreen%3C%2Ftext%3E%3C%2Fsvg%3E') 60 18,
-			pointer;
-	}
-</style>
