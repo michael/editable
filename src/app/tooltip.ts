@@ -1,8 +1,9 @@
 type TooltipKey = string | string[];
-type TooltipShortcut = { label: string; keys: TooltipKey[] };
+type TooltipShortcut = { label?: string; keys: TooltipKey[] };
 
 type TooltipOptions =
-	| { label: string; keys?: string[]; shortcuts?: never }
+	| { label: string; keys?: TooltipKey[]; shortcuts?: never }
+	| { label?: never; keys: TooltipKey[]; shortcuts?: never }
 	| { label?: never; keys?: never; shortcuts: TooltipShortcut[] };
 
 let tooltip_id = 0;
@@ -41,10 +42,12 @@ export function tooltip(trigger: HTMLElement, options: TooltipOptions) {
 
 	function render_shortcut({ label, keys }: TooltipShortcut) {
 		const shortcut_row = document.createElement('div');
-		shortcut_row.className = 'flex items-center justify-between gap-4';
-		const shortcut_label = document.createElement('span');
-		shortcut_label.textContent = label;
-		shortcut_row.append(shortcut_label);
+		shortcut_row.className = label ? 'flex items-center justify-between gap-4' : 'inline-flex';
+		if (label) {
+			const shortcut_label = document.createElement('span');
+			shortcut_label.textContent = label;
+			shortcut_row.append(shortcut_label);
+		}
 
 		const shortcut_keys = document.createElement('span');
 		shortcut_keys.className = 'inline-flex shrink-0 gap-1';
@@ -90,9 +93,11 @@ export function tooltip(trigger: HTMLElement, options: TooltipOptions) {
 			return;
 		}
 
-		const label = document.createElement('span');
-		label.textContent = next.label;
-		popup.append(label);
+		if (next.label) {
+			const label = document.createElement('span');
+			label.textContent = next.label;
+			popup.append(label);
+		}
 	}
 
 	function hide() {

@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import type { PathnameWithSearchOrHash } from '$app/types';
 	import { serialize_path } from 'svedit';
+	import { tooltip } from '#app/tooltip.js';
 	import Media from './Media.svelte';
 
 	const svedit = get_svedit_context();
@@ -193,6 +194,7 @@
 				type="button"
 				class="inline-flex min-h-9 max-w-full min-w-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent px-8 py-2 text-sm leading-5 font-medium wrap-anywhere text-(--editing) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--editing-muted) enabled:active:bg-(--editing)/15 disabled:cursor-default disabled:opacity-40"
 				onclick={handle_edit}
+				use:tooltip={{ keys: ['⌘', 'K'] }}
 			>
 				Create link
 			</button>
