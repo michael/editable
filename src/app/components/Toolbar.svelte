@@ -685,7 +685,7 @@
 											: tw_toolbar_btn_hover}"
 										onmousedown={handle_btn_mousedown}
 										onclick={handle_edit_image_click}
-										use:tooltip={{ label: 'Alt text' }}
+										use:tooltip={{ label: 'Alt text', keys: ['⌥', '⏎'] }}
 										aria-label="Alt text"
 									>
 										<span

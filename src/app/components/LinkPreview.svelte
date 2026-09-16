@@ -12,7 +12,6 @@
 
 	let { node, path } = $props();
 
-	let is_mark = $derived(svedit.session.kind(node) === 'mark');
 	let internal_page_href = $derived(get_internal_page_href(node?.href));
 
 	let page_preview = $derived.by(async () => {
@@ -32,13 +31,7 @@
 	}
 
 	function handle_remove() {
-		if (is_mark) {
-			svedit.session.apply(svedit.session.tr.toggle_mark('link'));
-		} else {
-			const tr = svedit.session.tr;
-			tr.set([node.id, 'href'], '');
-			svedit.session.apply(tr);
-		}
+		svedit.session.commands?.remove_link?.execute();
 	}
 
 	function get_internal_page_href(href) {
@@ -121,7 +114,7 @@
 				type="button"
 				class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 				onclick={handle_edit}
-				title="Edit link"
+				use:tooltip={{ label: 'Edit link', keys: ['⌘', 'K'] }}
 				aria-label="Edit link"
 			>
 				<svg
@@ -143,7 +136,7 @@
 				type="button"
 				class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 				onclick={handle_remove}
-				title="Remove link"
+				use:tooltip={{ label: 'Remove link', keys: ['⌘', '⌫'] }}
 				aria-label="Remove link"
 			>
 				<svg
