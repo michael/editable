@@ -31,6 +31,7 @@
 		is_admin: server_is_admin = false,
 		can_edit = true,
 		origin = null,
+		document_title = null,
 		children
 	}: {
 		document?: any;
@@ -40,6 +41,7 @@
 		is_admin?: boolean;
 		can_edit?: boolean;
 		origin?: string | null;
+		document_title?: string | null;
 		children?: Snippet;
 	} = $props();
 
@@ -87,6 +89,9 @@
 		},
 		get origin() {
 			return origin;
+		},
+		get document_title() {
+			return document_title;
 		},
 		get slug() {
 			return slug;
