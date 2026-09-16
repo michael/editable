@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { setContext, type Snippet } from 'svelte';
 	import { dev } from '$app/env';
+	import { DEMO_MODE } from '$app/env/public';
 	import { goto, invalidate, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -60,6 +61,7 @@
 	let edit_for_fun_saved_doc = $state<{ document_id: string; doc_json: string } | null>(null);
 	let is_admin = $derived(server_is_admin);
 	let is_admin_mode = $derived(editable && is_admin);
+	const is_demo_mode = DEMO_MODE;
 
 	let save_progress_visible = $state(false);
 	let save_progress_message = $state('');
@@ -83,6 +85,9 @@
 		},
 		get can_edit() {
 			return can_edit;
+		},
+		get is_demo_mode() {
+			return is_demo_mode;
 		},
 		get is_admin() {
 			return is_admin;
@@ -304,7 +309,7 @@
 				);
 			}
 
-			if (!has_backend || is_admin) {
+			if (!has_backend || is_admin || is_demo_mode) {
 				enter_edit_mode();
 				return;
 			}

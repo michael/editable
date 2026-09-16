@@ -807,14 +807,12 @@
 					<div id="format-code" class="space-y-3">
 						<h3 class="text-sm text-(--muted-foreground)">Code · code</h3>
 						<!--
-						Scale code relative to its surrounding text, with a foreground-derived surface.
-						Code and highlight share 0.25em horizontal and 0.125em vertical padding.
-						Follow the button radius, capped at 0.25em to keep inline corners subtle.
-						Clone the background and padding across wrapped lines. Long identifiers may break.
+						Code shares the shortcut-key border, muted surface, radius, and horizontal padding.
+						It keeps monospace typography and may break long identifiers across lines.
 					-->
 						<p class="max-w-prose body-base">
 							Use <code
-								class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+								class="rounded border border-(--stroke) bg-(--muted) px-1 box-decoration-clone font-mono text-[0.9em] leading-4 font-normal wrap-anywhere"
 								>font-medium</code
 							>
 							for button labels.

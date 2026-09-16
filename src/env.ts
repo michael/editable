@@ -64,5 +64,12 @@ export const variables = defineEnvVars({
 	NODE_ENV: {
 		description: 'Used to decide whether session cookies are marked secure.',
 		schema: optional((value) => value)
+	},
+	DEMO_MODE: {
+		public: true,
+		static: true,
+		description:
+			'Set to true or 1 at build time to show the Edit button to unauthenticated visitors.',
+		schema: optional((value) => value === 'true' || value === '1')
 	}
 });

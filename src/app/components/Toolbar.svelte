@@ -73,7 +73,7 @@
 	let can_manage_current_page = $derived(app.has_backend && app.is_admin && app.can_edit);
 	let can_logout = $derived(app.has_backend && app.is_admin && !editable);
 	let can_edit_document = $derived(
-		(!app.has_backend || app.is_admin) && !app_commands.edit_document.disabled
+		(app.is_demo_mode || !app.has_backend || app.is_admin) && !app_commands.edit_document.disabled
 	);
 	let can_show_read_toolbar = $derived(
 		can_create_pages ||
