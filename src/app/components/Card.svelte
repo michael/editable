@@ -8,16 +8,16 @@
 		description,
 		href = '',
 		target = '_self',
-		interactive = true
+		editable = false
 	}: {
 		media: Snippet;
 		title: Snippet;
 		description?: Snippet;
 		href?: string;
 		target?: string;
-		interactive?: boolean;
+		editable?: boolean;
 	} = $props();
-	let render_as_link = $derived(interactive && !!href);
+	let render_as_link = $derived(!editable && !!href);
 </script>
 
 <svelte:element

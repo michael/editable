@@ -55,7 +55,7 @@
 	{#if layout === 'compact'}
 		{@render compact()}
 	{:else}
-		<Card href={node.href} target={node.target} interactive={!svedit.editable}>
+		<Card href={node.href} target={node.target} editable={svedit.editable}>
 			{#snippet media()}
 				<MediaProperty path={[...path, 'media']} />
 			{/snippet}
