@@ -33,13 +33,13 @@
 			>
 				{#if comment_segments}
 					<pre
-						class="overflow-x-auto wrap-normal whitespace-pre tab-2">{#each comment_segments as segment, index (index)}{#if segment.comment}<span
+						class="overflow-x-auto wrap-normal whitespace-pre tab-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)">{#each comment_segments as segment, index (index)}{#if segment.comment}<span
 									class="text-(--muted-foreground)">{segment.text}</span
 								>{:else}{segment.text}{/if}{/each}</pre>
 				{:else}
 					<TextProperty
 						tag="pre"
-						class="overflow-x-auto! wrap-normal! whitespace-pre! tab-2"
+						class="overflow-x-auto! wrap-normal! whitespace-pre! tab-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 						path={[...path, 'content']}
 						placeholder="Preformatted text"
 					/>

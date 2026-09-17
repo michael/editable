@@ -30,7 +30,7 @@
 					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
 						Colors, fonts, and corner radii come from the shared tokens in
 						<code
-							class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>src/app.css</code
 						>. These specimens follow the current token values.
 					</p>
@@ -52,12 +52,12 @@
 							</div>
 							<p class="body-sm">
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--background</code
 								>
 								/
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--foreground</code
 								>
 							</p>
@@ -71,12 +71,12 @@
 							</div>
 							<p class="body-sm">
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--muted</code
 								>
 								/
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--muted-foreground</code
 								>
 							</p>
@@ -89,12 +89,12 @@
 							</div>
 							<p class="body-sm">
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--accent</code
 								>
 								/
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--accent-foreground</code
 								>
 							</p>
@@ -107,12 +107,12 @@
 							</div>
 							<p class="body-sm">
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--editing</code
 								>
 								/
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--editing-foreground</code
 								>
 							</p>
@@ -125,12 +125,12 @@
 							</div>
 							<p class="body-sm">
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--editing-muted</code
 								>
 								/
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--editing</code
 								>
 							</p>
@@ -144,7 +144,7 @@
 							</div>
 							<p class="body-sm">
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--stroke</code
 								>
 							</p>
@@ -159,7 +159,7 @@
 							<p class="font-sans text-2xl">Clear words.</p>
 							<p class="body-sm">
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>font-sans</code
 								> · Inter
 							</p>
@@ -168,7 +168,7 @@
 							<p class="font-serif text-2xl">Clear words.</p>
 							<p class="body-sm">
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>font-serif</code
 								> · Libertinos Serif Display
 							</p>
@@ -177,7 +177,7 @@
 							<p class="font-mono text-2xl">Clear words.</p>
 							<p class="body-sm">
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>font-mono</code
 								> · IBM Plex Mono
 							</p>
@@ -204,7 +204,7 @@
 							</div>
 							<p class="body-sm">
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--button-border-radius</code
 								>
 							</p>
@@ -241,7 +241,7 @@
 							</div>
 							<p class="body-sm">
 								<code
-									class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--image-border-radius</code
 								>
 							</p>
@@ -255,11 +255,11 @@
 					<h2 id="page-limiter-heading" class="text-xl font-medium">Page limiter</h2>
 					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
 						Center each block with <code
-							class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>mx-auto max-w-7xl</code
 						>, then add
 						<code
-							class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>px-5 sm:px-7</code
 						> inside it. The width limit is 80rem (1280px), including side padding: 1.25rem (20px) on
 						small screens and 1.75rem (28px) from the 40rem (640px) breakpoint, at the default root font
@@ -311,12 +311,12 @@
 					</p>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Narrow tracks use <code
-							class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>max-w-4xl</code
 						>
 						(56rem / 896px) inside the
 						<code
-							class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>max-w-7xl</code
 						> page limiter (80rem / 1280px). These are maximum widths, not fixed proportions. Both include
 						the shared side padding.
@@ -328,7 +328,7 @@
 					<figure class="space-y-2">
 						<figcaption class="body-sm">
 							Narrow left · <code
-								class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>max-w-4xl</code
 							>
 						</figcaption>
@@ -348,7 +348,7 @@
 					<figure class="space-y-2">
 						<figcaption class="body-sm">
 							Narrow center · <code
-								class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>mx-auto max-w-4xl</code
 							>
 						</figcaption>
@@ -368,7 +368,7 @@
 					<figure class="space-y-2">
 						<figcaption class="body-sm">
 							Narrow right · <code
-								class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>ml-auto max-w-4xl</code
 							>
 						</figcaption>
@@ -576,11 +576,11 @@
 						<h3 class="text-sm font-medium">Sample block implementation</h3>
 						<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
 							A top-level block receives its section context through <code
-								class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>mark</code
 							>, aliased to
 							<code
-								class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>section</code
 							>. As in Prose.svelte, the block derives its top and bottom padding from that context.
 							No extra padding props are needed.
@@ -626,19 +626,19 @@
 						<li>No section mark: both edges are generous.</li>
 						<li>
 							<code
-								class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>section.is_start</code
 							>: the top edge is generous.
 						</li>
 						<li>
 							<code
-								class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>section.is_end</code
 							>: the bottom edge is generous.
 						</li>
 						<li>
 							<code
-								class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>section.is_middle</code
 							>: both edges are compact; the two boundary checks already cover this case.
 						</li>
@@ -646,27 +646,27 @@
 					</ul>
 					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
 						The app uses shared utilities in <code
-							class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>src/app.css</code
 						>
 						for the default rhythm:
 						<code
-							class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>pt-block-generous</code
 						>,
 						<code
-							class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>pt-block-compact</code
 						>, and their
 						<code
-							class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>pb-</code
 						> equivalents. They apply the values above to existing elements without adding a wrapper component.
 					</p>
 					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
 						For a custom rhythm, replace the default utility on that edge with explicit responsive
 						classes, such as <code
-							class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>pt-8 lg:pt-16</code
 						>. Avoid combining a default utility with overrides on the same edge. Keep deliberate
 						exceptions local: flush and full-bleed figures have no vertical padding.
@@ -807,14 +807,12 @@
 					<div id="format-code" class="space-y-3">
 						<h3 class="text-sm text-(--muted-foreground)">Code · code</h3>
 						<!--
-						Scale code relative to its surrounding text, with a foreground-derived surface.
-						Code and highlight share 0.25em horizontal and 0.125em vertical padding.
-						Follow the button radius, capped at 0.25em to keep inline corners subtle.
-						Clone the background and padding across wrapped lines. Long identifiers may break.
+						Code shares the shortcut-key border, muted surface, radius, and horizontal padding.
+						It keeps monospace typography and may break long identifiers across lines.
 					-->
 						<p class="max-w-prose body-base">
 							Use <code
-								class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--foreground)/8 box-decoration-clone px-[0.25em] py-[0.125em] font-mono text-[0.9em] font-normal wrap-anywhere"
+								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>font-medium</code
 							>
 							for button labels.
@@ -825,7 +823,7 @@
 						<h3 class="text-sm text-(--muted-foreground)">Highlight · mark</h3>
 						<!--
 						Use the existing accent pair rather than fixed yellow or the editor selection color.
-						Match code padding and the button radius capped at 0.25em, including on wrapped lines.
+						Use em-based padding and the button radius capped at 0.25em, including on wrapped lines.
 						Highlight is a standalone formatting style.
 					-->
 						<p class="max-w-prose body-base">
@@ -845,12 +843,14 @@
 						A 4:3 media area, title, and optional description. Shared by gallery cards; width and
 						arrangement belong to the surrounding layout. Linked cards underline the title and make
 						the whole card clickable. Use a div and omit the underline for an unlinked card.
+						Keyboard focus uses a 2px editing-color outline with a 2px offset; scroll containers use
+						an inset outline to prevent clipping.
 					</p>
 				</div>
 				<div class="max-w-sm">
 					<a
 						href="#card"
-						class="ew-card group/card block min-w-0 outline-1 outline-transparent focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-(--editing)"
+						class="ew-card group/card block min-w-0 outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
 					>
 						<div class="aspect-4/3 overflow-hidden rounded-(--image-border-radius) bg-(--muted)">
 							<svg
@@ -1359,6 +1359,31 @@ Use a group here; production toolbar keyboard behavior belongs to the consuming 
 									/><circle cx="18" cy="12" r="1" fill="currentColor" /></svg
 								></button
 							>
+						</div>
+					</div>
+					<div id="pill-tooltip" class="space-y-4">
+						<h3 class="text-sm text-(--muted-foreground)">Tooltips and shortcut keys</h3>
+						<p class="text-sm text-(--muted-foreground)">
+							Show on hover and keyboard focus; Escape dismisses. Use separate keycaps for each
+							shortcut key. Mac shortcuts are shown for now.
+						</p>
+						<div
+							class="inline-flex max-w-full items-center gap-2 rounded-[min(0.75rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) px-2 py-1.5 text-[0.8125rem] leading-4 text-(--foreground)"
+						>
+							<span>Edit</span>
+							<span class="inline-flex gap-1">
+								<span class="sr-only">Command + E</span>
+								<kbd
+									aria-hidden="true"
+									class="inline-flex min-h-5 min-w-5 items-center justify-center rounded border border-(--stroke) bg-(--muted) px-1 font-sans text-xs leading-4 text-(--foreground)"
+									>⌘</kbd
+								>
+								<kbd
+									aria-hidden="true"
+									class="inline-flex min-h-5 min-w-5 items-center justify-center rounded border border-(--stroke) bg-(--muted) px-1 font-sans text-xs leading-4 text-(--foreground)"
+									>E</kbd
+								>
+							</span>
 						</div>
 					</div>
 					<div id="pill-inline-action" class="space-y-4">

@@ -20,6 +20,7 @@ import {
 	CycleLayoutCommand,
 	CycleNodeTypeCommand,
 	ToggleLinkCommand,
+	RemoveLinkCommand,
 	EditLinkCommand,
 	ReplaceMediaCommand,
 	EditImageCommand,
@@ -374,6 +375,7 @@ export const document_config = {
 			cycle_node_type_previous: new CycleNodeTypeCommand('previous', context),
 			toggle_accordion: new ToggleAccordionCommand(context),
 			toggle_link: new ToggleLinkCommand(context),
+			remove_link: new RemoveLinkCommand(context),
 			edit_link: new EditLinkCommand(context),
 			edit_image: new EditImageCommand(context),
 			replace_media: new ReplaceMediaCommand(context),
@@ -408,7 +410,8 @@ export const document_config = {
 			'ctrl+shift+arrowup': [commands.cycle_node_type_previous],
 			tab: [commands.toggle_accordion],
 
-			'meta+k,ctrl+k': [commands.edit_link, commands.toggle_link]
+			'meta+k,ctrl+k': [commands.edit_link, commands.toggle_link],
+			'meta+backspace,ctrl+backspace': [commands.remove_link]
 		});
 
 		return { commands, keymap };

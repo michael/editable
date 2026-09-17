@@ -10,7 +10,7 @@
 <Node class="ew-accordion-item border-b border-(--stroke) [--row:0]" {path}>
 	<details class="py-2 md:py-3">
 		<summary
-			class="list-none outline-1 outline-transparent focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-(--editing)"
+			class="list-none outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
 			class:pointer-events-none={svedit.editable}
 			class:cursor-pointer={!svedit.editable}
 		>
@@ -19,7 +19,7 @@
 					<TextProperty class="body-base" path={[...path, 'title']} placeholder="Title" />
 				</div>
 				<div
-					class="pointer-events-auto flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center text-(--muted-foreground) outline-1 outline-transparent focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-(--editing)"
+					class="pointer-events-auto flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center text-(--muted-foreground) outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
 					aria-label="Toggle accordion item"
 				>
 					<svg class="accordion-chevron size-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">

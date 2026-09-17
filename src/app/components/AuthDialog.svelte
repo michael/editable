@@ -10,14 +10,14 @@
 	// Toolbar height on small screens, roomier once there is space for it.
 	const TW_PILL_HEIGHT = 'h-9 sm:h-[46px]';
 
-	const TW_BTN_BASE = `inline-flex ${TW_PILL_HEIGHT} shrink-0 cursor-pointer items-center justify-center rounded-(--button-border-radius) text-sm leading-5 whitespace-nowrap outline-1 outline-transparent transition-[opacity,background-color,transform] duration-150 focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-(--editing) active:translate-y-px active:scale-95 disabled:cursor-not-allowed disabled:opacity-60`;
+	const TW_BTN_BASE = `inline-flex ${TW_PILL_HEIGHT} shrink-0 items-center justify-center rounded-(--button-border-radius) text-sm leading-5 whitespace-nowrap transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer disabled:cursor-default disabled:opacity-40`;
 
-	// Filled primary like the canvas Button, in the editing color.
-	const TW_PRIMARY_BTN = `${TW_BTN_BASE} border border-(--editing) bg-(--editing) px-5 text-(--editing-foreground) hover:opacity-80 active:opacity-80`;
+	// Filled primary action with the shared editing treatment.
+	const TW_PRIMARY_BTN = `${TW_BTN_BASE} border border-transparent bg-(--editing) px-5 text-(--editing-foreground) enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)]`;
 
 	// Secondary action styling from the toolbar's cancel button.
 	const TW_SECONDARY_SURFACE =
-		'border border-(--stroke) bg-(--background) text-(--foreground) hover:bg-(--muted) active:bg-(--muted)';
+		'border border-(--stroke) bg-(--background) text-(--foreground) enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10';
 	const TW_SECONDARY_BTN = `${TW_BTN_BASE} ${TW_SECONDARY_SURFACE} px-5`;
 
 	const TW_ICON_BTN = `${TW_BTN_BASE} ${TW_SECONDARY_SURFACE} aspect-square`;
@@ -144,7 +144,7 @@
 				<button
 					bind:this={edit_for_fun_button_ref}
 					type="button"
-					class={`${TW_PRIMARY_BTN} focus:outline-1 focus:outline-offset-1 focus:outline-(--editing)`}
+					class={TW_PRIMARY_BTN}
 					onclick={handle_edit_for_fun}
 				>
 					Try out editing

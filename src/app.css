@@ -238,3 +238,28 @@
 		}
 	}
 }
+
+/* Tooltips share the editor surface and stay above scrollable toolbars. */
+.ew-tooltip {
+	@apply fixed inset-auto m-0 max-w-[calc(100vw-1rem)] items-center gap-2 rounded-[min(0.75rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) px-2 py-1.5 font-sans text-[0.8125rem] leading-4 font-normal text-(--foreground);
+}
+
+.ew-tooltip:popover-open {
+	@apply flex;
+}
+
+.ew-shortcut-key {
+	@apply inline-flex min-h-5 min-w-5 items-center justify-center rounded border border-(--stroke) bg-(--muted) px-1 font-sans text-xs leading-4 text-(--foreground);
+}
+
+.ew-shortcut-alternatives {
+	@apply inline-flex overflow-hidden rounded border border-(--stroke) bg-(--muted);
+}
+
+.ew-shortcut-alternatives .ew-shortcut-key {
+	@apply rounded-none border-0 bg-transparent;
+}
+
+.ew-shortcut-alternatives .ew-shortcut-key + .ew-shortcut-key {
+	@apply border-l border-(--stroke);
+}

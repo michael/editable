@@ -341,6 +341,8 @@ Updated: ${updated_at_label}`;
 	}
 
 	function handle_page_click(event, document_id) {
+		// Preserve the browser's background-tab behavior for Command-clicks.
+		if (!is_picker_mode && event.metaKey) return;
 		event.preventDefault();
 		select_page(document_id);
 	}
@@ -844,7 +846,7 @@ Updated: ${updated_at_label}`;
 
 <dialog
 	bind:this={menu_ref}
-	class="page-actions-dialog"
+	class="page-actions-dialog focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 	oncancel={handle_menu_cancel}
 	onclick={handle_menu_click}
 	onkeydown={handle_menu_keydown}
@@ -899,7 +901,7 @@ Updated: ${updated_at_label}`;
 
 <dialog
 	bind:this={unlisted_info_ref}
-	class="confirm-dialog"
+	class="confirm-dialog focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 	oncancel={handle_unlisted_info_cancel}
 	onclick={handle_unlisted_info_click}
 >
@@ -925,7 +927,7 @@ Updated: ${updated_at_label}`;
 
 <dialog
 	bind:this={shadowed_info_ref}
-	class="confirm-dialog"
+	class="confirm-dialog focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 	oncancel={handle_shadowed_info_cancel}
 	onclick={handle_shadowed_info_click}
 >

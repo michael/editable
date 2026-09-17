@@ -271,6 +271,34 @@ export class ToggleLinkCommand extends Command {
 	}
 }
 
+/** Removes the active text link or the selected link-like node. */
+export class RemoveLinkCommand extends Command {
+	is_enabled() {
+		const { session, editable } = this.context;
+		if (!editable || !session.selection) return false;
+
+		const selected_node = session.selected_node;
+		if (selected_node && 'href' in selected_node && selected_node.href) return true;
+
+		return session.active_mark?.node.type === 'link';
+	}
+
+	execute() {
+		if (!this.is_enabled()) return;
+
+		const session = this.context.session;
+		const selected_node = session.selected_node;
+		if (selected_node && 'href' in selected_node && selected_node.href) {
+			const tr = session.tr;
+			tr.set([selected_node.id, 'href'], '');
+			session.apply(tr);
+			return;
+		}
+
+		session.apply(session.tr.toggle_mark('link'));
+	}
+}
+
 export class ToggleAccordionCommand extends Command {
 	is_enabled() {
 		const session = this.context.session;

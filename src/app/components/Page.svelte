@@ -17,7 +17,7 @@
 	let nav_height = $state(0);
 	let scroll_y = $state(0);
 	let head_metadata = $derived(extract_page_metadata(svedit.session.doc));
-	let page_title = $derived(head_metadata.title || 'Untitled page');
+	let page_title = $derived(app.document_title ?? (head_metadata.title || 'Untitled page'));
 	let page_image: Nodes['image'] = $derived(svedit.session.get([...path, 'image']));
 	let page_image_is_svg = $derived(
 		page_image?.mime_type

@@ -9,8 +9,10 @@ export type AppContext = {
 	readonly page_content?: Snippet;
 	readonly has_backend: boolean;
 	readonly can_edit: boolean;
+	readonly is_demo_mode: boolean;
 	readonly is_admin: boolean;
 	readonly origin: string | null;
+	readonly document_title: string | null;
 	readonly slug: string | null;
 	readonly is_new: boolean;
 	auth_dialog_open: boolean;

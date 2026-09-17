@@ -60,13 +60,13 @@
 		aria-label="Gallery"
 		aria-roledescription="carousel"
 		tabindex={svedit.editable ? undefined : 0}
-		class="[scrollbar-none] relative {svedit.editable
+		class="[scrollbar-none] relative -my-1 {svedit.editable
 			? 'snap-none'
 			: 'snap-x snap-mandatory'} scroll-px-(--ew-carousel-inset) overflow-x-auto overscroll-x-contain [--ew-carousel-card-width:calc(var(--ew-carousel-content)*0.85)] [--ew-carousel-content:calc(min(100cqw,80rem)-2*var(--ew-carousel-gutter))] [--ew-carousel-gutter:1.25rem] [--ew-carousel-inset:max(var(--ew-carousel-gutter),calc((100cqw-80rem)/2+var(--ew-carousel-gutter)))] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing) sm:[--ew-carousel-gutter:1.75rem] md:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-1.75rem)/2)] xl:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-3.5rem)/3)] [&::-webkit-scrollbar]:hidden"
 		{@attach track_carousel}
 	>
 		<!-- Keep gutters outside the node array so its trailing anchor ends at the last card. -->
-		<div class="ew-carousel-track w-max min-w-full px-(--ew-carousel-inset)">
+		<div class="ew-carousel-track w-max min-w-full px-(--ew-carousel-inset) py-1">
 			<NodeArrayProperty
 				class="grid auto-cols-(--ew-carousel-card-width) grid-flow-col gap-5 [--row:1] sm:gap-7"
 				{path}
