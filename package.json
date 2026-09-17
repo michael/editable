@@ -1,7 +1,7 @@
 {
 	"name": "editable-website",
 	"private": true,
-	"version": "2.0.0-preview.7",
+	"version": "2.0.0-preview.8",
 	"packageManager": "pnpm@11.23.0",
 	"type": "module",
 	"imports": {
