@@ -80,7 +80,7 @@
 <Node {path}>
 	<!-- Desktop nav (visible also during mobile editing) -->
 	<div
-		class="relative mx-auto max-w-7xl overflow-x-auto overflow-y-hidden"
+		class="relative mx-auto max-w-7xl overflow-x-auto overflow-y-hidden focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 		class:max-lg:hidden={!svedit.editable}
 	>
 		<div

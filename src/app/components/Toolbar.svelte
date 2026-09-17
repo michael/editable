@@ -347,7 +347,9 @@
 			</div>
 		{/if}
 
-		<div class="toolbar-middle min-w-0">
+		<div
+			class="toolbar-middle min-w-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
+		>
 			{#if editable && can_show_selection_tool_group}
 				<div
 					class="editor-toolbar selection-toolbar flex shrink items-center gap-1 {tw_toolbar_surface}"
@@ -371,7 +373,9 @@
 			<div class="editor-toolbar action-toolbar flex shrink items-center {tw_toolbar_surface}">
 				<!-- Four pixels of scroll padding clear the 2px outline and 2px offset.
 				The negative margin preserves the pill inset; keep the scrollport square. -->
-				<div class="tools-scroller -m-1 min-w-0 flex-1 scrollbar-none overflow-x-auto p-1">
+				<div
+					class="tools-scroller -m-1 min-w-0 flex-1 scrollbar-none overflow-x-auto p-1 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
+				>
 					<div class="flex min-w-max items-center gap-1">
 						{#if !editable}
 							<!-- Read mode: New page + Edit + Pages buttons -->

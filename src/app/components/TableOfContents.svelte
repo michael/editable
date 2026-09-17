@@ -108,7 +108,7 @@
 				popover="auto"
 				style:position-anchor={`--toc-${toc_id}`}
 				ontoggle={(event) => (toc_open = event.newState === 'open')}
-				class="toc-menu max-h-[min(24rem,calc(100vh-6rem))] w-[min(24rem,calc(100vw-2.5rem))] flex-col overflow-y-auto overscroll-contain rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-1 text-(--foreground) [&:popover-open]:flex"
+				class="toc-menu max-h-[min(24rem,calc(100vh-6rem))] w-[min(24rem,calc(100vw-2.5rem))] flex-col overflow-y-auto overscroll-contain rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-1 text-(--foreground) focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing) [&:popover-open]:flex"
 				aria-label="Table of contents"
 			>
 				{#each entries as entry, index (entry.href)}

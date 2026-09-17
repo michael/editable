@@ -266,7 +266,10 @@
 				<span class="drawer-handle" aria-hidden="true"></span>
 			</div>
 
-			<div class:drawer-panel-auto={drawer_height_mode === 'auto'} class="drawer-panel">
+			<div
+				class:drawer-panel-auto={drawer_height_mode === 'auto'}
+				class="drawer-panel focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
+			>
 				<div class="drawer-content" class:drawer-content-centered={center_content}>
 					{@render children?.({ close })}
 				</div>

@@ -812,7 +812,7 @@
 					-->
 						<p class="max-w-prose body-base">
 							Use <code
-								class="rounded border border-(--stroke) bg-(--muted) px-1 box-decoration-clone font-mono text-[0.9em] leading-4 font-normal wrap-anywhere"
+								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere"
 								>font-medium</code
 							>
 							for button labels.
@@ -843,12 +843,14 @@
 						A 4:3 media area, title, and optional description. Shared by gallery cards; width and
 						arrangement belong to the surrounding layout. Linked cards underline the title and make
 						the whole card clickable. Use a div and omit the underline for an unlinked card.
+						Keyboard focus uses a 2px editing-color outline with a 2px offset; scroll containers use
+						an inset outline to prevent clipping.
 					</p>
 				</div>
 				<div class="max-w-sm">
 					<a
 						href="#card"
-						class="ew-card group/card block min-w-0 outline-1 outline-transparent focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-(--editing)"
+						class="ew-card group/card block min-w-0 outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
 					>
 						<div class="aspect-4/3 overflow-hidden rounded-(--image-border-radius) bg-(--muted)">
 							<svg

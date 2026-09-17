@@ -79,7 +79,7 @@
 
 <dialog
 	bind:this={dialog_ref}
-	class="confirm-dialog"
+	class="confirm-dialog focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 	oncancel={handle_cancel}
 	onclick={handle_click}
 >

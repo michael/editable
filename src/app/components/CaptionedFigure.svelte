@@ -26,7 +26,7 @@
 				this={render_as_link ? 'a' : 'div'}
 				href={render_as_link ? node.href : undefined}
 				target={render_as_link ? node.target : undefined}
-				class="block overflow-hidden outline-1 outline-transparent focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-(--editing)"
+				class="block overflow-hidden outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
 				style:border-radius="var(--image-border-radius)"
 				style:aspect-ratio={media_node.width && media_node.height
 					? `${media_node.width} / ${media_node.height}`

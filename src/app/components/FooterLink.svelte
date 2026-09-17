@@ -16,7 +16,7 @@
 			this={render_as_link ? 'a' : 'div'}
 			href={render_as_link ? node.href : undefined}
 			target={render_as_link && node.target !== '_self' ? node.target : undefined}
-			class="inline-block decoration-transparent underline-offset-2 outline-1 outline-transparent transition-all duration-500 ease-in-out hover:text-(--foreground) hover:underline hover:decoration-(--foreground) focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-(--editing)"
+			class="inline-block decoration-transparent underline-offset-2 outline-2 outline-transparent hover:text-(--foreground) hover:underline hover:decoration-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
 			class:hover:underline={render_as_link}
 		>
 			<TextProperty class="inline" path={[...path, 'label']} placeholder="Link" />
