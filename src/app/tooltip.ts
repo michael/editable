@@ -201,7 +201,14 @@ export function tooltip(trigger: HTMLElement, options: TooltipOptions) {
 	document.addEventListener(
 		'keydown',
 		(event) => {
-			if (event.key === 'Escape' && popup.matches(':popover-open')) {
+			if (
+				event.key === 'Escape' &&
+				!event.ctrlKey &&
+				!event.metaKey &&
+				!event.altKey &&
+				!event.shiftKey &&
+				popup.matches(':popover-open')
+			) {
 				event.stopImmediatePropagation();
 				event.preventDefault();
 				hide();
