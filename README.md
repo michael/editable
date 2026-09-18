@@ -49,14 +49,6 @@ Open [http://localhost:5173](http://localhost:5173), press `⌘` or `Ctrl` + `E`
 
 You can also use `Ctrl` + `Shift` + `E` to edit. In read mode, admins can create a new page with `Ctrl` + `Shift` + `N`.
 
-To keep the **Edit** button visible to unauthenticated visitors — useful for a demo site — set this environment variable:
-
-```sh
-DEMO_MODE=true
-```
-
-Clicking the Edit button enters local editing immediately, but visitors cannot save changes or access admin tools. Keyboard editing shortcuts still open the login dialog. Restart the app after changing the flag.
-
 ## Make it yours
 
 Your repository, your styles, your components.
