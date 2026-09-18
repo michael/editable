@@ -25,6 +25,16 @@
 				grid grid-cols-3
 				**:[.image-wrapper]:aspect-[3/4]
    		`,
+			'squares-2-columns': `
+				[--row:1]
+				grid grid-cols-1 md:grid-cols-2
+				**:[.image-wrapper]:aspect-square
+			`,
+			'squares-3-columns': `
+				[--row:1]
+				grid grid-cols-2 md:grid-cols-3
+				**:[.image-wrapper]:aspect-square
+			`,
 			squares: `
 	     	[--row:1]
 				grid grid-cols-2 md:grid-cols-4

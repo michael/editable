@@ -488,7 +488,15 @@ export const document_schema = define_document_schema({
 		properties: {
 			layout: {
 				type: 'string',
-				values: ['mixed', 'portraits', 'squares', 'landscapes', 'compact-landscapes'],
+				values: [
+					'mixed',
+					'portraits',
+					'squares-2-columns',
+					'squares-3-columns',
+					'squares',
+					'landscapes',
+					'compact-landscapes'
+				],
 				default: 'mixed'
 			},
 			gallery_items: {
