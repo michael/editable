@@ -33,7 +33,7 @@
 			landscapes: `
 	     	[--row:1]
 				grid grid-cols-1 md:grid-cols-2
-				**:[.image-wrapper]:aspect-[2/1]
+				**:[.image-wrapper]:aspect-[4/3]
    		`,
 			'compact-landscapes': `
 	     	[--row:1]
