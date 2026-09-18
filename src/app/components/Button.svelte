@@ -54,7 +54,7 @@
 		this={render_as_link ? 'a' : 'div'}
 		href={render_as_link ? node.href : undefined}
 		target={render_as_link && node.target !== '_self' ? node.target : undefined}
-		class="ew-button inline-flex max-w-full items-center justify-start text-start font-medium wrap-anywhere text-(--foreground) underline decoration-1 underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {link_size} {render_as_link
+		class="ew-button inline-flex max-w-full items-center justify-start text-start font-normal wrap-anywhere text-(--foreground) underline decoration-1 underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {link_size} {render_as_link
 			? 'hover:decoration-2 active:decoration-2'
 			: ''}"
 	>

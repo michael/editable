@@ -918,7 +918,7 @@
 						<h3 class="text-sm text-(--muted-foreground)">Link</h3>
 						<!--
 						Standalone navigation: no horizontal padding or border, so text aligns with its surroundings.
-						Keep the 44px minimum height and a 24px minimum width, increased to 44px for coarse pointers.
+						Use normal weight to match inline links. Keep the 44px minimum height and a 24px minimum width, increased to 44px for coarse pointers.
 						Short labels stay start-aligned.
 						Inline links within prose need a separate recipe without this vertical sizing.
 						Target guidance: https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum
@@ -927,7 +927,7 @@
 					-->
 						<a
 							href="#buttons"
-							class="inline-flex min-h-11 max-w-full min-w-6 items-center justify-start py-2.5 text-start text-base leading-6 font-medium wrap-anywhere text-(--foreground) underline decoration-1 underline-offset-4 hover:decoration-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:decoration-2 pointer-coarse:min-w-11"
+							class="inline-flex min-h-11 max-w-full min-w-6 items-center justify-start py-2.5 text-start text-base leading-6 font-normal wrap-anywhere text-(--foreground) underline decoration-1 underline-offset-4 hover:decoration-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:decoration-2 pointer-coarse:min-w-11"
 						>
 							Continue
 						</a>
@@ -946,7 +946,7 @@
 
 				<!--
 				Compact geometry: 0.875rem text, 1.25rem line height, and a 2.25rem minimum height.
-				Keep medium weight at both sizes; emphasis comes from the variant, not heavier text.
+				Primary and secondary use medium weight; links match normal inline text.
 				Keep the same dimensions for mouse and touch. Let content wrap and increase the height.
 				These are explicit recipes, with the same colors and states as the standard size.
 			-->
@@ -978,7 +978,7 @@
 						<!-- Standalone link: preserve start alignment and omit horizontal padding at both sizes. -->
 						<a
 							href="#buttons"
-							class="inline-flex min-h-9 max-w-full min-w-6 items-center justify-start py-2 text-start text-sm leading-5 font-medium wrap-anywhere text-(--foreground) underline decoration-1 underline-offset-4 hover:decoration-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:decoration-2"
+							class="inline-flex min-h-9 max-w-full min-w-6 items-center justify-start py-2 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) underline decoration-1 underline-offset-4 hover:decoration-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:decoration-2"
 						>
 							Continue
 						</a>
