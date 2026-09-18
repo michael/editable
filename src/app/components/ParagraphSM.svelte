@@ -12,15 +12,10 @@
 </script>
 
 <Node class="ew-paragraph-sm" {path}>
-	<div
-		use:reveal
-		class={layout === 'muted'
-			? 'text-(--muted-foreground)'
-			: '[&_a]:text-(--foreground) [&_strong]:font-normal [&_strong]:text-(--foreground)'}
-	>
+	<div use:reveal>
 		<TextProperty
 			tag="p"
-			class="body-sm"
+			class={`body-sm ${layout === 'muted' ? 'text-(--muted-foreground)' : ''}`}
 			path={[...path, 'content']}
 			placeholder="Small Paragraph"
 		/>
