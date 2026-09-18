@@ -110,22 +110,22 @@
 /* Body text uses regular weight and a consistent 1.5 line height. */
 /* Small paragraphs and listing descriptions */
 @utility body-sm {
-	@apply font-sans text-sm leading-normal font-normal;
+	@apply font-sans text-sm leading-normal font-normal text-balance;
 }
 
 /* Standard paragraphs */
 @utility body-base {
-	@apply font-sans text-base leading-normal font-normal;
+	@apply font-sans text-base leading-normal font-normal text-balance;
 }
 
 /* Large paragraphs */
 @utility body-lg {
-	@apply font-sans text-lg leading-normal font-normal;
+	@apply font-sans text-lg leading-normal font-normal text-balance;
 }
 
 /* Introductory paragraphs */
 @utility body-xl {
-	@apply font-sans text-xl leading-normal font-normal lg:text-2xl;
+	@apply font-sans text-xl leading-normal font-normal lg:text-2xl text-balance;
 }
 
 /* Vertical block spacing */
