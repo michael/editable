@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import { validate_document } from 'svedit';
 import { db, with_transaction, delete_orphaned_assets, touch_asset } from '#app/services.js';
 
+import { build_page_forest } from '#app/page_tree.js';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
 import { document_schema } from '#app/document_schema.js';
 import { collect_node_ids_in_order } from '#lib/document_graph.js';
@@ -476,76 +477,6 @@ function get_outgoing_refs(source_document_id: string): string[] {
 	return rows.map((row) => row.target_document_id);
 }
 
-function build_tree_children(
-	refs: string[],
-	assigned_page_ids: Set<string>,
-	summaries_by_id: Map<string, PageSummary>,
-	body_refs_by_page_id: Map<string, string[]>
-): PageTreeNode[] {
-	const children: PageTreeNode[] = [];
-
-	for (const target_document_id of refs) {
-		if (assigned_page_ids.has(target_document_id)) continue;
-
-		const summary = summaries_by_id.get(target_document_id);
-		if (!summary) continue;
-
-		assigned_page_ids.add(target_document_id);
-
-		children.push({
-			document_id: summary.document_id,
-			title: summary.title,
-			description: summary.description,
-			preview_media_node: summary.preview_media_node,
-			page_href: summary.page_href,
-			slug: summary.slug,
-			shadowed_by_markdown: summary.shadowed_by_markdown,
-			created_at: summary.created_at,
-			updated_at: summary.updated_at,
-			children: build_tree_children(
-				body_refs_by_page_id.get(target_document_id) ?? [],
-				assigned_page_ids,
-				summaries_by_id,
-				body_refs_by_page_id
-			)
-		});
-	}
-
-	return children;
-}
-
-function build_page_tree_node(
-	root_document_id: string,
-	assigned_page_ids: Set<string>,
-	summaries_by_id: Map<string, PageSummary>,
-	body_refs_by_page_id: Map<string, string[]>,
-	root_refs: string[] | null = null
-): PageTreeNode | null {
-	const summary = summaries_by_id.get(root_document_id);
-	if (!summary) return null;
-	if (assigned_page_ids.has(root_document_id)) return null;
-
-	assigned_page_ids.add(root_document_id);
-
-	return {
-		document_id: summary.document_id,
-		title: summary.title,
-		description: summary.description,
-		preview_media_node: summary.preview_media_node,
-		page_href: summary.page_href,
-		slug: summary.slug,
-		shadowed_by_markdown: summary.shadowed_by_markdown,
-		created_at: summary.created_at,
-		updated_at: summary.updated_at,
-		children: build_tree_children(
-			root_refs ?? body_refs_by_page_id.get(root_document_id) ?? [],
-			assigned_page_ids,
-			summaries_by_id,
-			body_refs_by_page_id
-		)
-	};
-}
-
 function build_page_browser_data(pathname: string): {
 	home_page_id: string | null;
 	current_document_id: string | null;
@@ -564,55 +495,29 @@ function build_page_browser_data(pathname: string): {
 		? get_shared_root_ids(home_page_doc)
 		: { nav_root_id: null, footer_root_id: null };
 
-	const body_refs_by_page_id = new Map<string, string[]>();
+	const tree_refs_by_page_id = new Map<string, string[]>();
 	for (const page_doc of page_docs) {
 		const body_node_ids = collect_page_body_node_ids(page_doc);
-		body_refs_by_page_id.set(
+		tree_refs_by_page_id.set(
 			page_doc.document_id,
 			collect_document_refs(page_doc.nodes, body_node_ids, page_doc.document_id)
 		);
 	}
 
-	const page_forest: PageTreeNode[] = [];
-	const assigned_page_ids = new Set<string>();
-	const incoming_page_ref_counts = new Map<string, number>();
-
-	for (const page_doc of page_docs) {
-		incoming_page_ref_counts.set(page_doc.document_id, 0);
-	}
-
-	for (const refs of body_refs_by_page_id.values()) {
-		for (const target_document_id of refs) {
-			if (!incoming_page_ref_counts.has(target_document_id)) continue;
-			incoming_page_ref_counts.set(
-				target_document_id,
-				(incoming_page_ref_counts.get(target_document_id) ?? 0) + 1
-			);
-		}
-	}
-
-	let home_linked_page_ids = new Set<string>();
-
 	if (home_page_id && summaries_by_id.has(home_page_id)) {
 		const nav_refs = nav_root_id ? get_outgoing_refs(nav_root_id) : [];
 		const footer_refs = footer_root_id ? get_outgoing_refs(footer_root_id) : [];
-		const home_body_refs = body_refs_by_page_id.get(home_page_id) ?? [];
+		const home_body_refs = tree_refs_by_page_id.get(home_page_id) ?? [];
 
-		home_linked_page_ids = new Set([home_page_id]);
-		build_tree_children(
-			[...nav_refs, ...home_body_refs, ...footer_refs],
-			home_linked_page_ids,
-			summaries_by_id,
-			body_refs_by_page_id
-		);
+		tree_refs_by_page_id.set(home_page_id, [...nav_refs, ...home_body_refs, ...footer_refs]);
 	}
+
+	const referenced_page_ids = new Set([...tree_refs_by_page_id.values()].flat());
 
 	const non_home_root_summaries = summaries
 		.filter(
 			(summary) =>
-				summary.document_id !== home_page_id &&
-				!home_linked_page_ids.has(summary.document_id) &&
-				(incoming_page_ref_counts.get(summary.document_id) ?? 0) === 0
+				summary.document_id !== home_page_id && !referenced_page_ids.has(summary.document_id)
 		)
 		.sort((a, b) => {
 			const a_updated_at = a.updated_at ?? a.created_at ?? '';
@@ -625,39 +530,11 @@ function build_page_browser_data(pathname: string): {
 			return a.title.localeCompare(b.title);
 		});
 
-	if (home_page_id && summaries_by_id.has(home_page_id)) {
-		const nav_refs = nav_root_id ? get_outgoing_refs(nav_root_id) : [];
-		const footer_refs = footer_root_id ? get_outgoing_refs(footer_root_id) : [];
-		const home_body_refs = body_refs_by_page_id.get(home_page_id) ?? [];
-
-		const home_root = build_page_tree_node(
-			home_page_id,
-			assigned_page_ids,
-			summaries_by_id,
-			body_refs_by_page_id,
-			[...nav_refs, ...home_body_refs, ...footer_refs]
-		);
-
-		if (home_root) {
-			home_root.title = 'Home';
-			page_forest.push(home_root);
-		}
-	}
-
-	for (const summary of non_home_root_summaries) {
-		if (assigned_page_ids.has(summary.document_id)) continue;
-
-		const root_node = build_page_tree_node(
-			summary.document_id,
-			assigned_page_ids,
-			summaries_by_id,
-			body_refs_by_page_id
-		);
-
-		if (root_node) {
-			page_forest.push(root_node);
-		}
-	}
+	const root_ids = non_home_root_summaries.map((summary) => summary.document_id);
+	if (home_page_id && summaries_by_id.has(home_page_id)) root_ids.unshift(home_page_id);
+	const page_forest = build_page_forest(root_ids, summaries_by_id, tree_refs_by_page_id);
+	const home_root = page_forest.find((node) => node.document_id === home_page_id);
+	if (home_root) home_root.title = 'Home';
 
 	return {
 		home_page_id,
