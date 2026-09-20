@@ -540,40 +540,29 @@ Annotation nodes must not have registered rendering components. For node arrays,
 
 ## Media uploads
 
-When you paste or drop media into the page, it shows up instantly — the file is displayed straight from memory while processing happens in the background. Nothing touches the server until you hit save: only then are the processed files uploaded and the temporary references in the document replaced by content-addressed asset ids (`{sha256}.{ext}`). Identical files are deduplicated automatically.
-
-All processing happens in your browser, in a background worker — there is no server-side encoding pipeline and no external service.
+Pasted or dropped media appears immediately from a local preview while processing runs in the browser. Compression uses background workers, with no server-side encoding or external service. Files are uploaded only when you save; temporary references become content-addressed asset ids (`{sha256}.{ext}`), and identical stored files are deduplicated.
 
 ### Images
 
-Static raster images (JPEG, PNG, …) are converted to WebP, capped at 4096px wide, and encoded into a fixed set of responsive size variants so pages never ship more pixels than the layout needs. SVGs and animated GIFs are stored as-is.
+Static raster images (JPEG, PNG, …) become WebP, capped at 4096px wide, with smaller responsive variants. Images are never upscaled. SVGs and animated GIFs are stored unchanged.
 
 ### Videos
 
-Videos are optimized automatically in your browser, without quality prompts or external services. WebM inputs stay WebM (VP9, or AV1/VP8 depending on encoder support); other inputs become MP4 (H.264 + AAC). Anything your browser can decode can be considered for conversion, including MOV, MP4, WebM and MKV.
+Videos are optimized automatically. WebM stays WebM; other formats are converted to MP4 with H.264 video and AAC audio as needed. Every video gets a WebP poster.
 
-Each dropped video goes through this decision tree:
+- **Preserve useful originals.** Compatible MP4/WebM files are kept when bitrate estimates suggest they are already efficient, or a conversion saves no more than 25%. This is a heuristic, not a visual quality assessment. Efficient H.264 tracks in other containers can be repackaged without re-encoding the video.
+- **Prefer quality at a reasonable size.** Re-encoded video uses up to 1440 pixels on the short side (2560×1440 landscape or 1440×2560 portrait), without upscaling, and at most 30 fps. Brief sample encodes help choose settings for longer clips. Quality and output size depend on the footage and browser encoders.
+- **Enforce the size ceiling.** The default maximum is exactly 100 MB (100,000,000 bytes), including audio. When size constrains quality, encoding initially targets 95% of the limit and may lower resolution. Smaller successful outputs are accepted; only oversized results trigger another full encode from the original, at most twice. If none fits, processing fails.
+- **Allow manual optimization.** Files ending in `_optimized.mp4` or `_optimized.webm` keep their original bytes at any resolution, but must still fit the size limit. `.optimized` and `-optimized` suffixes also work. Remove the suffix to allow automatic compression of an oversized export.
 
-1. **Manual escape hatch** — files ending in `_optimized.mp4` or `_optimized.webm` are uploaded byte-identical at any resolution, provided they fit within 100 MB. The `.optimized` and `-optimized` forms also work. Oversized marked files are rejected; remove the suffix to allow automatic compression or reduce the size yourself. A poster is still generated.
-2. **Already efficient** — compatible MP4 and WebM files within the size limit are preserved when their bitrate relative to resolution and frame rate suggests that further compression risks needless quality loss. This is a conservative heuristic, not a measurement of visual quality. Efficient H.264 video in other containers can be repackaged without re-encoding the video track.
-3. **Automatic optimization** — the preferred output has a short side of up to 1440 pixels (2560×1440 landscape or 1440×2560 portrait), without upscaling. Transcodes cap high frame rates at 30 fps. For clips longer than six seconds, three short sample encodes estimate the size at a preferred quality. Simple footage can use fewer bits than complex footage. When that estimate exceeds the budget, the encoder reduces bitrate and resolution.
-4. **Verify the result** — the finished video must fit within 100 MB. An oversized result is retried from the original with a lower bitrate, at most twice. A compatible original within the limit is retained when the resulting savings are less than 25%.
-
-Two knobs in `src/app/config.ts`:
+Configure the output limits in `src/app/config.ts`:
 
 ```js
-export const MAX_VIDEO_RESOLUTION = 1440; // preferred short-side cap for transcodes
+export const MAX_VIDEO_RESOLUTION = 1440; // short-side cap for re-encoded video
 export const MAX_VIDEO_FILESIZE = 100 * 1000 * 1000; // hard ceiling in bytes (100 MB)
 ```
 
-Things worth knowing:
-
-- The size limit is a ceiling, not the desired output size. Size-constrained videos initially target 95% of it, including audio, and the selected resolution can use the full video bitrate budget. Smaller successful outputs are accepted without another full encode. Only oversized results trigger a retry from the original, with a lower bitrate based on the measured output size and extra headroom. Short clips normally use much less space at the preferred quality. The short sample encodes used to choose settings still happen before the full encode.
-- Quality-based encoding uses WebCodecs quantizer support where available, with a bitrate fallback. Actual quality and speed depend on the browser's encoders. Sampling estimates size; the final size check enforces the limit.
-- Efficient audio is copied when possible; other audio is explicitly encoded to AAC for MP4 or Opus for WebM. Every audio track is included in the size budget, and unsupported audio causes an error instead of a silent video.
-- Transparent WebM is preserved within the size limit because browser encoders cannot reliably preserve its transparency. Oversized transparent WebM needs manual optimization.
-- Input files for automatic processing are limited to 2 GiB. Automatic conversion requires a known duration and one video track. Files that cannot fit after retries produce a clear error.
-- Manually optimized files and preserved originals still need a browser decoder to generate their poster. HEVC decoding, for example, depends on the browser and platform.
+Automatic processing accepts inputs up to 2 GiB (about 2.15 GB); transcoding requires a known duration and one video track. Browser codec support determines which files can be processed, and even unchanged videos need decoding support for their poster. Audio is preserved or converted; unsupported audio causes an error rather than being silently dropped. Compatible transparent WebM is kept unchanged within the size limit; oversized transparent video needs manual optimization.
 
 ## Create a custom node type
 
