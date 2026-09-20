@@ -73,7 +73,7 @@ describe('video uploads', () => {
 		const file = new File([], 'surfer_optimized.webm', { type: 'video/webm' });
 		Object.defineProperty(file, 'size', { value: MAX_VIDEO_FILESIZE + 1 });
 		await start_processing('blob:oversized-manual', file);
-		await expect(upload_pending(['blob:oversized-manual'])).rejects.toThrow('at most 100 MiB');
+		await expect(upload_pending(['blob:oversized-manual'])).rejects.toThrow('at most 100 MB');
 		expect(process_video).not.toHaveBeenCalled();
 		expect(uploads).toHaveLength(0);
 	});

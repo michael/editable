@@ -134,7 +134,7 @@ export async function start_processing(blob_url: string, file: File) {
 				// upload the raw bytes without transcoding, at any resolution.
 				if (file.size > MAX_VIDEO_FILESIZE) {
 					throw new Error(
-						'Manually optimized videos must be at most 100 MiB. Reduce the file size or remove the _optimized suffix to use automatic compression.'
+						'Manually optimized videos must be at most 100 MB. Reduce the file size or remove the _optimized suffix to use automatic compression.'
 					);
 				}
 				const [hash, dims] = await Promise.all([hash_blob(file), get_video_dimensions(file)]);

@@ -25,7 +25,7 @@ export const MAX_VIDEO_RESOLUTION = 1440;
  * encoding prefers a sensible quality and uses this budget only when needed.
  * The finished file is checked because browser bitrate targets can overshoot.
  */
-export const MAX_VIDEO_FILESIZE = 100 * 1024 * 1024; // 100 MiB
+export const MAX_VIDEO_FILESIZE = 100 * 1000 * 1000; // 100 MB
 
 /**
  * Maximum size of a video file we attempt to transcode in the browser.

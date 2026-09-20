@@ -554,16 +554,16 @@ Videos are optimized automatically in your browser, without quality prompts or e
 
 Each dropped video goes through this decision tree:
 
-1. **Manual escape hatch** — files ending in `_optimized.mp4` or `_optimized.webm` are uploaded byte-identical at any resolution, provided they fit within 100 MiB. The `.optimized` and `-optimized` forms also work. Oversized marked files are rejected; remove the suffix to allow automatic compression or reduce the size yourself. A poster is still generated.
+1. **Manual escape hatch** — files ending in `_optimized.mp4` or `_optimized.webm` are uploaded byte-identical at any resolution, provided they fit within 100 MB. The `.optimized` and `-optimized` forms also work. Oversized marked files are rejected; remove the suffix to allow automatic compression or reduce the size yourself. A poster is still generated.
 2. **Already efficient** — compatible MP4 and WebM files within the size limit are preserved when their bitrate relative to resolution and frame rate suggests that further compression risks needless quality loss. This is a conservative heuristic, not a measurement of visual quality. Efficient H.264 video in other containers can be repackaged without re-encoding the video track.
 3. **Automatic optimization** — the preferred output has a short side of up to 1440 pixels (2560×1440 landscape or 1440×2560 portrait), without upscaling. Transcodes cap high frame rates at 30 fps. For clips longer than six seconds, three short sample encodes estimate the size at a preferred quality. Simple footage can use fewer bits than complex footage. When that estimate exceeds the budget, the encoder reduces bitrate and resolution.
-4. **Verify the result** — the finished video must fit within 100 MiB. An oversized result is retried from the original with a lower bitrate, at most twice. A compatible original within the limit is retained when the resulting savings are less than 25%.
+4. **Verify the result** — the finished video must fit within 100 MB. An oversized result is retried from the original with a lower bitrate, at most twice. A compatible original within the limit is retained when the resulting savings are less than 25%.
 
 Two knobs in `src/app/config.ts`:
 
 ```js
 export const MAX_VIDEO_RESOLUTION = 1440; // preferred short-side cap for transcodes
-export const MAX_VIDEO_FILESIZE = 100 * 1024 * 1024; // hard ceiling in bytes (100 MiB)
+export const MAX_VIDEO_FILESIZE = 100 * 1000 * 1000; // hard ceiling in bytes (100 MB)
 ```
 
 Things worth knowing:

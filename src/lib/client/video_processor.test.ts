@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MAX_VIDEO_FILESIZE } from '#app/config.js';
 
 const state = vi.hoisted(() => ({
 	format: 'mp4',
@@ -120,7 +121,7 @@ beforeEach(async () => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-function process_file(size = 1024 ** 3, max_filesize = 100 * 1024 ** 2) {
+function process_file(size = 1024 ** 3, max_filesize = MAX_VIDEO_FILESIZE) {
 	const file = new File([], `video.${state.format}`, { type: `video/${state.format}` });
 	Object.defineProperty(file, 'size', { value: size });
 	return new Promise<any>((resolve) => {
@@ -180,9 +181,9 @@ describe('video worker', () => {
 		state.duration = 900;
 		state.sample_size = 2_000_000;
 		state.audio = true;
-		state.output_sizes = [75 * 1024 ** 2];
+		state.output_sizes = [75_000_000];
 		const result = await process_file();
-		expect(result.buffer.byteLength).toBe(75 * 1024 ** 2);
+		expect(result.buffer.byteLength).toBe(75_000_000);
 		expect(state.conversions.filter((conversion) => !conversion.trim)).toHaveLength(1);
 	});
 
@@ -190,9 +191,9 @@ describe('video worker', () => {
 		state.duration = 900;
 		state.sample_size = 2_000_000;
 		state.audio = true;
-		state.output_sizes = [105 * 1024 ** 2, 92 * 1024 ** 2];
+		state.output_sizes = [105_000_000, 92_000_000];
 		const result = await process_file();
-		expect(result.buffer.byteLength).toBe(92 * 1024 ** 2);
+		expect(result.buffer.byteLength).toBe(92_000_000);
 		const full_conversions = state.conversions.filter((conversion) => !conversion.trim);
 		expect(full_conversions).toHaveLength(2);
 		expect(full_conversions[1].input).toBe(full_conversions[0].input);
@@ -201,9 +202,9 @@ describe('video worker', () => {
 	it('does not spend an extra pass on a long video already using 90% of the limit', async () => {
 		state.duration = 900;
 		state.sample_size = 2_000_000;
-		state.output_sizes = [90 * 1024 ** 2];
+		state.output_sizes = [90_000_000];
 		const result = await process_file();
-		expect(result.buffer.byteLength).toBe(90 * 1024 ** 2);
+		expect(result.buffer.byteLength).toBe(90_000_000);
 		expect(state.conversions.filter((conversion) => !conversion.trim)).toHaveLength(1);
 	});
 
