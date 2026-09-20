@@ -1,4 +1,3 @@
-
 export type ProcessedVideo = {
 	blob: Blob;
 	poster: Blob;
@@ -16,15 +15,12 @@ export type ProcessVideoOptions = {
 
 /**
  * Transcode a video file off the main thread using a Web Worker.
- * Produces a web-optimized MP4 (H.264 + AAC) capped at MAX_VIDEO_RESOLUTION,
- * with bitrate and resolution chosen to land within MAX_VIDEO_FILESIZE.
+ * Keeps WebM inputs as WebM; other formats become MP4 (H.264 + AAC).
+ * Prefers quality within MAX_VIDEO_RESOLUTION and verifies MAX_VIDEO_FILESIZE.
  * Files that are already web-optimized are detected and passed through
- * (as-is for MP4, losslessly remuxed for other containers like MOV).
+ * (as-is for MP4/WebM, with video remuxing for other containers like MOV).
  */
-export function process_video(
-	file: File,
-	options: ProcessVideoOptions
-): Promise<ProcessedVideo> {
+export function process_video(file: File, options: ProcessVideoOptions): Promise<ProcessedVideo> {
 	const { max_resolution, max_filesize, onStatus, onProgress } = options;
 
 	return new Promise((resolve, reject) => {
@@ -52,9 +48,9 @@ export function process_video(
 			if (msg.type === 'result') {
 				worker.terminate();
 				resolve({
-					// Passthrough: the file is already a web-optimized MP4 —
+					// Passthrough: the file is already a suitable MP4 or WebM —
 					// upload the original bytes untouched.
-					blob: msg.passthrough ? file : new Blob([msg.buffer], { type: 'video/mp4' }),
+					blob: msg.passthrough ? file : new Blob([msg.buffer], { type: msg.mime_type }),
 					poster: new Blob([msg.poster_buffer], { type: 'image/webp' }),
 					width: msg.width,
 					height: msg.height,

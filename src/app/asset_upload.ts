@@ -1,7 +1,15 @@
 import { process_asset } from '#lib/client/process_asset.js';
 import { create_video_poster, process_video } from '#lib/client/process_video.js';
 import type { ProcessVideoOptions, ProcessedVideo } from '#lib/client/process_video.js';
-import { EXT_TO_MIME, MAX_IMAGE_WIDTH, MAX_VIDEO_INPUT_BYTES, MAX_VIDEO_FILESIZE, MAX_VIDEO_RESOLUTION, OPTIMIZED_VIDEO_REGEX, VARIANT_WIDTHS } from '#app/config.js';
+import {
+	EXT_TO_MIME,
+	MAX_IMAGE_WIDTH,
+	MAX_VIDEO_INPUT_BYTES,
+	MAX_VIDEO_FILESIZE,
+	MAX_VIDEO_RESOLUTION,
+	OPTIMIZED_VIDEO_REGEX,
+	VARIANT_WIDTHS
+} from '#app/config.js';
 import { get_video_dimensions, get_media_dimensions } from '#lib/client/media_dimensions.js';
 import type { DocumentNode } from 'svedit';
 
@@ -71,10 +79,11 @@ function is_video(file: File): boolean {
 
 /**
  * Check if a video file is marked as already web-optimized via the filename
- * convention (e.g. my_video_optimized.mp4). Such files are uploaded as-is.
+ * convention (e.g. my_video_optimized.mp4 or clip_optimized.webm).
+ * Such files are uploaded as-is if they fit within the size limit.
  */
 function is_preoptimized_video(file: File): boolean {
-	return file.type === 'video/mp4' && OPTIMIZED_VIDEO_REGEX.test(file.name);
+	return ['video/mp4', 'video/webm'].includes(file.type) && OPTIMIZED_VIDEO_REGEX.test(file.name);
 }
 
 /**
@@ -122,10 +131,15 @@ export async function start_processing(blob_url: string, file: File) {
 		try {
 			if (is_preoptimized_video(file)) {
 				// Escape hatch: filename marks the file as already optimized —
-				// upload the raw bytes without transcoding.
+				// upload the raw bytes without transcoding, at any resolution.
+				if (file.size > MAX_VIDEO_FILESIZE) {
+					throw new Error(
+						'Manually optimized videos must be at most 100 MiB. Reduce the file size or remove the _optimized suffix to use automatic compression.'
+					);
+				}
 				const [hash, dims] = await Promise.all([hash_blob(file), get_video_dimensions(file)]);
 				entry.hash = hash;
-				entry.asset_id = `${hash}.mp4`;
+				entry.asset_id = `${hash}.${file.type === 'video/webm' ? 'webm' : 'mp4'}`;
 				entry.original = { blob: file, width: dims.width, height: dims.height };
 				entry.poster = await create_video_poster(file);
 			} else {
@@ -143,7 +157,7 @@ export async function start_processing(blob_url: string, file: File) {
 				// The asset id must be the SHA-256 of the stored (transcoded) bytes —
 				// the server verifies this on upload.
 				entry.hash = await hash_blob(result.blob);
-				entry.asset_id = `${entry.hash}.mp4`;
+				entry.asset_id = `${entry.hash}.${result.blob.type === 'video/webm' ? 'webm' : 'mp4'}`;
 				entry.original = { blob: result.blob, width: result.width, height: result.height };
 				entry.poster = result.poster;
 			}
@@ -174,9 +188,9 @@ export async function start_processing(blob_url: string, file: File) {
 			// over the re-encoded blob: the asset id must always be the SHA-256 of
 			// the stored bytes (the server verifies this on upload).
 			const result = await process_asset(file, {
-								max_width: MAX_IMAGE_WIDTH,
-								variant_widths: VARIANT_WIDTHS
-							});
+				max_width: MAX_IMAGE_WIDTH,
+				variant_widths: VARIANT_WIDTHS
+			});
 			entry.hash = await hash_blob(result.original.blob);
 			entry.original = result.original;
 			entry.variants = result.variants;

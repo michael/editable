@@ -550,29 +550,30 @@ Static raster images (JPEG, PNG, …) are converted to WebP, capped at 4096px wi
 
 ### Videos
 
-Videos are transcoded to a single web-optimized MP4 (H.264 + AAC). Drop an iPhone `.mov` fresh off the camera and it comes out as a downscaled, compressed MP4 that plays everywhere. Anything your browser can decode works as input: MOV, MP4, WebM, MKV, with H.264, HEVC, VP8/VP9 or AV1 inside.
+Videos are optimized automatically in your browser, without quality prompts or external services. WebM inputs stay WebM (VP9, or AV1/VP8 depending on encoder support); other inputs become MP4 (H.264 + AAC). Anything your browser can decode can be considered for conversion, including MOV, MP4, WebM and MKV.
 
 Each dropped video goes through this decision tree:
 
-1. **Filename escape hatch** — a file named `*_optimized.mp4` (or `*.optimized.mp4`) is uploaded byte-identical, bypassing all processing and all caps. Use this when you've deliberately prepared a file — say a high-bitrate 4K export — and want it kept exactly as exported.
-2. **Already good** — if the video is already H.264, within the resolution cap and within the size goal (with 25% tolerance, since re-encoding a marginally-over file costs quality and saves little), nothing is re-encoded: an MP4 is uploaded untouched, and other containers (e.g. an H.264 `.mov`) are losslessly repackaged into an MP4 container.
-3. **Everything else** is transcoded to fit the size goal: the bitrate is derived from the video's duration, and the resolution is chosen as the largest that still looks good at that bitrate — starting from the resolution cap (1440 means landscape 2560×1440 _and_ portrait 1440×2560; videos are never upscaled) and stepping down (1080, 720, 540, …) for long videos where the size budget would otherwise spread too thin. Rotation is preserved.
+1. **Manual escape hatch** — files ending in `_optimized.mp4` or `_optimized.webm` are uploaded byte-identical at any resolution, provided they fit within 100 MiB. The `.optimized` and `-optimized` forms also work. Oversized marked files are rejected; remove the suffix to allow automatic compression or reduce the size yourself. A poster is still generated.
+2. **Already efficient** — compatible MP4 and WebM files within the size limit are preserved when their bitrate relative to resolution and frame rate suggests that further compression risks needless quality loss. This is a conservative heuristic, not a measurement of visual quality. Efficient H.264 video in other containers can be repackaged without re-encoding the video track.
+3. **Automatic optimization** — the preferred output has a short side of up to 1440 pixels (2560×1440 landscape or 1440×2560 portrait), without upscaling. Transcodes cap high frame rates at 30 fps. For clips longer than six seconds, three short sample encodes estimate the size at a preferred quality. Simple footage can use fewer bits than complex footage. When that estimate exceeds the budget, the encoder reduces bitrate and resolution.
+4. **Verify the result** — the finished video must fit within 100 MiB. An oversized result is retried from the original with a lower bitrate, at most twice. A compatible original within the limit is retained when the resulting savings are less than 25%.
 
 Two knobs in `src/app/config.ts`:
 
 ```js
-export const MAX_VIDEO_RESOLUTION = 1440; // cap on the short side: 1080, 1440, …
-export const MAX_VIDEO_FILESIZE = 50 * 1024 * 1024; // size goal for transcoded videos
+export const MAX_VIDEO_RESOLUTION = 1440; // preferred short-side cap for transcodes
+export const MAX_VIDEO_FILESIZE = 100 * 1024 * 1024; // hard ceiling in bytes (100 MiB)
 ```
 
 Things worth knowing:
 
-- The size limit is a goal, not a hard guarantee: browser encoders treat bitrate as a target, so the output may overshoot by a few percent. Short clips usually land well under it — bitrate is also capped where extra bits stop visibly improving quality.
-- For very long videos the goal wins over quality: the encoder goes down to the bottom of the resolution ladder and, past that, simply spreads the budget thin. If the result looks too rough, split the video into parts or upload a deliberate export via the escape hatch.
-- Transcoding uses the browser's hardware-accelerated codecs and shows its progress in the save dialog, but a long 4K clip still takes a while — the "already good" path exists precisely so that well-prepared files skip it entirely.
-- Input files are limited to 2 GB (the converted output is assembled in memory).
-- Decoding HEVC (the default iPhone format) requires an HEVC decoder on your platform; most browsers have one, Firefox on some systems doesn't. If the video can't be converted you get a clear error on save — convert the file manually and re-drop it.
-- A video with an audio track that can't be converted fails loudly rather than uploading without sound.
+- The size limit is a ceiling, not the desired output size. Automatic encoding budgets 90% of it for headroom, and short clips normally use much less. Long, complex footage may need most of the budget and a lower resolution.
+- Quality-based encoding uses WebCodecs quantizer support where available, with a bitrate fallback. Actual quality and speed depend on the browser's encoders. Sampling estimates size; the final size check enforces the limit.
+- Efficient audio is copied when possible; other audio is explicitly encoded to AAC for MP4 or Opus for WebM. Every audio track is included in the size budget, and unsupported audio causes an error instead of a silent video.
+- Transparent WebM is preserved within the size limit because browser encoders cannot reliably preserve its transparency. Oversized transparent WebM needs manual optimization.
+- Input files for automatic processing are limited to 2 GiB. Automatic conversion requires a known duration and one video track. Files that cannot fit after retries produce a clear error.
+- Manually optimized files and preserved originals still need a browser decoder to generate their poster. HEVC decoding, for example, depends on the browser and platform.
 
 ## Create a custom node type
 
