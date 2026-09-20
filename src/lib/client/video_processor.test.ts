@@ -176,6 +176,41 @@ describe('video worker', () => {
 		expect(result.passthrough).toBe(true);
 	});
 
+	it('refines an undersized long video from its original at the same resolution', async () => {
+		state.duration = 900;
+		state.sample_size = 2_000_000;
+		state.audio = true;
+		state.output_sizes = [75 * 1024 ** 2, 95 * 1024 ** 2];
+		const result = await process_file();
+		expect(result.buffer.byteLength).toBe(95 * 1024 ** 2);
+		const full_conversions = state.conversions.filter((conversion) => !conversion.trim);
+		expect(full_conversions).toHaveLength(2);
+		expect(full_conversions[1].input).toBe(full_conversions[0].input);
+		expect(full_conversions[1].video.height).toBe(full_conversions[0].video.height);
+	});
+
+	it.each([110 * 1024 ** 2, 70 * 1024 ** 2, -1])(
+		'keeps the valid first encode when refinement overshoots, shrinks, or fails (%s)',
+		async (retry_size) => {
+			state.duration = 900;
+			state.sample_size = 2_000_000;
+			state.output_sizes = [75 * 1024 ** 2, retry_size];
+			const result = await process_file();
+			expect(result.type).toBe('result');
+			expect(result.buffer.byteLength).toBe(75 * 1024 ** 2);
+			expect(state.conversions.filter((conversion) => !conversion.trim)).toHaveLength(2);
+		}
+	);
+
+	it('does not spend an extra pass on a long video already using 90% of the limit', async () => {
+		state.duration = 900;
+		state.sample_size = 2_000_000;
+		state.output_sizes = [90 * 1024 ** 2];
+		const result = await process_file();
+		expect(result.buffer.byteLength).toBe(90 * 1024 ** 2);
+		expect(state.conversions.filter((conversion) => !conversion.trim)).toHaveLength(1);
+	});
+
 	it('rejects discarded audio instead of silently losing sound', async () => {
 		state.duration = 0.1;
 		state.audio = true;

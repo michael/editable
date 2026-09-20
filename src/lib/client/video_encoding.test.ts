@@ -3,6 +3,7 @@ import { MAX_VIDEO_FILESIZE, OPTIMIZED_VIDEO_REGEX } from '#app/config.js';
 import {
 	choose_encoding,
 	preferred_bitrate,
+	refinement_bitrate,
 	retry_bitrate,
 	sample_ranges,
 	should_preserve_video,
@@ -38,6 +39,26 @@ describe('automatic video planning', () => {
 		expect(encoding.short_side).toBeLessThan(1440);
 		expect(encoding.short_side).toBeGreaterThanOrEqual(540);
 		expect(((encoding.bitrate + 128_000) * 600) / 8).toBeLessThan(MAX_VIDEO_FILESIZE);
+	});
+
+	it('uses the full video budget after lowering resolution for a fifteen-minute clip', () => {
+		const budget = (MAX_VIDEO_FILESIZE * 8 * VIDEO_BUDGET_SAFETY) / 900 - 128_000;
+		const encoding = choose_encoding(2560, 1440, 30, budget, 1440, 'avc', true);
+		expect(encoding.short_side).toBeLessThan(1440);
+		expect(encoding.bitrate).toBe(Math.floor(budget));
+		expect(((encoding.bitrate + 128_000) * 900) / 8).toBeCloseTo(MAX_VIDEO_FILESIZE * 0.9, -3);
+	});
+
+	it('calculates a 95% refinement while reserving the unchanged audio budget', () => {
+		const actual_size = 75 * 1024 ** 2;
+		const bitrate = 700_000;
+		const refined = refinement_bitrate(bitrate, actual_size, MAX_VIDEO_FILESIZE, 900, 128_000);
+		const actual_video_rate = (actual_size * 8) / 900 - 128_000;
+		expect((((actual_video_rate * refined) / bitrate + 128_000) * 900) / 8).toBeCloseTo(
+			MAX_VIDEO_FILESIZE * 0.95,
+			-3
+		);
+		expect(refined).toBeGreaterThan(bitrate);
 	});
 
 	it('does not upscale and treats portrait and landscape equally', () => {

@@ -568,7 +568,7 @@ export const MAX_VIDEO_FILESIZE = 100 * 1024 * 1024; // hard ceiling in bytes (1
 
 Things worth knowing:
 
-- The size limit is a ceiling, not the desired output size. Automatic encoding budgets 90% of it for headroom, and short clips normally use much less. Long, complex footage may need most of the budget and a lower resolution.
+- The size limit is a ceiling, not the desired output size. Automatic encoding budgets 90% of it for headroom, and short clips normally use much less. When file size forces a quality reduction, the selected resolution can use the full video bitrate budget. If that output is below 85% of the limit, one optional encode from the original aims for 95%, at the same resolution. The earlier result is kept if the retry fails, exceeds the maximum, or produces a smaller file. This extra pass can take as long as the first encode. Short clips encoded at the preferred quality are not enlarged to fill space.
 - Quality-based encoding uses WebCodecs quantizer support where available, with a bitrate fallback. Actual quality and speed depend on the browser's encoders. Sampling estimates size; the final size check enforces the limit.
 - Efficient audio is copied when possible; other audio is explicitly encoded to AAC for MP4 or Opus for WebM. Every audio track is included in the size budget, and unsupported audio causes an error instead of a silent video.
 - Transparent WebM is preserved within the size limit because browser encoders cannot reliably preserve its transparency. Oversized transparent WebM needs manual optimization.

@@ -22,6 +22,7 @@ import type { ConversionVideoOptions, ConversionAudioOptions } from 'mediabunny'
 import {
 	choose_encoding,
 	preferred_bitrate,
+	refinement_bitrate,
 	retry_bitrate,
 	sample_ranges,
 	should_preserve_video,
@@ -301,7 +302,7 @@ async function handle_process(data: { file: File; max_resolution: number; max_fi
 				conversion.onProgress = (progress) => {
 					// Reserve space for possible retries; processing is complete only
 					// after the size check and poster generation.
-					self.postMessage({ type: 'progress', progress: 0.1 + (attempt + progress) * 0.28 });
+					self.postMessage({ type: 'progress', progress: 0.1 + (attempt + progress) * 0.21 });
 				};
 			await conversion.execute();
 			if (!target.buffer) throw new Error('Transcoding produced no output.');
@@ -341,6 +342,9 @@ async function handle_process(data: { file: File; max_resolution: number; max_fi
 		// because they can. Fall back to the preferred bitrate if quality mode
 		// is predicted to be unusually expensive at these dimensions.
 		let use_quality = estimated_bitrate <= Math.min(budget_bitrate, preferred * 1.5);
+		let size_constrained = !use_quality && budget_bitrate < preferred;
+		let last_video_options: ConversionVideoOptions = {};
+		let last_bitrate = 0;
 		let buffer: ArrayBuffer | null = null;
 		for (let attempt = 0; attempt < 3; attempt++) {
 			const encoding = choose_encoding(
@@ -349,22 +353,21 @@ async function handle_process(data: { file: File; max_resolution: number; max_fi
 				frame_rate,
 				budget_bitrate,
 				max_resolution,
-				codec
+				codec,
+				size_constrained
 			);
 			post_status(attempt ? 'Adjusting video to fit the size limit…' : 'Optimizing video…');
-			buffer = await convert(
-				{
-					...base_video,
-					...build_resize_options(
-						display_width,
-						display_height,
-						use_quality ? top : encoding.short_side
-					),
-					quality: use_quality ? preferred_quality : new Quality({ bitrate: encoding.bitrate })
-				},
-				undefined,
-				attempt
-			);
+			last_bitrate = encoding.bitrate;
+			last_video_options = {
+				...base_video,
+				...build_resize_options(
+					display_width,
+					display_height,
+					use_quality ? top : encoding.short_side
+				),
+				quality: use_quality ? preferred_quality : new Quality({ bitrate: encoding.bitrate })
+			};
+			buffer = await convert(last_video_options, undefined, attempt);
 			if (buffer.byteLength <= max_filesize) break;
 			budget_bitrate = retry_bitrate(
 				use_quality ? budget_bitrate : encoding.bitrate,
@@ -372,12 +375,43 @@ async function handle_process(data: { file: File; max_resolution: number; max_fi
 				max_filesize
 			);
 			use_quality = false;
+			size_constrained = budget_bitrate < preferred;
 			buffer = null;
 		}
 		if (!buffer)
 			throw new Error(
 				'Could not compress this video below the size limit. Please optimize it manually.'
 			);
+		// Only improve a result whose quality was constrained by file size.
+		// Keep the resolution fixed so the measured rate remains useful, and
+		// retain the valid first result if the optional retry fails or overshoots.
+		if (size_constrained && !use_quality && buffer.byteLength < max_filesize * 0.85) {
+			const higher_bitrate = refinement_bitrate(
+				last_bitrate,
+				buffer.byteLength,
+				max_filesize,
+				duration,
+				audio_bitrate
+			);
+			if (higher_bitrate > last_bitrate) {
+				post_status('Improving video quality within the size limit…');
+				try {
+					const refined = await convert(
+						{
+							...last_video_options,
+							quality: new Quality({ bitrate: higher_bitrate })
+						},
+						undefined,
+						3
+					);
+					if (refined.byteLength <= max_filesize && refined.byteLength > buffer.byteLength) {
+						buffer = refined;
+					}
+				} catch {
+					// The optional improvement must not invalidate a successful encode.
+				}
+			}
+		}
 		// A marginal saving does not justify another lossy generation.
 		if (can_keep_original && buffer.byteLength >= file.size * 0.75) {
 			await send_original();
