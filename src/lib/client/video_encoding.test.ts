@@ -3,7 +3,6 @@ import { MAX_VIDEO_FILESIZE, OPTIMIZED_VIDEO_REGEX } from '#app/config.js';
 import {
 	choose_encoding,
 	preferred_bitrate,
-	refinement_bitrate,
 	retry_bitrate,
 	sample_ranges,
 	should_preserve_video,
@@ -46,19 +45,7 @@ describe('automatic video planning', () => {
 		const encoding = choose_encoding(2560, 1440, 30, budget, 1440, 'avc', true);
 		expect(encoding.short_side).toBeLessThan(1440);
 		expect(encoding.bitrate).toBe(Math.floor(budget));
-		expect(((encoding.bitrate + 128_000) * 900) / 8).toBeCloseTo(MAX_VIDEO_FILESIZE * 0.9, -3);
-	});
-
-	it('calculates a 95% refinement while reserving the unchanged audio budget', () => {
-		const actual_size = 75 * 1024 ** 2;
-		const bitrate = 700_000;
-		const refined = refinement_bitrate(bitrate, actual_size, MAX_VIDEO_FILESIZE, 900, 128_000);
-		const actual_video_rate = (actual_size * 8) / 900 - 128_000;
-		expect((((actual_video_rate * refined) / bitrate + 128_000) * 900) / 8).toBeCloseTo(
-			MAX_VIDEO_FILESIZE * 0.95,
-			-3
-		);
-		expect(refined).toBeGreaterThan(bitrate);
+		expect(((encoding.bitrate + 128_000) * 900) / 8).toBeCloseTo(MAX_VIDEO_FILESIZE * 0.95, -3);
 	});
 
 	it('does not upscale and treats portrait and landscape equally', () => {
@@ -69,7 +56,7 @@ describe('automatic video planning', () => {
 	});
 
 	it('reduces retry budgets and samples multiple portions of a long clip', () => {
-		expect(retry_bitrate(1_000_000, 110, 100)).toBeLessThan(800_000);
+		expect(retry_bitrate(1_000_000, 110, 100)).toBe(Math.floor((1_000_000 * 90) / 110));
 		expect(sample_ranges(5)).toEqual([]);
 		const ranges = sample_ranges(600);
 		expect(ranges).toHaveLength(3);

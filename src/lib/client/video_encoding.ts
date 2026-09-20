@@ -3,7 +3,7 @@ export type OutputVideoCodec = 'avc' | 'vp8' | 'vp9' | 'av1';
 
 const CODEC_FACTORS = { avc: 1, vp8: 1.2, vp9: 0.65, av1: 0.5 };
 const RESOLUTION_LADDER = [1440, 1080, 720, 540, 360, 240, 144];
-export const VIDEO_BUDGET_SAFETY = 0.9;
+export const VIDEO_BUDGET_SAFETY = 0.95;
 
 export function preferred_bitrate(pixels: number, frame_rate: number, codec: OutputVideoCodec) {
 	return Math.round(pixels * frame_rate * 0.075 * CODEC_FACTORS[codec]);
@@ -28,21 +28,7 @@ export function should_preserve_video(
 
 /** A retry always leaves headroom and never increases the previous budget. */
 export function retry_bitrate(bitrate: number, actual_size: number, max_filesize: number) {
-	return Math.floor(bitrate * Math.min(0.8, (max_filesize * 0.85) / actual_size));
-}
-
-/** Estimate a higher video rate from the measured output, reserving audio separately. */
-export function refinement_bitrate(
-	bitrate: number,
-	actual_size: number,
-	max_filesize: number,
-	duration: number,
-	audio_bitrate: number
-) {
-	const actual_video_bitrate = (actual_size * 8) / duration - audio_bitrate;
-	const target_video_bitrate = (max_filesize * 8 * 0.95) / duration - audio_bitrate;
-	if (actual_video_bitrate <= 0 || target_video_bitrate <= actual_video_bitrate) return bitrate;
-	return Math.round(bitrate * Math.min(1.5, target_video_bitrate / actual_video_bitrate));
+	return Math.floor(bitrate * Math.min(0.95, (max_filesize * 0.9) / actual_size));
 }
 
 export function choose_encoding(
