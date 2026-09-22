@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { get_svedit_context } from '#app/svedit_context.js';
+	import { media_link_label } from '#app/media_link_label.js';
 	import type { Nodes } from '#app/document_schema.js';
 	import type { DocumentPath } from 'svedit';
 	import { getContext } from 'svelte';
@@ -11,7 +12,9 @@
 	const prose = getContext<{ is_centered: boolean } | undefined>('prose');
 	let { path }: { path: DocumentPath } = $props();
 	let node: Nodes['supporting_media'] = $derived(svedit.session.get(path));
+	let media_node = $derived(svedit.session.get([...path, 'media']));
 	let render_as_link = $derived(!svedit.editable && node.href);
+	let link_label = $derived(media_link_label(media_node.alt, node.href));
 
 	// The Prose or ProseGridItem node's layout determines alignment
 	let is_centered = $derived(prose?.is_centered);
@@ -34,6 +37,7 @@
 		<a
 			href={node.href}
 			target={render_as_link && node.target !== '_self' ? node.target : undefined}
+			aria-label={link_label}
 			class="group contents"
 		>
 			{@render viewbox(true)}
