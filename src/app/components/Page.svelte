@@ -141,13 +141,13 @@
 				{nav_height}
 			/>
 		{/if}
-		<div class="grow" style="anchor-name: --page-body; --node-caret-boundary: --page-body;">
+		<main class="grow" style="anchor-name: --page-body; --node-caret-boundary: --page-body;">
 			{#if !svedit.editable && app.page_content}
 				{@render app.page_content()}
 			{:else}
 				<NodeArrayProperty class="body-node-array" path={[...path, 'body']} />
 			{/if}
-		</div>
+		</main>
 		<div class="bg-(--background) text-(--foreground)">
 			<Footer path={[...path, 'footer']} />
 		</div>

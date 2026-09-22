@@ -19,7 +19,9 @@
 	slug={null}
 	can_edit={false}
 >
-	<main class="mx-auto flex min-h-[60vh] w-full max-w-7xl items-center justify-center px-5 py-24 sm:px-7 sm:py-32">
+	<div
+		class="mx-auto flex min-h-[60vh] w-full max-w-7xl items-center justify-center px-5 py-24 sm:px-7 sm:py-32"
+	>
 		<div class="max-w-2xl space-y-5 text-center text-balance">
 			<p class="font-mono text-sm font-medium text-(--editing)">{page.status}</p>
 			<h1 class="display-2">
@@ -37,5 +39,5 @@
 				Back home
 			</a>
 		</div>
-	</main>
+	</div>
 </App>
