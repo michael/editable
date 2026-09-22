@@ -12,8 +12,8 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0
       '@mediabunny/aac-encoder':
-        specifier: ^1.50.9
-        version: 1.50.9(mediabunny@1.50.9)
+        specifier: ^1.58.1
+        version: 1.58.1(mediabunny@1.58.1)
       '@sveltejs/adapter-node':
         specifier: 6.0.0-next.8
         version: 6.0.0-next.8(@sveltejs/kit@3.0.0-next.16(@sveltejs/vite-plugin-svelte@7.2.0(svelte@5.56.7(@typescript-eslint/types@8.65.0))(vite@8.1.5(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)))(svelte@5.56.7(@typescript-eslint/types@8.65.0))(typescript@6.0.3)(vite@8.1.5(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)))
@@ -24,8 +24,8 @@ importers:
         specifier: ^2.0.3
         version: 2.0.3
       mediabunny:
-        specifier: ^1.50.9
-        version: 1.50.9
+        specifier: ^1.58.1
+        version: 1.58.1
       nanoid:
         specifier: ^5.1.6
         version: 5.1.16
@@ -372,8 +372,8 @@ packages:
   '@jsquash/webp@1.5.0':
     resolution: {integrity: sha512-KggLoj2MnRSfIqTeKe1EmbljTX2vuV7mh79k89PCL1pyqiDULcPM1L47twxXt0hkb68F70bXiL31MxsuoZtKFw==}
 
-  '@mediabunny/aac-encoder@1.50.9':
-    resolution: {integrity: sha512-wTrGF1Md7XvlYj0KcAszmoKdAxY5t5UPOA5FzDbzLg2olY8FIP2N9JkUScr2nWl3AKiAl3vctATDZu53g92NYA==}
+  '@mediabunny/aac-encoder@1.58.1':
+    resolution: {integrity: sha512-xNoZT56QkNesKY6q5uneHZrPMtEzu6j/AYbJcfs+M2PrdjdTvn9qc+/RqV75WHuiZYSo7csdE80Zu/mE5eNXnw==}
     peerDependencies:
       mediabunny: ^1.0.0
 
@@ -1333,8 +1333,8 @@ packages:
   mdast-util-to-string@4.0.0:
     resolution: {integrity: sha512-0H44vDimn51F0YwvxSJSm0eCDOJTRlmN0R1yBh4HLj9wiV1Dn0QoXGbvFAWj2hSItVTlCmBF1hqKlIyUBVFLPg==}
 
-  mediabunny@1.50.9:
-    resolution: {integrity: sha512-dkv2xPuW7WxmiZrhV4yDzgqhdQcHdQ9g5xRyVIDNoxe8Bo+jnK71bdKMYj12LzJf5YV9hcsufBG9R41TFKfg9g==}
+  mediabunny@1.58.1:
+    resolution: {integrity: sha512-edscMXOwBgUlMT+45wpAHdiXTGukCQb1nOJPE2D+fM4esNhAvGyB2yGGgnEer2VSwhEg+7gMliZDDQQqLaR7nA==}
 
   micromark-core-commonmark@2.0.3:
     resolution: {integrity: sha512-RDBrHEMSxVFLg6xvnXmb1Ayr2WzLAWjeSATAoxwKYJV94TeNavgoIdA0a9ytzDSVzBy2YKFK+emCPOEibLeCrg==}
@@ -2140,9 +2140,9 @@ snapshots:
     dependencies:
       wasm-feature-detect: 1.8.0
 
-  '@mediabunny/aac-encoder@1.50.9(mediabunny@1.50.9)':
+  '@mediabunny/aac-encoder@1.58.1(mediabunny@1.58.1)':
     dependencies:
-      mediabunny: 1.50.9
+      mediabunny: 1.58.1
 
   '@napi-rs/wasm-runtime@1.1.6(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
@@ -2986,7 +2986,7 @@ snapshots:
     dependencies:
       '@types/mdast': 4.0.4
 
-  mediabunny@1.50.9:
+  mediabunny@1.58.1:
     dependencies:
       '@types/dom-mediacapture-transform': 0.1.12
       '@types/dom-webcodecs': 0.1.13

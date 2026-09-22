@@ -21,12 +21,11 @@ export const MAX_IMAGE_WIDTH = VARIANT_WIDTHS[VARIANT_WIDTHS.length - 1];
 export const MAX_VIDEO_RESOLUTION = 1440;
 
 /**
- * Target maximum file size for transcoded videos. The video bitrate (and,
- * for long videos, the resolution) is chosen so the output lands within
- * this size. It is a goal, not a hard limit: browser encoders treat
- * bitrate as a target, so the result may overshoot by a few percent.
+ * Maximum stored video size, including manually optimized uploads. Automatic
+ * encoding prefers a sensible quality and uses this budget only when needed.
+ * The finished file is checked because browser bitrate targets can overshoot.
  */
-export const MAX_VIDEO_FILESIZE = 50 * 1024 * 1024; // 50 MB
+export const MAX_VIDEO_FILESIZE = 100 * 1000 * 1000; // 100 MB
 
 /**
  * Maximum size of a video file we attempt to transcode in the browser.
@@ -36,10 +35,10 @@ export const MAX_VIDEO_INPUT_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB
 
 /**
  * Filename convention that marks a video as already web-optimized.
- * Matching MP4 files are uploaded as-is, skipping the transcode
+ * Matching MP4 and WebM files within the size limit are uploaded as-is
  * (e.g. my_video_optimized.mp4, clip.optimized.mp4).
  */
-export const OPTIMIZED_VIDEO_REGEX = /[._-]optimized\./i;
+export const OPTIMIZED_VIDEO_REGEX = /[._-]optimized\.(?:mp4|webm)$/i;
 
 /** URL prefix for serving assets */
 export const ASSET_BASE = '/assets';
