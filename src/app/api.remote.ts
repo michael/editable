@@ -7,6 +7,7 @@ import { validate_document } from 'svedit';
 import { db, with_transaction, delete_orphaned_assets, touch_asset } from '#app/services.js';
 
 import { build_page_forest } from '#app/page_tree.js';
+import type { SitemapEntry } from '#lib/server/sitemap.js';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
 import { document_schema } from '#app/document_schema.js';
 import { collect_node_ids_in_order } from '#lib/document_graph.js';
@@ -707,17 +708,17 @@ export const get_page_browser_data = query(v.string(), async (pathname) => {
 	return build_page_browser_data(pathname);
 });
 
-/** Return only public URLs reachable from Home using the page tree's references. */
-export const get_sitemap_paths = query(async () => {
+/** Return public URLs and saved timestamps for pages reachable from Home. */
+export const get_sitemap_entries = query(async () => {
 	const { page_forest } = build_page_browser_data('/', true);
-	const paths: string[] = [];
+	const entries: SitemapEntry[] = [];
 	const queue = [...page_forest];
 	for (const page of queue) {
 		if (page.shadowed_by_markdown) continue;
-		paths.push(page.page_href);
+		entries.push({ path: page.page_href, lastmod: page.updated_at ?? page.created_at });
 		queue.push(...page.children);
 	}
-	return paths;
+	return entries;
 });
 
 /**
