@@ -162,7 +162,7 @@
 				{nav_height}
 			/>
 		{/if}
-		<div
+		<main
 			class="grow **:[[id]]:scroll-mt-(--ew-anchor-offset)"
 			style="anchor-name: --page-body; --node-caret-boundary: --page-body;"
 			style:--ew-anchor-offset="{2 * nav_height}px"
@@ -172,7 +172,7 @@
 			{:else}
 				<NodeArrayProperty class="body-node-array" path={[...path, 'body']} />
 			{/if}
-		</div>
+		</main>
 		<div class="bg-(--background) text-(--foreground)">
 			<Footer path={[...path, 'footer']} />
 		</div>
