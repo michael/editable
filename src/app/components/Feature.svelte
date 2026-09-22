@@ -24,7 +24,7 @@
 		<svelte:element
 			this={render_as_link ? 'a' : 'div'}
 			href={render_as_link ? node.href : undefined}
-			target={render_as_link ? node.target : undefined}
+			target={render_as_link && node.target !== '_self' ? node.target : undefined}
 			class="block w-full overflow-hidden outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
 			style:border-radius={border_radius ? 'var(--image-border-radius)' : undefined}
 			style:aspect-ratio={media_aspect_ratio ?? placeholder_aspect_ratio}

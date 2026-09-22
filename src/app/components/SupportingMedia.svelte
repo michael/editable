@@ -31,7 +31,11 @@
 
 <Node {path}>
 	{#if render_as_link}
-		<a href={node.href} target={node.target} class="group contents">
+		<a
+			href={node.href}
+			target={render_as_link && node.target !== '_self' ? node.target : undefined}
+			class="group contents"
+		>
 			{@render viewbox(true)}
 		</a>
 	{:else}
