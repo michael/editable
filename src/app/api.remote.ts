@@ -477,7 +477,10 @@ function get_outgoing_refs(source_document_id: string): string[] {
 	return rows.map((row) => row.target_document_id);
 }
 
-function build_page_browser_data(pathname: string): {
+function build_page_browser_data(
+	pathname: string,
+	home_only = false
+): {
 	home_page_id: string | null;
 	current_document_id: string | null;
 	page_forest: PageTreeNode[];
@@ -530,7 +533,7 @@ function build_page_browser_data(pathname: string): {
 			return a.title.localeCompare(b.title);
 		});
 
-	const root_ids = non_home_root_summaries.map((summary) => summary.document_id);
+	const root_ids = home_only ? [] : non_home_root_summaries.map((summary) => summary.document_id);
 	if (home_page_id && summaries_by_id.has(home_page_id)) root_ids.unshift(home_page_id);
 	const page_forest = build_page_forest(root_ids, summaries_by_id, tree_refs_by_page_id);
 	const home_root = page_forest.find((node) => node.document_id === home_page_id);
@@ -702,6 +705,19 @@ export const logout_admin = command(v.void(), async () => {
 export const get_page_browser_data = query(v.string(), async (pathname) => {
 	require_admin_session(getRequestEvent().locals);
 	return build_page_browser_data(pathname);
+});
+
+/** Return only public URLs reachable from Home using the page tree's references. */
+export const get_sitemap_paths = query(async () => {
+	const { page_forest } = build_page_browser_data('/', true);
+	const paths: string[] = [];
+	const queue = [...page_forest];
+	for (const page of queue) {
+		if (page.shadowed_by_markdown) continue;
+		paths.push(page.page_href);
+		queue.push(...page.children);
+	}
+	return paths;
 });
 
 /**

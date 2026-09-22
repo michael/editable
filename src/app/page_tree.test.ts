@@ -26,6 +26,20 @@ function build_tree(root_ids: string[], links: Record<string, string[]>) {
 }
 
 describe('build_page_forest', () => {
+	it('with only Home as a root, excludes unlisted pages and disconnected cycles', () => {
+		expect(
+			build_tree(['home'], {
+				home: ['listed'],
+				listed: ['nested'],
+				nested: ['home'],
+				unlisted: ['nested', 'private'],
+				private: [],
+				cycle_a: ['cycle_b'],
+				cycle_b: ['cycle_a']
+			})
+		).toEqual([['home', [['listed', [['nested', []]]]]]]);
+	});
+
 	it('places a shared page under Home even when a deeper link occurs first', () => {
 		expect(
 			build_tree(['home'], {
