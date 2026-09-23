@@ -11,7 +11,7 @@
 	Colors, fonts, and corner radius come from app.css.
 -->
 <App {...data}>
-	<main class="bg-(--background) pt-block-generous pb-16 font-sans text-(--foreground)">
+	<div class="bg-(--background) pt-block-generous pb-16 font-sans text-(--foreground)">
 		<div class="mx-auto max-w-7xl space-y-16 px-5 sm:px-7">
 			<header class="space-y-3">
 				<h1 class="display-2">The Editable Design System</h1>
@@ -1720,5 +1720,5 @@ These destinations are real sections on this reference page. Application content
 				</div>
 			</section>
 		</div>
-	</main>
+	</div>
 </App>

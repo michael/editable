@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Nodes } from '#app/document_schema.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
+	import { media_link_label } from '#app/media_link_label.js';
 	import { Node, TextProperty } from 'svedit';
 	import MediaProperty from './MediaProperty.svelte';
 
@@ -9,6 +10,7 @@
 	let node: Nodes['captioned_figure'] = $derived(svedit.session.get(path));
 	let media_node = $derived(svedit.session.get([...path, 'media']));
 	let render_as_link = $derived(!svedit.editable && node.href);
+	let link_label = $derived(media_link_label(media_node.alt, node.href, node.caption?.content));
 	let padding_top_generous = $derived(!section || section.is_start);
 	let padding_bottom_generous = $derived(!section || section.is_end);
 </script>
@@ -26,6 +28,7 @@
 				this={render_as_link ? 'a' : 'div'}
 				href={render_as_link ? node.href : undefined}
 				target={render_as_link && node.target !== '_self' ? node.target : undefined}
+				aria-label={render_as_link ? link_label : undefined}
 				class="block overflow-hidden outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
 				style:border-radius="var(--image-border-radius)"
 				style:aspect-ratio={media_node.width && media_node.height
