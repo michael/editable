@@ -69,6 +69,17 @@
 	--image-border-radius: 2.2rem;
 }
 
+/* Dim custom selection frames when the editor canvas loses focus. */
+.svedit:not(:has(.svedit-canvas:focus-within))
+	:is(.selected-node-overlay, .selected-property-overlay) {
+	background: oklch(from var(--editing-muted) l 0 h / alpha);
+	outline-color: oklch(from var(--editing) l 0 h);
+}
+
+.svedit:not(:has(.svedit-canvas:focus-within)) .property-selection-overlay {
+	outline-color: oklch(from var(--editing) l 0 h);
+}
+
 /* Website fonts */
 @theme {
 	--font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
@@ -125,7 +136,7 @@
 
 /* Introductory paragraphs */
 @utility body-xl {
-	@apply font-sans text-xl leading-normal font-normal lg:text-2xl text-pretty;
+	@apply font-sans text-xl leading-normal font-normal text-pretty lg:text-2xl;
 }
 
 /* Vertical block spacing */

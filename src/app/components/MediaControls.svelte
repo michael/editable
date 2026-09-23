@@ -114,6 +114,13 @@
 		svedit.session.apply(tr, { batch: true });
 	}
 
+	function handle_pointer_down(e: PointerEvent) {
+		// The controls cover the selected property and intercept its native click.
+		// Keep focus on the canvas so Svedit can restore its native selection.
+		if (e.pointerType !== 'touch') e.preventDefault();
+		if (!svedit.canvas_focused) svedit.focus_canvas();
+	}
+
 	const pan_drag = touch_drag({
 		should_start: () => can_pan,
 		on_down(client_x, client_y) {
@@ -134,6 +141,7 @@
 		class="media-controls"
 		style={anchor_style}
 		oncontextmenu={(e) => e.preventDefault()}
+		onpointerdowncapture={handle_pointer_down}
 		ondblclick={handle_double_click}
 		onwheel={handle_wheel}
 		{@attach pan_drag}

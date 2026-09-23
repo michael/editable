@@ -274,6 +274,6 @@
 		left: anchor(left);
 		bottom: anchor(bottom);
 		right: anchor(right);
-		pointer-events: auto;
+		pointer-events: none;
 	}
 </style>
