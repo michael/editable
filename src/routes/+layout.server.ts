@@ -36,10 +36,7 @@ function create_not_found_document(shared_documents): Document {
 	return doc;
 }
 
-export const load: LayoutServerLoad = async ({ locals, depends, url }) => {
-	// Re-derived after saving a page, so favicon and site name update live.
-	depends('app:site_metadata');
-
+export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const has_backend = !VERCEL;
 	const languages = has_backend ? parse_languages(LANG) : [];
 	const language = languages.length ? select_language(languages, url.searchParams.get('lang')) : '';

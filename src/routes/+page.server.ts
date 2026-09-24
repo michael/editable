@@ -8,9 +8,8 @@ import type { PageServerLoad } from './$types';
 export const prerender = !!VERCEL;
 
 // Deliberately no `await parent()` here: depending on layout data would rerun
-// this load (and rebuild the editing session) whenever the layout is
-// invalidated, e.g. for the favicon refresh after a save. has_backend and
-// is_admin reach the page via the layout data merge.
+// this load whenever unrelated layout data changes. Saves explicitly refresh
+// all page data. has_backend and is_admin reach the page via the layout merge.
 export const load: PageServerLoad = async ({ url }) => {
 	if (VERCEL) {
 		return {

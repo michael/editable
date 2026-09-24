@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { setContext, type Snippet } from 'svelte';
+	import { setContext, untrack, type Snippet } from 'svelte';
 	import { dev } from '$app/env';
 	import { DEMO_MODE } from '$app/env/public';
-	import { beforeNavigate, goto, invalidate, refreshAll } from '$app/navigation';
+	import { beforeNavigate, goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { Svedit, KeyMapper, Command, define_keymap } from 'svedit';
@@ -537,14 +537,13 @@
 					save_progress_visible = false;
 					await goto(resolve('/[page_id]', { page_id: result.slug }), {
 						replaceState: true,
-						invalidate: ['app:site_metadata']
+						refreshAll: true
 					});
 					return;
 				}
 
 				this.context.editable = false;
-				invalidate_page_browser_data();
-				await invalidate('app:site_metadata');
+				await refreshAll();
 
 				// Display "saved" message only if saving took longer than 3 seconds
 				if (Date.now() - save_start > 3000) {
@@ -682,8 +681,11 @@
 	key_mapper.push_scope(app_key_map);
 
 	let session = $derived.by(() => {
+		// Equal load data must not reset the editor; language changes still reset history.
 		language;
-		return create_session(initial_doc);
+		const doc_json = initial_doc_json;
+		// Session construction reads reactive internals. Only load data belongs in this dependency list.
+		return untrack(() => create_session(JSON.parse(doc_json)));
 	});
 	let loaded_document_id = $derived(initial_doc.document_id);
 
