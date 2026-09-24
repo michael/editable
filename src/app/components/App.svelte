@@ -2,13 +2,14 @@
 	import { setContext, type Snippet } from 'svelte';
 	import { dev } from '$app/env';
 	import { DEMO_MODE } from '$app/env/public';
-	import { goto, invalidate, refreshAll } from '$app/navigation';
+	import { beforeNavigate, goto, invalidate, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { Svedit, KeyMapper, Command, define_keymap } from 'svedit';
 	import Toolbar from './Toolbar.svelte';
 	import SaveProgressModal from './SaveProgressModal.svelte';
 
+	import { language_href } from '#app/languages.js';
 	import { EXT_TO_MIME } from '#app/config.js';
 	import { create_session } from '#app/session.js';
 	import { create_page_browser, set_page_browser } from '#app/page_browser_context.svelte.js';
@@ -33,6 +34,10 @@
 		can_edit = true,
 		origin = null,
 		document_title = null,
+		languages = [],
+		language = '',
+		translation_revision = '',
+		canonical_path = null,
 		children
 	}: {
 		document?: any;
@@ -43,6 +48,10 @@
 		can_edit?: boolean;
 		origin?: string | null;
 		document_title?: string | null;
+		languages?: string[];
+		language?: string;
+		translation_revision?: string;
+		canonical_path?: string | null;
 		children?: Snippet;
 	} = $props();
 
@@ -58,7 +67,11 @@
 	let toolbar_ref = $state<{ open_page_menu: () => void; close_page_menu: () => void }>();
 	let editable = $state(false);
 	let current_is_new = $state(false);
-	let edit_for_fun_saved_doc = $state<{ document_id: string; doc_json: string } | null>(null);
+	let edit_for_fun_saved_doc = $state<{
+		document_id: string;
+		language: string;
+		doc_json: string;
+	} | null>(null);
 	let is_admin = $derived(server_is_admin);
 	let is_admin_mode = $derived(editable && is_admin);
 	const is_demo_mode = DEMO_MODE;
@@ -76,7 +89,55 @@
 	let mobile_touch_active = $state(false);
 	let mobile_touch_started_at_page_end = $state(false);
 
+	let switching_language = $state(false);
+	let translation_mode = $derived(!is_new && languages.length > 1 && language !== languages[0]);
+
+	async function switch_language(next_language: string, action: 'save' | 'discard' = 'discard') {
+		if (save_progress_visible || switching_language || !languages.includes(next_language)) return;
+		if (action === 'save') {
+			await app_commands.save_document.execute();
+			if (editable) return;
+		}
+		switching_language = true;
+		try {
+			await goto(language_href(page.url.href, next_language, languages[0]));
+			editable = false;
+		} finally {
+			switching_language = false;
+		}
+	}
+
+	beforeNavigate((navigation) => {
+		if (!languages.length || switching_language) return;
+		if (
+			save_progress_visible ||
+			(editable &&
+				JSON.stringify(session.to_json()) !== initial_doc_json &&
+				!confirm('Discard your unsaved changes?'))
+		)
+			navigation.cancel();
+	});
+
 	const app = {
+		get canonical_path() {
+			return canonical_path;
+		},
+		get languages() {
+			return is_new ? [] : languages;
+		},
+		get language() {
+			return language;
+		},
+		get translation_mode() {
+			return translation_mode;
+		},
+		get has_unsaved_changes() {
+			return editable && JSON.stringify(session.to_json()) !== initial_doc_json;
+		},
+		get saving() {
+			return save_progress_visible || switching_language;
+		},
+		switch_language,
 		get page_content() {
 			return can_edit ? undefined : children;
 		},
@@ -332,7 +393,10 @@
 			}
 
 			const saved_doc_json =
-				has_backend && !is_admin && edit_for_fun_saved_doc?.document_id === loaded_document_id
+				has_backend &&
+				!is_admin &&
+				edit_for_fun_saved_doc?.document_id === loaded_document_id &&
+				edit_for_fun_saved_doc.language === language
 					? edit_for_fun_saved_doc.doc_json
 					: initial_doc_json;
 			session = create_session(JSON.parse(saved_doc_json));
@@ -342,10 +406,11 @@
 
 	class SaveCommand extends Command {
 		is_enabled() {
-			return can_edit && editable;
+			return can_edit && editable && !save_progress_visible;
 		}
 
 		async execute() {
+			if (save_progress_visible) return;
 			// Keep this log so the saved document can be copied into default_site.js.
 			const doc_json = session.to_json();
 			if (dev) console.log('Saved', doc_json);
@@ -354,11 +419,32 @@
 				if (has_backend && !is_admin) {
 					edit_for_fun_saved_doc = {
 						document_id: loaded_document_id,
+						language,
 						doc_json: JSON.stringify(doc_json)
 					};
 				}
 				session.selection = null;
 				this.context.editable = false;
+				return;
+			}
+
+			if (translation_mode) {
+				save_progress_visible = true;
+				save_progress_done = false;
+				save_progress_message = 'Saving translation…';
+				try {
+					const { save_translations } = await import('#app/api.remote.js');
+					await save_translations({ ...doc_json, language, translation_revision });
+					editable = false;
+					session.selection = null;
+					await refreshAll();
+				} catch (err) {
+					const message =
+						err?.body?.message ?? (err instanceof Error ? err.message : 'Save failed.');
+					alert(`${message} Your changes have not been lost.`);
+				} finally {
+					save_progress_visible = false;
+				}
 				return;
 			}
 
@@ -419,7 +505,8 @@
 				const result: { ok: boolean; document_id?: string; slug?: string; created?: boolean } =
 					await save_document({
 						...doc_json,
-						create: current_is_new
+						create: current_is_new,
+						language: languages.length ? languages[0] : undefined
 					});
 
 				if (mapping) {
@@ -446,6 +533,8 @@
 				// When a new document has been created, return and redirect to the new url
 				if (result?.created && result.document_id && result.slug) {
 					current_is_new = false;
+					this.context.editable = false;
+					save_progress_visible = false;
 					await goto(resolve('/[page_id]', { page_id: result.slug }), {
 						replaceState: true,
 						invalidate: ['app:site_metadata']
@@ -592,7 +681,10 @@
 	});
 	key_mapper.push_scope(app_key_map);
 
-	let session = $derived.by(() => create_session(initial_doc));
+	let session = $derived.by(() => {
+		language;
+		return create_session(initial_doc);
+	});
 	let loaded_document_id = $derived(initial_doc.document_id);
 
 	$effect(() => {

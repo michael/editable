@@ -1,4 +1,5 @@
-import { VERCEL } from '$app/env/private';
+import { language_href, parse_languages, select_language } from '#app/languages.js';
+import { LANG, VERCEL } from '$app/env/private';
 import { default_site_document } from '#app/default_site.js';
 import type { PageServerLoad } from './$types';
 
@@ -10,7 +11,7 @@ export const prerender = !!VERCEL;
 // this load (and rebuild the editing session) whenever the layout is
 // invalidated, e.g. for the favicon refresh after a save. has_backend and
 // is_admin reach the page via the layout data merge.
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ url }) => {
 	if (VERCEL) {
 		return {
 			document: default_site_document,
@@ -18,6 +19,14 @@ export const load: PageServerLoad = async () => {
 		};
 	}
 
-	const { get_home_document } = await import('#app/api.remote.js');
-	return await get_home_document();
+	const { get_home_document, get_translated_document } = await import('#app/api.remote.js');
+	const result = await get_home_document();
+	const languages = parse_languages(LANG);
+	if (!languages.length) return result;
+	const language = select_language(languages, url.searchParams.get('lang'));
+	return {
+		...result,
+		canonical_path: language_href('/', language, languages[0]),
+		...(await get_translated_document({ document_id: result.document.document_id, language }))
+	};
 };

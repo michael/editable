@@ -5,6 +5,13 @@ import { getContext, type Snippet } from 'svelte';
  * the auth dialog state and its handlers.
  */
 export type AppContext = {
+	readonly languages: string[];
+	readonly language: string;
+	readonly translation_mode: boolean;
+	readonly has_unsaved_changes: boolean;
+	readonly saving: boolean;
+	readonly canonical_path: string | null;
+	switch_language: (language: string, action?: 'save' | 'discard') => Promise<void>;
 	/** Optional body for read-only routes using the shared site layout. */
 	readonly page_content?: Snippet;
 	readonly has_backend: boolean;

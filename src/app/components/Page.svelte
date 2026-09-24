@@ -6,6 +6,7 @@
 	import { TextProperty, Node, NodeArrayProperty } from 'svedit';
 	import Nav from './Nav.svelte';
 	import Footer from './Footer.svelte';
+	import LanguageSwitcher from './LanguageSwitcher.svelte';
 	import MediaProperty from './MediaProperty.svelte';
 	import { extract_page_metadata, get_social_image } from '#app/page_metadata.js';
 	import TableOfContents, { type TocEntry } from './TableOfContents.svelte';
@@ -25,7 +26,9 @@
 			: page_image?.src?.toLowerCase().endsWith('.svg')
 	);
 	let canonical_url = $derived(
-		app.origin && !app.is_new ? `${app.origin}${app.slug ? `/${app.slug}` : '/'}` : null
+		app.origin && !app.is_new
+			? `${app.origin}${app.canonical_path ?? (app.slug ? `/${app.slug}` : '/')}`
+			: null
 	);
 	let social_image = $derived(get_social_image(head_metadata.preview_media_node));
 	let social_image_url = $derived(social_image ? `${app.origin || ''}${social_image.url}` : null);
@@ -151,6 +154,7 @@
 		<div class="bg-(--background) text-(--foreground)">
 			<Footer path={[...path, 'footer']} />
 		</div>
+		<LanguageSwitcher />
 		{#if svedit.editable}
 			<div class="border-t border-(--stroke) bg-(--muted) text-(--foreground)">
 				<div class="mx-auto max-w-xl">

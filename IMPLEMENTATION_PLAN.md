@@ -1,5 +1,11 @@
 # Multi-language support implementation plan
 
+## First implementation status
+
+The first experimental implementation includes configuration, the additive translations table, self-contained annotation substitution, sparse saves with revision conflict checks, server-side rejection of structural edits, shared nav/footer translation, the footer switcher, language-preserving links, and translated page metadata. Svedit has no language-specific changes. Focused codec checks and Svelte diagnostics accompany the implementation; UI validation is manual.
+
+The richer design below remains a roadmap. Not included yet: source-hash/review indicators, per-property reset controls, translated drawer/preview summaries, alternate-language SEO links/sitemap entries, and explicit right-to-left/fallback-span language handling. The current table omits `source_hash`; revision tokens protect against saving stale originals/translations. Saves compare the submitted combined graph against the latest original and atomically update differing properties, with unchanged overrides left alone. Nested annotation subgraphs are rejected in this experiment; the current annotation types have scalar properties.
+
 ## Product decision and rationale
 
 **Decision: develop multi-language support as a deliberately limited, opt-in experimental feature.** Its behavior, configuration, and translation storage format may change, and the feature may be removed if it does not fit Editable. Treat it as an experiment with a maintenance cost, not a small switcher enhancement. Validate the editing boundary first and use a real bilingual site to drive the first implementation.
@@ -38,7 +44,7 @@ Keep one original language, one structure, text-only overrides, explicit languag
 
 The detailed plan below records necessary edge cases, not equal priority for every enhancement. For the initial rollout, prioritize a complete and safe read/edit/save/switch workflow. Rich-text correctness, original-data isolation, shared-record ownership, stale-save protection, and preserving unsaved edits cannot be deferred. Translation progress dashboards, elaborate review tooling, and additional discovery surfaces can wait; a basic source-changed indication is enough initially. Keep public URL and metadata behavior coherent from the outset.
 
-The first technical spike is a decision gate: can translation mode reliably restrict edits to text without invasive changes throughout Svedit and every application component? If it requires fragile interception of core editing behavior, pause and reconsider the editing interface or defer the feature. Do not ship a visually restricted editor that can still corrupt originals through keyboard or paste operations.
+Keep Svedit language-agnostic. The application loads substituted JSON and routes saves by language. The server rejects translated saves that change structure, media, or other shared properties, leaving the local draft open; no editor transaction interception is required.
 
 ### When to build it, and when to defer it
 
@@ -125,7 +131,7 @@ Use `?lang=de` for translated pages. Keep the original at `/` or `/about` withou
 - An explicit original-language parameter is equivalent to the parameter-free URL.
 - Preserve other query parameters and the hash when switching languages.
 - Preserve the chosen language on same-site page navigation, page drawer navigation, and historical-slug redirects. External links, asset URLs, and hash-only links retain their behavior.
-- Use a shared URL helper at rendering/navigation boundaries; never write language parameters into stored `href` values. Cover link marks, buttons, cards, nav/footer links, and programmatic navigation.
+- Substitute internal `href` values on the backend after applying text translations. Content components keep rendering `node.href` and need no language helpers or context. Normalize injected language parameters at the save boundary so they do not become stored content. Keep canonical references separate from navigation URLs in application data such as the page drawer.
 - Do not add automatic browser-language detection or cookie persistence initially. The URL is the single source of truth for SSR, sharing, refresh, and back/forward navigation.
 - Include language in remote-query arguments and cache keys, rather than relying on hidden request state. Refresh/invalidation must distinguish languages.
 
@@ -181,7 +187,7 @@ Ownership is local to each text property. Assume text attachment nodes are never
 - Treat an intentionally empty translation as a value. Row absence alone means fallback. Resetting to the original removes the override and restores the original property with its original attachment closure on the next overlay.
 - Original formatting/link edits do not silently mutate an existing translation's nodes. They change the source hash and can flag the translation for review. Removing an original annotation does not invalidate a self-contained translation that still uses its own equivalent annotation.
 
-Existing internal-slug maintenance must also rewrite matching internal `href` values inside stored translation payloads; the current original-document rewrite alone is insufficient. Keep `document_refs` based on the shared original structure as today; translation-owned link destinations do not define additional structural page-tree edges. Language query parameters remain a rendering concern and are not persisted in annotation nodes.
+Existing internal-slug maintenance must also rewrite matching internal `href` values inside stored translation payloads; the current original-document rewrite alone is insufficient. Keep `document_refs` based on the shared original structure as today; translation-owned link destinations do not define additional structural page-tree edges. Language query parameters are added by the backend document projection and removed at the save boundary; they are not persisted in annotation nodes.
 
 Verify the exact Svedit attachment shape and normalization behavior before implementing the payload codec. Add round-trip fixtures for both `marks` and `annotations`, including multiple references to one node within a single property.
 
@@ -236,7 +242,7 @@ Use server-issued hashes of the exact canonical records and language-specific tr
 
 Translation mode permits editing text and its supported inline formatting. It must not permit inserting, deleting, reordering, or replacing structural nodes; changing media; changing layouts; creating pages; duplicating pages; or changing page slugs or structural link properties. Editing link marks inside a translated text property changes only that translation’s owned link nodes and is permitted.
 
-Enforce this at both the editor transaction boundary and the server write boundary. Hiding toolbar buttons is insufficient: Enter, Backspace across blocks, paste, drag/drop, and keyboard shortcuts can also change structure. Inspect Svedit's current extension points; if needed, add a small supported transaction-policy API upstream rather than patching `node_modules`.
+Enforce this at the server write boundary. The local editor remains unchanged and may produce structural edits through Enter, Backspace, paste, or drag/drop; reject such a translated save with an actionable message and retain the draft. Make structural changes in the main language. Do not modify Svedit for language awareness.
 
 - Keep translated text editable through `TextProperty`, including page title/description and shared nav/footer labels.
 - Expose the active language and provide a per-property “use original” action. Distinguish fallback from overridden text and indicate translations needing review without adding database terminology to the UI.
@@ -265,11 +271,11 @@ Special cases:
 
 ## Delivery sequence
 
-1. **Establish the representation and editor boundary.** Verify Svedit attachment serialization and a viable transaction guard. Add representative rich-text fixtures and decide the exact payload contract before building the UI.
+1. **Establish the representation and editor boundary.** Verify Svedit attachment serialization and server-side structural comparison. Add representative rich-text fixtures and decide the exact payload contract before building the UI.
 2. **Add configuration and storage.** Implement language parsing/URL helpers, the additive migration, the pure text codec, and backend translation access. Prove disabled mode leaves existing documents untouched.
 3. **Implement translated reads.** Preserve ownership while composing, batch-fetch overrides, overlay before SSR, and pass language explicitly through remote queries. Cover home, slug, shared documents, previews, and markdown/404 exceptions.
 4. **Implement safe writes and lifecycle.** Add authenticated sparse patches, source/revision checks, equality-based deletion, reset, original-save cleanup, and page-deletion cleanup. Deleting a page must not delete shared nav/footer translations. Review migration helpers so property renames either migrate translation keys explicitly or remove obsolete rows.
-5. **Integrate translation editing.** Apply text-only transaction policy, select the correct save command, isolate histories, and preserve drafts on save/switch failures. Keep original editing behavior intact.
+5. **Integrate translation editing.** Keep local editing language-agnostic, select the correct save command, isolate histories, and preserve drafts on save/switch failures. Keep original editing behavior intact.
 6. **Add switching and public navigation.** Place the switcher, propagate language in links, update HTML language and metadata, and verify cache/invalidation behavior.
 7. **Document and validate rollout.** Update README/config examples and run the checks below. Deploy the additive migration with translations disabled first, then enable an additional language on a test site.
 
@@ -282,7 +288,7 @@ Add focused Vitest coverage for the feature's invariants:
 - Rich text: changed lengths, emoji/non-ASCII ranges using Svedit's indexing convention, formatting-only differences, empty translations, local attachment ID remapping, self-contained translated link properties, source annotation deletion, internal-slug rewrites in translation records, and semantic equality despite regenerated IDs.
 - Saves: unauthenticated/unsupported-language rejection; forged ownership/non-text edits rejection; insert/update/delete/reset; unchanged fallback creates no rows; other languages remain untouched; source/translation conflicts preserve drafts; multi-record writes roll back atomically.
 - Lifecycle: new blocks fall back; reorder preserves translations; removed nodes/properties/pages clean up correctly; shared translations survive page deletion; duplication copies originals only; source edits retain valid translations with review status.
-- Editor policy: structural keyboard/paste/drag transactions are rejected while text edits and supported formatting work; undo does not cross languages.
+- Save policy: translated saves containing structural keyboard/paste/drag edits are rejected without losing the draft; text and supported formatting save successfully; undo does not cross languages.
 - Routes and URLs: direct translated requests, internal navigation, back/forward, hashes/query preservation, old-slug redirects, metadata, remote-query language isolation, and markdown exceptions.
 - Compatibility: without opt-in configuration, existing fixtures retain the same load/save, links, query handling, metadata, HTML language, and UI behavior; persisted translation rows do not activate the feature; disabling translation leaves original JSON intact; `VERCEL=1` builds without evaluating backend imports.
 
