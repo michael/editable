@@ -59,6 +59,15 @@ it('saves sparse page/shared translations, protects originals, rejects stale and
 	input.nodes[footer_property.node_id][footer_property.property_id].content = 'Deutsche Fußzeile';
 	save_translated_document(input);
 	expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(2);
+	const stored = db
+		.prepare('SELECT value FROM translations WHERE node_id = ? AND property_id = ?')
+		.get(id, 'title') as { value: string };
+	expect(JSON.parse(stored.value)).toEqual({
+		content: 'Deutscher Titel',
+		marks: [],
+		annotations: [],
+		nodes: {}
+	});
 	expect(
 		db
 			.prepare('SELECT * FROM translations WHERE document_id = ?')

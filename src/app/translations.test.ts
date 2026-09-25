@@ -54,11 +54,9 @@ describe('experimental translation boundaries', () => {
 		const original = fixture();
 		const working = structuredClone(original);
 		const payload = {
-			translation: {
-				content: 'Hallo Welt',
-				marks: [{ start_offset: 0, end_offset: 10, node_id: 'translated_link' }],
-				annotations: []
-			},
+			content: 'Hallo Welt',
+			marks: [{ start_offset: 0, end_offset: 10, node_id: 'translated_link' }],
+			annotations: [],
 			nodes: {
 				translated_link: { id: 'translated_link', type: 'link', href: '/about', target: '_self' }
 			}
@@ -103,10 +101,12 @@ describe('experimental translation boundaries', () => {
 	it('keeps empty translations and removes original marks even without replacements', () => {
 		const working = fixture();
 		replace_translation(working, 'paragraph', 'content', {
-			translation: { content: '', marks: [], annotations: [] },
+			content: '',
+			marks: [],
+			annotations: [],
 			nodes: {}
 		});
 		expect(working.nodes.bold).toBeUndefined();
-		expect(working.nodes.paragraph.content.content).toBe('');
+		expect(working.nodes.paragraph.content).toEqual({ content: '', marks: [], annotations: [] });
 	});
 });

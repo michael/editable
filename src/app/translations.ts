@@ -2,7 +2,7 @@ import { document_schema } from './document_schema.js';
 import type { Document, DocumentNode, NodeSchema, Text } from 'svedit';
 
 const schema: Record<string, NodeSchema> = document_schema;
-export type TranslationPayload = { translation: Text; nodes: Record<string, DocumentNode> };
+export type TranslationPayload = Text & { nodes: Record<string, DocumentNode> };
 
 export function stable_json(value: unknown): string {
 	return JSON.stringify(value, (_key, entry) =>
@@ -46,21 +46,21 @@ export function text_payload(
 		}
 		nodes[node.id] = structuredClone(node);
 	}
-	return { translation, nodes };
+	return { ...translation, nodes };
 }
 
 export function normalized_payload(payload: TranslationPayload) {
 	const nodes: Record<string, DocumentNode> = {};
-	const translation = structuredClone(payload.translation);
+	const { nodes: original_nodes, ...translation } = structuredClone(payload);
 	const ids = new Map<string, string>();
 	for (const range of [...translation.marks, ...translation.annotations]) {
 		const original_id = range.node_id;
 		if (!ids.has(original_id)) ids.set(original_id, `annotation${ids.size}`);
 		const id = ids.get(original_id)!;
 		range.node_id = id;
-		nodes[id] = { ...payload.nodes[original_id], id };
+		nodes[id] = { ...original_nodes[original_id], id };
 	}
-	return stable_json({ translation, nodes });
+	return stable_json({ ...translation, nodes });
 }
 
 /** Substitute on a disposable graph; the canonical document remains untouched. */
@@ -73,21 +73,22 @@ export function replace_translation(
 	if (schema[doc.nodes[node_id]?.type]?.properties[property_id]?.type !== 'text') {
 		throw new Error('Translation target is not a text property');
 	}
+	const { nodes: payload_nodes, ...text } = payload;
 	const local_doc = {
 		document_id: doc.document_id,
 		nodes: {
-			...payload.nodes,
-			[node_id]: { ...doc.nodes[node_id], [property_id]: payload.translation }
+			...payload_nodes,
+			[node_id]: { ...doc.nodes[node_id], [property_id]: text }
 		}
 	};
 	const checked = text_payload(local_doc, node_id, property_id);
-	if (Object.keys(checked.nodes).length !== Object.keys(payload.nodes).length) {
+	if (Object.keys(checked.nodes).length !== Object.keys(payload_nodes).length) {
 		throw new Error('Translation contains unreferenced nodes');
 	}
 	const original = text_payload(doc, node_id, property_id);
-	const translation = structuredClone(checked.translation);
+	const { nodes: checked_nodes, ...translation } = checked;
 	const remapped = new Map<string, string>();
-	for (const id of Object.keys(checked.nodes)) {
+	for (const id of Object.keys(checked_nodes)) {
 		let next_id = `translation-${node_id}-${property_id}-${remapped.size}`;
 		while (doc.nodes[next_id]) next_id = `t-${next_id}`;
 		remapped.set(id, next_id);
@@ -95,7 +96,7 @@ export function replace_translation(
 	for (const id of Object.keys(original.nodes)) delete doc.nodes[id];
 	for (const range of [...translation.marks, ...translation.annotations])
 		range.node_id = remapped.get(range.node_id)!;
-	for (const [id, node] of Object.entries(checked.nodes)) {
+	for (const [id, node] of Object.entries(checked_nodes)) {
 		const next_id = remapped.get(id)!;
 		doc.nodes[next_id] = { ...node, id: next_id };
 	}
