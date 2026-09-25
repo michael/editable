@@ -15,6 +15,7 @@ import {
 	SelectParentCommand
 } from 'svedit';
 import type { DocumentNode, DocumentPath, NodeSelection, Text, Transaction } from 'svedit';
+import type { EditorState } from './app_context.js';
 import nanoid from './nanoid.js';
 import {
 	CycleLayoutCommand,
@@ -142,7 +143,6 @@ async function replace_media(
 	file: File,
 	blob_url: string
 ) {
-	if (session.config.allow_structural_changes === false) return;
 	const node = session.get(path);
 	if (node.type !== 'image' && node.type !== 'video') return;
 
@@ -259,7 +259,6 @@ export const document_config = {
 		set_properties(tr, [target_node.id], MEDIA_DEFAULTS);
 	},
 	handle_media_paste: async (session, pasted_media) => {
-		if (session.config.allow_structural_changes === false) return;
 		if (session.selection.type === 'property') {
 			const node = session.get(session.selection.path);
 			if (node.type === 'image' || node.type === 'video') {
@@ -356,14 +355,14 @@ export const document_config = {
 	 * Factory function to create Svedit commands and keymap.
 	 * Called by Svedit component with the svedit context.
 	 */
-	create_commands_and_keymap: (context) => {
+	create_commands_and_keymap: (context, editor_state: EditorState) => {
 		// Structural commands share a capability without knowing why it is disabled.
 		const structural_context = {
 			get session() {
 				return context.session;
 			},
 			get editable() {
-				return context.editable && context.session.config.allow_structural_changes !== false;
+				return context.editable && editor_state.allow_structural_changes;
 			}
 		};
 		// Create command instances with the provided context
@@ -386,8 +385,8 @@ export const document_config = {
 			cycle_node_type_previous: new CycleNodeTypeCommand('previous', structural_context),
 			toggle_accordion: new ToggleAccordionCommand(context),
 			toggle_link: new ToggleLinkCommand(context),
-			remove_link: new RemoveLinkCommand(context),
-			edit_link: new EditLinkCommand(context),
+			remove_link: new RemoveLinkCommand(context, editor_state),
+			edit_link: new EditLinkCommand(context, editor_state),
 			edit_image: new EditImageCommand(structural_context),
 			replace_media: new ReplaceMediaCommand(structural_context),
 			duplicate_nodes: new DuplicateNodesCommand(structural_context)
