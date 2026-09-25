@@ -101,7 +101,7 @@
 		}
 		switching_language = true;
 		try {
-			await goto(language_href(page.url.href, next_language, languages[0]));
+			await goto(language_href(page.url.href, next_language, languages[0]), { reset: false });
 			editable = false;
 		} finally {
 			switching_language = false;
