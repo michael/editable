@@ -46,9 +46,9 @@ const where =
 	'Set it in .env locally, via `fly secrets set` on Fly, or in the server .env on a VPS.';
 
 export const variables = defineEnvVars({
-	LANG: {
+	LANGUAGES: {
 		description:
-			'Experimental translations: comma-separated language tags, original first (en,de). Ordinary OS locale values are ignored.',
+			'Experimental translations: comma-separated language tags, original first (en,de).',
 		schema: optional((value) => value ?? '')
 	},
 	ADMIN_PASSWORD: {

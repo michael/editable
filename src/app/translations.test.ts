@@ -37,9 +37,12 @@ function fixture(): Document {
 }
 
 describe('experimental translation boundaries', () => {
-	it('ignores OS locales and preserves query/hash when switching', () => {
+	it('parses opt-in languages and preserves query/hash when switching', () => {
 		expect(parse_languages(undefined)).toEqual([]);
-		expect(parse_languages('en_US.UTF-8')).toEqual([]);
+		expect(parse_languages('  ')).toEqual([]);
+		expect(parse_languages('en')).toEqual([]);
+		expect(() => parse_languages('en_US.UTF-8')).toThrow();
+		expect(() => parse_languages('en,')).toThrow();
 		expect(parse_languages('en,de,en')).toEqual(['en', 'de']);
 		expect(language_href('/about?ref=test#contact', 'de', 'en')).toBe(
 			'/about?ref=test&lang=de#contact'

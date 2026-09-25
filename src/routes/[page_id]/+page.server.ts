@@ -1,7 +1,7 @@
 import { language_href, parse_languages, select_language } from '#app/languages.js';
 import { error, redirect } from '@sveltejs/kit';
 import { dev } from '$app/env';
-import { LANG, VERCEL } from '$app/env/private';
+import { LANGUAGES, VERCEL } from '$app/env/private';
 import { get_markdown_page, get_markdown_page_pathnames } from '#app/markdown/registry.js';
 import { convert_markdown } from '#app/markdown/convert.js';
 import { compose_markdown_document } from '#app/markdown/compose.js';
@@ -19,7 +19,7 @@ export function entries() {
 
 // Deliberately no `await parent()` here — see routes/+page.server.ts.
 export const load: PageServerLoad = async ({ params, url }) => {
-	const languages = VERCEL ? [] : parse_languages(LANG);
+	const languages = VERCEL ? [] : parse_languages(LANGUAGES);
 	const language = languages.length ? select_language(languages, url.searchParams.get('lang')) : '';
 	// Configured markdown pages win over database slugs.
 	const markdown_page = get_markdown_page(`/${params.page_id}`);

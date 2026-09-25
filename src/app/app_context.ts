@@ -1,12 +1,8 @@
 import { getContext, type Snippet } from 'svelte';
 
-/** Live editor capabilities, exposed through reactive getters. */
-export type EditorState = {
-	readonly allow_structural_changes: boolean;
-};
-
 /** App state and handlers provided by App.svelte. */
-export type AppContext = EditorState & {
+export type AppContext = {
+	readonly allow_structural_changes: boolean;
 	readonly languages: string[];
 	readonly language: string;
 	readonly translation_mode: boolean;

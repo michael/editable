@@ -105,20 +105,20 @@ Two details must drive the implementation:
 
 ### Environment contract
 
-Use `LANG` as requested, replacing the earlier `PUBLIC_LANG` proposal:
+Use the `LANGUAGES` variable:
 
 ```dotenv
-LANG="en,de,es"
+LANGUAGES="en,de,es"
 ```
 
 Declare it as optional server configuration in `src/env.ts` and expose only the parsed application language configuration through load data. Add a commented experimental example to `.env.example` and document it in the README.
 
-`LANG` is also a conventional operating-system locale variable, so its mere presence cannot count as opting in. Reserve the comma-separated list form for Editable: only a list containing at least two distinct valid language tags enables the experiment. Ignore inherited single locale values such as `en_US.UTF-8`, `C.UTF-8`, or `en`. Verify environment-loading precedence during implementation so a documented application setting actually takes effect even when the shell supplies `LANG`; include a process-level configuration example if needed.
+The plural name avoids conflicts with operating-system locale variables such as `LANG`. Use normal environment loading without custom precedence or locale detection.
 
 - Missing or blank: translations are disabled, current URLs and document behavior remain unchanged, and the switcher is absent. Keep the existing English HTML language default without asserting that legacy content is English.
 - A single value, or a list with fewer than two distinct languages: leave the feature disabled and preserve all existing behavior. There is no separate single-language configuration mode in this experiment.
 - Multiple languages: first is `main_language`; the rest are additional languages. Preserve configured order.
-- Trim entries, canonicalize valid language tags, deduplicate, and reject malformed comma-separated opt-in lists with a useful startup error. Ordinary inherited single-value OS locales must not cause a startup error.
+- Trim entries, canonicalize valid language tags, deduplicate, and reject malformed comma-separated opt-in lists with a useful startup error.
 - Accept both generic and regional tags, such as `en`, `de`, and `en-GB`. Only configured tags are selectable. Missing translations fall directly back to the original; regional fallback chains are outside this release.
 - Removing an additional language hides it and rejects new writes for it, but retains its rows for later re-enabling.
 - Changing the first language reinterprets the original JSON; it does not translate it. Document that this requires an explicit content migration. Merely reordering additional languages is safe.
@@ -242,7 +242,7 @@ Use server-issued hashes of the exact canonical records and language-specific tr
 
 Translation mode permits editing text and its supported inline formatting. It must not permit inserting, deleting, reordering, or replacing structural nodes; changing media; changing layouts; creating pages; duplicating pages; or changing page slugs or structural link properties. Editing link marks inside a translated text property changes only that translation’s owned link nodes and is permitted.
 
-Derive `allow_structural_changes` in the app: it is true except when editing a translation. Expose this generic capability as a reactive editor-state getter on the app context. Session configuration only wires that live context into commands and media callbacks; it does not store the capability. Changing the capability does not recreate the session or discard history. Structural commands use a restricted command context, and editor controls and browser input handlers check the same capability. Hide structural controls, prevent boundary deletion from merging blocks, block node cut and drag/drop, and paste plain text into existing text properties. Enter may add a newline where allowed, but cannot split or insert blocks. Text and inline formatting, including translation-owned links, remain editable. Use the standard Svedit session; neither Svedit nor content components need language awareness.
+Derive `allow_structural_changes` in the app: it is true except when editing a translation. Expose this generic capability as a reactive getter on the existing app and command contexts (`context.allow_structural_changes` beside `context.editable`). No separate editor-state object is needed. Session configuration only wires these live getters into commands and media callbacks; it does not store the capability. Changing the capability does not recreate the session or discard history. Structural commands use a restricted command context, and editor controls and browser input handlers check the same capability. Hide structural controls, prevent boundary deletion from merging blocks, block node cut and drag/drop, and paste plain text into existing text properties. Enter may add a newline where allowed, but cannot split or insert blocks. Text and inline formatting, including translation-owned links, remain editable. Use the standard Svedit session; neither Svedit nor content components need language awareness.
 
 Keep structural validation at the server write boundary as a safeguard for unexpected or custom actions. Reject an invalid save with an actionable message and retain the draft. Make structural changes in the main language.
 
@@ -285,7 +285,7 @@ Special cases:
 
 Add focused Vitest coverage for the feature's invariants:
 
-- Configuration: missing/blank/single/multiple languages, inherited OS `LANG` values, explicit application configuration precedence, invalid opt-in lists, regional tags, duplicates, and removed languages.
+- Configuration: missing/blank/single/multiple languages, invalid opt-in lists, regional tags, duplicates, and removed languages.
 - Overlay: zero translation queries in original mode; sparse property fallback; no mutation of original objects; shared nav/footer ownership; original attachment nodes absent only for replaced properties; unrelated attachment nodes preserved; no dangling references; invalid payload fallback preserves the original closure.
 - Rich text: changed lengths, emoji/non-ASCII ranges using Svedit's indexing convention, formatting-only differences, empty translations, local attachment ID remapping, self-contained translated link properties, source annotation deletion, internal-slug rewrites in translation records, and semantic equality despite regenerated IDs.
 - Saves: unauthenticated/unsupported-language rejection; forged ownership/non-text edits rejection; insert/update/delete/reset; unchanged fallback creates no rows; other languages remain untouched; source/translation conflicts preserve drafts; multi-record writes roll back atomically.
@@ -296,6 +296,6 @@ Add focused Vitest coverage for the feature's invariants:
 
 During implementation, run focused tests, `pnpm check`, `pnpm lint`, the relevant broader test suite, and backend/static builds. Use the required Svelte documentation tools and autofixer when writing Svelte code. Respect repository guidance: UI verification is performed manually by the user, without agent browser or screenshot checks unless requested.
 
-Manual acceptance walkthrough: enable `en,de`, translate a heading and footer label, save and reload; verify German on another page's shared footer; switch back and confirm the original is unchanged; edit an original untranslated paragraph and see the fallback update; reset a translation; try switching with an unsaved draft; finally remove the application `LANG` setting and confirm the original site behaves normally.
+Manual acceptance walkthrough: enable `en,de`, translate a heading and footer label, save and reload; verify German on another page's shared footer; switch back and confirm the original is unchanged; edit an original untranslated paragraph and see the fallback update; reset a translation; try switching with an unsaved draft; finally remove the application `LANGUAGES` setting and confirm the original site behaves normally.
 
 The feature is ready when existing sites need no configuration changes, translated saves cannot overwrite originals, untranslated properties consume no translation rows, and every visible language selection survives loading, navigation, editing, and saving consistently.

@@ -1,6 +1,6 @@
 import { restore_document_links, translate_document_links } from './document_links.js';
 import { createHash } from 'node:crypto';
-import { LANG, ORIGIN, VERCEL } from '$app/env/private';
+import { LANGUAGES, ORIGIN, VERCEL } from '$app/env/private';
 import { error } from '@sveltejs/kit';
 import { fill_document_defaults, validate_document, type Document } from 'svedit';
 import { db, with_transaction } from './services.js';
@@ -22,7 +22,7 @@ type TranslationRow = {
 	property_id: string;
 	value: string;
 };
-export const languages = VERCEL ? [] : parse_languages(LANG);
+export const languages = VERCEL ? [] : parse_languages(LANGUAGES);
 
 function load_records(document_id: string) {
 	const read = (id: string): Document => {

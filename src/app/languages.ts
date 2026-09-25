@@ -1,12 +1,14 @@
-/** Experimental language configuration; ordinary OS locale values are ignored. */
+/** Experimental language configuration. */
 export function parse_languages(value: string | undefined): string[] {
-	if (!value?.includes(',')) return [];
+	if (!value?.trim()) return [];
 	const languages = [
 		...new Set(
 			value.split(',').map((tag) => {
 				const trimmed = tag.trim();
 				if (!trimmed)
-					throw new Error('LANG must contain comma-separated language tags, e.g. en,de.');
+					throw new Error(
+						'LANGUAGES must contain comma-separated language tags, e.g. en,de.'
+					);
 				return Intl.getCanonicalLocales(trimmed)[0];
 			})
 		)

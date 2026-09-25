@@ -2,7 +2,7 @@ import { afterAll, expect, it, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
 
 vi.mock('$app/env/private', () => ({
-	LANG: 'en,de',
+	LANGUAGES: 'en,de',
 	ORIGIN: 'https://example.com',
 	VERCEL: undefined
 }));

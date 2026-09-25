@@ -1,5 +1,5 @@
 import { language_href, parse_languages, select_language } from '#app/languages.js';
-import { LANG, VERCEL } from '$app/env/private';
+import { LANGUAGES, VERCEL } from '$app/env/private';
 import { default_site_document } from '#app/default_site.js';
 import type { PageServerLoad } from './$types';
 
@@ -20,7 +20,7 @@ export const load: PageServerLoad = async ({ url }) => {
 
 	const { get_home_document, get_translated_document } = await import('#app/api.remote.js');
 	const result = await get_home_document();
-	const languages = parse_languages(LANG);
+	const languages = parse_languages(LANGUAGES);
 	if (!languages.length) return result;
 	const language = select_language(languages, url.searchParams.get('lang'));
 	return {

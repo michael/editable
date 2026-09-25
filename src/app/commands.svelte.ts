@@ -1,4 +1,4 @@
-import type { EditorState } from './app_context.js';
+import type { AppContext } from './app_context.js';
 import { Command, is_selection_collapsed, serialize_path } from 'svedit';
 import type { CommandContext, DocumentNode, DocumentPath, Transaction } from 'svedit';
 import {
@@ -6,6 +6,8 @@ import {
 	get_cycle_node_state,
 	is_node_subtree_empty
 } from '#app/app_utils.js';
+
+export type AppCommandContext = CommandContext & Pick<AppContext, 'allow_structural_changes'>;
 
 /**
  * Replace a node with a schema-equivalent node type while preserving property values.
@@ -278,10 +280,9 @@ export class ToggleLinkCommand extends Command {
 
 /** Removes the active text link or the selected link-like node. */
 export class RemoveLinkCommand extends Command {
-	constructor(
-		context: CommandContext,
-		private readonly editor_state: EditorState
-	) {
+	declare context: AppCommandContext;
+
+	constructor(context: AppCommandContext) {
 		super(context);
 	}
 
@@ -291,7 +292,7 @@ export class RemoveLinkCommand extends Command {
 
 		const selected_node = session.selected_node;
 		if (
-			this.editor_state.allow_structural_changes &&
+			this.context.allow_structural_changes &&
 			selected_node &&
 			'href' in selected_node &&
 			selected_node.href
@@ -307,7 +308,7 @@ export class RemoveLinkCommand extends Command {
 		const session = this.context.session;
 		const selected_node = session.selected_node;
 		if (
-			this.editor_state.allow_structural_changes &&
+			this.context.allow_structural_changes &&
 			selected_node &&
 			'href' in selected_node &&
 			selected_node.href
@@ -348,12 +349,11 @@ export class ToggleAccordionCommand extends Command {
  * Command that opens the edit link dialog for link-ish nodes (nodes with href property).
  */
 export class EditLinkCommand extends Command {
+	declare context: AppCommandContext;
+
 	show_prompt = $state(false);
 
-	constructor(
-		context: CommandContext,
-		private readonly editor_state: EditorState
-	) {
+	constructor(context: AppCommandContext) {
 		super(context);
 
 		// Reset show_prompt when selection changes
@@ -371,7 +371,7 @@ export class EditLinkCommand extends Command {
 
 		// Check if selected_node has an href property (link-ish block node)
 		const selected_node = session.selected_node;
-		if (this.editor_state.allow_structural_changes && selected_node && 'href' in selected_node)
+		if (this.context.allow_structural_changes && selected_node && 'href' in selected_node)
 			return true;
 
 		// Check for active link mark (text link)

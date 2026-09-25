@@ -1,4 +1,4 @@
-import type { EditorState } from './app_context.js';
+import type { AppContext } from './app_context.js';
 import { Session, fill_document_defaults } from 'svedit';
 import type { Document } from 'svedit';
 import { default_site_document } from './default_site.js';
@@ -10,18 +10,28 @@ export type AppSession = Session<typeof document_schema>;
 
 export function create_session(
 	doc: Document = default_site_document,
-	editor_state: EditorState = { allow_structural_changes: true }
+	app: Pick<AppContext, 'allow_structural_changes'> = { allow_structural_changes: true }
 ): AppSession {
 	const document_with_defaults = fill_document_defaults(doc, document_schema);
 	return new Session(document_schema, document_with_defaults, {
 		...document_config,
 		create_commands_and_keymap: (context) =>
-			document_config.create_commands_and_keymap(context, editor_state),
+			document_config.create_commands_and_keymap({
+				get session() {
+					return context.session;
+				},
+				get editable() {
+					return context.editable;
+				},
+				get allow_structural_changes() {
+					return app.allow_structural_changes;
+				}
+			}),
 		replace_media: (...args: Parameters<typeof document_config.replace_media>) => {
-			if (editor_state.allow_structural_changes) return document_config.replace_media(...args);
+			if (app.allow_structural_changes) return document_config.replace_media(...args);
 		},
 		handle_media_paste: (...args: Parameters<typeof document_config.handle_media_paste>) => {
-			if (editor_state.allow_structural_changes) return document_config.handle_media_paste(...args);
+			if (app.allow_structural_changes) return document_config.handle_media_paste(...args);
 		}
 	});
 }

@@ -1,5 +1,5 @@
 import { parse_languages, select_language } from '#app/languages.js';
-import { LANG, ORIGIN, VERCEL } from '$app/env/private';
+import { LANGUAGES, ORIGIN, VERCEL } from '$app/env/private';
 import {
 	default_footer_document,
 	default_nav_document,
@@ -38,7 +38,7 @@ function create_not_found_document(shared_documents): Document {
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const has_backend = !VERCEL;
-	const languages = has_backend ? parse_languages(LANG) : [];
+	const languages = has_backend ? parse_languages(LANGUAGES) : [];
 	const language = languages.length ? select_language(languages, url.searchParams.get('lang')) : '';
 
 	let site_metadata;
