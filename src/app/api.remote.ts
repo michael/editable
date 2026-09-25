@@ -716,13 +716,13 @@ export const logout_admin = command(v.void(), async () => {
 export const get_page_browser_data = query(v.string(), async (href) => {
 	const event = getRequestEvent();
 	require_admin_session(event.locals);
-	const url = new URL(href, event.url.origin);
+	const url = new URL(href);
 	const result = build_page_browser_data(url.pathname);
 	const language = select_language(languages, url.searchParams.get('lang'));
 	if (language && language !== languages[0] && url.pathname !== '/new') {
 		const visit = (nodes: PageTreeNode[]) => {
 			for (const node of nodes) {
-				node.navigation_href = translated_href(node.page_href, language, event.url.origin);
+				node.navigation_href = translated_href(node.page_href, language, url.origin);
 				visit(node.children);
 			}
 		};
