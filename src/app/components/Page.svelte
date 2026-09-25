@@ -54,11 +54,12 @@
 		return null;
 	});
 
-	// In view mode the nav is sticky, so offset anchor scrolls (e.g. /manual#quickstart)
+	// The nav is sticky, so offset anchor scrolls (e.g. /manual#quickstart)
 	// by twice the nav height to prevent content from being covered and leave some space.
+	// Editing does not need hash-target alignment or document-level scroll padding.
 	$effect(() => {
 		const el = nav_wrapper_ref;
-		if (svedit.editable || !el) return;
+		if (!el || svedit.editable) return;
 
 		const update_scroll_padding_top = () => {
 			const next_nav_height = el.offsetHeight;
@@ -128,11 +129,8 @@
 	<div class="page flex min-h-screen flex-col [--row:0]">
 		<div
 			bind:this={nav_wrapper_ref}
-			class="bg-(--background) text-(--foreground)"
-			class:sticky={!svedit.editable}
-			class:top-0={!svedit.editable}
-			class:z-40={!svedit.editable}
-			class:shadow-sm={!svedit.editable && scroll_y > 0}
+			class="sticky top-0 z-40 bg-(--background) text-(--foreground)"
+			class:shadow-sm={scroll_y > 0}
 		>
 			<Nav path={[...path, 'nav']} />
 		</div>
