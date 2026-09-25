@@ -129,27 +129,6 @@ To reset your local database to the initial default site content (asks for confi
 pnpm data:reset
 ```
 
-## Translations (experimental)
-
-Enable translations on a backend deployment by setting a comma-separated language list in `.env` or your deployment environment:
-
-```dotenv
-LANGUAGES="en,de"
-```
-
-The first language is the original. Additional languages appear in a switcher below the footer. Open a language, edit text on the page, and save. Missing translations show the original text; only differing text properties and their formatting/link nodes are stored separately. The original document stays complete and unchanged by translated saves.
-
-This feature is experimental: its behavior and storage format may change, or it may be removed. Back up your database before upgrading. With `LANGUAGES` unset or blank, Editable behaves as before. Removing the setting hides translations without deleting them. Do not reorder the first language without migrating the original content.
-
-Translated pages use URLs such as `/about?lang=de`. Text, including page titles, descriptions, and shared navigation/footer labels, can be translated. Structure, layouts, media, and ordinary string properties such as image alt text are shared. Make those changes in the original language. While editing a translation, structural controls and actions are disabled; paste inserts plain text into an existing text property. Text and inline formatting remain editable. The server also rejects unexpected structural/media changes and leaves your draft open. Svedit itself remains language-agnostic.
-
-You can also enable it explicitly for local development:
-
-```sh
-LANGUAGES=en,de pnpm dev
-```
-
-On a server, set `LANGUAGES` in the application's actual runtime environment, not only when building. The static/no-backend deployment does not support translations. Repository markdown bodies and editor interface labels are not translated. This first implementation does not yet include per-property reset/review controls, translated page-drawer summaries, or multilingual sitemap entries. To remove an override for now, restore the original text and formatting and save.
 
 ## Primitives
 
@@ -1156,6 +1135,28 @@ pnpm migration:create reconcile-heading \
 ```
 
 The generated `before` array overrides timestamp order for that relationship only. The target must exist and still be pending; missing targets, already-applied targets, and dependency cycles abort the upgrade before any changes are committed. Prefer tolerant migrations that safely do nothing when their source shape is absent, and reserve `before` for genuine conflicts.
+
+## Translations (experimental)
+
+Set a comma-separated language list in `.env` or your deployment environment:
+
+```dotenv
+LANGUAGES="en,de"
+```
+
+The first language is the original. Additional languages appear in a switcher below the footer. Translated pages use URLs such as `/about?lang=de`. Open a language, edit its text, and save. Missing translations show the original text.
+
+Text, including page titles, descriptions, and shared navigation/footer labels, can be translated. Structure, layouts, media, and ordinary string properties such as image alt text are shared; make those changes in the original language. Text and inline formatting remain editable in translations, but structural controls are disabled.
+
+For local development:
+
+```sh
+LANGUAGES=en,de pnpm dev
+```
+
+Set `LANGUAGES` in the runtime environment, not only when building. Repository markdown bodies and editor interface labels are not translated.
+
+This feature is experimental: its behavior and storage format may change or be removed. Back up your database before upgrading, and do not reorder the first language. With `LANGUAGES` unset or blank, Editable behaves as before. Removing the setting hides translations without deleting them. To remove an override, restore the original text and formatting, then save.
 
 ## Markdown pages (experimental)
 
