@@ -2,10 +2,12 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { get_app_context } from '#app/app_context.js';
+	import { get_svedit_context } from '#app/svedit_context.js';
 	import { language_href } from '#app/languages.js';
 
 	const app = get_app_context();
-	let pending_language = $state('');
+	const svedit = get_svedit_context();
+	let disabled = $derived(svedit.editable || app.saving);
 	const menu_id = $props.id();
 	let menu_ref: HTMLElement | undefined = $state();
 	let menu_open = $state(false);
@@ -13,20 +15,19 @@
 
 	function get_menu_items() {
 		return Array.from(
-			menu_ref?.querySelectorAll<HTMLElement>(
-				'a[href]:not([aria-disabled="true"]), button:not(:disabled)'
-			) ?? []
+			menu_ref?.querySelectorAll<HTMLElement>('a[href]:not([aria-disabled="true"])') ?? []
 		);
 	}
 
 	function open_menu(last = false) {
+		if (disabled) return;
 		menu_ref?.showPopover();
 		const items = get_menu_items();
 		items[last ? items.length - 1 : 0]?.focus({ preventScroll: true });
 	}
 
 	function handle_keydown(event: KeyboardEvent) {
-		if (event.defaultPrevented || event.isComposing) return;
+		if (disabled || event.defaultPrevented || event.isComposing) return;
 		if (
 			(event.metaKey || event.ctrlKey) &&
 			event.shiftKey &&
@@ -79,29 +80,24 @@
 		return () => window.removeEventListener('keydown', handle_keydown, true);
 	});
 
+	$effect(() => {
+		if (disabled && menu_ref?.matches(':popover-open')) menu_ref.hidePopover();
+	});
+
 	function language_name(language: string) {
 		return new Intl.DisplayNames([language], { type: 'language' }).of(language) ?? language;
 	}
 
 	async function choose(event: MouseEvent, language: string) {
-		if (app.saving || language === app.language) {
+		if (disabled || language === app.language) {
 			event.preventDefault();
 			return;
 		}
 		if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)
 			return;
 		event.preventDefault();
-		if (app.has_unsaved_changes) pending_language = language;
-		else {
-			menu_ref?.hidePopover();
-			await app.switch_language(language);
-		}
-	}
-
-	async function finish(action: 'save' | 'discard') {
-		await app.switch_language(pending_language, action);
-		pending_language = '';
 		menu_ref?.hidePopover();
+		await app.switch_language(language);
 	}
 </script>
 
@@ -110,6 +106,7 @@
 		<button
 			type="button"
 			bind:this={menu_trigger}
+			{disabled}
 			popovertarget={menu_id}
 			aria-controls={menu_id}
 			aria-keyshortcuts="Meta+Shift+L Control+Shift+L"
@@ -122,11 +119,12 @@
 			style:anchor-name={`--language-${menu_id}`}
 			aria-label={`Language: ${language_name(app.language)}`}
 			aria-expanded={menu_open}
-			class="inline-flex min-h-9 cursor-pointer items-center gap-1 border-0 bg-transparent py-1.5 text-sm leading-5 font-normal text-(--foreground) underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:underline"
+			class="inline-flex min-h-9 items-center gap-1 border-0 bg-transparent py-1.5 text-sm leading-5 font-normal text-(--foreground) underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:underline enabled:active:underline disabled:cursor-default disabled:text-(--muted-foreground)"
 		>
 			{app.language.toUpperCase()}
 			<svg
 				class="size-3 text-(--muted-foreground)"
+				class:invisible={svedit.editable}
 				viewBox="0 0 12 12"
 				fill="none"
 				aria-hidden="true"
@@ -141,21 +139,20 @@
 			style:position-anchor={`--language-${menu_id}`}
 			ontoggle={(event) => {
 				menu_open = event.newState === 'open';
-				if (!menu_open) pending_language = '';
 			}}
 			class="ew-language-menu w-max max-w-[calc(100vw-2rem)] min-w-44 rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-1 text-(--foreground)"
 		>
 			<nav aria-label="Language" class="flex flex-col">
 				{#each app.languages as language (language)}
 					<a
-						href={app.saving || app.language === language
+						href={disabled || app.language === language
 							? undefined
 							: language_href(page.url.href, language, app.languages[0])}
-						tabindex={app.saving || app.language === language ? -1 : undefined}
+						tabindex={disabled || app.language === language ? -1 : undefined}
 						hreflang={language}
 						lang={language}
 						aria-current={app.language === language ? 'true' : undefined}
-						aria-disabled={app.saving || app.language === language}
+						aria-disabled={disabled || app.language === language}
 						onclick={(event) => choose(event, language)}
 						class="group flex min-h-10 items-center gap-3 rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] px-3 py-2.5 text-sm leading-5 not-aria-disabled:hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) aria-disabled:cursor-default aria-disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
 					>
@@ -167,37 +164,6 @@
 					</a>
 				{/each}
 			</nav>
-			{#if pending_language}
-				<div
-					class="max-w-72 space-y-3 border-t border-(--stroke) px-3 py-2.5"
-					role="group"
-					aria-label="Unsaved changes"
-				>
-					<p>You have unsaved changes.</p>
-					<div class="flex flex-wrap justify-center gap-3">
-						<button
-							type="button"
-							disabled={app.saving}
-							onclick={() => finish('save')}
-							class="rounded border border-(--stroke) px-3 py-2 hover:bg-(--muted)"
-							>Save and switch</button
-						>
-						<button
-							type="button"
-							disabled={app.saving}
-							onclick={() => finish('discard')}
-							class="rounded border border-(--stroke) px-3 py-2 hover:bg-(--muted)"
-							>Discard and switch</button
-						>
-						<button
-							type="button"
-							disabled={app.saving}
-							onclick={() => (pending_language = '')}
-							class="rounded border border-(--stroke) px-3 py-2 hover:bg-(--muted)">Cancel</button
-						>
-					</div>
-				</div>
-			{/if}
 		</div>
 	</div>
 {/if}

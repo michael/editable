@@ -93,16 +93,17 @@
 	let translation_mode = $derived(!is_new && languages.length > 1 && language !== languages[0]);
 	let allow_structural_changes = $derived(!translation_mode);
 
-	async function switch_language(next_language: string, action: 'save' | 'discard' = 'discard') {
-		if (save_progress_visible || switching_language || !languages.includes(next_language)) return;
-		if (action === 'save') {
-			await app_commands.save_document.execute();
-			if (editable) return;
-		}
+	async function switch_language(next_language: string) {
+		if (
+			editable ||
+			save_progress_visible ||
+			switching_language ||
+			!languages.includes(next_language)
+		)
+			return;
 		switching_language = true;
 		try {
 			await goto(language_href(page.url.href, next_language, languages[0]), { reset: false });
-			editable = false;
 		} finally {
 			switching_language = false;
 		}
@@ -190,9 +191,6 @@
 		},
 		get translation_mode() {
 			return translation_mode;
-		},
-		get has_unsaved_changes() {
-			return editable && JSON.stringify(session.to_json()) !== initial_doc_json;
 		},
 		get saving() {
 			return save_progress_visible || switching_language;
