@@ -118,6 +118,40 @@
 			navigation.cancel();
 	});
 
+	$effect(() => {
+		if (!editable || !session.config.text_only || !app_el) return;
+		const element = app_el;
+		const current_session = session;
+		const in_canvas = (event: Event) =>
+			event.target instanceof Element && !!event.target.closest('.svedit-canvas');
+		const prevent_drop = (event: DragEvent) => {
+			if (!in_canvas(event)) return;
+			event.preventDefault();
+			event.stopPropagation();
+			if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
+		};
+		const paste_text = (event: ClipboardEvent) => {
+			if (!in_canvas(event)) return;
+			event.preventDefault();
+			event.stopPropagation();
+			if (current_session.selection?.type !== 'text') return;
+			let text = event.clipboardData?.getData('text/plain');
+			if (!text) return;
+			text = text.replace(/\r\n?/g, '\n');
+			if (!current_session.inspect(current_session.selection.path).allow_newlines)
+				text = text.replace(/\n/g, ' ');
+			current_session.apply(current_session.tr.insert_text(text));
+		};
+		element.addEventListener('paste', paste_text, true);
+		element.addEventListener('dragover', prevent_drop, true);
+		element.addEventListener('drop', prevent_drop, true);
+		return () => {
+			element.removeEventListener('paste', paste_text, true);
+			element.removeEventListener('dragover', prevent_drop, true);
+			element.removeEventListener('drop', prevent_drop, true);
+		};
+	});
+
 	const app = {
 		get canonical_path() {
 			return canonical_path;
@@ -399,7 +433,7 @@
 				edit_for_fun_saved_doc.language === language
 					? edit_for_fun_saved_doc.doc_json
 					: initial_doc_json;
-			session = create_session(JSON.parse(saved_doc_json));
+			session = create_session(JSON.parse(saved_doc_json), translation_mode);
 			this.context.editable = false;
 		}
 	}
@@ -684,8 +718,9 @@
 		// Equal load data must not reset the editor; language changes still reset history.
 		language;
 		const doc_json = initial_doc_json;
+		const text_only = translation_mode;
 		// Session construction reads reactive internals. Only load data belongs in this dependency list.
-		return untrack(() => create_session(JSON.parse(doc_json)));
+		return untrack(() => create_session(JSON.parse(doc_json), text_only));
 	});
 	let loaded_document_id = $derived(initial_doc.document_id);
 

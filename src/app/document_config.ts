@@ -382,6 +382,42 @@ export const document_config = {
 			duplicate_nodes: new DuplicateNodesCommand(context)
 		};
 
+		if (context.session.config.text_only) {
+			const blocked = new Set([
+				'insert_default_node',
+				'break_text_node',
+				'toggle_section',
+				'cycle_layout_next',
+				'cycle_layout_previous',
+				'cycle_node_type_next',
+				'cycle_node_type_previous',
+				'edit_image',
+				'replace_media',
+				'duplicate_nodes'
+			]);
+			for (const [name, command] of Object.entries(commands)) {
+				const is_enabled = command.is_enabled.bind(command);
+				const execute = command.execute.bind(command);
+				command.is_enabled = () => {
+					if (blocked.has(name)) return false;
+					if (['toggle_link', 'remove_link', 'edit_link'].includes(name)) {
+						if (context.session.selection?.type !== 'text') return false;
+						// Block-level destinations are shared; only inline links can change.
+						if (
+							name === 'edit_link' &&
+							context.session.selected_node &&
+							'href' in context.session.selected_node
+						)
+							return false;
+					}
+					return is_enabled();
+				};
+				command.execute = () => {
+					if (command.is_enabled()) return execute();
+				};
+			}
+		}
+
 		// Define keymap binding keys to commands
 		const keymap = define_keymap({
 			'meta+a,ctrl+a': [commands.select_all],

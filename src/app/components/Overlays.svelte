@@ -29,7 +29,7 @@
 	let file_drag_active = $state(false);
 
 	$effect(() => {
-		if (!svedit.editable) return;
+		if (!svedit.editable || svedit.session.config.text_only) return;
 
 		document.addEventListener('dragover', on_dragover, true);
 		document.addEventListener('dragleave', on_dragleave, true);
@@ -56,7 +56,7 @@
 	}
 
 	function on_dragover(e) {
-		if (!svedit.editable) return;
+		if (!svedit.editable || svedit.session.config.text_only) return;
 		if (!e.dataTransfer?.types?.includes('Files')) return;
 		file_drag_active = true;
 		const path = get_media_path_at(e);
@@ -148,7 +148,7 @@
 		if (!sel) return null;
 
 		const selected_node = svedit.session.selected_node;
-		if (selected_node && 'href' in selected_node) {
+		if (!svedit.session.config.text_only && selected_node && 'href' in selected_node) {
 			if (sel.type === 'node') {
 				const start = Math.min(sel.anchor_offset, sel.focus_offset);
 				const end = Math.max(sel.anchor_offset, sel.focus_offset);
@@ -187,7 +187,7 @@
 		></div>
 	{/if}
 
-	{#if !file_drag_active}
+	{#if !file_drag_active && !svedit.session.config.text_only}
 		{#if svedit.session.selection?.type === 'property'}
 			{@const anchor_style = `position-anchor: --${serialize_path(svedit.session.selection.path)};`}
 			{#if is_media_selected}

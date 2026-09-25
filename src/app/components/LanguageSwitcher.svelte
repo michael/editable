@@ -46,8 +46,8 @@
 		</nav>
 		{#if app.is_admin && app.translation_mode}
 			<p class="mt-3 text-(--muted-foreground)">
-				Experimental translations · Save text and inline formatting here. Edit structure and media
-				in {language_name(app.languages[0])}.
+				Experimental translations · Only text and inline formatting can be edited here. Edit
+				structure and media in {language_name(app.languages[0])}.
 			</p>
 		{/if}
 		{#if pending_language}
