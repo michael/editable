@@ -1,10 +1,12 @@
 import { getContext, type Snippet } from 'svelte';
 
-/**
- * The app-level context provided by App.svelte: server-derived flags plus
- * the auth dialog state and its handlers.
- */
-export type AppContext = {
+/** Live editor capabilities, exposed through reactive getters. */
+export type EditorState = {
+	readonly allow_structural_changes: boolean;
+};
+
+/** App state and handlers provided by App.svelte. */
+export type AppContext = EditorState & {
 	readonly languages: string[];
 	readonly language: string;
 	readonly translation_mode: boolean;

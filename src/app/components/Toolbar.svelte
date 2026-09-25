@@ -112,7 +112,7 @@
 		!!session.commands.select_parent && !session.commands.select_parent.disabled
 	);
 	let can_show_variant_selector = $derived(
-		!session.config.text_only && get_selection_node_ancestors(session).length > 0
+		app.allow_structural_changes && get_selection_node_ancestors(session).length > 0
 	);
 	let can_show_selection_tool_group = $derived(can_select_parent || can_show_variant_selector);
 
@@ -173,6 +173,7 @@
 	}
 
 	function handle_delete_selection_click(event) {
+		if (!app.allow_structural_changes) return;
 		session.apply(session.tr.delete_selection('backward'));
 		restore_canvas_focus(event);
 	}
@@ -691,7 +692,7 @@
 							{/if}
 
 							<!-- Media actions (visible when media is selected) -->
-							{#if is_media_selected && !session.config.text_only}
+							{#if is_media_selected && app.allow_structural_changes}
 								<div class="flex items-center gap-1">
 									<button
 										class="{tw_toolbar_btn} {session.commands.edit_image?.disabled
@@ -735,7 +736,7 @@
 								</div>
 							{/if}
 
-							{#if !session.config.text_only && (session.selection?.type === 'node' || is_media_selected)}
+							{#if app.allow_structural_changes && (session.selection?.type === 'node' || is_media_selected)}
 								<div class="flex items-center gap-1">
 									{#if is_node_caret && !session.commands.insert_default_node?.disabled}
 										<button

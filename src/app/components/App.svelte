@@ -5,7 +5,7 @@
 	import { beforeNavigate, goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { Svedit, KeyMapper, Command, define_keymap } from 'svedit';
+	import { Svedit, KeyMapper, Command, define_keymap, get_char_length } from 'svedit';
 	import Toolbar from './Toolbar.svelte';
 	import SaveProgressModal from './SaveProgressModal.svelte';
 
@@ -91,6 +91,7 @@
 
 	let switching_language = $state(false);
 	let translation_mode = $derived(!is_new && languages.length > 1 && language !== languages[0]);
+	let allow_structural_changes = $derived(!translation_mode);
 
 	async function switch_language(next_language: string, action: 'save' | 'discard' = 'discard') {
 		if (save_progress_visible || switching_language || !languages.includes(next_language)) return;
@@ -119,7 +120,7 @@
 	});
 
 	$effect(() => {
-		if (!editable || !session.config.text_only || !app_el) return;
+		if (!editable || allow_structural_changes || !app_el) return;
 		const element = app_el;
 		const current_session = session;
 		const in_canvas = (event: Event) =>
@@ -142,10 +143,32 @@
 				text = text.replace(/\n/g, ' ');
 			current_session.apply(current_session.tr.insert_text(text));
 		};
+		const prevent_structural_input = (event: InputEvent | ClipboardEvent) => {
+			if (!in_canvas(event)) return;
+			const selection = current_session.selection;
+			let blocked = selection?.type !== 'text';
+			if (selection?.type === 'text' && selection.anchor_offset === selection.focus_offset) {
+				const input_type = event instanceof InputEvent ? event.inputType : 'deleteContentBackward';
+				const offset = selection.focus_offset;
+				const length = get_char_length(current_session.get(selection.path).content);
+				// Deleting across a property boundary would merge or remove blocks.
+				blocked =
+					input_type.startsWith('delete') &&
+					(input_type.endsWith('Forward') ? offset === length : offset === 0);
+			}
+			if (blocked) {
+				event.preventDefault();
+				event.stopPropagation();
+			}
+		};
+		element.addEventListener('beforeinput', prevent_structural_input, true);
+		element.addEventListener('cut', prevent_structural_input, true);
 		element.addEventListener('paste', paste_text, true);
 		element.addEventListener('dragover', prevent_drop, true);
 		element.addEventListener('drop', prevent_drop, true);
 		return () => {
+			element.removeEventListener('beforeinput', prevent_structural_input, true);
+			element.removeEventListener('cut', prevent_structural_input, true);
 			element.removeEventListener('paste', paste_text, true);
 			element.removeEventListener('dragover', prevent_drop, true);
 			element.removeEventListener('drop', prevent_drop, true);
@@ -161,6 +184,9 @@
 		},
 		get language() {
 			return language;
+		},
+		get allow_structural_changes() {
+			return allow_structural_changes;
 		},
 		get translation_mode() {
 			return translation_mode;
@@ -433,7 +459,7 @@
 				edit_for_fun_saved_doc.language === language
 					? edit_for_fun_saved_doc.doc_json
 					: initial_doc_json;
-			session = create_session(JSON.parse(saved_doc_json), translation_mode);
+			session = create_session(JSON.parse(saved_doc_json), app);
 			this.context.editable = false;
 		}
 	}
@@ -718,9 +744,8 @@
 		// Equal load data must not reset the editor; language changes still reset history.
 		language;
 		const doc_json = initial_doc_json;
-		const text_only = translation_mode;
 		// Session construction reads reactive internals. Only load data belongs in this dependency list.
-		return untrack(() => create_session(JSON.parse(doc_json), text_only));
+		return untrack(() => create_session(JSON.parse(doc_json), app));
 	});
 	let loaded_document_id = $derived(initial_doc.document_id);
 

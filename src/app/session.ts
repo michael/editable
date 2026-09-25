@@ -1,4 +1,4 @@
-import { TextOnlySession } from './text_only_session.js';
+import type { EditorState } from './app_context.js';
 import { Session, fill_document_defaults } from 'svedit';
 import type { Document } from 'svedit';
 import { default_site_document } from './default_site.js';
@@ -10,10 +10,18 @@ export type AppSession = Session<typeof document_schema>;
 
 export function create_session(
 	doc: Document = default_site_document,
-	text_only = false
+	editor_state: EditorState = { allow_structural_changes: true }
 ): AppSession {
 	const document_with_defaults = fill_document_defaults(doc, document_schema);
-	return text_only
-		? new TextOnlySession(document_with_defaults, document_config)
-		: new Session(document_schema, document_with_defaults, document_config);
+	return new Session(document_schema, document_with_defaults, {
+		...document_config,
+		create_commands_and_keymap: (context) =>
+			document_config.create_commands_and_keymap(context, editor_state),
+		replace_media: (...args: Parameters<typeof document_config.replace_media>) => {
+			if (editor_state.allow_structural_changes) return document_config.replace_media(...args);
+		},
+		handle_media_paste: (...args: Parameters<typeof document_config.handle_media_paste>) => {
+			if (editor_state.allow_structural_changes) return document_config.handle_media_paste(...args);
+		}
+	});
 }

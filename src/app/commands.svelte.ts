@@ -1,3 +1,4 @@
+import type { EditorState } from './app_context.js';
 import { Command, is_selection_collapsed, serialize_path } from 'svedit';
 import type { CommandContext, DocumentNode, DocumentPath, Transaction } from 'svedit';
 import {
@@ -63,6 +64,7 @@ export class CycleLayoutCommand extends Command {
 	}
 
 	execute() {
+		if (!this.is_enabled()) return;
 		const session = this.context.session;
 		const { node } = this.closest_switchable_layout;
 		const layouts = session.schema[node.type].properties.layout.values;
@@ -77,6 +79,7 @@ export class CycleLayoutCommand extends Command {
 	}
 
 	execute_with_layout(new_layout: string) {
+		if (!this.is_enabled()) return;
 		const session = this.context.session;
 		const closest_switchable_layout = this.closest_switchable_layout;
 		if (!closest_switchable_layout) return;
@@ -117,6 +120,7 @@ export class CycleNodeTypeCommand extends Command {
 	}
 
 	execute() {
+		if (!this.is_enabled()) return;
 		const cycle_node_state = this.cycle_node_state;
 		if (!cycle_node_state || cycle_node_state.available_types.length === 0) return;
 
@@ -129,6 +133,7 @@ export class CycleNodeTypeCommand extends Command {
 	 * Replace the derived switchable node with an explicitly chosen type/variant.
 	 */
 	execute_with_type(new_type: string, new_layout: string | null = null) {
+		if (!this.is_enabled()) return;
 		const session = this.context.session;
 		const cycle_node_state = this.cycle_node_state;
 		if (!cycle_node_state?.available_types.includes(new_type)) return;
@@ -273,12 +278,25 @@ export class ToggleLinkCommand extends Command {
 
 /** Removes the active text link or the selected link-like node. */
 export class RemoveLinkCommand extends Command {
+	constructor(
+		context: CommandContext,
+		private readonly editor_state: EditorState
+	) {
+		super(context);
+	}
+
 	is_enabled() {
 		const { session, editable } = this.context;
 		if (!editable || !session.selection) return false;
 
 		const selected_node = session.selected_node;
-		if (selected_node && 'href' in selected_node && selected_node.href) return true;
+		if (
+			this.editor_state.allow_structural_changes &&
+			selected_node &&
+			'href' in selected_node &&
+			selected_node.href
+		)
+			return true;
 
 		return session.active_mark?.node.type === 'link';
 	}
@@ -288,7 +306,12 @@ export class RemoveLinkCommand extends Command {
 
 		const session = this.context.session;
 		const selected_node = session.selected_node;
-		if (selected_node && 'href' in selected_node && selected_node.href) {
+		if (
+			this.editor_state.allow_structural_changes &&
+			selected_node &&
+			'href' in selected_node &&
+			selected_node.href
+		) {
 			const tr = session.tr;
 			tr.set([selected_node.id, 'href'], '');
 			session.apply(tr);
@@ -327,7 +350,10 @@ export class ToggleAccordionCommand extends Command {
 export class EditLinkCommand extends Command {
 	show_prompt = $state(false);
 
-	constructor(context: CommandContext) {
+	constructor(
+		context: CommandContext,
+		private readonly editor_state: EditorState
+	) {
 		super(context);
 
 		// Reset show_prompt when selection changes
@@ -345,7 +371,8 @@ export class EditLinkCommand extends Command {
 
 		// Check if selected_node has an href property (link-ish block node)
 		const selected_node = session.selected_node;
-		if (selected_node && 'href' in selected_node) return true;
+		if (this.editor_state.allow_structural_changes && selected_node && 'href' in selected_node)
+			return true;
 
 		// Check for active link mark (text link)
 		const active_link = session.active_mark;
@@ -383,6 +410,7 @@ export class EditLinkCommand extends Command {
  */
 export class DuplicateNodesCommand extends Command {
 	is_enabled() {
+		if (!this.context.editable) return false;
 		const selection = this.context.session.selection;
 		if (!selection) return false;
 
@@ -394,6 +422,7 @@ export class DuplicateNodesCommand extends Command {
 	}
 
 	execute() {
+		if (!this.is_enabled()) return;
 		const { session } = this.context;
 
 		// Anything that is not already a node selection duplicates its closest

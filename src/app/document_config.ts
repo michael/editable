@@ -142,6 +142,7 @@ async function replace_media(
 	file: File,
 	blob_url: string
 ) {
+	if (session.config.allow_structural_changes === false) return;
 	const node = session.get(path);
 	if (node.type !== 'image' && node.type !== 'video') return;
 
@@ -258,6 +259,7 @@ export const document_config = {
 		set_properties(tr, [target_node.id], MEDIA_DEFAULTS);
 	},
 	handle_media_paste: async (session, pasted_media) => {
+		if (session.config.allow_structural_changes === false) return;
 		if (session.selection.type === 'property') {
 			const node = session.get(session.selection.path);
 			if (node.type === 'image' || node.type === 'video') {
@@ -355,68 +357,41 @@ export const document_config = {
 	 * Called by Svedit component with the svedit context.
 	 */
 	create_commands_and_keymap: (context) => {
+		// Structural commands share a capability without knowing why it is disabled.
+		const structural_context = {
+			get session() {
+				return context.session;
+			},
+			get editable() {
+				return context.editable && context.session.config.allow_structural_changes !== false;
+			}
+		};
 		// Create command instances with the provided context
 		const commands = {
 			select_all: new SelectAllCommand(context),
-			insert_default_node: new InsertDefaultNodeCommand(context),
+			insert_default_node: new InsertDefaultNodeCommand(structural_context),
 			add_new_line: new AddNewLineCommand(context),
-			break_text_node: new BreakTextNodeCommand(context),
+			break_text_node: new BreakTextNodeCommand(structural_context),
 			toggle_strong: new ToggleMarkCommand('strong', context),
 			toggle_emphasis: new ToggleMarkCommand('emphasis', context),
 			toggle_code: new ToggleMarkCommand('code', context),
 			toggle_highlight: new ToggleMarkCommand('highlight', context),
-			toggle_section: new ToggleMarkCommand('section', context),
+			toggle_section: new ToggleMarkCommand('section', structural_context),
 			undo: new UndoCommand(context),
 			redo: new RedoCommand(context),
 			select_parent: new SelectParentCommand(context),
-			cycle_layout_next: new CycleLayoutCommand('next', context),
-			cycle_layout_previous: new CycleLayoutCommand('previous', context),
-			cycle_node_type_next: new CycleNodeTypeCommand('next', context),
-			cycle_node_type_previous: new CycleNodeTypeCommand('previous', context),
+			cycle_layout_next: new CycleLayoutCommand('next', structural_context),
+			cycle_layout_previous: new CycleLayoutCommand('previous', structural_context),
+			cycle_node_type_next: new CycleNodeTypeCommand('next', structural_context),
+			cycle_node_type_previous: new CycleNodeTypeCommand('previous', structural_context),
 			toggle_accordion: new ToggleAccordionCommand(context),
 			toggle_link: new ToggleLinkCommand(context),
 			remove_link: new RemoveLinkCommand(context),
 			edit_link: new EditLinkCommand(context),
-			edit_image: new EditImageCommand(context),
-			replace_media: new ReplaceMediaCommand(context),
-			duplicate_nodes: new DuplicateNodesCommand(context)
+			edit_image: new EditImageCommand(structural_context),
+			replace_media: new ReplaceMediaCommand(structural_context),
+			duplicate_nodes: new DuplicateNodesCommand(structural_context)
 		};
-
-		if (context.session.config.text_only) {
-			const blocked = new Set([
-				'insert_default_node',
-				'break_text_node',
-				'toggle_section',
-				'cycle_layout_next',
-				'cycle_layout_previous',
-				'cycle_node_type_next',
-				'cycle_node_type_previous',
-				'edit_image',
-				'replace_media',
-				'duplicate_nodes'
-			]);
-			for (const [name, command] of Object.entries(commands)) {
-				const is_enabled = command.is_enabled.bind(command);
-				const execute = command.execute.bind(command);
-				command.is_enabled = () => {
-					if (blocked.has(name)) return false;
-					if (['toggle_link', 'remove_link', 'edit_link'].includes(name)) {
-						if (context.session.selection?.type !== 'text') return false;
-						// Block-level destinations are shared; only inline links can change.
-						if (
-							name === 'edit_link' &&
-							context.session.selected_node &&
-							'href' in context.session.selected_node
-						)
-							return false;
-					}
-					return is_enabled();
-				};
-				command.execute = () => {
-					if (command.is_enabled()) return execute();
-				};
-			}
-		}
 
 		// Define keymap binding keys to commands
 		const keymap = define_keymap({

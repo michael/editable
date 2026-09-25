@@ -141,7 +141,7 @@ The first language is the original. Additional languages appear in a switcher be
 
 This feature is experimental: its behavior and storage format may change, or it may be removed. Back up your database before upgrading. With `LANG` unset or blank, Editable behaves as before. Removing the setting hides translations without deleting them. Ordinary OS locale values such as `en_US.UTF-8` do not enable the feature. Do not reorder the first language without migrating the original content.
 
-Translated pages use URLs such as `/about?lang=de`. Text, including page titles, descriptions, and shared navigation/footer labels, can be translated. Structure, layouts, media, and ordinary string properties such as image alt text are shared. Make those changes in the original language: a translated save containing structural/media changes is rejected and leaves your draft open. Svedit itself remains language-agnostic.
+Translated pages use URLs such as `/about?lang=de`. Text, including page titles, descriptions, and shared navigation/footer labels, can be translated. Structure, layouts, media, and ordinary string properties such as image alt text are shared. Make those changes in the original language. While editing a translation, structural controls and actions are disabled; paste inserts plain text into an existing text property. Text and inline formatting remain editable. The server also rejects unexpected structural/media changes and leaves your draft open. Svedit itself remains language-agnostic.
 
 For local development, `.env` language configuration takes precedence over an inherited OS locale. You can also enable it explicitly:
 
