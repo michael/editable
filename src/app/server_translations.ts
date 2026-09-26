@@ -161,12 +161,7 @@ export function save_translated_document(input: {
 			const owner = records.find((doc) => doc.nodes[node_id]);
 			if (!owner) error(400, 'Unknown translation owner');
 			const payload = property_payload(edited, node_id, property_id);
-			if ('node_id' in payload) {
-				const media = payload.nodes[payload.node_id];
-				if (media.src && (!ASSET_ID_REGEX.test(media.src) || !asset_exists(media.src))) {
-					error(400, 'Upload translated media before saving. Your draft is still open.');
-				}
-			}
+
 			const key = [owner.document_id, input.language, node_id, property_id];
 			if (
 				normalized_payload(payload) ===
@@ -174,6 +169,12 @@ export function save_translated_document(input: {
 			)
 				remove.run(...key);
 			else {
+				if ('node_id' in payload) {
+					const media = payload.nodes[payload.node_id];
+					if (media.src && (!ASSET_ID_REGEX.test(media.src) || !asset_exists(media.src))) {
+						error(400, 'Upload translated media before saving. Your draft is still open.');
+					}
+				}
 				const existing = rows.find(
 					(row) =>
 						row.document_id === owner.document_id &&
@@ -208,11 +209,21 @@ export function cleanup_translations(document_id: string) {
 		let remove = property?.type !== 'text' && !is_media_property(property);
 		if (!remove) {
 			try {
+				const payload = JSON.parse(entry.value);
+				// A property may have changed its allowed types since this override was saved.
 				remove =
-					normalized_payload(JSON.parse(entry.value)) ===
-					normalized_payload(property_payload(doc, entry.node_id, entry.property_id));
+					'node_id' in payload
+						? !is_media_property(property) ||
+							property.type !== 'node' ||
+							!property.node_types.includes(payload.nodes[payload.node_id]?.type)
+						: property.type !== 'text';
+				if (!remove)
+					remove =
+						normalized_payload(payload) ===
+						normalized_payload(property_payload(doc, entry.node_id, entry.property_id));
 			} catch {
-				// Invalid stored overrides fall back during reads; they must not block an original save.
+				// Invalid overrides already fall back on reads and must not retain orphaned assets.
+				remove = true;
 			}
 		}
 		if (remove)

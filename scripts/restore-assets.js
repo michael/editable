@@ -45,6 +45,7 @@ if (!s3_enabled()) {
 // Same reference walk as check-assets.js.
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
 const referenced = referenced_assets(db);
+const document_count = db.prepare('SELECT count(*) AS count FROM documents').get().count;
 
 // Content summary, so a restore immediately shows what state it produced.
 // updated_at may not exist in databases predating the timestamps migration.
@@ -109,5 +110,5 @@ if (failed > 0) {
 	process.exit(1);
 }
 console.log(
-	`[backup] Restored state: ${plural(rows.length, 'document')}, last edited ${last_edited ?? 'unknown'}, ${plural(referenced.size, 'referenced asset')}.`
+	`[backup] Restored state: ${plural(document_count, 'document')}, last edited ${last_edited ?? 'unknown'}, ${plural(referenced.size, 'referenced asset')}.`
 );

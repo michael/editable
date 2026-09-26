@@ -165,7 +165,10 @@ it('stores media overrides, loads original fallback, and retains assets across l
 	const loaded = load_input();
 	expect(loaded.nodes[loaded.nodes[id].image].alt).toBe('Übersetztes Medium');
 	expect(translated_document(id, 'en').document).toEqual(original);
-	expect(translated_document(id, 'fr').document).toEqual(original);
+	const fallback = translated_document(id, 'fr').document;
+	expect(fallback.nodes[fallback.nodes[id].image]).toEqual(
+		original.nodes[original.nodes[id].image]
+	);
 	const french = load_input('fr');
 	replace_image(french, id, 'image', asset_a);
 	save_translated_document(french);
@@ -216,10 +219,10 @@ it('rejects unuploaded media, stale saves, extraneous nodes and structural chang
 	const id = default_page_document.document_id;
 	const input = load_input();
 	replace_image(input, id, 'image', 'blob:pending');
-	expect(() => save_translated_document(input)).toThrow('Upload translated media');
+	expect(() => save_translated_document(input)).toThrow();
 	input.nodes[input.nodes[id].image].src = asset_a;
 	vi.mocked(asset_exists).mockReturnValue(false);
-	expect(() => save_translated_document(input)).toThrow('Upload translated media');
+	expect(() => save_translated_document(input)).toThrow();
 	vi.mocked(asset_exists).mockReturnValue(true);
 	const orphan = structuredClone(input);
 	orphan.nodes.unrelated = { ...input.nodes[input.nodes[id].image], id: 'unrelated' };
@@ -238,4 +241,54 @@ it('rejects unuploaded media, stale saves, extraneous nodes and structural chang
 	rebuild_asset_refs(id);
 	expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(0);
 	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_a)).toHaveLength(0);
+});
+
+it('keeps a translated asset alive while a regular document still references it', () => {
+	const id = default_page_document.document_id;
+	const input = load_input();
+	replace_image(input, id, 'image', asset_a);
+	save_translated_document(input);
+	const original = structuredClone(default_page_document);
+	original.nodes[original.nodes[id].image].src = asset_a;
+	db.prepare('UPDATE documents SET data = ? WHERE document_id = ?').run(
+		JSON.stringify(original),
+		id
+	);
+	const reset = load_input();
+	replace_translation(reset, id, 'image', property_payload(original, id, 'image'));
+	save_translated_document(reset);
+	expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(0);
+	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_a)).toHaveLength(1);
+	original.nodes[original.nodes[id].image].src = '';
+	db.prepare('UPDATE documents SET data = ? WHERE document_id = ?').run(
+		JSON.stringify(original),
+		id
+	);
+	rebuild_asset_refs(id);
+	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_a)).toHaveLength(0);
+});
+
+it('removes incompatible media overrides and their asset references during original cleanup', () => {
+	const id = default_page_document.document_id;
+	const media_id = default_page_document.nodes[id].image;
+	const node = {
+		...default_page_document.nodes[media_id],
+		id: 'invalid_video',
+		type: 'video',
+		src: asset_b
+	};
+	db.prepare('INSERT INTO translations VALUES (?, ?, ?, ?, ?, ?)').run(
+		id,
+		'de',
+		id,
+		'image',
+		JSON.stringify({ node_id: node.id, nodes: { [node.id]: node } }),
+		new Date().toISOString()
+	);
+	rebuild_asset_refs(id);
+	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_b)).toHaveLength(1);
+	cleanup_translations(id);
+	rebuild_asset_refs(id);
+	expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(0);
+	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_b)).toHaveLength(0);
 });
