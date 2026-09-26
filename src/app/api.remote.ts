@@ -1,4 +1,12 @@
+import { translated_href } from './document_links.js';
+import { select_language } from './languages.js';
 import { getRequestEvent, query, command } from '$app/server';
+import {
+	cleanup_translations,
+	languages,
+	save_translated_document,
+	translated_document
+} from './server_translations.js';
 import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import slugify from 'slugify';
@@ -100,6 +108,7 @@ export type InternalLinkPreview = {
 };
 
 export type PageTreeNode = {
+	navigation_href?: string;
 	document_id: string;
 	title: string;
 	description: string | null;
@@ -115,7 +124,8 @@ export type PageTreeNode = {
 const save_document_input_schema = v.object({
 	document_id: v.string(),
 	nodes: v.record(v.string(), v.any()),
-	create: v.optional(v.boolean())
+	create: v.optional(v.boolean()),
+	language: v.optional(v.string())
 });
 
 const update_page_slug_input_schema = v.object({
@@ -703,9 +713,22 @@ export const logout_admin = command(v.void(), async () => {
 /**
  * Return page browser data for the pages drawer.
  */
-export const get_page_browser_data = query(v.string(), async (pathname) => {
-	require_admin_session(getRequestEvent().locals);
-	return build_page_browser_data(pathname);
+export const get_page_browser_data = query(v.string(), async (href) => {
+	const event = getRequestEvent();
+	require_admin_session(event.locals);
+	const url = new URL(href);
+	const result = build_page_browser_data(url.pathname);
+	const language = select_language(languages, url.searchParams.get('lang'));
+	if (language && language !== languages[0] && url.pathname !== '/new') {
+		const visit = (nodes: PageTreeNode[]) => {
+			for (const node of nodes) {
+				node.navigation_href = translated_href(node.page_href, language, url.origin);
+				visit(node.children);
+			}
+		};
+		visit(result.page_forest);
+	}
+	return result;
 });
 
 /** Return public URLs and saved timestamps for pages reachable from Home. */
@@ -760,6 +783,7 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
 		delete_incoming_document_refs.run(document_id);
 		delete_document_slugs.run(document_id);
 		delete_document.run(document_id, 'page');
+		if (languages.length) cleanup_translations(document_id);
 	});
 
 	await cleanup_orphaned_assets(refs_before);
@@ -885,8 +909,32 @@ function assign_active_slug(
 	insert_active_slug(document_id, slug, insert_slug_stmt, deactivate_slug_stmt);
 }
 
+export const get_translated_document = query(
+	v.object({ document_id: v.string(), language: v.string() }),
+	async (input) => {
+		return translated_document(input.document_id, input.language);
+	}
+);
+
+export const save_translations = command(
+	v.object({
+		document_id: v.string(),
+		nodes: v.record(v.string(), v.any()),
+		language: v.string(),
+		translation_revision: v.string()
+	}),
+	async (input) => {
+		require_admin_session(getRequestEvent().locals);
+		const result = save_translated_document(input);
+		void snapshot_if_stale();
+		return result;
+	}
+);
+
 export const save_document = command(save_document_input_schema, async (combined_doc) => {
 	require_admin_session(getRequestEvent().locals);
+	if (combined_doc.language && combined_doc.language !== languages[0])
+		error(400, 'Use the translation save command for additional languages.');
 
 	const all_nodes = structuredClone(combined_doc.nodes);
 	const page_node = all_nodes[combined_doc.document_id];
@@ -1008,6 +1056,12 @@ export const save_document = command(save_document_input_schema, async (combined
 				delete_document_refs,
 				insert_document_ref
 			);
+		}
+
+		if (languages.length) {
+			for (const id of [combined_doc.document_id, nav_root_id, footer_root_id]) {
+				if (id) cleanup_translations(id);
+			}
 		}
 
 		let active_slug = get_active_slug_for_document_id(combined_doc.document_id);
@@ -1180,6 +1234,23 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 			);
 		}
 
+		if (languages.length) {
+			const translations = db.prepare('SELECT rowid, value FROM translations').all() as {
+				rowid: number;
+				value: string;
+			}[];
+			for (const row of translations) {
+				const payload = JSON.parse(row.value);
+				rewrite_internal_page_hrefs(payload.nodes, input.document_id, active_slug);
+				const value = JSON.stringify(payload);
+				if (value !== row.value)
+					db.prepare('UPDATE translations SET value = ?, updated_at = ? WHERE rowid = ?').run(
+						value,
+						now_iso,
+						row.rowid
+					);
+			}
+		}
 		return active_slug;
 	});
 

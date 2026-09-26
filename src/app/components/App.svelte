@@ -1,14 +1,15 @@
 <script lang="ts">
-	import { setContext, type Snippet } from 'svelte';
+	import { setContext, untrack, type Snippet } from 'svelte';
 	import { dev } from '$app/env';
 	import { DEMO_MODE } from '$app/env/public';
-	import { goto, invalidate, refreshAll } from '$app/navigation';
+	import { beforeNavigate, goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { Svedit, KeyMapper, Command, define_keymap } from 'svedit';
+	import { Svedit, KeyMapper, Command, define_keymap, get_char_length } from 'svedit';
 	import Toolbar from './Toolbar.svelte';
 	import SaveProgressModal from './SaveProgressModal.svelte';
 
+	import { language_href } from '#app/languages.js';
 	import { EXT_TO_MIME } from '#app/config.js';
 	import { create_session } from '#app/session.js';
 	import { create_page_browser, set_page_browser } from '#app/page_browser_context.svelte.js';
@@ -33,6 +34,10 @@
 		can_edit = true,
 		origin = null,
 		document_title = null,
+		languages = [],
+		language = '',
+		translation_revision = '',
+		canonical_path = null,
 		children
 	}: {
 		document?: any;
@@ -43,6 +48,10 @@
 		can_edit?: boolean;
 		origin?: string | null;
 		document_title?: string | null;
+		languages?: string[];
+		language?: string;
+		translation_revision?: string;
+		canonical_path?: string | null;
 		children?: Snippet;
 	} = $props();
 
@@ -58,7 +67,11 @@
 	let toolbar_ref = $state<{ open_page_menu: () => void; close_page_menu: () => void }>();
 	let editable = $state(false);
 	let current_is_new = $state(false);
-	let edit_for_fun_saved_doc = $state<{ document_id: string; doc_json: string } | null>(null);
+	let edit_for_fun_saved_doc = $state<{
+		document_id: string;
+		language: string;
+		doc_json: string;
+	} | null>(null);
 	let is_admin = $derived(server_is_admin);
 	let is_admin_mode = $derived(editable && is_admin);
 	const is_demo_mode = DEMO_MODE;
@@ -76,7 +89,113 @@
 	let mobile_touch_active = $state(false);
 	let mobile_touch_started_at_page_end = $state(false);
 
+	let switching_language = $state(false);
+	let translation_mode = $derived(!is_new && languages.length > 1 && language !== languages[0]);
+	let allow_structural_changes = $derived(!translation_mode);
+
+	async function switch_language(next_language: string) {
+		if (
+			editable ||
+			save_progress_visible ||
+			switching_language ||
+			!languages.includes(next_language)
+		)
+			return;
+		switching_language = true;
+		try {
+			await goto(language_href(page.url.href, next_language, languages[0]), { reset: false });
+		} finally {
+			switching_language = false;
+		}
+	}
+
+	beforeNavigate((navigation) => {
+		if (!languages.length || switching_language) return;
+		if (
+			save_progress_visible ||
+			(editable &&
+				JSON.stringify(session.to_json()) !== initial_doc_json &&
+				!confirm('Discard your unsaved changes?'))
+		)
+			navigation.cancel();
+	});
+
+	$effect(() => {
+		if (!editable || allow_structural_changes || !app_el) return;
+		const element = app_el;
+		const current_session = session;
+		const in_canvas = (event: Event) =>
+			event.target instanceof Element && !!event.target.closest('.svedit-canvas');
+		const prevent_drop = (event: DragEvent) => {
+			if (!in_canvas(event)) return;
+			event.preventDefault();
+			event.stopPropagation();
+			if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
+		};
+		const paste_text = (event: ClipboardEvent) => {
+			if (!in_canvas(event)) return;
+			event.preventDefault();
+			event.stopPropagation();
+			if (current_session.selection?.type !== 'text') return;
+			let text = event.clipboardData?.getData('text/plain');
+			if (!text) return;
+			text = text.replace(/\r\n?/g, '\n');
+			if (!current_session.inspect(current_session.selection.path).allow_newlines)
+				text = text.replace(/\n/g, ' ');
+			current_session.apply(current_session.tr.insert_text(text));
+		};
+		const prevent_structural_input = (event: InputEvent | ClipboardEvent) => {
+			if (!in_canvas(event)) return;
+			const selection = current_session.selection;
+			let blocked = selection?.type !== 'text';
+			if (selection?.type === 'text' && selection.anchor_offset === selection.focus_offset) {
+				const input_type = event instanceof InputEvent ? event.inputType : 'deleteContentBackward';
+				const offset = selection.focus_offset;
+				const length = get_char_length(current_session.get(selection.path).content);
+				// Deleting across a property boundary would merge or remove blocks.
+				blocked =
+					input_type.startsWith('delete') &&
+					(input_type.endsWith('Forward') ? offset === length : offset === 0);
+			}
+			if (blocked) {
+				event.preventDefault();
+				event.stopPropagation();
+			}
+		};
+		element.addEventListener('beforeinput', prevent_structural_input, true);
+		element.addEventListener('cut', prevent_structural_input, true);
+		element.addEventListener('paste', paste_text, true);
+		element.addEventListener('dragover', prevent_drop, true);
+		element.addEventListener('drop', prevent_drop, true);
+		return () => {
+			element.removeEventListener('beforeinput', prevent_structural_input, true);
+			element.removeEventListener('cut', prevent_structural_input, true);
+			element.removeEventListener('paste', paste_text, true);
+			element.removeEventListener('dragover', prevent_drop, true);
+			element.removeEventListener('drop', prevent_drop, true);
+		};
+	});
+
 	const app = {
+		get canonical_path() {
+			return canonical_path;
+		},
+		get languages() {
+			return is_new ? [] : languages;
+		},
+		get language() {
+			return language;
+		},
+		get allow_structural_changes() {
+			return allow_structural_changes;
+		},
+		get translation_mode() {
+			return translation_mode;
+		},
+		get saving() {
+			return save_progress_visible || switching_language;
+		},
+		switch_language,
 		get page_content() {
 			return can_edit ? undefined : children;
 		},
@@ -332,20 +451,24 @@
 			}
 
 			const saved_doc_json =
-				has_backend && !is_admin && edit_for_fun_saved_doc?.document_id === loaded_document_id
+				has_backend &&
+				!is_admin &&
+				edit_for_fun_saved_doc?.document_id === loaded_document_id &&
+				edit_for_fun_saved_doc.language === language
 					? edit_for_fun_saved_doc.doc_json
 					: initial_doc_json;
-			session = create_session(JSON.parse(saved_doc_json));
+			session = create_session(JSON.parse(saved_doc_json), app);
 			this.context.editable = false;
 		}
 	}
 
 	class SaveCommand extends Command {
 		is_enabled() {
-			return can_edit && editable;
+			return can_edit && editable && !save_progress_visible;
 		}
 
 		async execute() {
+			if (save_progress_visible) return;
 			// Keep this log so the saved document can be copied into default_site.js.
 			const doc_json = session.to_json();
 			if (dev) console.log('Saved', doc_json);
@@ -354,11 +477,32 @@
 				if (has_backend && !is_admin) {
 					edit_for_fun_saved_doc = {
 						document_id: loaded_document_id,
+						language,
 						doc_json: JSON.stringify(doc_json)
 					};
 				}
 				session.selection = null;
 				this.context.editable = false;
+				return;
+			}
+
+			if (translation_mode) {
+				save_progress_visible = true;
+				save_progress_done = false;
+				save_progress_message = 'Saving translation…';
+				try {
+					const { save_translations } = await import('#app/api.remote.js');
+					await save_translations({ ...doc_json, language, translation_revision });
+					editable = false;
+					session.selection = null;
+					await refreshAll();
+				} catch (err) {
+					const message =
+						err?.body?.message ?? (err instanceof Error ? err.message : 'Save failed.');
+					alert(`${message} Your changes have not been lost.`);
+				} finally {
+					save_progress_visible = false;
+				}
 				return;
 			}
 
@@ -419,7 +563,8 @@
 				const result: { ok: boolean; document_id?: string; slug?: string; created?: boolean } =
 					await save_document({
 						...doc_json,
-						create: current_is_new
+						create: current_is_new,
+						language: languages.length ? languages[0] : undefined
 					});
 
 				if (mapping) {
@@ -446,16 +591,17 @@
 				// When a new document has been created, return and redirect to the new url
 				if (result?.created && result.document_id && result.slug) {
 					current_is_new = false;
+					this.context.editable = false;
+					save_progress_visible = false;
 					await goto(resolve('/[page_id]', { page_id: result.slug }), {
 						replaceState: true,
-						invalidate: ['app:site_metadata']
+						refreshAll: true
 					});
 					return;
 				}
 
 				this.context.editable = false;
-				invalidate_page_browser_data();
-				await invalidate('app:site_metadata');
+				await refreshAll();
 
 				// Display "saved" message only if saving took longer than 3 seconds
 				if (Date.now() - save_start > 3000) {
@@ -592,7 +738,13 @@
 	});
 	key_mapper.push_scope(app_key_map);
 
-	let session = $derived.by(() => create_session(initial_doc));
+	let session = $derived.by(() => {
+		// Equal load data must not reset the editor; language changes still reset history.
+		language;
+		const doc_json = initial_doc_json;
+		// Session construction reads reactive internals. Only load data belongs in this dependency list.
+		return untrack(() => create_session(JSON.parse(doc_json), app));
+	});
 	let loaded_document_id = $derived(initial_doc.document_id);
 
 	$effect(() => {

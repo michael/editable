@@ -129,6 +129,7 @@ To reset your local database to the initial default site content (asks for confi
 pnpm data:reset
 ```
 
+
 ## Primitives
 
 Make Svelte components editable by composing a small set of primitives.
@@ -1134,6 +1135,28 @@ pnpm migration:create reconcile-heading \
 ```
 
 The generated `before` array overrides timestamp order for that relationship only. The target must exist and still be pending; missing targets, already-applied targets, and dependency cycles abort the upgrade before any changes are committed. Prefer tolerant migrations that safely do nothing when their source shape is absent, and reserve `before` for genuine conflicts.
+
+## Translations (experimental)
+
+Set a comma-separated language list in `.env` or your deployment environment:
+
+```dotenv
+LANGUAGES="en,de"
+```
+
+The first language is the original. Additional languages appear in a switcher below the footer. Translated pages use URLs such as `/about?lang=de`. Open a language, edit its text, and save. Missing translations show the original text.
+
+Text, including page titles, descriptions, and shared navigation/footer labels, can be translated. Structure, layouts, media, and ordinary string properties such as image alt text are shared; make those changes in the original language. Text and inline formatting remain editable in translations, but structural controls are disabled.
+
+For local development:
+
+```sh
+LANGUAGES=en,de pnpm dev
+```
+
+Set `LANGUAGES` in the runtime environment, not only when building. Repository markdown bodies and editor interface labels are not translated.
+
+This feature is experimental: its behavior and storage format may change or be removed. Back up your database before upgrading, and do not reorder the first language. With `LANGUAGES` unset or blank, Editable behaves as before. Removing the setting hides translations without deleting them. To remove an override, restore the original text and formatting, then save.
 
 ## Markdown pages (experimental)
 

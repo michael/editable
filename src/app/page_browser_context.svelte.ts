@@ -55,7 +55,7 @@ export function create_page_browser(options: {
 
 		reset();
 		if (page?.page_href) {
-			void goto(page.page_href);
+			void goto(page.navigation_href ?? page.page_href);
 		}
 	}
 

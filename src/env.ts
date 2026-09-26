@@ -46,6 +46,11 @@ const where =
 	'Set it in .env locally, via `fly secrets set` on Fly, or in the server .env on a VPS.';
 
 export const variables = defineEnvVars({
+	LANGUAGES: {
+		description:
+			'Experimental translations: comma-separated language tags, original first (en,de).',
+		schema: optional((value) => value ?? '')
+	},
 	ADMIN_PASSWORD: {
 		description:
 			'Password for the admin login. Required whenever the backend is enabled — the app refuses to start without it. Unused in VERCEL=1 mode.',
@@ -67,8 +72,7 @@ export const variables = defineEnvVars({
 	},
 	DEMO_MODE: {
 		public: true,
-		description:
-			'Set to true or 1 to show the Edit button to unauthenticated visitors.',
+		description: 'Set to true or 1 to show the Edit button to unauthenticated visitors.',
 		schema: optional((value) => value === 'true' || value === '1')
 	}
 });

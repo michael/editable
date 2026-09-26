@@ -15,6 +15,7 @@ import {
 	SelectParentCommand
 } from 'svedit';
 import type { DocumentNode, DocumentPath, NodeSelection, Text, Transaction } from 'svedit';
+import type { AppCommandContext } from './commands.svelte.js';
 import nanoid from './nanoid.js';
 import {
 	CycleLayoutCommand,
@@ -354,32 +355,41 @@ export const document_config = {
 	 * Factory function to create Svedit commands and keymap.
 	 * Called by Svedit component with the svedit context.
 	 */
-	create_commands_and_keymap: (context) => {
+	create_commands_and_keymap: (context: AppCommandContext) => {
+		// Structural commands share a capability without knowing why it is disabled.
+		const structural_context = {
+			get session() {
+				return context.session;
+			},
+			get editable() {
+				return context.editable && context.allow_structural_changes;
+			}
+		};
 		// Create command instances with the provided context
 		const commands = {
 			select_all: new SelectAllCommand(context),
-			insert_default_node: new InsertDefaultNodeCommand(context),
+			insert_default_node: new InsertDefaultNodeCommand(structural_context),
 			add_new_line: new AddNewLineCommand(context),
-			break_text_node: new BreakTextNodeCommand(context),
+			break_text_node: new BreakTextNodeCommand(structural_context),
 			toggle_strong: new ToggleMarkCommand('strong', context),
 			toggle_emphasis: new ToggleMarkCommand('emphasis', context),
 			toggle_code: new ToggleMarkCommand('code', context),
 			toggle_highlight: new ToggleMarkCommand('highlight', context),
-			toggle_section: new ToggleMarkCommand('section', context),
+			toggle_section: new ToggleMarkCommand('section', structural_context),
 			undo: new UndoCommand(context),
 			redo: new RedoCommand(context),
 			select_parent: new SelectParentCommand(context),
-			cycle_layout_next: new CycleLayoutCommand('next', context),
-			cycle_layout_previous: new CycleLayoutCommand('previous', context),
-			cycle_node_type_next: new CycleNodeTypeCommand('next', context),
-			cycle_node_type_previous: new CycleNodeTypeCommand('previous', context),
+			cycle_layout_next: new CycleLayoutCommand('next', structural_context),
+			cycle_layout_previous: new CycleLayoutCommand('previous', structural_context),
+			cycle_node_type_next: new CycleNodeTypeCommand('next', structural_context),
+			cycle_node_type_previous: new CycleNodeTypeCommand('previous', structural_context),
 			toggle_accordion: new ToggleAccordionCommand(context),
 			toggle_link: new ToggleLinkCommand(context),
 			remove_link: new RemoveLinkCommand(context),
 			edit_link: new EditLinkCommand(context),
-			edit_image: new EditImageCommand(context),
-			replace_media: new ReplaceMediaCommand(context),
-			duplicate_nodes: new DuplicateNodesCommand(context)
+			edit_image: new EditImageCommand(structural_context),
+			replace_media: new ReplaceMediaCommand(structural_context),
+			duplicate_nodes: new DuplicateNodesCommand(structural_context)
 		};
 
 		// Define keymap binding keys to commands

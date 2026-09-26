@@ -1,10 +1,14 @@
 import { getContext, type Snippet } from 'svelte';
 
-/**
- * The app-level context provided by App.svelte: server-derived flags plus
- * the auth dialog state and its handlers.
- */
+/** App state and handlers provided by App.svelte. */
 export type AppContext = {
+	readonly allow_structural_changes: boolean;
+	readonly languages: string[];
+	readonly language: string;
+	readonly translation_mode: boolean;
+	readonly saving: boolean;
+	readonly canonical_path: string | null;
+	switch_language: (language: string) => Promise<void>;
 	/** Optional body for read-only routes using the shared site layout. */
 	readonly page_content?: Snippet;
 	readonly has_backend: boolean;

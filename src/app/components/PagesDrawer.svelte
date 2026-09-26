@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import type { PathnameWithSearchOrHash } from '$app/types';
 	import { page } from '$app/state';
 
 	import { get_page_browser_data } from '#app/api.remote.js';
@@ -102,7 +103,7 @@
 	const browser_data_query = $derived.by(() => {
 		page_browser?.version ?? 0;
 		if (!page_browser.state.open) return null;
-		return get_page_browser_data(page.url.pathname);
+		return get_page_browser_data(page.url.href);
 	});
 
 	$effect(() => {
@@ -235,10 +236,8 @@
 		return count;
 	}
 
-	function get_resolved_page_href(page_href) {
-		// Branch on the slug: home's page_href is '/', truthy but strips to empty.
-		const page_id = page_href?.slice(1);
-		return page_id ? resolve('/[page_id]', { page_id }) : resolve('/');
+	function get_resolved_page_href(page_href: string) {
+		return resolve((page_href || '/') as PathnameWithSearchOrHash);
 	}
 
 	function get_page_slug_label(page_href) {
@@ -454,7 +453,11 @@ Updated: ${updated_at_label}`;
 
 	async function open_in_new_tab() {
 		if (!menu_item?.page_href) return;
-		window.open(get_resolved_page_href(menu_item.page_href), '_blank', 'noopener,noreferrer');
+		window.open(
+			get_resolved_page_href(menu_item.navigation_href ?? menu_item.page_href),
+			'_blank',
+			'noopener,noreferrer'
+		);
 		close_menu();
 	}
 
@@ -727,7 +730,7 @@ Updated: ${updated_at_label}`;
 									?.document_id === node.document_id}
 								data-page-browser-row={node.document_id}
 								title={get_page_title_tooltip(node)}
-								href={get_resolved_page_href(node.page_href)}
+								href={get_resolved_page_href(node.navigation_href ?? node.page_href)}
 								onclick={(event) => handle_page_click(event, node.document_id)}
 							>
 								<div class="page-illustration tree-illustration" aria-hidden="true">

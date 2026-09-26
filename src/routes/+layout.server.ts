@@ -1,4 +1,5 @@
-import { ORIGIN, VERCEL } from '$app/env/private';
+import { parse_languages, select_language } from '#app/languages.js';
+import { LANGUAGES, ORIGIN, VERCEL } from '$app/env/private';
 import {
 	default_footer_document,
 	default_nav_document,
@@ -35,11 +36,10 @@ function create_not_found_document(shared_documents): Document {
 	return doc;
 }
 
-export const load: LayoutServerLoad = async ({ locals, depends }) => {
-	// Re-derived after saving a page, so favicon and site name update live.
-	depends('app:site_metadata');
-
+export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const has_backend = !VERCEL;
+	const languages = has_backend ? parse_languages(LANGUAGES) : [];
+	const language = languages.length ? select_language(languages, url.searchParams.get('lang')) : '';
 
 	let site_metadata;
 	let not_found_document: Document = create_not_found_document({
@@ -52,6 +52,17 @@ export const load: LayoutServerLoad = async ({ locals, depends }) => {
 			get_shared_documents(),
 			get_site_metadata()
 		]);
+		if (language) {
+			const { translate_shared_document } = await import('#app/server_translations.js');
+			shared_documents.nav_document = translate_shared_document(
+				shared_documents.nav_document,
+				language
+			);
+			shared_documents.footer_document = translate_shared_document(
+				shared_documents.footer_document,
+				language
+			);
+		}
 		not_found_document = create_not_found_document(shared_documents);
 		site_metadata = next_site_metadata;
 	} else {
@@ -59,6 +70,8 @@ export const load: LayoutServerLoad = async ({ locals, depends }) => {
 	}
 
 	return {
+		languages,
+		language,
 		has_backend,
 		is_admin: !!locals.is_admin,
 		origin: ORIGIN,

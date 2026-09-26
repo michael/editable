@@ -5,6 +5,9 @@
 
 	let { data, children } = $props();
 
+	$effect(() => {
+		if (data.languages?.length && data.language) document.documentElement.lang = data.language;
+	});
 
 	onNavigate((navigation) => {
 		if (typeof document.startViewTransition !== 'function') return;
