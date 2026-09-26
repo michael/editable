@@ -1,3 +1,4 @@
+import nanoid from './nanoid.js';
 import { document_schema } from './document_schema.js';
 import type { Document, DocumentNode, NodeSchema, Text } from 'svedit';
 
@@ -88,9 +89,14 @@ export function replace_translation(
 	const original = text_payload(doc, node_id, property_id);
 	const { nodes: checked_nodes, ...translation } = checked;
 	const remapped = new Map<string, string>();
+	const used_ids = new Set([...Object.keys(doc.nodes), ...Object.keys(checked_nodes)]);
 	for (const id of Object.keys(checked_nodes)) {
-		let next_id = `translation-${node_id}-${property_id}-${remapped.size}`;
-		while (doc.nodes[next_id]) next_id = `t-${next_id}`;
+		let next_id = id;
+		if (doc.nodes[id]) {
+			do next_id = nanoid();
+			while (used_ids.has(next_id));
+		}
+		used_ids.add(next_id);
 		remapped.set(id, next_id);
 	}
 	for (const id of Object.keys(original.nodes)) delete doc.nodes[id];

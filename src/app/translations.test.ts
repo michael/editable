@@ -3,7 +3,7 @@ import {
 	translate_document_links,
 	translated_href
 } from './document_links.js';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Document } from 'svedit';
 import {
 	document_structure,
@@ -12,6 +12,9 @@ import {
 	text_payload
 } from './translations.js';
 import { language_href, parse_languages } from './languages.js';
+import * as id_generator from './nanoid.js';
+
+afterEach(() => vi.restoreAllMocks());
 
 function fixture(): Document {
 	return {
@@ -62,6 +65,7 @@ describe('experimental translation boundaries', () => {
 			}
 		};
 		replace_translation(working, 'paragraph', 'content', payload);
+		expect(text_payload(working, 'paragraph', 'content')).toEqual(payload);
 		expect(working.nodes.bold).toBeUndefined();
 		expect(original.nodes.bold).toBeDefined();
 		expect(working.nodes.other).toEqual(original.nodes.other);
@@ -73,6 +77,46 @@ describe('experimental translation boundaries', () => {
 		expect(document_structure(working)).toBe(document_structure(original));
 		working.nodes.other.type = 'heading_1';
 		expect(document_structure(working)).not.toBe(document_structure(original));
+	});
+
+	it('uses the shared generator for collisions and reserves incoming and generated IDs', () => {
+		const working = fixture();
+		const unrelated = structuredClone(working.nodes.other);
+		const payload = {
+			content: 'Hallo',
+			marks: [
+				{ start_offset: 0, end_offset: 1, node_id: 'other' },
+				{ start_offset: 1, end_offset: 2, node_id: 'bold' },
+				{ start_offset: 2, end_offset: 5, node_id: 'incoming' }
+			],
+			annotations: [],
+			nodes: {
+				other: { id: 'other', type: 'strong' },
+				bold: { id: 'bold', type: 'strong' },
+				incoming: { id: 'incoming', type: 'strong' }
+			}
+		};
+		const original_payload = structuredClone(payload);
+		vi.spyOn(id_generator, 'default')
+			.mockReturnValueOnce('other')
+			.mockReturnValueOnce('incoming')
+			.mockReturnValueOnce('fresh')
+			.mockReturnValueOnce('fresh')
+			.mockReturnValueOnce('another');
+		replace_translation(working, 'paragraph', 'content', payload);
+		expect(working.nodes.other).toEqual(unrelated);
+		expect(working.nodes.paragraph.content.marks.map((mark) => mark.node_id)).toEqual([
+			'fresh',
+			'another',
+			'incoming'
+		]);
+		expect(working.nodes.fresh).toEqual({ id: 'fresh', type: 'strong' });
+		expect(working.nodes.another).toEqual({ id: 'another', type: 'strong' });
+		expect(working.nodes.incoming).toEqual(payload.nodes.incoming);
+		expect(payload).toEqual(original_payload);
+		expect(normalized_payload(text_payload(working, 'paragraph', 'content'))).toBe(
+			normalized_payload(payload)
+		);
 	});
 
 	it('projects navigation links on the backend and removes only projected parameters on save', () => {
