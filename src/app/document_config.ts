@@ -1,3 +1,5 @@
+import { delete_media } from './media_translation.js';
+import { is_media_property } from './translations.js';
 /**
  * The application's Svedit configuration: components, commands, inserters, and exporters.
  * `session.ts` composes this configuration with the schema and default site document.
@@ -141,7 +143,8 @@ async function replace_media(
 	session: AppSession,
 	path: DocumentPath,
 	file: File,
-	blob_url: string
+	blob_url: string,
+	force_new_node = false
 ) {
 	const node = session.get(path);
 	if (node.type !== 'image' && node.type !== 'video') return;
@@ -154,7 +157,9 @@ async function replace_media(
 	session.selection = { type: 'property', path };
 	const tr = session.tr;
 
-	if (media_type === node.type) {
+	const property = session.inspect(path);
+	if (property?.type !== 'node' || !property.node_types.includes(media_type)) return;
+	if (media_type === node.type && !force_new_node) {
 		// Same type — replace src and dimensions, reset crop
 		set_properties(tr, path, {
 			...MEDIA_DEFAULTS,
@@ -249,15 +254,7 @@ export const document_config = {
 		section: Section
 	},
 	replace_media,
-	handle_property_deletion: (tr, path) => {
-		const property_definition = tr.inspect(path);
-		if (property_definition?.type !== 'node') return;
-
-		const target_node = tr.get(path);
-		if (target_node?.type !== 'image' && target_node?.type !== 'video') return;
-
-		set_properties(tr, [target_node.id], MEDIA_DEFAULTS);
-	},
+	handle_property_deletion: delete_media,
 	handle_media_paste: async (session, pasted_media) => {
 		if (session.selection.type === 'property') {
 			const node = session.get(session.selection.path);
@@ -365,6 +362,19 @@ export const document_config = {
 				return context.editable && context.allow_structural_changes;
 			}
 		};
+		const media_context = {
+			get session() {
+				return context.session;
+			},
+			get editable() {
+				return (
+					context.editable &&
+					(context.allow_structural_changes ||
+						(context.session.selection?.type === 'property' &&
+							is_media_property(context.session.inspect(context.session.selection.path))))
+				);
+			}
+		};
 		// Create command instances with the provided context
 		const commands = {
 			select_all: new SelectAllCommand(context),
@@ -387,8 +397,8 @@ export const document_config = {
 			toggle_link: new ToggleLinkCommand(context),
 			remove_link: new RemoveLinkCommand(context),
 			edit_link: new EditLinkCommand(context),
-			edit_image: new EditImageCommand(structural_context),
-			replace_media: new ReplaceMediaCommand(structural_context),
+			edit_image: new EditImageCommand(media_context),
+			replace_media: new ReplaceMediaCommand(media_context),
 			duplicate_nodes: new DuplicateNodesCommand(structural_context)
 		};
 

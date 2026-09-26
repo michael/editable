@@ -1,3 +1,4 @@
+import { rebuild_asset_refs } from './server_asset_refs.js';
 import { translated_href } from './document_links.js';
 import { select_language } from './languages.js';
 import { getRequestEvent, query, command } from '$app/server';
@@ -383,34 +384,6 @@ function collect_document_refs(
 	return refs;
 }
 
-function update_asset_refs(
-	document_id: string,
-	node_ids: Iterable<string>,
-	all_nodes: Record<string, DocumentNode>,
-	delete_stmt: StatementSync,
-	insert_stmt: StatementSync
-) {
-	const asset_ids = new Set<string>();
-
-	for (const node_id of node_ids) {
-		const node = all_nodes[node_id];
-		if (
-			node &&
-			(node.type === 'image' || node.type === 'video') &&
-			typeof node.src === 'string' &&
-			node.src &&
-			!node.src.startsWith('blob:')
-		) {
-			asset_ids.add(node.src);
-		}
-	}
-
-	delete_stmt.run(document_id);
-	for (const asset_id of asset_ids) {
-		insert_stmt.run(asset_id, document_id);
-	}
-}
-
 function update_document_refs(
 	source_document_id: string,
 	target_document_ids: string[],
@@ -783,7 +756,7 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
 		delete_incoming_document_refs.run(document_id);
 		delete_document_slugs.run(document_id);
 		delete_document.run(document_id, 'page');
-		if (languages.length) cleanup_translations(document_id);
+		cleanup_translations(document_id);
 	});
 
 	await cleanup_orphaned_assets(refs_before);
@@ -925,7 +898,9 @@ export const save_translations = command(
 	}),
 	async (input) => {
 		require_admin_session(getRequestEvent().locals);
+		const refs_before = get_referenced_asset_ids();
 		const result = save_translated_document(input);
+		await cleanup_orphaned_assets(refs_before);
 		void snapshot_if_stale();
 		return result;
 	}
@@ -979,11 +954,6 @@ export const save_document = command(save_document_input_schema, async (combined
 		'INSERT INTO documents (document_id, type, data, created_at, updated_at) VALUES(?, ?, ?, ?, ?) ON CONFLICT(document_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at'
 	);
 
-	const delete_asset_refs = db.prepare('DELETE FROM asset_refs WHERE document_id = ?');
-	const insert_asset_ref = db.prepare(
-		'INSERT OR IGNORE INTO asset_refs (asset_id, document_id) VALUES (?, ?)'
-	);
-
 	const delete_document_refs = db.prepare('DELETE FROM document_refs WHERE source_document_id = ?');
 	const insert_document_ref = db.prepare(
 		'INSERT OR REPLACE INTO document_refs (target_document_id, source_document_id, ref_order) VALUES (?, ?, ?)'
@@ -1006,13 +976,6 @@ export const save_document = command(save_document_input_schema, async (combined
 		const created_at = existing_page_row?.created_at ?? now_iso;
 
 		upsert.run(combined_doc.document_id, 'page', JSON.stringify(page_doc), created_at, now_iso);
-		update_asset_refs(
-			combined_doc.document_id,
-			page_node_ids,
-			all_nodes,
-			delete_asset_refs,
-			insert_asset_ref
-		);
 		update_document_refs(
 			combined_doc.document_id,
 			collect_document_refs(all_nodes, page_node_ids, combined_doc.document_id),
@@ -1027,7 +990,6 @@ export const save_document = command(save_document_input_schema, async (combined
 				.get(nav_root_id) as unknown as DocumentRow | undefined;
 			const nav_created_at = existing_nav_row?.created_at ?? now_iso;
 			upsert.run(nav_root_id, 'nav', JSON.stringify(nav_doc), nav_created_at, now_iso);
-			update_asset_refs(nav_root_id, nav_node_ids, all_nodes, delete_asset_refs, insert_asset_ref);
 			update_document_refs(
 				nav_root_id,
 				collect_document_refs(all_nodes, nav_node_ids, nav_root_id),
@@ -1043,13 +1005,6 @@ export const save_document = command(save_document_input_schema, async (combined
 				.get(footer_root_id) as unknown as DocumentRow | undefined;
 			const footer_created_at = existing_footer_row?.created_at ?? now_iso;
 			upsert.run(footer_root_id, 'footer', JSON.stringify(footer_doc), footer_created_at, now_iso);
-			update_asset_refs(
-				footer_root_id,
-				footer_node_ids,
-				all_nodes,
-				delete_asset_refs,
-				insert_asset_ref
-			);
 			update_document_refs(
 				footer_root_id,
 				collect_document_refs(all_nodes, footer_node_ids, footer_root_id),
@@ -1058,9 +1013,10 @@ export const save_document = command(save_document_input_schema, async (combined
 			);
 		}
 
-		if (languages.length) {
-			for (const id of [combined_doc.document_id, nav_root_id, footer_root_id]) {
-				if (id) cleanup_translations(id);
+		for (const id of [combined_doc.document_id, nav_root_id, footer_root_id]) {
+			if (id) {
+				cleanup_translations(id);
+				rebuild_asset_refs(id);
 			}
 		}
 

@@ -9,6 +9,8 @@
 	import Toolbar from './Toolbar.svelte';
 	import SaveProgressModal from './SaveProgressModal.svelte';
 
+	import { paste_translated_media } from '#app/media_translation.js';
+	import { is_media_property } from '#app/translations.js';
 	import { language_href } from '#app/languages.js';
 	import { EXT_TO_MIME } from '#app/config.js';
 	import { create_session } from '#app/session.js';
@@ -134,8 +136,27 @@
 		};
 		const paste_text = (event: ClipboardEvent) => {
 			if (!in_canvas(event)) return;
+			if (
+				current_session.selection?.type === 'property' &&
+				Array.from(event.clipboardData?.items ?? []).some(
+					(item) => item.type.startsWith('image/') || item.type.startsWith('video/')
+				)
+			)
+				return;
 			event.preventDefault();
 			event.stopPropagation();
+			if (current_session.selection?.type === 'property') {
+				const tr = current_session.tr;
+				if (
+					paste_translated_media(
+						tr,
+						current_session.selection.path,
+						event.clipboardData?.getData('text/html') ?? ''
+					)
+				)
+					current_session.apply(tr);
+				return;
+			}
 			if (current_session.selection?.type !== 'text') return;
 			let text = event.clipboardData?.getData('text/plain');
 			if (!text) return;
@@ -147,9 +168,13 @@
 		const prevent_structural_input = (event: InputEvent | ClipboardEvent) => {
 			if (!in_canvas(event)) return;
 			const selection = current_session.selection;
-			let blocked = selection?.type !== 'text';
+			const input_type = event instanceof InputEvent ? event.inputType : 'deleteByCut';
+			const media_deletion =
+				selection?.type === 'property' &&
+				is_media_property(current_session.inspect(selection.path)) &&
+				input_type.startsWith('delete');
+			let blocked = selection?.type !== 'text' && !media_deletion;
 			if (selection?.type === 'text' && selection.anchor_offset === selection.focus_offset) {
-				const input_type = event instanceof InputEvent ? event.inputType : 'deleteContentBackward';
 				const offset = selection.focus_offset;
 				const length = get_char_length(current_session.get(selection.path).content);
 				// Deleting across a property boundary would merge or remove blocks.
@@ -486,26 +511,6 @@
 				return;
 			}
 
-			if (translation_mode) {
-				save_progress_visible = true;
-				save_progress_done = false;
-				save_progress_message = 'Saving translation…';
-				try {
-					const { save_translations } = await import('#app/api.remote.js');
-					await save_translations({ ...doc_json, language, translation_revision });
-					editable = false;
-					session.selection = null;
-					await refreshAll();
-				} catch (err) {
-					const message =
-						err?.body?.message ?? (err instanceof Error ? err.message : 'Save failed.');
-					alert(`${message} Your changes have not been lost.`);
-				} finally {
-					save_progress_visible = false;
-				}
-				return;
-			}
-
 			const save_start = Date.now();
 
 			const [api_module, asset_upload_module] = await Promise.all([
@@ -561,11 +566,13 @@
 				}
 
 				const result: { ok: boolean; document_id?: string; slug?: string; created?: boolean } =
-					await save_document({
-						...doc_json,
-						create: current_is_new,
-						language: languages.length ? languages[0] : undefined
-					});
+					translation_mode
+						? await api_module.save_translations({ ...doc_json, language, translation_revision })
+						: await save_document({
+								...doc_json,
+								create: current_is_new,
+								language: languages.length ? languages[0] : undefined
+							});
 
 				if (mapping) {
 					const tr = session.tr;
@@ -614,7 +621,8 @@
 			} catch (err) {
 				console.error('Save failed:', err);
 				save_progress_visible = false;
-				alert('Save failed. Your changes have not been lost — please try again.');
+				const message = err?.body?.message ?? (err instanceof Error ? err.message : 'Save failed.');
+				alert(`${message} Your changes have not been lost — please try again.`);
 			}
 		}
 	}

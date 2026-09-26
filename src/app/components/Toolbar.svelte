@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { is_media_property } from '#app/translations.js';
 	import { get_app_context } from '#app/app_context.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -103,6 +104,12 @@
 	let is_media_selected = $derived(
 		selected_property?.type === 'image' || selected_property?.type === 'video'
 	);
+	let can_delete_selection = $derived(
+		app.allow_structural_changes ||
+			(session.selection?.type === 'property' &&
+				is_media_selected &&
+				is_media_property(session.inspect(session.selection.path)))
+	);
 	let is_node_caret = $derived(
 		session.selection?.type === 'node' &&
 			session.selection.anchor_offset === session.selection.focus_offset
@@ -173,7 +180,7 @@
 	}
 
 	function handle_delete_selection_click(event) {
-		if (!app.allow_structural_changes) return;
+		if (!can_delete_selection) return;
 		session.apply(session.tr.delete_selection('backward'));
 		restore_canvas_focus(event);
 	}
@@ -692,7 +699,7 @@
 							{/if}
 
 							<!-- Media actions (visible when media is selected) -->
-							{#if is_media_selected && app.allow_structural_changes}
+							{#if is_media_selected && !session.commands.replace_media?.disabled}
 								<div class="flex items-center gap-1">
 									<button
 										class="{tw_toolbar_btn} {session.commands.edit_image?.disabled
@@ -736,7 +743,7 @@
 								</div>
 							{/if}
 
-							{#if app.allow_structural_changes && (session.selection?.type === 'node' || is_media_selected)}
+							{#if can_delete_selection && (session.selection?.type === 'node' || is_media_selected)}
 								<div class="flex items-center gap-1">
 									{#if is_node_caret && !session.commands.insert_default_node?.disabled}
 										<button
