@@ -28,6 +28,8 @@ export function create_session(
 					return app.allow_structural_changes;
 				}
 			}),
+		handle_property_deletion: (tr, path) =>
+			document_config.handle_property_deletion(tr, path, !app.allow_structural_changes),
 		replace_media: (...args: Parameters<typeof document_config.replace_media>) => {
 			const [session, path, file, blob_url] = args;
 			if (app.allow_structural_changes || is_media_property(session.inspect(path))) {

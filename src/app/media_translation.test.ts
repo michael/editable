@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Session, type Document } from 'svedit';
 import { default_site_document } from './default_site.js';
-import { document_schema } from './document_schema.js';
-import { update_media } from './media_translation.js';
+import { document_schema, MEDIA_DEFAULTS } from './document_schema.js';
+import { delete_media, update_media } from './media_translation.js';
 import {
 	document_structure,
 	is_media_property,
@@ -48,6 +48,25 @@ describe('translated media', () => {
 		expect(session.doc.nodes[next_id]).toBeUndefined();
 		session.redo();
 		expect(session.doc.nodes[page_id].image).toBe(next_id);
+	});
+
+	it('deletes only the selected translated media and can undo the deletion', () => {
+		const { doc, page_id, image_id } = shared_media();
+		const session = new Session(document_schema, doc, {
+			handle_property_deletion: (tr, path) => delete_media(tr, path, true)
+		});
+		session.apply(
+			session.tr.set_selection({ type: 'property', path: [page_id, 'image'] }).delete_selection()
+		);
+		const cleared = session.get([page_id, 'image']);
+		expect(cleared).toMatchObject(MEDIA_DEFAULTS);
+		expect(cleared.id).not.toBe(image_id);
+		expect(session.get(['nav_logo', 'media'])).toEqual(doc.nodes[image_id]);
+		expect(document_structure(session.doc)).toBe(document_structure(doc));
+		session.undo();
+		expect(session.get([page_id, 'image'])).toEqual(doc.nodes[image_id]);
+		session.redo();
+		expect(session.get([page_id, 'image'])).toMatchObject(MEDIA_DEFAULTS);
 	});
 
 	it('preserves media payload IDs unless occupied and leaves the payload and shared nodes untouched', () => {

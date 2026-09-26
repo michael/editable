@@ -1,3 +1,4 @@
+import { delete_media } from './media_translation.js';
 import { is_media_property } from './translations.js';
 /**
  * The application's Svedit configuration: components, commands, inserters, and exporters.
@@ -253,15 +254,7 @@ export const document_config = {
 		section: Section
 	},
 	replace_media,
-	handle_property_deletion: (tr, path) => {
-		const property_definition = tr.inspect(path);
-		if (property_definition?.type !== 'node') return;
-
-		const target_node = tr.get(path);
-		if (target_node?.type !== 'image' && target_node?.type !== 'video') return;
-
-		set_properties(tr, [target_node.id], MEDIA_DEFAULTS);
-	},
+	handle_property_deletion: delete_media,
 	handle_media_paste: async (session, pasted_media) => {
 		if (session.selection.type === 'property') {
 			const node = session.get(session.selection.path);

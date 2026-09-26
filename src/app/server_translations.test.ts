@@ -1,3 +1,6 @@
+import { Session } from 'svedit';
+import { document_schema, MEDIA_DEFAULTS } from './document_schema.js';
+import { delete_media } from './media_translation.js';
 import { afterAll, beforeEach, expect, it, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -291,4 +294,32 @@ it('removes incompatible media overrides and their asset references during origi
 	rebuild_asset_refs(id);
 	expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(0);
 	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_b)).toHaveLength(0);
+});
+
+it('persists deleted translated media as an empty override and releases its asset reference', () => {
+	const id = default_page_document.document_id;
+	const source = structuredClone(default_page_document);
+	source.nodes[source.nodes[id].image].src = `${'c'.repeat(64)}.webp`;
+	db.prepare('UPDATE documents SET data = ? WHERE document_id = ?').run(JSON.stringify(source), id);
+	const original = translated_document(id, 'en').document;
+	const input = load_input();
+	replace_image(input, id, 'image', asset_a);
+	save_translated_document(input);
+	const loaded = load_input();
+	const session = new Session(document_schema, loaded, {
+		handle_property_deletion: (tr, path) => delete_media(tr, path, true)
+	});
+	session.apply(
+		session.tr.set_selection({ type: 'property', path: [id, 'image'] }).delete_selection()
+	);
+	save_translated_document({ ...loaded, ...session.to_json() });
+	const result = load_input();
+	expect(result.nodes[result.nodes[id].image]).toMatchObject(MEDIA_DEFAULTS);
+	expect(db.prepare('SELECT * FROM translations WHERE property_id = ?').all('image')).toHaveLength(
+		1
+	);
+	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_a)).toHaveLength(0);
+	expect(translated_document(id, 'en').document).toEqual(original);
+	const french = translated_document(id, 'fr').document;
+	expect(french.nodes[french.nodes[id].image]).toEqual(original.nodes[original.nodes[id].image]);
 });

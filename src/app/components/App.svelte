@@ -9,6 +9,7 @@
 	import Toolbar from './Toolbar.svelte';
 	import SaveProgressModal from './SaveProgressModal.svelte';
 
+	import { is_media_property } from '#app/translations.js';
 	import { language_href } from '#app/languages.js';
 	import { EXT_TO_MIME } from '#app/config.js';
 	import { create_session } from '#app/session.js';
@@ -154,9 +155,13 @@
 		const prevent_structural_input = (event: InputEvent | ClipboardEvent) => {
 			if (!in_canvas(event)) return;
 			const selection = current_session.selection;
-			let blocked = selection?.type !== 'text';
+			const input_type = event instanceof InputEvent ? event.inputType : 'deleteByCut';
+			const media_deletion =
+				selection?.type === 'property' &&
+				is_media_property(current_session.inspect(selection.path)) &&
+				input_type.startsWith('delete');
+			let blocked = selection?.type !== 'text' && !media_deletion;
 			if (selection?.type === 'text' && selection.anchor_offset === selection.focus_offset) {
-				const input_type = event instanceof InputEvent ? event.inputType : 'deleteContentBackward';
 				const offset = selection.focus_offset;
 				const length = get_char_length(current_session.get(selection.path).content);
 				// Deleting across a property boundary would merge or remove blocks.
