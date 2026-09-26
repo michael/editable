@@ -692,7 +692,7 @@
 							{/if}
 
 							<!-- Media actions (visible when media is selected) -->
-							{#if is_media_selected && app.allow_structural_changes}
+							{#if is_media_selected && !session.commands.replace_media?.disabled}
 								<div class="flex items-center gap-1">
 									<button
 										class="{tw_toolbar_btn} {session.commands.edit_image?.disabled

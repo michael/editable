@@ -1,9 +1,11 @@
+import { rebuild_asset_refs } from './server_asset_refs.js';
+import { ASSET_ID_REGEX } from './config.js';
 import { restore_document_links, translate_document_links } from './document_links.js';
 import { createHash } from 'node:crypto';
 import { LANGUAGES, ORIGIN, VERCEL } from '$app/env/private';
 import { error } from '@sveltejs/kit';
 import { fill_document_defaults, validate_document, type Document } from 'svedit';
-import { db, with_transaction } from './services.js';
+import { db, with_transaction, asset_exists } from './services.js';
 import { document_schema } from './document_schema.js';
 import { parse_languages, select_language } from './languages.js';
 import {
@@ -11,8 +13,9 @@ import {
 	normalized_payload,
 	replace_translation,
 	stable_json,
-	text_payload,
-	text_properties
+	property_payload,
+	translation_properties,
+	is_media_property
 } from './translations.js';
 
 type TranslationRow = {
@@ -141,7 +144,7 @@ export function save_translated_document(input: {
 			if (document_structure(original) !== document_structure(edited)) {
 				error(
 					400,
-					'Translations can save text and inline formatting only. Make structure, layout, and media changes in the main language. Your draft is still open.'
+					'Translations can save text, inline formatting, and media only. Make structure and layout changes in the main language. Your draft is still open.'
 				);
 			}
 		} catch (err) {
@@ -154,14 +157,20 @@ export function save_translated_document(input: {
 		const remove = db.prepare(
 			'DELETE FROM translations WHERE document_id = ? AND language = ? AND node_id = ? AND property_id = ?'
 		);
-		for (const { node_id, property_id } of text_properties(original)) {
+		for (const { node_id, property_id } of translation_properties(original)) {
 			const owner = records.find((doc) => doc.nodes[node_id]);
 			if (!owner) error(400, 'Unknown translation owner');
-			const payload = text_payload(edited, node_id, property_id);
+			const payload = property_payload(edited, node_id, property_id);
+			if ('node_id' in payload) {
+				const media = payload.nodes[payload.node_id];
+				if (media.src && (!ASSET_ID_REGEX.test(media.src) || !asset_exists(media.src))) {
+					error(400, 'Upload translated media before saving. Your draft is still open.');
+				}
+			}
 			const key = [owner.document_id, input.language, node_id, property_id];
 			if (
 				normalized_payload(payload) ===
-				normalized_payload(text_payload(original, node_id, property_id))
+				normalized_payload(property_payload(original, node_id, property_id))
 			)
 				remove.run(...key);
 			else {
@@ -178,6 +187,7 @@ export function save_translated_document(input: {
 					upsert.run(...key, JSON.stringify(payload), new Date().toISOString());
 			}
 		}
+		for (const record of records) rebuild_asset_refs(record.document_id);
 		return { ok: true };
 	});
 }
@@ -195,12 +205,12 @@ export function cleanup_translations(document_id: string) {
 		.all(document_id) as TranslationRow[];
 	for (const entry of rows) {
 		const property = document_schema[doc.nodes[entry.node_id]?.type]?.properties[entry.property_id];
-		let remove = property?.type !== 'text';
+		let remove = property?.type !== 'text' && !is_media_property(property);
 		if (!remove) {
 			try {
 				remove =
 					normalized_payload(JSON.parse(entry.value)) ===
-					normalized_payload(text_payload(doc, entry.node_id, entry.property_id));
+					normalized_payload(property_payload(doc, entry.node_id, entry.property_id));
 			} catch {
 				// Invalid stored overrides fall back during reads; they must not block an original save.
 			}

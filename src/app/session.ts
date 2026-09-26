@@ -1,3 +1,4 @@
+import { is_media_property } from './translations.js';
 import type { AppContext } from './app_context.js';
 import { Session, fill_document_defaults } from 'svedit';
 import type { Document } from 'svedit';
@@ -28,10 +29,33 @@ export function create_session(
 				}
 			}),
 		replace_media: (...args: Parameters<typeof document_config.replace_media>) => {
-			if (app.allow_structural_changes) return document_config.replace_media(...args);
+			const [session, path, file, blob_url] = args;
+			if (app.allow_structural_changes || is_media_property(session.inspect(path))) {
+				return document_config.replace_media(
+					session,
+					path,
+					file,
+					blob_url,
+					!app.allow_structural_changes
+				);
+			}
 		},
 		handle_media_paste: (...args: Parameters<typeof document_config.handle_media_paste>) => {
 			if (app.allow_structural_changes) return document_config.handle_media_paste(...args);
+			const [session, media] = args;
+			if (
+				session.selection?.type === 'property' &&
+				media.length &&
+				is_media_property(session.inspect(session.selection.path))
+			) {
+				return document_config.replace_media(
+					session,
+					session.selection.path,
+					media[0].blob,
+					media[0].data_url,
+					true
+				);
+			}
 		}
 	});
 }

@@ -1,3 +1,4 @@
+import { rebuild_asset_refs } from './server_asset_refs.js';
 import { translated_href } from './document_links.js';
 import { select_language } from './languages.js';
 import { getRequestEvent, query, command } from '$app/server';
@@ -783,7 +784,7 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
 		delete_incoming_document_refs.run(document_id);
 		delete_document_slugs.run(document_id);
 		delete_document.run(document_id, 'page');
-		if (languages.length) cleanup_translations(document_id);
+		cleanup_translations(document_id);
 	});
 
 	await cleanup_orphaned_assets(refs_before);
@@ -925,7 +926,9 @@ export const save_translations = command(
 	}),
 	async (input) => {
 		require_admin_session(getRequestEvent().locals);
+		const refs_before = get_referenced_asset_ids();
 		const result = save_translated_document(input);
+		await cleanup_orphaned_assets(refs_before);
 		void snapshot_if_stale();
 		return result;
 	}
@@ -1058,9 +1061,10 @@ export const save_document = command(save_document_input_schema, async (combined
 			);
 		}
 
-		if (languages.length) {
-			for (const id of [combined_doc.document_id, nav_root_id, footer_root_id]) {
-				if (id) cleanup_translations(id);
+		for (const id of [combined_doc.document_id, nav_root_id, footer_root_id]) {
+			if (id) {
+				cleanup_translations(id);
+				rebuild_asset_refs(id);
 			}
 		}
 

@@ -13,6 +13,7 @@
 // Usage: node --disable-warning=ExperimentalWarning restore-assets.js [db_path]
 // db_path defaults to $DATA_DIR/db.sqlite3; assets always go to $DATA_DIR/assets.
 
+import { referenced_assets } from './asset-references.js';
 import { DatabaseSync } from 'node:sqlite';
 import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -43,9 +44,7 @@ if (!s3_enabled()) {
 
 // Same reference walk as check-assets.js.
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
-const rows = /** @type {Array<{ data: string }>} */ (
-	db.prepare('SELECT data FROM documents').all()
-);
+const referenced = referenced_assets(db);
 
 // Content summary, so a restore immediately shows what state it produced.
 // updated_at may not exist in databases predating the timestamps migration.
@@ -58,21 +57,6 @@ try {
 	// Old schema — no updated_at column.
 }
 db.close();
-
-const referenced = new Set();
-for (const row of rows) {
-	const doc = JSON.parse(row.data);
-	for (const node of Object.values(doc.nodes ?? {})) {
-		if (
-			(node.type === 'image' || node.type === 'video') &&
-			typeof node.src === 'string' &&
-			node.src &&
-			!node.src.startsWith('blob:')
-		) {
-			referenced.add(node.src);
-		}
-	}
-}
 
 const stem = (id) => (extname(id) ? id.slice(0, -extname(id).length) : id);
 const stems = new Set([...referenced].map(stem));

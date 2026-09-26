@@ -134,6 +134,13 @@
 		};
 		const paste_text = (event: ClipboardEvent) => {
 			if (!in_canvas(event)) return;
+			if (
+				current_session.selection?.type === 'property' &&
+				Array.from(event.clipboardData?.items ?? []).some(
+					(item) => item.type.startsWith('image/') || item.type.startsWith('video/')
+				)
+			)
+				return;
 			event.preventDefault();
 			event.stopPropagation();
 			if (current_session.selection?.type !== 'text') return;
@@ -486,26 +493,6 @@
 				return;
 			}
 
-			if (translation_mode) {
-				save_progress_visible = true;
-				save_progress_done = false;
-				save_progress_message = 'Saving translation…';
-				try {
-					const { save_translations } = await import('#app/api.remote.js');
-					await save_translations({ ...doc_json, language, translation_revision });
-					editable = false;
-					session.selection = null;
-					await refreshAll();
-				} catch (err) {
-					const message =
-						err?.body?.message ?? (err instanceof Error ? err.message : 'Save failed.');
-					alert(`${message} Your changes have not been lost.`);
-				} finally {
-					save_progress_visible = false;
-				}
-				return;
-			}
-
 			const save_start = Date.now();
 
 			const [api_module, asset_upload_module] = await Promise.all([
@@ -561,11 +548,13 @@
 				}
 
 				const result: { ok: boolean; document_id?: string; slug?: string; created?: boolean } =
-					await save_document({
-						...doc_json,
-						create: current_is_new,
-						language: languages.length ? languages[0] : undefined
-					});
+					translation_mode
+						? await api_module.save_translations({ ...doc_json, language, translation_revision })
+						: await save_document({
+								...doc_json,
+								create: current_is_new,
+								language: languages.length ? languages[0] : undefined
+							});
 
 				if (mapping) {
 					const tr = session.tr;
@@ -614,7 +603,8 @@
 			} catch (err) {
 				console.error('Save failed:', err);
 				save_progress_visible = false;
-				alert('Save failed. Your changes have not been lost — please try again.');
+				const message = err?.body?.message ?? (err instanceof Error ? err.message : 'Save failed.');
+				alert(`${message} Your changes have not been lost — please try again.`);
 			}
 		}
 	}

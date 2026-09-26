@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { get_svedit_context } from '#app/svedit_context.js';
+	import { is_media_property } from '#app/translations.js';
 	import { get_app_context } from '#app/app_context.js';
 	import { deserialize_path, serialize_path } from 'svedit';
 	import { get_page_browser } from '#app/page_browser_context.svelte.js';
@@ -29,7 +30,7 @@
 	let file_drag_active = $state(false);
 
 	$effect(() => {
-		if (!svedit.editable || !app.allow_structural_changes) return;
+		if (!svedit.editable) return;
 
 		document.addEventListener('dragover', on_dragover, true);
 		document.addEventListener('dragleave', on_dragleave, true);
@@ -52,11 +53,13 @@
 		const path = deserialize_path(path_str);
 		const node = svedit.session.get(path);
 		if (node?.type !== 'image' && node?.type !== 'video') return null;
+		if (!app.allow_structural_changes && !is_media_property(svedit.session.inspect(path)))
+			return null;
 		return path;
 	}
 
 	function on_dragover(e) {
-		if (!svedit.editable || !app.allow_structural_changes) return;
+		if (!svedit.editable) return;
 		if (!e.dataTransfer?.types?.includes('Files')) return;
 		file_drag_active = true;
 		const path = get_media_path_at(e);
@@ -86,7 +89,6 @@
 	}
 
 	async function on_drop(e) {
-		if (!app.allow_structural_changes) return;
 		const path = drop_target_path ? [...drop_target_path] : null;
 		drop_target_path = null;
 		file_drag_active = false;
@@ -188,7 +190,7 @@
 		></div>
 	{/if}
 
-	{#if !file_drag_active && app.allow_structural_changes}
+	{#if !file_drag_active && (app.allow_structural_changes || (is_media_selected && !svedit.session.commands.replace_media?.disabled))}
 		{#if svedit.session.selection?.type === 'property'}
 			{@const anchor_style = `position-anchor: --${serialize_path(svedit.session.selection.path)};`}
 			{#if is_media_selected}
@@ -202,7 +204,7 @@
 			{/if}
 		{/if}
 
-		{#if viewbox_context}
+		{#if viewbox_context && app.allow_structural_changes}
 			<SizableViewboxControls
 				path={viewbox_context.parent_path}
 				media_property={viewbox_context.media_property as string}

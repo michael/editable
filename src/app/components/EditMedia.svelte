@@ -1,9 +1,12 @@
 <script lang="ts">
 	import type { DocumentPath } from 'svedit';
 	import { get_svedit_context } from '#app/svedit_context.js';
+	import { get_app_context } from '#app/app_context.js';
+	import { update_media } from '#app/media_translation.js';
 	import { serialize_path } from 'svedit';
 
 	const svedit = get_svedit_context();
+	const app = get_app_context();
 
 	let { path }: { path: DocumentPath } = $props();
 
@@ -16,7 +19,7 @@
 	function save() {
 		if (target_node?.type === 'image' || target_node?.type === 'video') {
 			const tr = svedit.session.tr;
-			tr.set([target_node.id, 'alt'], alt_input_value);
+			update_media(tr, path, { alt: alt_input_value }, app.translation_mode);
 			svedit.session.apply(tr);
 		}
 		close();
