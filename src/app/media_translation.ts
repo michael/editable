@@ -26,3 +26,26 @@ export function delete_media(tr: Transaction, path: DocumentPath, detach = false
 	if (node?.type !== 'image' && node?.type !== 'video') return;
 	update_media(tr, path, MEDIA_DEFAULTS, detach);
 }
+
+/** Paste Svedit's copied media property without changing the surrounding structure. */
+export function paste_translated_media(tr: Transaction, path: DocumentPath, html: string): boolean {
+	const property = tr.inspect(path);
+	if (!is_media_property(property)) return false;
+	const encoded = html.match(/data-svedit="([^"]+)"/)?.[1];
+	if (!encoded) return false;
+	let payload;
+	try {
+		payload = JSON.parse(decodeURIComponent(atob(encoded)));
+	} catch {
+		return false;
+	}
+	if (
+		payload?.kind !== 'property' ||
+		payload.type !== 'node' ||
+		!['image', 'video'].includes(payload.value?.type) ||
+		!property.node_types?.includes(payload.value.type)
+	)
+		return false;
+	update_media(tr, path, payload.value, true);
+	return true;
+}

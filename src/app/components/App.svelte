@@ -9,6 +9,7 @@
 	import Toolbar from './Toolbar.svelte';
 	import SaveProgressModal from './SaveProgressModal.svelte';
 
+	import { paste_translated_media } from '#app/media_translation.js';
 	import { is_media_property } from '#app/translations.js';
 	import { language_href } from '#app/languages.js';
 	import { EXT_TO_MIME } from '#app/config.js';
@@ -144,6 +145,18 @@
 				return;
 			event.preventDefault();
 			event.stopPropagation();
+			if (current_session.selection?.type === 'property') {
+				const tr = current_session.tr;
+				if (
+					paste_translated_media(
+						tr,
+						current_session.selection.path,
+						event.clipboardData?.getData('text/html') ?? ''
+					)
+				)
+					current_session.apply(tr);
+				return;
+			}
 			if (current_session.selection?.type !== 'text') return;
 			let text = event.clipboardData?.getData('text/plain');
 			if (!text) return;

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Session, type Document } from 'svedit';
 import { default_site_document } from './default_site.js';
 import { document_schema, MEDIA_DEFAULTS } from './document_schema.js';
-import { delete_media, update_media } from './media_translation.js';
+import { delete_media, paste_translated_media, update_media } from './media_translation.js';
 import {
 	document_structure,
 	is_media_property,
@@ -106,4 +106,67 @@ describe('translated media', () => {
 		);
 		expect(doc).toEqual(snapshot);
 	});
+});
+
+function clipboard_html(payload: unknown) {
+	return `<span data-svedit="${btoa(encodeURIComponent(JSON.stringify(payload)))}"></span>`;
+}
+
+it('pastes copied media into a translation without changing shared originals and supports undo', () => {
+	const { doc, page_id, image_id } = shared_media();
+	const session = new Session(document_schema, doc, {});
+	const copied = { ...doc.nodes[image_id], src: 'copied.webp', alt: 'Übersetztes Bild' };
+	const tr = session.tr;
+	expect(
+		paste_translated_media(
+			tr,
+			[page_id, 'image'],
+			clipboard_html({
+				kind: 'property',
+				type: 'node',
+				value: copied
+			})
+		)
+	).toBe(true);
+	session.apply(tr);
+	expect(session.get([page_id, 'image'])).toMatchObject({ src: copied.src, alt: copied.alt });
+	expect(session.get([page_id, 'image']).id).not.toBe(image_id);
+	expect(session.get(['nav_logo', 'media'])).toEqual(doc.nodes[image_id]);
+	expect(document_structure(session.doc)).toBe(document_structure(doc));
+	session.undo();
+	expect(session.get([page_id, 'image'])).toEqual(doc.nodes[image_id]);
+});
+
+it('rejects incompatible media, structural clipboard content, and malformed data', () => {
+	const { doc, page_id, image_id } = shared_media();
+	const session = new Session(document_schema, doc, {});
+	for (const html of [
+		clipboard_html({
+			kind: 'property',
+			type: 'node',
+			value: { ...doc.nodes[image_id], type: 'video' }
+		}),
+		clipboard_html({
+			kind: 'property',
+			type: 'node',
+			value: { id: 'paragraph', type: 'paragraph' }
+		}),
+		clipboard_html({ main_nodes: [image_id], nodes: doc.nodes }),
+		'<span data-svedit="invalid"></span>',
+		''
+	]) {
+		expect(paste_translated_media(session.tr, [page_id, 'image'], html)).toBe(false);
+	}
+	expect(
+		paste_translated_media(
+			session.tr,
+			[page_id, 'body'],
+			clipboard_html({
+				kind: 'property',
+				type: 'node',
+				value: doc.nodes[image_id]
+			})
+		)
+	).toBe(false);
+	expect(session.to_json()).toEqual(doc);
 });
