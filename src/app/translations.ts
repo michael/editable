@@ -1,28 +1,12 @@
+import { is_media_property } from './media.js';
 import nanoid from './nanoid.js';
 import { document_schema } from './document_schema.js';
-import type {
-	Document,
-	DocumentNode,
-	NodeSchema,
-	Text,
-	PropertyDefinition,
-	Inspection
-} from 'svedit';
+import type { Document, DocumentNode, NodeSchema, Text } from 'svedit';
 
 const schema: Record<string, NodeSchema> = document_schema;
 export type TextTranslationPayload = Text & { nodes: Record<string, DocumentNode> };
 export type MediaTranslationPayload = { node_id: string; nodes: Record<string, DocumentNode> };
 export type TranslationPayload = TextTranslationPayload | MediaTranslationPayload;
-
-export function is_media_property(property: PropertyDefinition | Inspection | undefined) {
-	return (
-		property?.type === 'node' &&
-		'node_types' in property &&
-		Array.isArray(property.node_types) &&
-		property.node_types.length > 0 &&
-		property.node_types.every((type: string) => type === 'image' || type === 'video')
-	);
-}
 
 export function translation_properties(doc: Document) {
 	return Object.values(doc.nodes).flatMap((node) =>

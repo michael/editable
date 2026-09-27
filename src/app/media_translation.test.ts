@@ -2,10 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { Session, type Document } from 'svedit';
 import { default_site_document } from './default_site.js';
 import { document_schema, MEDIA_DEFAULTS } from './document_schema.js';
-import { delete_media, paste_translated_media, update_media } from './media_translation.js';
+import {
+	delete_media,
+	paste_media,
+	update_media,
+	is_media_property,
+	is_media_selection
+} from './media.js';
 import {
 	document_structure,
-	is_media_property,
 	normalized_payload,
 	property_payload,
 	replace_translation
@@ -35,7 +40,7 @@ describe('translated media', () => {
 		const { doc, page_id, image_id } = shared_media();
 		const session = new Session(document_schema, doc, {});
 		const tr = session.tr;
-		update_media(tr, [page_id, 'image'], { alt: 'Deutscher Alternativtext', scale: 1.5 }, true);
+		update_media(tr, [page_id, 'image'], { alt: 'Deutscher Alternativtext', scale: 1.5 });
 		session.apply(tr);
 		const next_id = session.doc.nodes[page_id].image;
 		expect(next_id).not.toBe(image_id);
@@ -53,7 +58,7 @@ describe('translated media', () => {
 	it('deletes only the selected translated media and can undo the deletion', () => {
 		const { doc, page_id, image_id } = shared_media();
 		const session = new Session(document_schema, doc, {
-			handle_property_deletion: (tr, path) => delete_media(tr, path, true)
+			handle_property_deletion: (tr, path) => delete_media(tr, path)
 		});
 		session.apply(
 			session.tr.set_selection({ type: 'property', path: [page_id, 'image'] }).delete_selection()
@@ -118,7 +123,7 @@ it('pastes copied media into a translation without changing shared originals and
 	const copied = { ...doc.nodes[image_id], src: 'copied.webp', alt: 'Übersetztes Bild' };
 	const tr = session.tr;
 	expect(
-		paste_translated_media(
+		paste_media(
 			tr,
 			[page_id, 'image'],
 			clipboard_html({
@@ -155,10 +160,10 @@ it('rejects incompatible media, structural clipboard content, and malformed data
 		'<span data-svedit="invalid"></span>',
 		''
 	]) {
-		expect(paste_translated_media(session.tr, [page_id, 'image'], html)).toBe(false);
+		expect(paste_media(session.tr, [page_id, 'image'], html)).toBe(false);
 	}
 	expect(
-		paste_translated_media(
+		paste_media(
 			session.tr,
 			[page_id, 'body'],
 			clipboard_html({
@@ -168,5 +173,17 @@ it('rejects incompatible media, structural clipboard content, and malformed data
 			})
 		)
 	).toBe(false);
+	expect(session.to_json()).toEqual(doc);
+});
+
+it('recognizes media field selections independently of language and rejects structural edits', () => {
+	const { doc, page_id } = shared_media();
+	const session = new Session(document_schema, doc, {});
+	session.selection = { type: 'property', path: [page_id, 'image'] };
+	expect(is_media_selection(session)).toBe(true);
+	session.selection = { type: 'node', path: [page_id, 'body'], anchor_offset: 0, focus_offset: 0 };
+	expect(is_media_selection(session)).toBe(false);
+	expect(update_media(session.tr, [page_id, 'body'], { src: 'image.webp' })).toBe(false);
+	expect(update_media(session.tr, [page_id, 'image'], { type: 'video' })).toBe(false);
 	expect(session.to_json()).toEqual(doc);
 });

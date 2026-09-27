@@ -9,8 +9,7 @@
 	import Toolbar from './Toolbar.svelte';
 	import SaveProgressModal from './SaveProgressModal.svelte';
 
-	import { paste_translated_media } from '#app/media_translation.js';
-	import { is_media_property } from '#app/translations.js';
+	import { paste_media, is_media_selection } from '#app/media.js';
 	import { language_href } from '#app/languages.js';
 	import { EXT_TO_MIME } from '#app/config.js';
 	import { create_session } from '#app/session.js';
@@ -123,32 +122,32 @@
 	});
 
 	$effect(() => {
-		if (!editable || allow_structural_changes || !app_el) return;
+		if (!editable || !app_el) return;
 		const element = app_el;
 		const current_session = session;
 		const in_canvas = (event: Event) =>
 			event.target instanceof Element && !!event.target.closest('.svedit-canvas');
 		const prevent_drop = (event: DragEvent) => {
-			if (!in_canvas(event)) return;
+			if (allow_structural_changes || !in_canvas(event)) return;
 			event.preventDefault();
 			event.stopPropagation();
 			if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
 		};
-		const paste_text = (event: ClipboardEvent) => {
+		const handle_paste = (event: ClipboardEvent) => {
 			if (!in_canvas(event)) return;
-			if (
-				current_session.selection?.type === 'property' &&
-				Array.from(event.clipboardData?.items ?? []).some(
-					(item) => item.type.startsWith('image/') || item.type.startsWith('video/')
+			if (is_media_selection(current_session)) {
+				// File pastes use Svedit's media upload hook; copied properties use our media primitive.
+				if (
+					Array.from(event.clipboardData?.items ?? []).some(
+						(item) => item.type.startsWith('image/') || item.type.startsWith('video/')
+					)
 				)
-			)
-				return;
-			event.preventDefault();
-			event.stopPropagation();
-			if (current_session.selection?.type === 'property') {
+					return;
+				event.preventDefault();
+				event.stopPropagation();
 				const tr = current_session.tr;
 				if (
-					paste_translated_media(
+					paste_media(
 						tr,
 						current_session.selection.path,
 						event.clipboardData?.getData('text/html') ?? ''
@@ -157,6 +156,9 @@
 					current_session.apply(tr);
 				return;
 			}
+			if (allow_structural_changes) return;
+			event.preventDefault();
+			event.stopPropagation();
 			if (current_session.selection?.type !== 'text') return;
 			let text = event.clipboardData?.getData('text/plain');
 			if (!text) return;
@@ -166,13 +168,10 @@
 			current_session.apply(current_session.tr.insert_text(text));
 		};
 		const prevent_structural_input = (event: InputEvent | ClipboardEvent) => {
-			if (!in_canvas(event)) return;
+			if (allow_structural_changes || !in_canvas(event)) return;
 			const selection = current_session.selection;
 			const input_type = event instanceof InputEvent ? event.inputType : 'deleteByCut';
-			const media_deletion =
-				selection?.type === 'property' &&
-				is_media_property(current_session.inspect(selection.path)) &&
-				input_type.startsWith('delete');
+			const media_deletion = is_media_selection(current_session) && input_type.startsWith('delete');
 			let blocked = selection?.type !== 'text' && !media_deletion;
 			if (selection?.type === 'text' && selection.anchor_offset === selection.focus_offset) {
 				const offset = selection.focus_offset;
@@ -189,13 +188,13 @@
 		};
 		element.addEventListener('beforeinput', prevent_structural_input, true);
 		element.addEventListener('cut', prevent_structural_input, true);
-		element.addEventListener('paste', paste_text, true);
+		element.addEventListener('paste', handle_paste, true);
 		element.addEventListener('dragover', prevent_drop, true);
 		element.addEventListener('drop', prevent_drop, true);
 		return () => {
 			element.removeEventListener('beforeinput', prevent_structural_input, true);
 			element.removeEventListener('cut', prevent_structural_input, true);
-			element.removeEventListener('paste', paste_text, true);
+			element.removeEventListener('paste', handle_paste, true);
 			element.removeEventListener('dragover', prevent_drop, true);
 			element.removeEventListener('drop', prevent_drop, true);
 		};

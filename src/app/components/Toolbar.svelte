@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { is_media_property } from '#app/translations.js';
+	import { is_media_selection } from '#app/media.js';
 	import { get_app_context } from '#app/app_context.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -98,18 +98,8 @@
 		});
 	}
 
-	let selected_property = $derived(
-		session.selection?.type === 'property' ? session.get(session.selection.path) : null
-	);
-	let is_media_selected = $derived(
-		selected_property?.type === 'image' || selected_property?.type === 'video'
-	);
-	let can_delete_selection = $derived(
-		app.allow_structural_changes ||
-			(session.selection?.type === 'property' &&
-				is_media_selected &&
-				is_media_property(session.inspect(session.selection.path)))
-	);
+	let is_media_selected = $derived(is_media_selection(session));
+	let can_delete_selection = $derived(app.allow_structural_changes || is_media_selected);
 	let is_node_caret = $derived(
 		session.selection?.type === 'node' &&
 			session.selection.anchor_offset === session.selection.focus_offset

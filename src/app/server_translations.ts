@@ -1,3 +1,4 @@
+import { is_media_property } from './media.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { ASSET_ID_REGEX } from './config.js';
 import { restore_document_links, translate_document_links } from './document_links.js';
@@ -14,8 +15,7 @@ import {
 	replace_translation,
 	stable_json,
 	property_payload,
-	translation_properties,
-	is_media_property
+	translation_properties
 } from './translations.js';
 
 type TranslationRow = {

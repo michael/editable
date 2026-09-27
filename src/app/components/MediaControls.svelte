@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { get_app_context } from '#app/app_context.js';
-	import { update_media } from '#app/media_translation.js';
+	import { update_media } from '#app/media.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { touch_drag } from '#lib/client/touch_drag.js';
 
 	const svedit = get_svedit_context();
-	const app = get_app_context();
 
 	// Zoom constraints
 	const MIN_SCALE = 0.1;
@@ -83,12 +81,7 @@
 		const new_focal_point_y = Math.min(Math.max(media_node.focal_point_y - dy, 0), 1);
 
 		const tr = svedit.session.tr;
-		update_media(
-			tr,
-			path,
-			{ focal_point_x: new_focal_point_x, focal_point_y: new_focal_point_y },
-			app.translation_mode
-		);
+		update_media(tr, path, { focal_point_x: new_focal_point_x, focal_point_y: new_focal_point_y });
 		svedit.session.apply(tr, { batch: true });
 
 		last_x = client_x;
@@ -97,12 +90,10 @@
 
 	function handle_double_click() {
 		const tr = svedit.session.tr;
-		update_media(
-			tr,
-			path,
-			{ scale: 1.0, object_fit: media_node.object_fit === 'cover' ? 'contain' : 'cover' },
-			app.translation_mode
-		);
+		update_media(tr, path, {
+			scale: 1.0,
+			object_fit: media_node.object_fit === 'cover' ? 'contain' : 'cover'
+		});
 		svedit.session.apply(tr, { batch: true });
 	}
 
@@ -121,12 +112,7 @@
 		const snapped_scale = crosses_one || is_close_to_one ? 1.0 : next_scale;
 
 		const tr = svedit.session.tr;
-		update_media(
-			tr,
-			path,
-			{ scale: Math.min(Math.max(snapped_scale, MIN_SCALE), MAX_SCALE) },
-			app.translation_mode
-		);
+		update_media(tr, path, { scale: Math.min(Math.max(snapped_scale, MIN_SCALE), MAX_SCALE) });
 		svedit.session.apply(tr, { batch: true });
 	}
 

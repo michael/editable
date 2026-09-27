@@ -1,6 +1,6 @@
 import { Session } from 'svedit';
 import { document_schema, MEDIA_DEFAULTS } from './document_schema.js';
-import { delete_media } from './media_translation.js';
+import { delete_media } from './media.js';
 import { afterAll, beforeEach, expect, it, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -307,7 +307,7 @@ it('persists deleted translated media as an empty override and releases its asse
 	save_translated_document(input);
 	const loaded = load_input();
 	const session = new Session(document_schema, loaded, {
-		handle_property_deletion: (tr, path) => delete_media(tr, path, true)
+		handle_property_deletion: (tr, path) => delete_media(tr, path)
 	});
 	session.apply(
 		session.tr.set_selection({ type: 'property', path: [id, 'image'] }).delete_selection()

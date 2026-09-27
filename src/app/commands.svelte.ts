@@ -1,3 +1,4 @@
+import { is_media_selection } from './media.js';
 import type { AppContext } from './app_context.js';
 import { Command, is_selection_collapsed, serialize_path } from 'svedit';
 import type { CommandContext, DocumentNode, DocumentPath, Transaction } from 'svedit';
@@ -175,10 +176,7 @@ export class CycleNodeTypeCommand extends Command {
 
 export class ReplaceMediaCommand extends Command {
 	is_enabled() {
-		const session = this.context.session;
-		if (!this.context.editable || session.selection?.type !== 'property') return false;
-		const selected_property = session.get(session.selection.path);
-		return selected_property?.type === 'image' || selected_property?.type === 'video';
+		return this.context.editable && is_media_selection(this.context.session);
 	}
 
 	execute() {
@@ -208,10 +206,7 @@ export class EditImageCommand extends Command {
 	}
 
 	is_enabled() {
-		const session = this.context.session;
-		if (!this.context.editable || session.selection?.type !== 'property') return false;
-		const selected_property = session.get(session.selection.path);
-		return selected_property?.type === 'image' || selected_property?.type === 'video';
+		return this.context.editable && is_media_selection(this.context.session);
 	}
 
 	execute() {
