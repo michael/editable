@@ -1,4 +1,4 @@
-import { Session } from 'svedit';
+import { Session, type Document } from 'svedit';
 import { document_schema, MEDIA_DEFAULTS } from './document_schema.js';
 import { delete_media } from './media.js';
 import { afterAll, beforeEach, expect, it, vi } from 'vitest';
@@ -206,7 +206,7 @@ it('translates shared navigation media to video and releases references after it
 	expect(db.prepare('SELECT document_id FROM asset_refs WHERE asset_id = ?').get(asset_b)).toEqual({
 		document_id: default_nav_document.document_id
 	});
-	const nav = structuredClone(default_nav_document);
+	const nav: Document = structuredClone(default_nav_document);
 	delete nav.nodes[node_id];
 	db.prepare('UPDATE documents SET data = ? WHERE document_id = ?').run(
 		JSON.stringify(nav),
@@ -322,4 +322,47 @@ it('persists deleted translated media as an empty override and releases its asse
 	expect(translated_document(id, 'en').document).toEqual(original);
 	const french = translated_document(id, 'fr').document;
 	expect(french.nodes[french.nodes[id].image]).toEqual(original.nodes[original.nodes[id].image]);
+});
+
+it('keeps server references in sync with backup scanning across documents and disabled languages', () => {
+	const page_id = default_page_document.document_id;
+	const nav_id = default_nav_document.document_id;
+	const input = load_input();
+	replace_image(input, page_id, 'image', asset_a);
+	save_translated_document(input);
+	// A saved language no longer present in LANGUAGES must still retain its assets.
+	db.prepare('UPDATE translations SET language = ?').run('it');
+	const nav: Document = structuredClone(default_nav_document);
+	nav.nodes[nav.nodes.nav_logo.media].src = asset_a;
+	db.prepare('UPDATE documents SET data = ? WHERE document_id = ?').run(
+		JSON.stringify(nav),
+		nav_id
+	);
+	for (const id of [page_id, nav_id, default_footer_document.document_id]) rebuild_asset_refs(id);
+	const server_assets = () =>
+		new Set(
+			(db.prepare('SELECT DISTINCT asset_id FROM asset_refs').all() as { asset_id: string }[]).map(
+				(row) => row.asset_id
+			)
+		);
+	expect(server_assets()).toEqual(referenced_assets(db));
+	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_a)).toHaveLength(2);
+	db.prepare('DELETE FROM translations WHERE document_id = ?').run(page_id);
+	rebuild_asset_refs(page_id);
+	expect(server_assets()).toEqual(referenced_assets(db));
+	expect(db.prepare('SELECT document_id FROM asset_refs WHERE asset_id = ?').get(asset_a)).toEqual({
+		document_id: nav_id
+	});
+});
+
+it('fails before removing existing references when a stored translation is malformed', () => {
+	const id = default_page_document.document_id;
+	const input = load_input();
+	replace_image(input, id, 'image', asset_a);
+	save_translated_document(input);
+	const refs_before = db.prepare('SELECT * FROM asset_refs').all();
+	db.prepare('UPDATE translations SET value = ?').run('{invalid');
+	expect(() => rebuild_asset_refs(id)).toThrow();
+	expect(() => referenced_assets(db)).toThrow();
+	expect(db.prepare('SELECT * FROM asset_refs').all()).toEqual(refs_before);
 });

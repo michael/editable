@@ -1,5 +1,5 @@
 import { db } from './services.js';
-import type { DocumentNode } from 'svedit';
+import { collect_asset_ids } from '../lib/asset_references.js';
 
 /** Rebuild the union of original and all-language media references atomically with saves. */
 export function rebuild_asset_refs(document_id: string) {
@@ -15,19 +15,8 @@ export function rebuild_asset_refs(document_id: string) {
 				).map((row) => row.value)
 			]
 		: [];
-	const assets = new Set<string>();
-	for (const json of payloads) {
-		const payload = JSON.parse(json);
-		for (const node of Object.values(payload.nodes ?? {}) as DocumentNode[]) {
-			if (
-				(node.type === 'image' || node.type === 'video') &&
-				typeof node.src === 'string' &&
-				node.src &&
-				!node.src.startsWith('blob:')
-			)
-				assets.add(node.src);
-		}
-	}
+	const assets = collect_asset_ids(payloads.map((json) => JSON.parse(json)));
+
 	db.prepare('DELETE FROM asset_refs WHERE document_id = ?').run(document_id);
 	const insert = db.prepare(
 		'INSERT OR IGNORE INTO asset_refs (asset_id, document_id) VALUES (?, ?)'
