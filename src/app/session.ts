@@ -1,3 +1,4 @@
+import { is_media_selection } from './media.js';
 import type { AppContext } from './app_context.js';
 import { Session, fill_document_defaults } from 'svedit';
 import type { Document } from 'svedit';
@@ -27,11 +28,10 @@ export function create_session(
 					return app.allow_structural_changes;
 				}
 			}),
-		replace_media: (...args: Parameters<typeof document_config.replace_media>) => {
-			if (app.allow_structural_changes) return document_config.replace_media(...args);
-		},
-		handle_media_paste: (...args: Parameters<typeof document_config.handle_media_paste>) => {
-			if (app.allow_structural_changes) return document_config.handle_media_paste(...args);
+		handle_media_paste: (session, media) => {
+			if (app.allow_structural_changes || is_media_selection(session)) {
+				return document_config.handle_media_paste(session, media);
+			}
 		}
 	});
 }

@@ -1,3 +1,4 @@
+import { delete_media, update_media, is_media_selection } from './media.js';
 /**
  * The application's Svedit configuration: components, commands, inserters, and exporters.
  * `session.ts` composes this configuration with the schema and default site document.
@@ -83,7 +84,6 @@ import Section from './components/Section.svelte';
 
 import { document_schema, MEDIA_DEFAULTS } from '#app/document_schema.js';
 import { start_processing } from '#app/asset_upload.js';
-import { set_properties } from 'svedit';
 import { get_media_dimensions } from '#lib/client/media_dimensions.js';
 
 type AppSession = Session<typeof document_schema>;
@@ -143,9 +143,6 @@ async function replace_media(
 	file: File,
 	blob_url: string
 ) {
-	const node = session.get(path);
-	if (node.type !== 'image' && node.type !== 'video') return;
-
 	const media_type = get_media_type(file);
 	const dims = await get_media_dimensions(file);
 
@@ -154,31 +151,17 @@ async function replace_media(
 	session.selection = { type: 'property', path };
 	const tr = session.tr;
 
-	if (media_type === node.type) {
-		// Same type — replace src and dimensions, reset crop
-		set_properties(tr, path, {
+	if (
+		!update_media(tr, path, {
 			...MEDIA_DEFAULTS,
-			src: blob_url,
-			mime_type: file.type,
-			width: dims.width,
-			height: dims.height
-		});
-	} else {
-		// Different type — replace the entire node
-		const new_node = {
-			...MEDIA_DEFAULTS,
-			id: nanoid(),
 			type: media_type,
 			src: blob_url,
 			mime_type: file.type,
 			width: dims.width,
 			height: dims.height
-		};
-		tr.create(new_node);
-		const parent_path = path.slice(0, -1);
-		const property_name = path[path.length - 1];
-		tr.set([...parent_path, property_name], new_node.id);
-	}
+		})
+	)
+		return;
 
 	// Set selection on the transaction so undo/redo restores it correctly
 	tr.selection = { type: 'property', path };
@@ -249,19 +232,10 @@ export const document_config = {
 		section: Section
 	},
 	replace_media,
-	handle_property_deletion: (tr, path) => {
-		const property_definition = tr.inspect(path);
-		if (property_definition?.type !== 'node') return;
-
-		const target_node = tr.get(path);
-		if (target_node?.type !== 'image' && target_node?.type !== 'video') return;
-
-		set_properties(tr, [target_node.id], MEDIA_DEFAULTS);
-	},
+	handle_property_deletion: delete_media,
 	handle_media_paste: async (session, pasted_media) => {
 		if (session.selection.type === 'property') {
-			const node = session.get(session.selection.path);
-			if (node.type === 'image' || node.type === 'video') {
+			if (is_media_selection(session)) {
 				await replace_media(
 					session,
 					session.selection.path,
@@ -387,8 +361,8 @@ export const document_config = {
 			toggle_link: new ToggleLinkCommand(context),
 			remove_link: new RemoveLinkCommand(context),
 			edit_link: new EditLinkCommand(context),
-			edit_image: new EditImageCommand(structural_context),
-			replace_media: new ReplaceMediaCommand(structural_context),
+			edit_image: new EditImageCommand(context),
+			replace_media: new ReplaceMediaCommand(context),
 			duplicate_nodes: new DuplicateNodesCommand(structural_context)
 		};
 

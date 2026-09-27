@@ -7,6 +7,7 @@
 // Usage: node --disable-warning=ExperimentalWarning check-assets.js [--list-entries] <db_path> <assets_dir>
 // Exit codes: 0 = all present, 1 = missing references, 2 = bad usage.
 
+import { referenced_assets } from './asset-references.js';
 import { DatabaseSync } from 'node:sqlite';
 import { existsSync, lstatSync } from 'node:fs';
 import { extname, join } from 'node:path';
@@ -21,24 +22,7 @@ if (!db_path || !assets_dir) {
 }
 
 const db = new DatabaseSync(db_path, { readOnly: true });
-const rows = /** @type {Array<{ data: string }>} */ (
-	db.prepare('SELECT data FROM documents').all()
-);
-
-const referenced = new Set();
-for (const row of rows) {
-	const doc = JSON.parse(row.data);
-	for (const node of Object.values(doc.nodes ?? {})) {
-		if (
-			(node.type === 'image' || node.type === 'video') &&
-			typeof node.src === 'string' &&
-			node.src &&
-			!node.src.startsWith('blob:')
-		) {
-			referenced.add(node.src);
-		}
-	}
-}
+const referenced = referenced_assets(db);
 
 const missing = [...referenced].filter((asset_id) => !existsSync(join(assets_dir, asset_id)));
 

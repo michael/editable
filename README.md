@@ -1144,9 +1144,9 @@ Set a comma-separated language list in `.env` or your deployment environment:
 LANGUAGES="en,de"
 ```
 
-The first language is the original. Additional languages appear in a switcher below the footer. Translated pages use URLs such as `/about?lang=de`. Open a language, edit its text, and save. Missing translations show the original text.
+The first language is the original. Additional languages appear in the navigation switcher. Translated pages use URLs such as `/about?lang=de`. Choose a language before entering edit mode, edit its text or media, and save. Missing translations show the original content.
 
-Text, including page titles, descriptions, and shared navigation/footer labels, can be translated. Structure, layouts, media, and ordinary string properties such as image alt text are shared; make those changes in the original language. Text and inline formatting remain editable in translations, but structural controls are disabled.
+Text, including page titles, descriptions, and shared navigation/footer labels, can be translated. Media properties allowing images and/or videos can also be replaced, with separate alt text and crop settings per language. Media uploads use the same asset storage as the original language. Structure, layouts, and other ordinary string properties remain shared; make those changes in the original language. Structural controls are disabled in translation mode.
 
 For local development:
 
@@ -1156,7 +1156,7 @@ LANGUAGES=en,de pnpm dev
 
 Set `LANGUAGES` in the runtime environment, not only when building. Repository markdown bodies and editor interface labels are not translated.
 
-This feature is experimental: its behavior and storage format may change or be removed. Back up your database before upgrading, and do not reorder the first language. With `LANGUAGES` unset or blank, Editable behaves as before. Removing the setting hides translations without deleting them. To remove an override, restore the original text and formatting, then save.
+This feature is experimental: its behavior and storage format may change or be removed. Back up your database before upgrading, and do not reorder the first language. With `LANGUAGES` unset or blank, Editable behaves as before. Removing the setting hides translations without deleting them. To remove an override, restore the original text and formatting or the original media and its settings, then save. Assets referenced by any saved language are retained; after their last reference is removed, the usual asset cleanup grace period applies.
 
 ## Markdown pages (experimental)
 
