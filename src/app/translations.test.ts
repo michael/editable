@@ -9,7 +9,7 @@ import {
 	document_structure,
 	normalized_payload,
 	replace_translation,
-	text_payload
+	property_payload
 } from './translations.js';
 import { language_href, parse_languages } from './languages.js';
 import * as id_generator from './nanoid.js';
@@ -65,11 +65,11 @@ describe('experimental translation boundaries', () => {
 			}
 		};
 		replace_translation(working, 'paragraph', 'content', payload);
-		expect(text_payload(working, 'paragraph', 'content')).toEqual(payload);
+		expect(property_payload(working, 'paragraph', 'content')).toEqual(payload);
 		expect(working.nodes.bold).toBeUndefined();
 		expect(original.nodes.bold).toBeDefined();
 		expect(working.nodes.other).toEqual(original.nodes.other);
-		expect(normalized_payload(text_payload(working, 'paragraph', 'content'))).toBe(
+		expect(normalized_payload(property_payload(working, 'paragraph', 'content'))).toBe(
 			normalized_payload(payload)
 		);
 		expect(document_structure(working)).toBe(document_structure(original));
@@ -114,7 +114,7 @@ describe('experimental translation boundaries', () => {
 		expect(working.nodes.another).toEqual({ id: 'another', type: 'strong' });
 		expect(working.nodes.incoming).toEqual(payload.nodes.incoming);
 		expect(payload).toEqual(original_payload);
-		expect(normalized_payload(text_payload(working, 'paragraph', 'content'))).toBe(
+		expect(normalized_payload(property_payload(working, 'paragraph', 'content'))).toBe(
 			normalized_payload(payload)
 		);
 	});

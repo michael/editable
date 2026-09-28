@@ -1,14 +1,15 @@
+import { languages } from '#app/server_languages.js';
 import { is_media_property } from './media.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { ASSET_ID_REGEX } from './config.js';
 import { restore_document_links, translate_document_links } from './document_links.js';
 import { createHash } from 'node:crypto';
-import { LANGUAGES, ORIGIN, VERCEL } from '$app/env/private';
+import { ORIGIN } from '$app/env/private';
 import { error } from '@sveltejs/kit';
 import { fill_document_defaults, validate_document, type Document } from 'svedit';
 import { db, with_transaction, asset_exists } from './services.js';
 import { document_schema } from './document_schema.js';
-import { parse_languages, select_language } from './languages.js';
+import { select_language } from './languages.js';
 import {
 	document_structure,
 	normalized_payload,
@@ -25,7 +26,6 @@ type TranslationRow = {
 	property_id: string;
 	value: string;
 };
-export const languages = VERCEL ? [] : parse_languages(LANGUAGES);
 
 function load_records(document_id: string) {
 	const read = (id: string): Document => {

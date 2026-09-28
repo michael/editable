@@ -5,7 +5,6 @@ export type AppContext = {
 	readonly allow_structural_changes: boolean;
 	readonly languages: string[];
 	readonly language: string;
-	readonly translation_mode: boolean;
 	readonly saving: boolean;
 	readonly canonical_path: string | null;
 	switch_language: (language: string) => Promise<void>;

@@ -1,10 +1,10 @@
+import { languages } from './server_languages.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { translated_href } from './document_links.js';
 import { select_language } from './languages.js';
 import { getRequestEvent, query, command } from '$app/server';
 import {
 	cleanup_translations,
-	languages,
 	save_translated_document,
 	translated_document
 } from './server_translations.js';

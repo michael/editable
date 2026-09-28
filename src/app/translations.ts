@@ -80,19 +80,7 @@ export function stable_json(value: unknown): string {
 	);
 }
 
-export function text_properties(doc: Document) {
-	return Object.values(doc.nodes).flatMap((node) =>
-		Object.entries(schema[node.type]?.properties ?? {})
-			.filter(([, definition]) => definition.type === 'text')
-			.map(([property_id]) => ({ node_id: node.id, property_id }))
-	);
-}
-
-export function text_payload(
-	doc: Document,
-	node_id: string,
-	property_id: string
-): TextTranslationPayload {
+function text_payload(doc: Document, node_id: string, property_id: string): TextTranslationPayload {
 	const translation: Text = structuredClone(doc.nodes[node_id][property_id]);
 	const nodes: Record<string, DocumentNode> = {};
 	for (const range of [...translation.marks, ...translation.annotations]) {
@@ -143,45 +131,41 @@ export function replace_translation(
 	property_id: string,
 	payload: TranslationPayload
 ) {
-	const property = schema[doc.nodes[node_id]?.type]?.properties[property_id];
-	if (is_media_property(property)) {
-		if (!('node_id' in payload)) throw new Error('Expected media payload');
-		normalized_payload(payload);
-		const media = payload.nodes[payload.node_id];
-		if (property.type !== 'node' || !property.node_types.includes(media.type))
-			throw new Error('Unsupported media type');
-		const old_id = doc.nodes[node_id][property_id];
-		const next_id = remap_ids(doc, payload.nodes).get(payload.node_id)!;
-		doc.nodes[next_id] = { ...structuredClone(media), id: next_id };
-		doc.nodes[node_id][property_id] = next_id;
-		remove_unreferenced(doc, [old_id]);
-		return;
-	}
-	if (property?.type !== 'text' || 'node_id' in payload) {
-		throw new Error('Translation target is not a text property');
-	}
-	const { nodes: payload_nodes, ...text } = payload;
-	const local_doc = {
-		document_id: doc.document_id,
-		nodes: {
-			...payload_nodes,
-			[node_id]: { ...doc.nodes[node_id], [property_id]: text }
-		}
-	};
-	const checked = text_payload(local_doc, node_id, property_id);
+	const original = property_payload(doc, node_id, property_id);
+	if ('node_id' in original !== 'node_id' in payload)
+		throw new Error('Wrong translation payload type');
+	if ('node_id' in payload) normalized_payload(payload);
+	const { nodes: payload_nodes, ...value } = payload;
+	const checked = property_payload(
+		{
+			document_id: doc.document_id,
+			nodes: {
+				...payload_nodes,
+				[node_id]: {
+					...doc.nodes[node_id],
+					[property_id]: 'node_id' in payload ? payload.node_id : value
+				}
+			}
+		},
+		node_id,
+		property_id
+	);
 	if (Object.keys(checked.nodes).length !== Object.keys(payload_nodes).length) {
 		throw new Error('Translation contains unreferenced nodes');
 	}
-	const original = text_payload(doc, node_id, property_id);
-	const { nodes: checked_nodes, ...translation } = checked;
-	const remapped = remap_ids(doc, checked_nodes);
-	for (const range of [...translation.marks, ...translation.annotations])
-		range.node_id = remapped.get(range.node_id)!;
-	for (const [id, node] of Object.entries(checked_nodes)) {
+	const { nodes, ...translation } = checked;
+	const remapped = remap_ids(doc, nodes);
+	if ('node_id' in translation) {
+		doc.nodes[node_id][property_id] = remapped.get(translation.node_id)!;
+	} else {
+		for (const range of [...translation.marks, ...translation.annotations])
+			range.node_id = remapped.get(range.node_id)!;
+		doc.nodes[node_id][property_id] = translation;
+	}
+	for (const [id, node] of Object.entries(nodes)) {
 		const next_id = remapped.get(id)!;
 		doc.nodes[next_id] = { ...node, id: next_id };
 	}
-	doc.nodes[node_id][property_id] = translation;
 	remove_unreferenced(doc, Object.keys(original.nodes));
 }
 

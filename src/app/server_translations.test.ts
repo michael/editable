@@ -41,12 +41,7 @@ import {
 	save_translated_document,
 	translated_document
 } from './server_translations.js';
-import {
-	text_properties,
-	property_payload,
-	replace_translation,
-	translation_properties
-} from './translations.js';
+import { property_payload, replace_translation, translation_properties } from './translations.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { referenced_assets } from '../../scripts/asset-references.js';
 
@@ -79,7 +74,10 @@ it('saves sparse page/shared translations, protects originals, rejects stale and
 	save_translated_document(input);
 	expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(0);
 	input.nodes[id].title.content = 'Deutscher Titel';
-	const footer_property = text_properties(default_footer_document)[0];
+	const footer_property = translation_properties(default_footer_document).find(
+		({ node_id, property_id }) =>
+			default_footer_document.nodes[node_id][property_id]?.content !== undefined
+	)!;
 	input.nodes[footer_property.node_id][footer_property.property_id].content = 'Deutsche Fußzeile';
 	save_translated_document(input);
 	expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(2);

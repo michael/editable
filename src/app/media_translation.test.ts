@@ -98,7 +98,7 @@ describe('translated media', () => {
 			nodes: { translated: { ...doc.nodes[image_id], id: 'translated', type: 'video' } }
 		};
 		expect(() => replace_translation(doc, page_id, 'image', payload)).toThrow(
-			'Unsupported media type'
+			'Invalid translated media'
 		);
 		expect(doc).toEqual(snapshot);
 		payload.nodes.translated.type = 'image';

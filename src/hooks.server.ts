@@ -1,5 +1,5 @@
-import { parse_languages, select_language } from '#app/languages.js';
-import { LANGUAGES, ORIGIN, VERCEL } from '$app/env/private';
+import { languages, request_language } from '#app/server_languages.js';
+import { ORIGIN, VERCEL } from '$app/env/private';
 import { dev } from '$app/env';
 import { redirect } from '@sveltejs/kit';
 import type { Handle, ServerInit } from '@sveltejs/kit';
@@ -91,10 +91,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	const languages = VERCEL ? [] : parse_languages(LANGUAGES);
-	const language = languages.length
-		? select_language(languages, event.url.searchParams.get('lang'))
-		: '';
+	const language = request_language(event.url);
 	const response = await resolve(
 		event,
 		languages.length

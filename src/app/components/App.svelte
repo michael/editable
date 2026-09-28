@@ -213,9 +213,6 @@
 		get allow_structural_changes() {
 			return allow_structural_changes;
 		},
-		get translation_mode() {
-			return translation_mode;
-		},
 		get saving() {
 			return save_progress_visible || switching_language;
 		},
