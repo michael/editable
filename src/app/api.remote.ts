@@ -1,7 +1,7 @@
-import { languages } from './server_languages.js';
+import { languages, request_language } from './server_languages.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
-import { translated_href } from './document_links.js';
-import { select_language } from './languages.js';
+import { translated_href, parse_internal_page_href } from './document_links.js';
+import { language_path } from './languages.js';
 import { getRequestEvent, query, command } from '$app/server';
 import {
 	cleanup_translations,
@@ -298,32 +298,11 @@ function create_unique_slug(base_slug: string): string {
 	}
 }
 
-function parse_internal_page_href(href: string): { slug: string; fragment: string } | null {
-	if (!href) return null;
-	if (/^[a-z][a-z0-9+.-]*:/i.test(href)) return null;
-	if (href.startsWith('//')) return null;
-	if (!href.startsWith('/')) return null;
-
-	const [path_part, fragment_part] = href.split('#');
-	if (!path_part || path_part === '/') return null;
-
-	const segments = path_part.split('/').filter(Boolean);
-	if (segments.length !== 1) return null;
-
-	const slug = segments[0];
-	if (!slug) return null;
-
-	return {
-		slug,
-		fragment: fragment_part ? `#${fragment_part}` : ''
-	};
-}
-
 function normalize_internal_page_href(
 	href: string,
 	source_document_id: string | undefined
 ): string | null {
-	const parsed = parse_internal_page_href(href);
+	const parsed = parse_internal_page_href(href, languages);
 	if (!parsed) return null;
 
 	const resolved = resolve_slug(parsed.slug);
@@ -690,12 +669,12 @@ export const get_page_browser_data = query(v.string(), async (href) => {
 	const event = getRequestEvent();
 	require_admin_session(event.locals);
 	const url = new URL(href);
-	const result = build_page_browser_data(url.pathname);
-	const language = select_language(languages, url.searchParams.get('lang'));
+	const result = build_page_browser_data(language_path(url.pathname, languages).pathname);
+	const language = request_language(url);
 	if (language && language !== languages[0] && url.pathname !== '/new') {
 		const visit = (nodes: PageTreeNode[]) => {
 			for (const node of nodes) {
-				node.navigation_href = translated_href(node.page_href, language, url.origin);
+				node.navigation_href = translated_href(node.page_href, language, url.origin, languages);
 				visit(node.children);
 			}
 		};
@@ -771,7 +750,7 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
  * Return a lightweight preview for a simple internal page href like `/some-slug`.
  */
 export const get_internal_link_preview = query(v.string(), async (href) => {
-	const parsed = parse_internal_page_href(href);
+	const parsed = parse_internal_page_href(href, languages);
 	if (!parsed) {
 		return null;
 	}
@@ -804,13 +783,13 @@ export const get_internal_link_preview = query(v.string(), async (href) => {
  * Save a document to the database, splitting shared documents (nav, footer) back out.
  */
 function rewrite_internal_page_href(href: string, target_document_id: string, new_slug: string) {
-	const parsed = parse_internal_page_href(href);
+	const parsed = parse_internal_page_href(href, languages);
 	if (!parsed) return href;
 
 	const resolved = resolve_slug(parsed.slug);
 	if (resolved?.document_id !== target_document_id) return href;
 
-	return `/${new_slug}${parsed.fragment}`;
+	return `${parsed.prefix}/${new_slug}${parsed.suffix}`;
 }
 
 function rewrite_internal_page_hrefs(

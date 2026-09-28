@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { parse_internal_page_href } from '#app/document_links.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { get_app_context } from '#app/app_context.js';
 	import { resolve } from '$app/paths';
@@ -12,7 +13,9 @@
 
 	let { node, path } = $props();
 
-	let internal_page_href = $derived(get_internal_page_href(node?.href));
+	let internal_page_href = $derived(
+		parse_internal_page_href(node?.href, app.languages) ? node.href : null
+	);
 
 	let page_preview = $derived.by(async () => {
 		const href = internal_page_href;
@@ -32,20 +35,6 @@
 
 	function handle_remove() {
 		svedit.session.commands?.remove_link?.execute();
-	}
-
-	function get_internal_page_href(href) {
-		if (typeof href !== 'string') return null;
-		if (!href.startsWith('/')) return null;
-		if (href.startsWith('//')) return null;
-
-		const pathname = href.split(/[?#]/, 1)[0];
-		if (!pathname || pathname === '/') return null;
-
-		const segments = pathname.split('/').filter(Boolean);
-		if (segments.length !== 1) return null;
-
-		return href;
 	}
 
 	function get_preview_href(href: unknown) {
