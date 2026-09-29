@@ -60,6 +60,9 @@
 	// scroll padding: padding marks the nav area as obscured, so the browser scrolls
 	// the page up while you drag a text selection inside the nav.
 	// Editing does not need hash-target alignment or anchor offsets.
+	// Hash alignment corrects only the initial load, where the browser scrolls to the target
+	// before the nav is measured. Later runs, e.g. after saving, must not scroll.
+	let hash_target_aligned = false;
 	$effect(() => {
 		const el = nav_wrapper_ref;
 		if (!el || svedit.editable) return;
@@ -81,6 +84,8 @@
 		update_nav_height();
 		const frame_id = requestAnimationFrame(() => {
 			update_nav_height();
+			if (hash_target_aligned) return;
+			hash_target_aligned = true;
 			align_hash_target();
 		});
 
