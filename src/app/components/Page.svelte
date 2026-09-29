@@ -56,15 +56,16 @@
 
 	// The nav is sticky, so offset anchor scrolls (e.g. /manual#quickstart)
 	// by twice the nav height to prevent content from being covered and leave some space.
-	// Editing does not need hash-target alignment or document-level scroll padding.
+	// The offset is a scroll margin on body anchor targets rather than document-level
+	// scroll padding: padding marks the nav area as obscured, so the browser scrolls
+	// the page up while you drag a text selection inside the nav.
+	// Editing does not need hash-target alignment or anchor offsets.
 	$effect(() => {
 		const el = nav_wrapper_ref;
 		if (!el || svedit.editable) return;
 
-		const update_scroll_padding_top = () => {
-			const next_nav_height = el.offsetHeight;
-			nav_height = next_nav_height;
-			document.documentElement.style.scrollPaddingTop = `${2 * next_nav_height}px`;
+		const update_nav_height = () => {
+			nav_height = el.offsetHeight;
 		};
 		const align_hash_target = () => {
 			const target_id = window.location.hash.slice(1);
@@ -77,20 +78,19 @@
 			if (Math.abs(offset) > 1) window.scrollBy(0, offset);
 		};
 
-		update_scroll_padding_top();
+		update_nav_height();
 		const frame_id = requestAnimationFrame(() => {
-			update_scroll_padding_top();
+			update_nav_height();
 			align_hash_target();
 		});
 
-		const observer = new ResizeObserver(update_scroll_padding_top);
+		const observer = new ResizeObserver(update_nav_height);
 		observer.observe(el);
 
 		return () => {
 			cancelAnimationFrame(frame_id);
 			observer.disconnect();
 			nav_height = 0;
-			document.documentElement.style.scrollPaddingTop = '';
 		};
 	});
 </script>
@@ -143,7 +143,11 @@
 				{nav_height}
 			/>
 		{/if}
-		<div class="grow" style="anchor-name: --page-body; --node-caret-boundary: --page-body;">
+		<div
+			class="grow **:[[id]]:scroll-mt-(--ew-anchor-offset)"
+			style="anchor-name: --page-body; --node-caret-boundary: --page-body;"
+			style:--ew-anchor-offset="{2 * nav_height}px"
+		>
 			{#if !svedit.editable && app.page_content}
 				{@render app.page_content()}
 			{:else}
