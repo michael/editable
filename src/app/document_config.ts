@@ -5,6 +5,9 @@ import { delete_media, update_media, is_media_selection } from './media.js';
  */
 import {
 	Session,
+	export_text_html,
+	escape_html,
+	safe_html_href,
 	define_keymap,
 	SelectAllCommand,
 	InsertDefaultNodeCommand,
@@ -15,7 +18,15 @@ import {
 	RedoCommand,
 	SelectParentCommand
 } from 'svedit';
-import type { DocumentNode, DocumentPath, NodeSelection, Text, Transaction } from 'svedit';
+import type {
+	DocumentNode,
+	DocumentPath,
+	NodeSelection,
+	Text,
+	Transaction,
+	HtmlPasteConfig,
+	MarkHtmlExporter
+} from 'svedit';
 import type { AppCommandContext } from './commands.svelte.js';
 import nanoid from './nanoid.js';
 import {
@@ -171,6 +182,34 @@ async function replace_media(
 
 // App-specific config object, always available via session.config for introspection
 export const document_config = {
+	// External HTML uses semantic sizes; native clipboard data retains exact variants.
+	html_paste: {
+		blocks: {
+			p: { type: 'paragraph', text_property: 'content' },
+			h1: { type: 'heading_1', text_property: 'content' },
+			h2: { type: 'heading_2', text_property: 'content' },
+			h3: { type: 'heading_3', text_property: 'content' },
+			h4: { type: 'heading_4', text_property: 'content' },
+			h5: { type: 'heading_4', text_property: 'content' },
+			h6: { type: 'heading_4', text_property: 'content' }
+		},
+		marks: {
+			bold: { type: 'strong' },
+			link: ({ href }) => ({ type: 'link', properties: { href, target: '_self' } })
+		}
+	} satisfies HtmlPasteConfig,
+	mark_html_exporters: {
+		strong: (_node, content) => `<strong>${content}</strong>`,
+		emphasis: (_node, content) => `<em>${content}</em>`,
+		code: (_node, content) => `<code>${content}</code>`,
+		highlight: (_node, content) => `<mark>${content}</mark>`,
+		link: (node, content) => {
+			const href = safe_html_href(node.href || '');
+			if (!href) return content;
+			const target = node.target === '_blank' ? ' target="_blank" rel="noopener noreferrer"' : '';
+			return `<a href="${escape_html(href)}"${target}>${content}</a>`;
+		}
+	} satisfies Record<string, MarkHtmlExporter>,
 	// Custom ID generator function
 	generate_id: nanoid,
 	// Provide definitions/overrides for system native components,
@@ -294,7 +333,7 @@ export const document_config = {
 	// HTML exporters for different node types
 	html_exporters: {
 		prose: (node, session, html_exporters) => {
-			let html = '<div class="prose">\n';
+			let html = '<div class="ew-prose">\n';
 			for (const child_id of node.body.nodes) {
 				const child = session.get(child_id);
 				const exporter = html_exporters[child.type];
@@ -305,24 +344,26 @@ export const document_config = {
 			html += '</div>\n';
 			return html;
 		},
-		paragraph: (node) => `<p>${node.content.content}</p>\n`,
-		paragraph_sm: (node) => `<p>${node.content.content}</p>\n`,
-		paragraph_lg: (node) => `<p>${node.content.content}</p>\n`,
-		paragraph_xl: (node) => `<p>${node.content.content}</p>\n`,
-		heading_1_xl: (node) => `<h1>${node.content.content}</h1>\n`,
-		heading_1: (node) => `<h1>${node.content.content}</h1>\n`,
-		heading_2: (node) => `<h2>${node.content.content}</h2>\n`,
-		heading_3: (node) => `<h3>${node.content.content}</h3>\n`,
-		heading_4: (node) => `<h4>${node.content.content}</h4>\n`,
-		preformatted: (node) => `<pre>${node.content.content}</pre>\n`,
+		paragraph: (node, session) => `<p>${export_text_html(node.content, session)}</p>\n`,
+		paragraph_sm: (node, session) => `<p>${export_text_html(node.content, session)}</p>\n`,
+		paragraph_lg: (node, session) => `<p>${export_text_html(node.content, session)}</p>\n`,
+		paragraph_xl: (node, session) => `<p>${export_text_html(node.content, session)}</p>\n`,
+		heading_1_xl: (node, session) => `<h1>${export_text_html(node.content, session)}</h1>\n`,
+		heading_1: (node, session) => `<h1>${export_text_html(node.content, session)}</h1>\n`,
+		heading_2: (node, session) => `<h2>${export_text_html(node.content, session)}</h2>\n`,
+		heading_3: (node, session) => `<h3>${export_text_html(node.content, session)}</h3>\n`,
+		heading_4: (node, session) => `<h4>${export_text_html(node.content, session)}</h4>\n`,
+		preformatted: (node) => `<pre>${escape_html(node.content.content)}</pre>\n`,
 		list: (node, session, html_exporters) => {
-			let html = '<ul>\n';
+			const tag = ['decimal', 'lower-alpha'].includes(node.layout) ? 'ol' : 'ul';
+			const attributes = node.layout === 'lower-alpha' ? ' type="a"' : '';
+			let html = `<${tag}${attributes}>\n`;
 			for (const list_item_id of node.list_items.nodes) {
-				html += html_exporters.list_item(session.get(list_item_id));
+				html += html_exporters.list_item(session.get(list_item_id), session, html_exporters);
 			}
-			return `${html}</ul>\n`;
+			return `${html}</${tag}>\n`;
 		},
-		list_item: (node) => `<li>${node.content.content}</li>\n`
+		list_item: (node, session) => `<li>${export_text_html(node.content, session)}</li>\n`
 	},
 
 	/**
