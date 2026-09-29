@@ -233,6 +233,10 @@ export const document_config = {
 	},
 	replace_media,
 	handle_property_deletion: delete_media,
+	// Recorded in copied node selections so pasting them into a link URL field
+	// can create a deep link. Unsaved pages have no URL yet.
+	clipboard_source: () =>
+		location.pathname === '/new' ? null : { url: location.origin + location.pathname },
 	handle_media_paste: async (session, pasted_media) => {
 		if (session.selection.type === 'property') {
 			if (is_media_selection(session)) {
