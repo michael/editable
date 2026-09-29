@@ -6,6 +6,7 @@
 	import type { DocumentNode, DocumentPath, Transaction } from 'svedit';
 	import { serialize_path } from 'svedit';
 	import { get_page_browser } from '#app/page_browser_context.svelte.js';
+	import { language_path } from '#app/languages.js';
 
 	const svedit = get_svedit_context();
 	const app = get_app_context();
@@ -143,6 +144,35 @@
 		}
 	}
 
+	// Turns a pasted Svedit node selection into a deep link to its first node.
+	function get_deep_link_href(html: string) {
+		const encoded = html.match(/data-svedit="([^"]+)"/)?.[1];
+		if (!encoded) return null;
+
+		try {
+			const payload = JSON.parse(decodeURIComponent(atob(encoded)));
+			const node_id = payload.main_nodes?.[0];
+			if (typeof node_id !== 'string' || typeof payload.source?.url !== 'string') return null;
+
+			const source_url = new URL(payload.source.url);
+			if (source_url.origin !== location.origin) {
+				return `${source_url.origin}${source_url.pathname}#${node_id}`;
+			}
+			// Internal links are stored without a language prefix so they follow the reader's language.
+			return `${language_path(source_url.pathname, app.languages).pathname}#${node_id}`;
+		} catch {
+			return null;
+		}
+	}
+
+	function handle_paste(event: ClipboardEvent) {
+		const deep_link_href = get_deep_link_href(event.clipboardData?.getData('text/html') ?? '');
+		if (!deep_link_href) return;
+
+		event.preventDefault();
+		href_input_value = deep_link_href;
+	}
+
 	function handle_backdrop_click(event) {
 		if (event.target === dialog_ref) {
 			close();
@@ -186,6 +216,7 @@
 					placeholder="https://example.com"
 					class="edit-link-input min-h-9 w-72 min-w-0 flex-1 rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border border-(--stroke) bg-(--background) px-3 py-1 text-base leading-6 text-(--foreground) outline-none focus:border-(--editing) focus:ring-0"
 					onkeydown={handle_keydown}
+					onpaste={handle_paste}
 				/>
 				{#if app.has_backend && app.is_admin}
 					<button
