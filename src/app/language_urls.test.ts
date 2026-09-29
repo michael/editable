@@ -15,7 +15,7 @@ it.each([
 	['/de', 'en', '/'],
 	['/de/about?ref=a%20b#contact', 'fr', '/fr/about?ref=a%20b#contact'],
 	['/de/about?ref=a%20b#contact', 'en', '/about?ref=a%20b#contact'],
-	['/about?lang=de&ref=test#contact', 'de', '/de/about?ref=test#contact'],
+	['/about?lang=de&ref=test#contact', 'de', '/de/about?lang=de&ref=test#contact'],
 	['/de/about', 'de', '/de/about'],
 	['/about', 'pt-BR', '/pt-BR/about']
 ])('switches %s to %s', (href, language, expected) => {

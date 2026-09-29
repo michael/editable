@@ -50,7 +50,7 @@ describe('experimental translation boundaries', () => {
 		expect(language_href('/about?ref=test#contact', 'de', ['en', 'de'])).toBe(
 			'/de/about?ref=test#contact'
 		);
-		expect(language_href('/about?lang=de#contact', 'en', ['en', 'de'])).toBe('/about#contact');
+		expect(language_href('/de/about#contact', 'en', ['en', 'de'])).toBe('/about#contact');
 	});
 
 	it('replaces owned annotation nodes without mutating the original and round-trips semantically', () => {
@@ -134,7 +134,7 @@ describe('experimental translation boundaries', () => {
 			restore_document_links(rendered, original, 'de', 'https://example.com', ['en', 'de'])
 		).toEqual(original);
 		expect(translated_href('/about?lang=en', 'de', 'https://example.com', ['en', 'de'])).toBe(
-			'/about?lang=en'
+			'/de/about?lang=en'
 		);
 		expect(
 			translated_href('https://elsewhere.com/about', 'de', 'https://example.com', ['en', 'de'])

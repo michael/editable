@@ -33,12 +33,7 @@ export function translated_href(
 	languages: string[]
 ): string {
 	const url = internal_page_url(href, origin, languages);
-	if (
-		!language ||
-		!url ||
-		url.searchParams.has('lang') ||
-		language_path(url.pathname, languages).pathname !== url.pathname
-	)
+	if (!language || !url || language_path(url.pathname, languages).pathname !== url.pathname)
 		return href;
 	return page_href(href, url, `/${language}${url.pathname === '/' ? '' : url.pathname}`);
 }

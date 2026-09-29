@@ -35,6 +35,5 @@ export function language_href(href: string, language: string, languages: string[
 		language && language !== languages[0]
 			? `/${language}${pathname === '/' ? '' : pathname}`
 			: pathname;
-	if (url.searchParams.has('lang')) url.searchParams.delete('lang');
 	return `${url.pathname}${url.search}${url.hash}`;
 }

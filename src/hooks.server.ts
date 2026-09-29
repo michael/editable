@@ -1,4 +1,3 @@
-import { language_href, select_language } from '#app/languages.js';
 import { languages, request_language } from '#app/server_languages.js';
 import { ORIGIN, VERCEL } from '$app/env/private';
 import { dev } from '$app/env';
@@ -57,22 +56,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (canonical_origin && (event.request.method === 'GET' || event.request.method === 'HEAD')) {
 		const canonical_url = get_canonical_redirect(event.url);
 		if (canonical_url) redirect(301, canonical_url, { external: [canonical_origin.origin] });
-	}
-
-	if (
-		languages.length &&
-		['/', '/[page_id]', '/[language]/[page_id]'].includes(event.route.id ?? '') &&
-		event.url.searchParams.has('lang') &&
-		['GET', 'HEAD'].includes(event.request.method)
-	) {
-		redirect(
-			301,
-			language_href(
-				event.url.href,
-				select_language(languages, event.url.searchParams.get('lang')),
-				languages
-			)
-		);
 	}
 
 	event.locals.is_admin = false;
