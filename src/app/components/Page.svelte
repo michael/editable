@@ -127,10 +127,12 @@
 
 <Node {path}>
 	<div class="page flex min-h-screen flex-col [--row:0]">
+		<!-- Sticky only in view mode: Svedit's selection overlays can't sit both above
+		and below a sticky nav, so while editing it scrolls with the page. -->
 		<div
 			bind:this={nav_wrapper_ref}
-			class="sticky top-0 z-40 bg-(--background) text-(--foreground)"
-			class:shadow-sm={scroll_y > 0}
+			class="bg-(--background) text-(--foreground) {svedit.editable ? '' : 'sticky top-0 z-40'}"
+			class:shadow-sm={!svedit.editable && scroll_y > 0}
 		>
 			<Nav path={[...path, 'nav']} />
 		</div>
