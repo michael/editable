@@ -144,33 +144,24 @@
 		}
 	}
 
-	// Turns a pasted Svedit node selection into a deep link to its first node.
-	function get_deep_link_href(html: string) {
-		const encoded = html.match(/data-svedit="([^"]+)"/)?.[1];
-		if (!encoded) return null;
+	// Internal links are stored without a language prefix so they follow the reader's language.
+	function get_internal_href(url: URL) {
+		return `${language_path(url.pathname, app.languages).pathname}${url.search}${url.hash}`;
+	}
 
-		try {
-			const payload = JSON.parse(decodeURIComponent(atob(encoded)));
-			const node_id = payload.main_nodes?.[0];
-			if (typeof node_id !== 'string' || typeof payload.source?.url !== 'string') return null;
-
-			const source_url = new URL(payload.source.url);
-			if (source_url.origin !== location.origin) {
-				return `${source_url.origin}${source_url.pathname}#${node_id}`;
-			}
-			// Internal links are stored without a language prefix so they follow the reader's language.
-			return `${language_path(source_url.pathname, app.languages).pathname}#${node_id}`;
-		} catch {
-			return null;
-		}
+	// Shortens pasted URLs of this site, e.g. from Copy link to block, to internal links.
+	function get_same_site_href(text: string) {
+		if (!URL.canParse(text)) return null;
+		const url = new URL(text);
+		return url.origin === location.origin ? get_internal_href(url) : null;
 	}
 
 	function handle_paste(event: ClipboardEvent) {
-		const deep_link_href = get_deep_link_href(event.clipboardData?.getData('text/html') ?? '');
-		if (!deep_link_href) return;
+		const pasted_href = get_same_site_href(event.clipboardData?.getData('text/plain').trim() ?? '');
+		if (!pasted_href) return;
 
 		event.preventDefault();
-		href_input_value = deep_link_href;
+		href_input_value = pasted_href;
 	}
 
 	function handle_backdrop_click(event) {
