@@ -88,6 +88,14 @@
 	// Home is served from `/` and has no editable slug.
 	let is_home_page = $derived(language_path(page.url.pathname, app.languages).pathname === '/');
 
+	// The nav isn't sticky while editing, so the toolbar shows the language being edited.
+	let editing_language_name = $derived(
+		app.languages.length > 1
+			? (new Intl.DisplayNames([app.language], { type: 'language' }).of(app.language) ??
+					app.language)
+			: null
+	);
+
 	function open_page_delete_dialog() {
 		if (is_home_page) return;
 		// On demand, not reactive: to_json() serializes the whole document.
@@ -306,6 +314,12 @@
 
 {#snippet save_group_contents()}
 	<span class="mx-1 h-5 w-px shrink-0 bg-(--stroke)" aria-hidden="true"></span>
+	{#if editing_language_name}
+		<span
+			class="pointer-events-auto inline-flex min-h-9 shrink-0 cursor-default items-center px-2 text-sm leading-5 font-medium text-(--muted-foreground)"
+			use:tooltip={{ label: `Editing ${editing_language_name}` }}>{app.language.toUpperCase()}</span
+		>
+	{/if}
 	{#if cancel_command && !cancel_command.disabled}
 		<button
 			class="pointer-events-auto inline-flex min-h-9 w-9 min-w-9 shrink-0 cursor-pointer items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 text-sm leading-5 font-medium text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 sm:w-auto sm:px-3 sm:py-2"
