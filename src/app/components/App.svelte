@@ -13,6 +13,7 @@
 	import { language_href, language_path } from '#app/languages.js';
 	import { EXT_TO_MIME } from '#app/config.js';
 	import { create_session } from '#app/session.js';
+	import type { AppSession } from '#app/session.js';
 	import { create_page_browser, set_page_browser } from '#app/page_browser_context.svelte.js';
 	import type { PageBrowser } from '#app/page_browser_context.svelte.js';
 	import {
@@ -718,6 +719,32 @@
 		}
 	}
 
+	function get_selected_block_id(current_session: AppSession) {
+		const selection = current_session.selection;
+		if (selection?.type !== 'node' || selection.anchor_offset === selection.focus_offset)
+			return null;
+		const start = Math.min(selection.anchor_offset, selection.focus_offset);
+		return current_session.get([...selection.path, start])?.id ?? null;
+	}
+
+	class CopyLinkToBlockCommand extends Command {
+		copied = $state(false);
+		copied_timeout: ReturnType<typeof setTimeout> | undefined;
+
+		is_enabled() {
+			return this.context.editable && !is_new && !!get_selected_block_id(this.context.session);
+		}
+
+		async execute() {
+			const block_id = get_selected_block_id(this.context.session);
+			if (!block_id) return;
+			await navigator.clipboard.writeText(`${location.origin}${location.pathname}#${block_id}`);
+			this.copied = true;
+			clearTimeout(this.copied_timeout);
+			this.copied_timeout = setTimeout(() => (this.copied = false), 1500);
+		}
+	}
+
 	const app_commands = {
 		duplicate_page: new DuplicatePageCommand(app_command_context),
 		edit_page_url: new EditPageUrlCommand(app_command_context),
@@ -727,7 +754,8 @@
 		cancel_editing: new CancelCommand(app_command_context),
 		save_document: new SaveCommand(app_command_context),
 		logout_admin: new LogoutCommand(app_command_context),
-		browse_pages: new BrowsePagesCommand(app_command_context)
+		browse_pages: new BrowsePagesCommand(app_command_context),
+		copy_link_to_block: new CopyLinkToBlockCommand(app_command_context)
 	};
 
 	const app_key_map = define_keymap({
@@ -738,6 +766,7 @@
 		'ctrl+shift+u': [app_commands.edit_page_url],
 		'ctrl+shift+m': [app_commands.page_menu],
 		'meta+p,ctrl+p': [app_commands.browse_pages],
+		'ctrl+shift+k': [app_commands.copy_link_to_block],
 		'meta+s,ctrl+s': [app_commands.save_document]
 	});
 	key_mapper.push_scope(app_key_map);

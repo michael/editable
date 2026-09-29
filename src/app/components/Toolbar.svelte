@@ -312,6 +312,42 @@
 	{/if}
 {/snippet}
 
+{#snippet copy_link_to_block_button()}
+	<button
+		class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
+		onmousedown={handle_btn_mousedown}
+		onclick={(e) => handle_btn_click(e, app_commands.copy_link_to_block)}
+		use:tooltip={{ label: 'Copy link to block', keys: ['⌃', '⇧', 'K'] }}
+		aria-keyshortcuts="Control+Shift+K"
+		aria-label="Copy link to block"
+	>
+		<svg class="size-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+			{#if app_commands.copy_link_to_block.copied}
+				<path
+					d="M5 12.5L9.5 17L19 7.5"
+					stroke="currentColor"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
+			{:else}
+				<path
+					d="M14.6668 11.5189C14.4506 11.0529 14.1503 10.6163 13.7659 10.2319C12.0086 8.47455 9.23819 8.5329 7.40199 10.2319C6.66799 10.9111 5.95984 11.6192 5.28067 12.3532C3.58406 14.1867 3.52331 16.9598 5.28067 18.7172C7.03802 20.4745 9.81111 20.4138 11.6446 18.7172C12.0107 18.3785 12.3703 18.0326 12.7231 17.6798"
+					stroke="currentColor"
+					stroke-linecap="round"
+				/>
+				<path
+					d="M9.32925 12.4811C9.54548 12.9471 9.84578 13.3837 10.2301 13.7681C11.9875 15.5255 14.7579 15.4671 16.5941 13.7681C17.3281 13.0889 18.0363 12.3808 18.7154 11.6468C20.412 9.81325 20.4728 7.04017 18.7154 5.28281C16.9581 3.52545 14.185 3.58621 12.3515 5.28281C11.9854 5.62151 11.6258 5.96742 11.273 6.32015"
+					stroke="currentColor"
+					stroke-linecap="round"
+				/>
+			{/if}
+		</svg>
+	</button>
+	<span class="sr-only" aria-live="polite"
+		>{app_commands.copy_link_to_block.copied ? 'Link copied' : ''}</span
+	>
+{/snippet}
+
 {#snippet save_group_contents()}
 	<span class="mx-1 h-5 w-px shrink-0 bg-(--stroke)" aria-hidden="true"></span>
 	{#if editing_language_name}
@@ -746,6 +782,10 @@
 										</svg>
 									</button>
 								</div>
+							{/if}
+
+							{#if !app_commands.copy_link_to_block.disabled}
+								{@render copy_link_to_block_button()}
 							{/if}
 
 							{#if can_delete_selection && (session.selection?.type === 'node' || is_media_selected)}
