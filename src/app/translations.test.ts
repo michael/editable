@@ -47,10 +47,10 @@ describe('experimental translation boundaries', () => {
 		expect(() => parse_languages('en_US.UTF-8')).toThrow();
 		expect(() => parse_languages('en,')).toThrow();
 		expect(parse_languages('en,de,en')).toEqual(['en', 'de']);
-		expect(language_href('/about?ref=test#contact', 'de', 'en')).toBe(
-			'/about?ref=test&lang=de#contact'
+		expect(language_href('/about?ref=test#contact', 'de', ['en', 'de'])).toBe(
+			'/de/about?ref=test#contact'
 		);
-		expect(language_href('/about?lang=de#contact', 'en', 'en')).toBe('/about#contact');
+		expect(language_href('/de/about#contact', 'en', ['en', 'de'])).toBe('/about#contact');
 	});
 
 	it('replaces owned annotation nodes without mutating the original and round-trips semantically', () => {
@@ -127,17 +127,19 @@ describe('experimental translation boundaries', () => {
 			href: '/about?ref=a%20b#contact',
 			target: '_self'
 		};
-		const rendered = translate_document_links(original, 'de', 'https://example.com');
-		expect(rendered.nodes.bold.href).toBe('/about?ref=a%20b&lang=de#contact');
+		const rendered = translate_document_links(original, 'de', 'https://example.com', ['en', 'de']);
+		expect(rendered.nodes.bold.href).toBe('/de/about?ref=a%20b#contact');
 		expect(original.nodes.bold.href).toBe('/about?ref=a%20b#contact');
-		expect(restore_document_links(rendered, original, 'de', 'https://example.com')).toEqual(
-			original
+		expect(
+			restore_document_links(rendered, original, 'de', 'https://example.com', ['en', 'de'])
+		).toEqual(original);
+		expect(translated_href('/about?lang=en', 'de', 'https://example.com', ['en', 'de'])).toBe(
+			'/de/about?lang=en'
 		);
-		expect(translated_href('/about?lang=en', 'de', 'https://example.com')).toBe('/about?lang=en');
-		expect(translated_href('https://elsewhere.com/about', 'de', 'https://example.com')).toBe(
-			'https://elsewhere.com/about'
-		);
-		expect(translated_href('/assets/photo.webp', 'de', 'https://example.com')).toBe(
+		expect(
+			translated_href('https://elsewhere.com/about', 'de', 'https://example.com', ['en', 'de'])
+		).toBe('https://elsewhere.com/about');
+		expect(translated_href('/assets/photo.webp', 'de', 'https://example.com', ['en', 'de'])).toBe(
 			'/assets/photo.webp'
 		);
 	});

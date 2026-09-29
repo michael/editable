@@ -147,7 +147,7 @@
 					<a
 						href={disabled || app.language === language
 							? undefined
-							: language_href(page.url.href, language, app.languages[0])}
+							: language_href(page.url.href, language, app.languages)}
 						tabindex={disabled || app.language === language ? -1 : undefined}
 						hreflang={language}
 						lang={language}

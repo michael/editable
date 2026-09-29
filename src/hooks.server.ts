@@ -1,4 +1,4 @@
-import { languages, request_language } from '#app/server_languages.js';
+import { request_language } from '#app/server_languages.js';
 import { ORIGIN, VERCEL } from '$app/env/private';
 import { dev } from '$app/env';
 import { redirect } from '@sveltejs/kit';
@@ -91,15 +91,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	const language = request_language(event.url);
-	const response = await resolve(
-		event,
-		languages.length
-			? {
-					transformPageChunk: ({ html }) =>
-						html.replace('<html lang="en">', `<html lang="${language}">`)
-				}
-			: undefined
-	);
-	return response;
+	const language = request_language(event.url) || 'en';
+	return resolve(event, {
+		transformPageChunk: ({ html }) => html.replace('%lang%', language)
+	});
 };

@@ -10,7 +10,7 @@
 	import SaveProgressModal from './SaveProgressModal.svelte';
 
 	import { paste_media, is_media_selection } from '#app/media.js';
-	import { language_href } from '#app/languages.js';
+	import { language_href, language_path } from '#app/languages.js';
 	import { EXT_TO_MIME } from '#app/config.js';
 	import { create_session } from '#app/session.js';
 	import { create_page_browser, set_page_browser } from '#app/page_browser_context.svelte.js';
@@ -104,7 +104,7 @@
 			return;
 		switching_language = true;
 		try {
-			await goto(language_href(page.url.href, next_language, languages[0]), { reset: false });
+			await goto(language_href(page.url.href, next_language, languages), { reset: false });
 		} finally {
 			switching_language = false;
 		}
@@ -679,7 +679,7 @@
 		}
 	}
 
-	let is_home_page = $derived(page.url.pathname === '/');
+	let is_home_page = $derived(language_path(page.url.pathname, languages).pathname === '/');
 	let duplicate_source = $derived(is_home_page ? '/' : slug);
 
 	class DuplicatePageCommand extends Command {

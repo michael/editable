@@ -16,7 +16,7 @@ it.each([
 		vi.doMock('$app/env/private', () => env);
 		const { languages, request_language } = await import('./server_languages.js');
 		expect(languages).toEqual(expected);
-		const url = new URL('https://example.com/?lang=de');
+		const url = new URL('https://example.com/de');
 		if (!expected.length)
 			Object.defineProperty(url, 'searchParams', {
 				get() {

@@ -129,7 +129,7 @@
 	<div class="page flex min-h-screen flex-col [--row:0]">
 		<div
 			bind:this={nav_wrapper_ref}
-			class="sticky top-0 z-40 bg-(--background) text-(--foreground)"
+			class="sticky top-0 z-10 bg-(--background) text-(--foreground)"
 			class:shadow-sm={scroll_y > 0}
 		>
 			<Nav path={[...path, 'nav']} />

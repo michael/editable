@@ -71,7 +71,8 @@ export function translated_document(document_id: string, requested?: string) {
 	const document = translate_document_links(
 		overlay_document(compose(records), records, rows),
 		language !== languages[0] ? language : '',
-		ORIGIN
+		ORIGIN,
+		languages
 	);
 	return { document, language, languages, translation_revision: revision(records, rows) };
 }
@@ -109,7 +110,8 @@ export function translate_shared_document(source: Document, requested: string) {
 			read_rows([source], language)
 		),
 		language,
-		ORIGIN
+		ORIGIN,
+		languages
 	);
 }
 
@@ -137,7 +139,8 @@ export function save_translated_document(input: {
 			),
 			overlay_document(original, records, rows),
 			input.language,
-			ORIGIN
+			ORIGIN,
+			languages
 		);
 		try {
 			validate_document(edited, document_schema);

@@ -1144,7 +1144,7 @@ Set a comma-separated language list in `.env` or your deployment environment:
 LANGUAGES="en,de"
 ```
 
-The first language is the original. Additional languages appear in the navigation switcher. Translated pages use URLs such as `/about?lang=de`. Choose a language before entering edit mode, edit its text or media, and save. Missing translations show the original content.
+The first language is the original. Additional languages appear in the navigation switcher. Translated pages use URLs such as `/de/about` and `/de` for the homepage. The original language keeps unprefixed URLs. Choose a language before entering edit mode, edit its text or media, and save. Missing translations show the original content.
 
 Text, including page titles, descriptions, and shared navigation/footer labels, can be translated. Media properties allowing images and/or videos can also be replaced, with separate alt text and crop settings per language. Media uploads use the same asset storage as the original language. Structure, layouts, and other ordinary string properties remain shared; make those changes in the original language. Structural controls are disabled in translation mode.
 

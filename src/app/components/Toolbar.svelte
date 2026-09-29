@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { language_path } from '#app/languages.js';
 	import { is_media_selection } from '#app/media.js';
 	import { get_app_context } from '#app/app_context.js';
 	import { resolve } from '$app/paths';
@@ -85,7 +86,7 @@
 	);
 
 	// Home is served from `/` and has no editable slug.
-	let is_home_page = $derived(page.url.pathname === '/');
+	let is_home_page = $derived(language_path(page.url.pathname, app.languages).pathname === '/');
 
 	function open_page_delete_dialog() {
 		if (is_home_page) return;
