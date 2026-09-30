@@ -68,7 +68,6 @@
 	let svedit_ref = $state<{ focus_canvas: () => void }>();
 	let toolbar_ref = $state<{ open_page_menu: () => void; close_page_menu: () => void }>();
 	let editable = $state(false);
-	let current_is_new = $state(false);
 	let edit_for_fun_saved_doc = $state<{
 		document_id: string;
 		language: string;
@@ -243,7 +242,7 @@
 			return slug;
 		},
 		get is_new() {
-			return current_is_new;
+			return is_new;
 		},
 		get auth_dialog_open() {
 			return auth_dialog_open;
@@ -280,13 +279,6 @@
 
 	$effect(() => {
 		document.documentElement.style.scrollBehavior = editable ? 'auto' : 'smooth';
-	});
-
-	$effect(() => {
-		current_is_new = !!is_new;
-		if (current_is_new) {
-			editable = true;
-		}
 	});
 
 	function focus_canvas() {
@@ -467,7 +459,7 @@
 		async execute() {
 			session.selection = null;
 
-			if (current_is_new) {
+			if (is_new) {
 				await goto(resolve('/'));
 				return;
 			}
@@ -567,7 +559,7 @@
 						? await api_module.save_translations({ ...doc_json, language, translation_revision })
 						: await save_document({
 								...doc_json,
-								create: current_is_new,
+								create: is_new,
 								language: languages.length ? languages[0] : undefined
 							});
 
@@ -594,7 +586,6 @@
 
 				// When a new document has been created, return and redirect to the new url
 				if (result?.created && result.document_id && result.slug) {
-					current_is_new = false;
 					this.context.editable = false;
 					save_progress_visible = false;
 					await goto(resolve('/[page_id]', { page_id: result.slug }), {
