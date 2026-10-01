@@ -59,11 +59,10 @@
 	});
 
 	function enter_fullscreen(e: MouseEvent) {
-		// Only allow fullscreen in published view (not editable)
-		if (editable) return;
-		e.preventDefault();
 		const v = video_el;
-		if (!v || is_fullscreen) return;
+		// Linked videos belong to the enclosing link's click action.
+		if (editable || !v || is_fullscreen || v.closest('a[href]')) return;
+		e.preventDefault();
 
 		// Enable controls and unmute for fullscreen experience
 		v.controls = true;
@@ -153,7 +152,7 @@
 		disablepictureinpicture
 		preload="auto"
 		onclick={enter_fullscreen}
-		class="block size-full"
+		class="block size-full [a[href]_&]:cursor-[inherit]"
 		class:cursor-zoom-in={!editable && !is_fullscreen}
 	></video>
 {/if}
