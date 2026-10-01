@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { get_app_context } from '#app/app_context.js';
 	import { MEDIA_DEFAULTS } from '#app/document_schema.js';
@@ -157,11 +158,17 @@
 	}
 
 	function handle_paste(event: ClipboardEvent) {
+		const input = href_input_ref;
+		if (!input || input.selectionStart !== 0 || input.selectionEnd !== input.value.length) return;
+
 		const pasted_href = get_same_site_href(event.clipboardData?.getData('text/plain').trim() ?? '');
 		if (!pasted_href) return;
 
+		// Native insertion preserves undo history. Fall back to ordinary paste if unavailable.
+		if (!document.execCommand?.('insertText', false, pasted_href)) return;
+
 		event.preventDefault();
-		href_input_value = pasted_href;
+		href_input_value = input.value;
 	}
 
 	function handle_backdrop_click(event) {
@@ -181,8 +188,12 @@
 			}
 
 			if (href_input_ref) {
-				href_input_ref.focus();
-				href_input_ref.select();
+				// Select after the bound URL reaches the input.
+				void tick().then(() => {
+					if (!dialog_ref?.open) return;
+					href_input_ref?.focus();
+					href_input_ref?.select();
+				});
 			}
 		} else if (dialog_ref?.open) {
 			dialog_ref.close();
@@ -202,7 +213,8 @@
 				<input
 					id="edit-link-url-input"
 					bind:this={href_input_ref}
-					type="url"
+					type="text"
+					inputmode="url"
 					bind:value={href_input_value}
 					placeholder="https://example.com"
 					class="edit-link-input min-h-9 w-72 min-w-0 flex-1 rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border border-(--stroke) bg-(--background) px-3 py-1 text-base leading-6 text-(--foreground) outline-none focus:border-(--editing) focus:ring-0"
