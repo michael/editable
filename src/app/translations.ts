@@ -48,19 +48,19 @@ function referenced_ids(doc: Document) {
 	return ids;
 }
 
-function remove_unreferenced(doc: Document, ids: Iterable<string>) {
+export function remove_unreferenced(doc: Document, ids: Iterable<string>) {
 	const referenced = referenced_ids(doc);
 	for (const id of ids) if (!referenced.has(id)) delete doc.nodes[id];
 }
 
 function remap_ids(doc: Document, nodes: Record<string, DocumentNode>) {
 	const remapped = new Map<string, string>();
-	const used_ids = new Set([...Object.keys(doc.nodes), ...Object.keys(nodes)]);
+	const used_ids = new Set(Object.keys(nodes));
 	for (const id of Object.keys(nodes)) {
 		let next_id = id;
 		if (doc.nodes[id]) {
 			do next_id = nanoid();
-			while (used_ids.has(next_id));
+			while (doc.nodes[next_id] || used_ids.has(next_id));
 		}
 		used_ids.add(next_id);
 		remapped.set(id, next_id);
@@ -124,8 +124,8 @@ export function normalized_payload(payload: TranslationPayload) {
 	return stable_json({ ...translation, nodes });
 }
 
-/** Substitute on a disposable graph; the canonical document remains untouched. */
-export function replace_translation(
+/** Prepare a property replacement without changing the graph. */
+export function prepare_translation(
 	doc: Document,
 	node_id: string,
 	property_id: string,
@@ -155,18 +155,32 @@ export function replace_translation(
 	}
 	const { nodes, ...translation } = checked;
 	const remapped = remap_ids(doc, nodes);
+	const owner = { ...doc.nodes[node_id] };
 	if ('node_id' in translation) {
-		doc.nodes[node_id][property_id] = remapped.get(translation.node_id)!;
+		owner[property_id] = remapped.get(translation.node_id)!;
 	} else {
 		for (const range of [...translation.marks, ...translation.annotations])
 			range.node_id = remapped.get(range.node_id)!;
-		doc.nodes[node_id][property_id] = translation;
+		owner[property_id] = translation;
 	}
+	const replacements: Record<string, DocumentNode> = { [node_id]: owner };
 	for (const [id, node] of Object.entries(nodes)) {
 		const next_id = remapped.get(id)!;
-		doc.nodes[next_id] = { ...node, id: next_id };
+		replacements[next_id] = { ...node, id: next_id };
 	}
-	remove_unreferenced(doc, Object.keys(original.nodes));
+	return { nodes: replacements, removed_ids: Object.keys(original.nodes) };
+}
+
+/** Substitute on a disposable graph; the canonical document remains untouched. */
+export function replace_translation(
+	doc: Document,
+	node_id: string,
+	property_id: string,
+	payload: TranslationPayload
+) {
+	const replacement = prepare_translation(doc, node_id, property_id, payload);
+	Object.assign(doc.nodes, replacement.nodes);
+	remove_unreferenced(doc, replacement.removed_ids);
 }
 
 /** Compare structure independently of text and property-owned attachment IDs. */
