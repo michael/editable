@@ -911,23 +911,25 @@ That folder is `data/`: an SQLite database (`db.sqlite3`) and uploaded assets (`
 
 - **pnpm data:pull** — Copy the live site's data to your machine
 - **pnpm data:push [--yes]** — Replace the live site's data with your local state — guarded, undoable
-- **pnpm data:backup** — Snapshot the live database, kept on the server and mirrored locally
-- **pnpm data:backups** — List the live site's snapshots
-- **pnpm data:restore &lt;name> [--yes]** — Roll the live database back to a snapshot — pass a name from data:backups
+- **pnpm data:backup [--remote]** — Snapshot the local database; remote backups are kept on the server and mirrored locally
+- **pnpm data:backups [--remote]** — List local snapshots; add --remote to list server snapshots
+- **pnpm data:restore &lt;name> [--remote] [--yes]** — Restore the local database from a snapshot; add --remote to restore the deployed database
 - **pnpm data:cloud-snapshots** — List points in time you can restore to — requires automated backups
 - **pnpm data:restore-cloud [--at &lt;timestamp>] [--yes]** — Roll the live site back to a point in time — requires automated backups
 - **pnpm data:pull-cloud [--at &lt;timestamp>]** — Rebuild your local data folder from the bucket — requires automated backups
-- **pnpm data:translations [--local]** — List stored translation languages and document counts, including disabled languages; defaults to the live site
-- **pnpm data:purge-translations &lt;language> [--local] [--yes]** — Back up the database, then permanently delete one language's translations without restarting; defaults to the live site
-- **pnpm data:verify** — Health-check the deployed database and assets
+- **pnpm data:translations [--remote]** — List stored translation languages and document counts, including disabled languages; defaults to local data
+- **pnpm data:purge-translations &lt;language> [--remote] [--yes]** — Back up the database, then permanently delete one language's translations without restarting; defaults to local data
+- **pnpm data:verify [--remote]** — Health-check the local database and assets; add --remote to check the deployment
 - **pnpm data:reset [--yes]** — Reset your local database to fresh default site content, keeping assets
 - **pnpm litestream:install** — One-time local setup for data:pull-cloud — requires automated backups
 
-Disabling a language in `LANGUAGES` preserves its translations and media references. Original node deletions and page slug changes continue to update stored translations, even when multilingual support is completely disabled. To permanently remove a language, deploy the maintenance scripts, then run `pnpm data:translations` and `pnpm data:purge-translations es`. The purge asks for confirmation, takes a backup, and deletes the language's maps and rebuilds affected asset references in a single transaction on the live server. It does not replace the database or restart the app; concurrent writes may briefly wait for the transaction. Media files remain on disk and become eligible for normal cleanup after the configured grace period if nothing else references them. The command uses the same Fly.io or VPS target as the other data commands. Avoid editing that language during a purge: an open draft will become stale, but a fresh save can create translations again if the language remains enabled.
+Maintenance commands (`backup`, `backups`, `restore`, `verify`, `translations`, and `purge-translations`) operate locally by default; add `--remote` for the configured deployment. `pull` and `push` retain their remote-to-local and local-to-remote directions. `reset` remains local only; cloud commands retain their existing destinations. Local backups go into `data-backups/`, which also holds remote backup mirrors. Local restore requires stopping the dev server and verifies the snapshot and its referenced assets before replacing the database; local backup, verification, and translation maintenance can run while the server is active.
 
-For your local database, run `pnpm data:translations --local` or `pnpm data:purge-translations es --local`. These use `DATA_DIR` from your shell environment (default `./data`), require no deployment connection, and can run while the dev server is active. A local purge first saves a consistent snapshot in `data-backups/local-<timestamp>-<id>.sqlite3` and uses the same transaction and media grace-period behavior as the live command.
+Disabling a language in `LANGUAGES` preserves its translations and media references. Original node deletions and page slug changes continue to update stored translations, even when multilingual support is completely disabled. To permanently remove a language, deploy the maintenance scripts, then run `pnpm data:translations --remote` and `pnpm data:purge-translations es --remote`. The purge asks for confirmation, takes a backup, and deletes the language's maps and rebuilds affected asset references in a single transaction on the live server. It does not replace the database or restart the app; concurrent writes may briefly wait for the transaction. Media files remain on disk and become eligible for normal cleanup after the configured grace period if nothing else references them. With `--remote`, the command uses the same Fly.io or VPS target as pull and push. Avoid editing that language during a purge: an open draft will become stale, but a fresh save can create translations again if the language remains enabled.
 
-Arguments in brackets are optional; pnpm forwards them directly to the script, without an extra `--` separator. The cloud commands require [Automated backups](#automated-backups-optional). Every command reads the target app from `fly.toml`; only append `-a <app>` if no app name is set there, or to override it. Every restore prints a summary of the restored state (documents, last edited, assets) so you can confirm you got the moment you meant, and backs up the state it replaces first. `pnpm data:help` prints this reference, with arguments, in the terminal.
+For your local database, run `pnpm data:translations` or `pnpm data:purge-translations es`. These use `DATA_DIR` from your shell environment (default `./data`), require no deployment connection, and can run while the dev server is active. A local purge first saves a consistent snapshot in `data-backups/local-<timestamp>-<id>.sqlite3` and uses the same transaction and media grace-period behavior as the live command.
+
+Arguments in brackets are optional; pnpm forwards them directly to the script, without an extra `--` separator. The cloud commands require [Automated backups](#automated-backups-optional). Commands that connect to a deployment read the target app from `fly.toml`; only append `-a <app>` if no app name is set there, or to override it. Remote restores print a summary of the restored state (documents, last edited, assets). Both local and remote restores back up the state they replace first. `pnpm data:help` prints this reference, with arguments, in the terminal.
 
 Pull the live site down to work on it locally, or push a local state up to production. Both directions sync the database and any missing assets.
 
@@ -949,11 +951,11 @@ Assets are content-addressed and immutable, so they only ever need to be added, 
 Every push prints an undo command. To roll back:
 
 ```
-pnpm data:backups          # list the live site's snapshots
-pnpm data:restore <name>   # roll the live site back to one (name from the listing; file extension optional)
+pnpm data:backups --remote # list the live site's snapshots
+pnpm data:restore <name> --remote # roll the live site back to one (name from the listing; file extension optional)
 ```
 
-Snapshots are taken automatically before every push and restore, and on demand with `pnpm data:backup` — each lives on the server (last 10 kept) and is mirrored to `data-backups/` on your machine (kept forever, prune by hand). `restore` finds it in either place.
+Snapshots are taken automatically before every push and restore, and on demand with `pnpm data:backup --remote` — each lives on the server (last 10 kept) and is mirrored to `data-backups/` on your machine (kept forever, prune by hand). `restore --remote` finds it in either place.
 
 A rollback restores only the database; it re-points at the same immutable asset pool, which is why `ASSET_GRACE_PERIOD_DAYS` (see [Deploy](#deploy)) defines how far back you can safely go — restores from the backup bucket don't have this limit.
 
@@ -1038,7 +1040,7 @@ New Editable releases are one `git pull` away.
 Because your site keeps Editable as the `upstream` remote (see [Your site is your repo](#your-site-is-your-repo)), improvements flow in with ordinary git. The ritual, in order:
 
 ```sh
-pnpm data:backup            # snapshot the live database first
+pnpm data:backup --remote   # snapshot the live database first
 git fetch upstream          # download available Editable releases
 git merge upstream/stable   # merge the latest Editable release
 pnpm install                # update dependencies (including svedit)
