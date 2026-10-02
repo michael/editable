@@ -103,6 +103,14 @@ case "$cmd" in
 			"$DATA/db.sqlite3" "$DATA/assets"
 		;;
 
+	translations)
+		node --disable-warning=ExperimentalWarning "$SCRIPT_DIR/translations.js" "$DATA/db.sqlite3" list
+		;;
+
+	purge-translations)
+		node --disable-warning=ExperimentalWarning "$SCRIPT_DIR/translations.js" "$DATA/db.sqlite3" purge "$1" --yes
+		;;
+
 	list-assets)
 		# The header guarantees non-empty output on success, so callers can
 		# tell "no assets yet" apart from a failed ssh connection.

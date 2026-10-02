@@ -40,6 +40,8 @@
 		"data:restore-cloud": "./scripts/data.sh restore-cloud",
 		"data:pull-cloud": "./scripts/data.sh pull-cloud",
 		"data:cloud-snapshots": "./scripts/data.sh cloud-snapshots",
+		"data:translations": "./scripts/data.sh translations",
+		"data:purge-translations": "./scripts/data.sh purge-translations",
 		"data:verify": "./scripts/data.sh verify",
 		"data:reset": "./scripts/data.sh reset",
 		"vps:deploy": "./scripts/vps-deploy.sh",
