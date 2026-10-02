@@ -43,6 +43,7 @@ export const load_page = async ({
 		return {
 			document,
 			slug: params.page_id,
+			canonical_path: `/${params.page_id}`,
 			can_edit: false,
 			content_source: 'markdown'
 		};

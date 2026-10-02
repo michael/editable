@@ -1,7 +1,12 @@
 import { afterAll, beforeEach, expect, it, vi } from 'vitest';
 import { fill_document_defaults } from 'svedit';
 import { document_schema } from './document_schema.js';
-import { default_page_document, default_site_document } from './default_site.js';
+import {
+	default_page_document,
+	default_site_document,
+	default_nav_document,
+	default_footer_document
+} from './default_site.js';
 import initial_schema from './migrations/20260803T131059242Z_editable_initial_schema.js';
 import translations_schema from './migrations/20260923T180000000Z_editable_translations.js';
 
@@ -48,10 +53,89 @@ import {
 	update_page_slug,
 	delete_page,
 	save_document,
-	get_page_browser_data
+	get_page_browser_data,
+	get_sitemap_entries
 } from './api.remote.js';
 import { warn_about_language_slug_collisions } from './server_language_slugs.js';
 import * as markdown_registry from './markdown/registry.js';
+
+it('publishes localized sitemap URLs with translation dates while excluding hidden pages and redirects', async () => {
+	const insert_doc = db.prepare(
+		'INSERT INTO documents (document_id, type, data, updated_at) VALUES (?, ?, ?, ?)'
+	);
+	for (const doc of [default_page_document, default_nav_document, default_footer_document])
+		insert_doc.run(
+			doc.document_id,
+			doc.nodes[doc.document_id].type,
+			JSON.stringify(doc),
+			'2026-10-01T00:00:00Z'
+		);
+	db.prepare('INSERT INTO site_settings VALUES (?, ?)').run(
+		'home_page_id',
+		default_page_document.document_id
+	);
+	db.prepare('UPDATE documents SET updated_at = ? WHERE document_id = ?').run(
+		'2026-10-02T00:00:00Z',
+		default_nav_document.document_id
+	);
+	const insert_slug = db.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)');
+	for (const slug of ['about', 'de', 'manual', 'unlisted']) {
+		const doc = structuredClone(default_page_document);
+		const root = doc.nodes[doc.document_id];
+		delete doc.nodes[doc.document_id];
+		doc.document_id = `${slug}-page`;
+		doc.nodes[doc.document_id] = {
+			...root,
+			id: doc.document_id,
+			body: { nodes: [], marks: [], annotations: [] }
+		};
+		insert_doc.run(doc.document_id, 'page', JSON.stringify(doc), '2026-10-01T00:00:00Z');
+		insert_slug.run(slug, doc.document_id, 1, 'now');
+		if (slug !== 'unlisted')
+			db.prepare('INSERT INTO document_refs VALUES (?, ?, ?)').run(
+				doc.document_id,
+				default_nav_document.document_id,
+				0
+			);
+	}
+	insert_slug.run('old-about', 'about-page', 0, 'now');
+	for (const [document_id, language, date] of [
+		['about-page', 'de', '2026-10-03T00:00:00Z'],
+		[default_nav_document.document_id, 'de', '2026-10-04T00:00:00Z'],
+		['about-page', 'es', '2026-10-05T00:00:00Z']
+	])
+		db.prepare('INSERT INTO translations VALUES (?, ?, ?, ?)').run(
+			document_id,
+			language,
+			'{}',
+			date
+		);
+	const entries = await get_sitemap_entries();
+	expect(entries.map((entry) => entry.path).sort()).toEqual([
+		'/',
+		'/about',
+		'/de',
+		'/de/about',
+		'/manual',
+		'/product'
+	]);
+	expect(entries.find((entry) => entry.path === '/about')?.lastmod).toBe(
+		'2026-10-02T00:00:00.000Z'
+	);
+	expect(entries.find((entry) => entry.path === '/de/about')?.lastmod).toBe(
+		'2026-10-04T00:00:00.000Z'
+	);
+	expect(entries.find((entry) => entry.path === '/about')?.alternates).toEqual(
+		entries.find((entry) => entry.path === '/de/about')?.alternates
+	);
+	languages.splice(0);
+	const disabled = await get_sitemap_entries();
+	expect(disabled.some((entry) => entry.path === '/de/about')).toBe(false);
+	expect(disabled.find((entry) => entry.path === '/about')).toMatchObject({
+		alternates: [],
+		lastmod: '2026-10-02T00:00:00.000Z'
+	});
+});
 
 afterAll(() => db.close());
 beforeEach(() => {

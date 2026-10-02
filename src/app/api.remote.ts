@@ -3,7 +3,7 @@ import { translation_payloads } from '../lib/asset_references.js';
 import { languages, request_language } from './server_languages.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { translated_href, parse_internal_page_href } from './document_links.js';
-import { language_path, is_reserved_language_slug } from './languages.js';
+import { language_path, language_href, is_reserved_language_slug } from './languages.js';
 import { getRequestEvent, query, command } from '$app/server';
 import {
 	cleanup_translations,
@@ -19,10 +19,12 @@ import { db, with_transaction, delete_orphaned_assets, touch_asset } from '#app/
 
 import { build_page_forest } from '#app/page_tree.js';
 import type { SitemapEntry } from '#lib/server/sitemap.js';
+import { latest_modified } from '#lib/server/sitemap.js';
+import { language_alternates } from './seo.js';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
 import { document_schema } from '#app/document_schema.js';
 import { collect_node_ids_in_order } from '#lib/document_graph.js';
-import { is_reserved_markdown_slug } from '#app/markdown/registry.js';
+import { is_reserved_markdown_slug, get_markdown_page_pathnames } from '#app/markdown/registry.js';
 import {
 	extract_page_metadata,
 	extract_site_metadata,
@@ -692,12 +694,48 @@ export const get_page_browser_data = query(v.string(), async (href) => {
 /** Return public URLs and saved timestamps for pages reachable from Home. */
 export const get_sitemap_entries = query(async () => {
 	const { page_forest } = build_page_browser_data('/', true);
+	const records = db
+		.prepare(
+			`SELECT document_id, COALESCE(updated_at, created_at) AS modified,
+		 json_extract(data, '$.nodes."' || document_id || '".nav') AS nav,
+		 json_extract(data, '$.nodes."' || document_id || '".footer') AS footer
+		 FROM documents WHERE type IN ('page', 'nav', 'footer')`
+		)
+		.all() as {
+		document_id: string;
+		modified: string | null;
+		nav: string | null;
+		footer: string | null;
+	}[];
+	const records_by_id = new Map(records.map((record) => [record.document_id, record]));
+	const translations = db
+		.prepare('SELECT document_id, language, updated_at FROM translations')
+		.all() as { document_id: string; language: string; updated_at: string }[];
+	const modified_by_language = new Map(
+		translations.map((row) => [JSON.stringify([row.document_id, row.language]), row.updated_at])
+	);
 	const entries: SitemapEntry[] = [];
 	const queue = [...page_forest];
 	for (const page of queue) {
-		if (page.shadowed_by_markdown) continue;
-		entries.push({ path: page.page_href, lastmod: page.updated_at ?? page.created_at });
 		queue.push(...page.children);
+		if (page.shadowed_by_markdown || page.shadowed_by_language) continue;
+		const record = records_by_id.get(page.document_id);
+		const ids = [page.document_id, record?.nav, record?.footer].filter((id): id is string => !!id);
+		const original_dates = ids.map((id) => records_by_id.get(id)?.modified);
+		const alternates = language_alternates(page.page_href, languages);
+		for (const language of languages.length ? languages : ['']) {
+			entries.push({
+				path: language ? language_href(page.page_href, language, languages) : page.page_href,
+				lastmod: latest_modified([
+					...original_dates,
+					...ids.map((id) => modified_by_language.get(JSON.stringify([id, language])))
+				]),
+				alternates
+			});
+		}
+	}
+	for (const path of get_markdown_page_pathnames()) {
+		if (!is_reserved_language_slug(path.slice(1), languages)) entries.push({ path, lastmod: null });
 	}
 	return entries;
 });

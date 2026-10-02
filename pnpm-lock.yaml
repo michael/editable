@@ -191,8 +191,8 @@ importers:
         specifier: ^1.6.9
         version: 1.6.9
       svedit:
-        specifier: ^0.15.0
-        version: 0.15.0(svelte@5.57.1(@typescript-eslint/types@8.71.0))
+        specifier: ^0.15.1
+        version: 0.15.1(svelte@5.57.1(@typescript-eslint/types@8.71.0))
       valibot:
         specifier: ^1.5.0
         version: 1.5.0(typescript@6.0.3)
@@ -1797,8 +1797,8 @@ packages:
   std-env@4.3.0:
     resolution: {integrity: sha512-OtU/EgQ1kIm5KwqQpBC6ZEMXrZRui11w8zgfTWp8cdO9B8OaPsbA8bTHO2P+HNo1VlUTGMVBwPhydu6poeXiag==}
 
-  svedit@0.15.0:
-    resolution: {integrity: sha512-26sIJuqKv21DNzTwjO1u98OnGn7PwAYNqzXh8d8K5GNC0gl8TC+uF3RPxR1dCow+hH5L791+kQwH6liME3BJDw==}
+  svedit@0.15.1:
+    resolution: {integrity: sha512-bPEVDg6h9Yr9iG4Pr0L47HFyjDH3TwSZjS51YIeeQmM55JMdQIG9ILtXifurQv+dM/fDZ60odWNA02prChnjKQ==}
     peerDependencies:
       svelte: ^5.0.0
 
@@ -3222,7 +3222,7 @@ snapshots:
 
   std-env@4.3.0: {}
 
-  svedit@0.15.0(svelte@5.57.1(@typescript-eslint/types@8.71.0)):
+  svedit@0.15.1(svelte@5.57.1(@typescript-eslint/types@8.71.0)):
     dependencies:
       svelte: 5.57.1(@typescript-eslint/types@8.71.0)
 
