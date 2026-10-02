@@ -1147,29 +1147,23 @@ The generated `before` array overrides timestamp order for that relationship onl
 
 ## Translations (experimental)
 
-Set a comma-separated language list in `.env` or your deployment environment:
+Publish your website in multiple languages.
+
+Enable translations with a comma-separated language list in `.env` or your deployment environment:
 
 ```dotenv
 LANGUAGES="en,de"
 ```
 
-The first language is the original. Additional languages appear in the navigation switcher. Translated pages use URLs such as `/de/about` and `/de` for the homepage. The original language keeps unprefixed URLs. Choose a language before entering edit mode, edit its text or media, and save. Missing translations show the original content.
+The first language is the original and keeps unprefixed URLs. Additional languages appear in the navigation switcher and use URLs such as `/de/about` and `/de` for the homepage. Keep the original language first when changing the list.
 
-Secondary-language prefixes are reserved Page URLs: with `LANGUAGES=en,de`, a new page titled “De” receives `/de-2`, and renaming a page to `/de` is rejected. Before enabling another language, rename any existing page using its prefix and update its links. Startup logs warn about conflicting pages, historical redirects, and configured markdown paths. Conflicting database pages show a **URL TAKEN** badge in the page browser; click it for an explanation, then use the page's actions menu to change its Page URL. Existing data is preserved; a historical redirect at `/de` cannot work while `/de` serves the German homepage.
+Choose a language before entering edit mode, edit its text or media, and save. Titles, descriptions, navigation, and footer labels can be translated; images and videos can have separate alt text and crop settings. Missing translations show the original content. Structure and layouts stay shared and are edited in the original language.
 
-On backend deployments, `/sitemap.xml` lists pages reachable from Home in each enabled language, plus configured markdown pages. Language versions include reciprocal `hreflang` alternatives and an `x-default` pointing to the original language, both in the sitemap and page head. Each language version has its own canonical URL. Sitemap modification dates include saved page and shared navigation/footer changes, including translations for that language. Unlisted database pages, historical redirects, and shadowed database URLs are excluded. Markdown bodies are not translated, so prefixed markdown pages keep the original canonical URL and are listed only once. `/robots.txt` advertises the sitemap using `ORIGIN`; static deployments allow crawling without advertising a database-backed sitemap.
+On backend deployments, language versions are included automatically in the sitemap and page metadata for search engines.
 
-Text, including page titles, descriptions, and shared navigation/footer labels, can be translated. Media properties allowing images and/or videos can also be replaced, with separate alt text and crop settings per language. Media uploads use the same asset storage as the original language. Structure, layouts, and other ordinary string properties remain shared; make those changes in the original language. Structural controls are disabled in translation mode.
+Removing a language from the list hides its translations without deleting them. Leave `LANGUAGES` unset or blank for a single-language site.
 
-For local development:
-
-```sh
-LANGUAGES=en,de pnpm dev
-```
-
-Set `LANGUAGES` in the runtime environment, not only when building. Repository markdown bodies and editor interface labels are not translated.
-
-This feature is experimental: its behavior and storage format may change or be removed. Back up your database before upgrading, and do not reorder the first language. With `LANGUAGES` unset or blank, Editable behaves as before. Removing the setting hides translations without deleting them. To remove an override, restore the original text and formatting or the original media and its settings, then save. Assets referenced by any saved language are retained; after their last reference is removed, the usual asset cleanup grace period applies.
+This feature is experimental: its behavior and storage format may change. Back up your database before upgrading.
 
 ## Markdown pages (experimental)
 
