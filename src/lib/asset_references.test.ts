@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { collect_asset_ids } from './asset_references.js';
+import { collect_asset_ids, translation_payloads } from './asset_references.js';
 
 it('collects the union of original and translated image/video assets without mutating payloads', () => {
 	const payloads = [
@@ -40,4 +40,18 @@ it('ignores empty media, pending uploads, non-media nodes, and text-only transla
 			}
 		])
 	).toEqual(new Set());
+});
+
+it('scans nested translation maps even when a document node is named nodes', () => {
+	const map: Record<
+		string,
+		Record<string, { nodes: Record<string, { type: string; src: string }> }>
+	> = {
+		nodes: { image: { nodes: { image: { type: 'image', src: 'translated.webp' } } } },
+		page: { media: { nodes: { video: { type: 'video', src: 'translated.mp4' } } } }
+	};
+	expect(collect_asset_ids(translation_payloads(map))).toEqual(
+		new Set(['translated.webp', 'translated.mp4'])
+	);
+	expect(() => [...translation_payloads({ broken: null } as never)]).toThrow();
 });

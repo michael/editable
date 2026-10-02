@@ -19,3 +19,17 @@ export function collect_asset_ids(payloads) {
 	}
 	return assets;
 }
+
+/** Yield property payloads from a sparse document/language translation map.
+ * @template T
+ * @param {Record<string, Record<string, T>>} map
+ */
+export function* translation_payloads(map) {
+	if (!map || typeof map !== 'object' || Array.isArray(map))
+		throw new Error('Invalid translation map');
+	for (const properties of Object.values(map)) {
+		if (!properties || typeof properties !== 'object' || Array.isArray(properties))
+			throw new Error('Invalid translation properties');
+		yield* Object.values(properties);
+	}
+}

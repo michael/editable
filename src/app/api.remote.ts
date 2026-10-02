@@ -1,3 +1,5 @@
+import type { TranslationMap } from './translations.js';
+import { translation_payloads } from '../lib/asset_references.js';
 import { languages, request_language } from './server_languages.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { translated_href, parse_internal_page_href } from './document_links.js';
@@ -782,8 +784,13 @@ export const get_internal_link_preview = query(v.string(), async (href) => {
 /**
  * Save a document to the database, splitting shared documents (nav, footer) back out.
  */
-function rewrite_internal_page_href(href: string, target_document_id: string, new_slug: string) {
-	const parsed = parse_internal_page_href(href, languages);
+function rewrite_internal_page_href(
+	href: string,
+	target_document_id: string,
+	new_slug: string,
+	link_languages: string[]
+) {
+	const parsed = parse_internal_page_href(href, link_languages);
 	if (!parsed) return href;
 
 	const resolved = resolve_slug(parsed.slug);
@@ -795,13 +802,19 @@ function rewrite_internal_page_href(href: string, target_document_id: string, ne
 function rewrite_internal_page_hrefs(
 	nodes: Record<string, DocumentNode>,
 	target_document_id: string,
-	new_slug: string
+	new_slug: string,
+	link_languages = languages
 ) {
 	for (const node of Object.values(nodes)) {
 		if (!node || typeof node !== 'object') continue;
 
 		if (typeof node.href === 'string') {
-			node.href = rewrite_internal_page_href(node.href, target_document_id, new_slug);
+			node.href = rewrite_internal_page_href(
+				node.href,
+				target_document_id,
+				new_slug,
+				link_languages
+			);
 		}
 
 		const type_schema: NodeSchema | undefined = document_schema[node.type];
@@ -819,7 +832,12 @@ function rewrite_internal_page_hrefs(
 				if (!range_node || range_node.type !== 'link') continue;
 				if (typeof range_node.href !== 'string') continue;
 
-				range_node.href = rewrite_internal_page_href(range_node.href, target_document_id, new_slug);
+				range_node.href = rewrite_internal_page_href(
+					range_node.href,
+					target_document_id,
+					new_slug,
+					link_languages
+				);
 			}
 		}
 	}
@@ -1170,14 +1188,19 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		}
 
 		if (languages.length) {
-			const translations = db.prepare('SELECT rowid, value FROM translations').all() as {
+			const translations = db.prepare('SELECT rowid, language, value FROM translations').all() as {
 				rowid: number;
+				language: string;
 				value: string;
 			}[];
 			for (const row of translations) {
-				const payload = JSON.parse(row.value);
-				rewrite_internal_page_hrefs(payload.nodes, input.document_id, active_slug);
-				const value = JSON.stringify(payload);
+				const map: TranslationMap = JSON.parse(row.value);
+				for (const payload of translation_payloads(map))
+					rewrite_internal_page_hrefs(payload.nodes ?? {}, input.document_id, active_slug, [
+						...languages,
+						row.language
+					]);
+				const value = JSON.stringify(map);
 				if (value !== row.value)
 					db.prepare('UPDATE translations SET value = ?, updated_at = ? WHERE rowid = ?').run(
 						value,

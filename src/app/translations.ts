@@ -7,6 +7,8 @@ const schema: Record<string, NodeSchema> = document_schema;
 export type TextTranslationPayload = Text & { nodes: Record<string, DocumentNode> };
 export type MediaTranslationPayload = { node_id: string; nodes: Record<string, DocumentNode> };
 export type TranslationPayload = TextTranslationPayload | MediaTranslationPayload;
+export type TranslationMap = Record<string, Record<string, TranslationPayload>>;
+export type TranslationIdGenerator = (id: string, attempt: number) => string;
 
 export function translation_properties(doc: Document) {
 	return Object.values(doc.nodes).flatMap((node) =>
@@ -53,13 +55,18 @@ export function remove_unreferenced(doc: Document, ids: Iterable<string>) {
 	for (const id of ids) if (!referenced.has(id)) delete doc.nodes[id];
 }
 
-function remap_ids(doc: Document, nodes: Record<string, DocumentNode>) {
+function remap_ids(
+	doc: Document,
+	nodes: Record<string, DocumentNode>,
+	generate_id: TranslationIdGenerator
+) {
 	const remapped = new Map<string, string>();
 	const used_ids = new Set(Object.keys(nodes));
 	for (const id of Object.keys(nodes)) {
 		let next_id = id;
 		if (doc.nodes[id]) {
-			do next_id = nanoid();
+			let attempt = 0;
+			do next_id = generate_id(id, attempt++);
 			while (doc.nodes[next_id] || used_ids.has(next_id));
 		}
 		used_ids.add(next_id);
@@ -129,7 +136,8 @@ export function prepare_translation(
 	doc: Document,
 	node_id: string,
 	property_id: string,
-	payload: TranslationPayload
+	payload: TranslationPayload,
+	generate_id: TranslationIdGenerator = nanoid
 ) {
 	const original = property_payload(doc, node_id, property_id);
 	if ('node_id' in original !== 'node_id' in payload)
@@ -154,7 +162,7 @@ export function prepare_translation(
 		throw new Error('Translation contains unreferenced nodes');
 	}
 	const { nodes, ...translation } = checked;
-	const remapped = remap_ids(doc, nodes);
+	const remapped = remap_ids(doc, nodes, generate_id);
 	const owner = { ...doc.nodes[node_id] };
 	if ('node_id' in translation) {
 		owner[property_id] = remapped.get(translation.node_id)!;
