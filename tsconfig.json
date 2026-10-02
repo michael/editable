@@ -2,15 +2,7 @@
 	"extends": "$app/tsconfig",
 	"include": ["src", "vite.config.ts"],
 	"compilerOptions": {
-		"allowJs": true,
-		"checkJs": true,
-		"esModuleInterop": true,
-		"forceConsistentCasingInFileNames": true,
-		"resolveJsonModule": true,
-		"skipLibCheck": true,
 		"sourceMap": false,
-		"strict": false,
-		"moduleResolution": "bundler",
-		"allowImportingTsExtensions": true
+		"strict": false
 	}
 }

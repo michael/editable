@@ -10,6 +10,7 @@
 	});
 
 	onNavigate((navigation) => {
+		if (navigation.shallow) return;
 		if (typeof document.startViewTransition !== 'function') return;
 
 		return new Promise<void>((resolve) => {

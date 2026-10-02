@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { ASSET_ID_REGEX } from '#app/config.js';
 import { delete_asset, asset_exists } from '#app/services.js';
 import { require_admin_session } from '#lib/server/auth.js';
@@ -18,5 +18,5 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	}
 
 	await delete_asset(asset_id);
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

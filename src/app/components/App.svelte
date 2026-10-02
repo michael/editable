@@ -111,6 +111,7 @@
 	}
 
 	beforeNavigate((navigation) => {
+		if (navigation.shallow) return;
 		if (!languages.length || switching_language) return;
 		if (
 			save_progress_visible ||
@@ -589,7 +590,7 @@
 					this.context.editable = false;
 					save_progress_visible = false;
 					await goto(resolve('/[page_id]', { page_id: result.slug }), {
-						replaceState: true,
+						replace: true,
 						refreshAll: true
 					});
 					return;
@@ -667,7 +668,7 @@
 		}
 
 		execute() {
-			return goto(resolve('/new'));
+			return goto(resolve('new'));
 		}
 	}
 
@@ -682,7 +683,7 @@
 		execute() {
 			if (!duplicate_source) return;
 			toolbar_ref?.close_page_menu();
-			return goto(`${resolve('/new')}?from=${encodeURIComponent(duplicate_source)}`);
+			return goto(`${resolve('new')}?from=${encodeURIComponent(duplicate_source)}`);
 		}
 	}
 
@@ -796,6 +797,7 @@
 
 <div class="antialiased" bind:this={app_el}>
 	<Toolbar bind:this={toolbar_ref} {session} {app_commands} {editable} {focus_canvas} />
+
 	<Svedit {session} bind:editable bind:this={svedit_ref} path={[session.doc.document_id]} />
 
 	{#if has_backend}

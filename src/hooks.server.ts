@@ -1,8 +1,9 @@
+import { redirect } from '@sveltejs/kit';
+import type { Handle, ServerInit } from '@sveltejs/kit/hooks';
 import { request_language } from '#app/server_languages.js';
 import { ORIGIN, VERCEL } from '$app/env/private';
 import { dev } from '$app/env';
-import { redirect } from '@sveltejs/kit';
-import type { Handle, ServerInit } from '@sveltejs/kit';
+
 import {
 	admin_session_cookie_name,
 	clear_admin_session_cookie,
