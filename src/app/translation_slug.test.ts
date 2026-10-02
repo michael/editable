@@ -116,8 +116,7 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 		'/about',
 		'/de',
 		'/de/about',
-		'/manual',
-		'/product'
+		'/manual'
 	]);
 	expect(entries.find((entry) => entry.path === '/about')?.lastmod).toBe(
 		'2026-10-02T00:00:00.000Z'
