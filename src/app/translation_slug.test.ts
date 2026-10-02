@@ -44,7 +44,12 @@ vi.mock('./services.js', async () => {
 
 import { db } from './services.js';
 import { languages } from './server_languages.js';
-import { update_page_slug, delete_page, save_document } from './api.remote.js';
+import {
+	update_page_slug,
+	delete_page,
+	save_document,
+	get_page_browser_data
+} from './api.remote.js';
 import { warn_about_language_slug_collisions } from './server_language_slugs.js';
 import * as markdown_registry from './markdown/registry.js';
 
@@ -88,6 +93,43 @@ it('rejects a language homepage slug without changing the page or its links', as
 	});
 	expect(db.prepare('SELECT data FROM documents').get()).toMatchObject({
 		data: JSON.stringify(page)
+	});
+});
+
+it('flags language collisions in the page browser and clears the flag after renaming', async () => {
+	const page = structuredClone(default_page_document);
+	db.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)').run(
+		page.document_id,
+		'page',
+		JSON.stringify(page)
+	);
+	db.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)').run(
+		'de',
+		page.document_id,
+		1,
+		'now'
+	);
+	const browser = await get_page_browser_data('https://example.com/');
+	expect(browser.page_forest[0]).toMatchObject({
+		document_id: page.document_id,
+		slug: 'de',
+		shadowed_by_language: true,
+		shadowed_by_markdown: false
+	});
+	languages.splice(0);
+	expect((await get_page_browser_data('https://example.com/')).page_forest[0]).toMatchObject({
+		shadowed_by_language: false
+	});
+	languages.push('en', 'de');
+	expect(
+		await update_page_slug({ document_id: page.document_id, slug: 'spanish-page' })
+	).toMatchObject({
+		ok: true
+	});
+	expect((await get_page_browser_data('https://example.com/')).page_forest[0]).toMatchObject({
+		document_id: page.document_id,
+		slug: 'spanish-page',
+		shadowed_by_language: false
 	});
 });
 
