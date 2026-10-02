@@ -30,6 +30,7 @@ vi.mock('./services.js', async () => {
 	};
 });
 
+import { languages } from './server_languages.js';
 import { db, asset_exists } from './services.js';
 import migration from './migrations/20260923T180000000Z_editable_translations.js';
 import {
@@ -54,6 +55,7 @@ import { referenced_assets } from '../../scripts/asset-references.js';
 afterAll(() => (db as DatabaseSync).close());
 
 beforeEach(() => {
+	languages.splice(0, languages.length, 'en', 'de', 'fr');
 	db.exec(
 		'DROP TABLE IF EXISTS documents; DROP TABLE IF EXISTS asset_refs; DROP TABLE IF EXISTS translations'
 	);
@@ -221,32 +223,45 @@ it('stores media overrides, loads original fallback, and retains assets across l
 	expect(referenced_assets(db)).not.toContain(asset_a);
 });
 
-it('translates shared navigation media to video and releases references after its property is removed', () => {
-	const input = load_input();
-	const media_property = translation_properties(default_nav_document).find(
-		({ node_id, property_id }) =>
-			property_id === 'media' && default_nav_document.nodes[node_id].type === 'nav_media'
-	)!;
-	expect(media_property).toBeDefined();
-	const { node_id, property_id } = media_property;
-	replace_image(input, node_id, property_id, asset_b, 'video');
-	save_translated_document(input);
-	const loaded = load_input();
-	expect(loaded.nodes[loaded.nodes[node_id][property_id]].type).toBe('video');
-	expect(db.prepare('SELECT document_id FROM asset_refs WHERE asset_id = ?').get(asset_b)).toEqual({
-		document_id: default_nav_document.document_id
-	});
-	const nav: Document = structuredClone(default_nav_document);
-	delete nav.nodes[node_id];
-	db.prepare('UPDATE documents SET data = ? WHERE document_id = ?').run(
-		JSON.stringify(nav),
-		nav.document_id
-	);
-	cleanup_translations(nav.document_id);
-	rebuild_asset_refs(nav.document_id);
-	expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(0);
-	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_b)).toHaveLength(0);
-});
+it.each([false, true])(
+	'cleans deleted original nodes across stored languages with multilingual disabled=%s',
+	(disabled) => {
+		const input = load_input();
+		const media_property = translation_properties(default_nav_document).find(
+			({ node_id, property_id }) =>
+				property_id === 'media' && default_nav_document.nodes[node_id].type === 'nav_media'
+		)!;
+		expect(media_property).toBeDefined();
+		const { node_id, property_id } = media_property;
+		replace_image(input, node_id, property_id, asset_b, 'video');
+		save_translated_document(input);
+		const loaded = load_input();
+		expect(loaded.nodes[loaded.nodes[node_id][property_id]].type).toBe('video');
+		expect(
+			db.prepare('SELECT document_id FROM asset_refs WHERE asset_id = ?').get(asset_b)
+		).toEqual({
+			document_id: default_nav_document.document_id
+		});
+		const nav: Document = structuredClone(default_nav_document);
+		const spanish_map = stored_map(nav.document_id);
+		db.prepare('INSERT INTO translations VALUES (?, ?, ?, ?)').run(
+			nav.document_id,
+			'es',
+			JSON.stringify(spanish_map),
+			'now'
+		);
+		if (disabled) languages.splice(0);
+		delete nav.nodes[node_id];
+		db.prepare('UPDATE documents SET data = ? WHERE document_id = ?').run(
+			JSON.stringify(nav),
+			nav.document_id
+		);
+		cleanup_translations(nav.document_id);
+		rebuild_asset_refs(nav.document_id);
+		expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(0);
+		expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_b)).toHaveLength(0);
+	}
+);
 
 it('rejects unuploaded media, stale saves, extraneous nodes and structural changes without changing references', () => {
 	const id = default_page_document.document_id;

@@ -129,7 +129,6 @@ To reset your local database to the initial default site content (asks for confi
 pnpm data:reset
 ```
 
-
 ## Primitives
 
 Make Svelte components editable by composing a small set of primitives.
@@ -918,9 +917,15 @@ That folder is `data/`: an SQLite database (`db.sqlite3`) and uploaded assets (`
 - **pnpm data:cloud-snapshots** — List points in time you can restore to — requires automated backups
 - **pnpm data:restore-cloud [--at &lt;timestamp>] [--yes]** — Roll the live site back to a point in time — requires automated backups
 - **pnpm data:pull-cloud [--at &lt;timestamp>]** — Rebuild your local data folder from the bucket — requires automated backups
+- **pnpm data:translations [--local]** — List stored translation languages and document counts, including disabled languages; defaults to the live site
+- **pnpm data:purge-translations &lt;language> [--local] [--yes]** — Back up the database, then permanently delete one language's translations without restarting; defaults to the live site
 - **pnpm data:verify** — Health-check the deployed database and assets
 - **pnpm data:reset [--yes]** — Reset your local database to fresh default site content, keeping assets
 - **pnpm litestream:install** — One-time local setup for data:pull-cloud — requires automated backups
+
+Disabling a language in `LANGUAGES` preserves its translations and media references. Original node deletions and page slug changes continue to update stored translations, even when multilingual support is completely disabled. To permanently remove a language, deploy the maintenance scripts, then run `pnpm data:translations` and `pnpm data:purge-translations es`. The purge asks for confirmation, takes a backup, and deletes the language's maps and rebuilds affected asset references in a single transaction on the live server. It does not replace the database or restart the app; concurrent writes may briefly wait for the transaction. Media files remain on disk and become eligible for normal cleanup after the configured grace period if nothing else references them. The command uses the same Fly.io or VPS target as the other data commands. Avoid editing that language during a purge: an open draft will become stale, but a fresh save can create translations again if the language remains enabled.
+
+For your local database, run `pnpm data:translations --local` or `pnpm data:purge-translations es --local`. These use `DATA_DIR` from your shell environment (default `./data`), require no deployment connection, and can run while the dev server is active. A local purge first saves a consistent snapshot in `data-backups/local-<timestamp>-<id>.sqlite3` and uses the same transaction and media grace-period behavior as the live command.
 
 Arguments in brackets are optional; pnpm forwards them directly to the script, without an extra `--` separator. The cloud commands require [Automated backups](#automated-backups-optional). Every command reads the target app from `fly.toml`; only append `-a <app>` if no app name is set there, or to override it. Every restore prints a summary of the restored state (documents, last edited, assets) so you can confirm you got the moment you meant, and backs up the state it replaces first. `pnpm data:help` prints this reference, with arguments, in the terminal.
 

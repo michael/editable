@@ -626,6 +626,52 @@ cmd_backup() {
 	echo "✓ Backup '$ts' (remote volume + $BACKUP_DIR_LOCAL/$ts.sqlite3)"
 }
 
+cmd_translations() {
+	if [ "$#" -eq 1 ] && [ "$1" = "--local" ]; then
+		[ -f "$DATA_DIR_LOCAL/db.sqlite3" ] || die "No local database at $DATA_DIR_LOCAL/db.sqlite3"
+		info "Local translations ($DATA_DIR_LOCAL/db.sqlite3)"
+		node --disable-warning=ExperimentalWarning "$SCRIPT_DIR/translations.js" "$DATA_DIR_LOCAL/db.sqlite3" list
+		return
+	fi
+	[ "$#" -eq 0 ] || die "Usage: pnpm data:translations [--local]"
+	need_app translations
+	ensure_running
+	info "Live translations on '$APP'"
+	remote translations
+}
+
+cmd_purge_translations() {
+	local language="" yes="" local_mode=false out arg backup_path
+	for arg in "$@"; do
+		case "$arg" in
+			--local) local_mode=true ;;
+			--yes) yes=--yes ;;
+			*) [ -z "$language" ] || die "Specify only one language"; language="$arg" ;;
+		esac
+	done
+	[[ "$language" =~ ^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$ ]] ||
+		die "Usage: pnpm data:purge-translations <language> [--local] [--yes]"
+	if [ "$local_mode" = true ]; then
+		cmd_translations --local
+		[ "$yes" = "--yes" ] || confirm "Permanently delete all '$language' translations in your local database ($DATA_DIR_LOCAL/db.sqlite3)?"
+		mkdir -p "$BACKUP_DIR_LOCAL"
+		backup_path="$BACKUP_DIR_LOCAL/local-$(date -u +%Y%m%dT%H%M%SZ)-$(printf '%04x' "$RANDOM").sqlite3"
+		sqlite3 -cmd '.timeout 10000' "$DATA_DIR_LOCAL/db.sqlite3" "VACUUM INTO '$backup_path'"
+		info "Local backup: $backup_path"
+		node --disable-warning=ExperimentalWarning "$SCRIPT_DIR/translations.js" "$DATA_DIR_LOCAL/db.sqlite3" purge "$language" --yes
+		return
+	fi
+	need_app purge-translations
+	ensure_running
+	info "Live translations on '$APP'"
+	remote translations
+	[ "$yes" = "--yes" ] || confirm "Permanently delete all '$language' translations on '$APP'?"
+	cmd_backup
+	out="$(remote purge-translations "$language" 2>&1)" || die "$out"
+	printf '%s\n' "$out"
+	[[ "$out" == *"OK: purged $language translations"* ]] || die "Purge was not confirmed by the server; inspect its output before retrying."
+}
+
 cmd_backups() {
 	need_app backups
 	ensure_running
@@ -662,6 +708,9 @@ Data commands (via pnpm; arguments are forwarded directly):
   pnpm data:cloud-snapshots                 list restore points in the backup bucket
   pnpm data:restore-cloud [--at <ts>]       roll the live site back to a point in time
   pnpm data:pull-cloud [--at <ts>]          rebuild local data/ from the backup bucket
+  pnpm data:translations [--local]          list stored languages (live by default)
+  pnpm data:purge-translations <lang> [--local] [--yes]
+                                           back up, then purge a language without restarting
   pnpm data:verify                          health-check the deployed database + assets
   pnpm data:reset [--yes]                   reset local database to fresh demo content (assets stay)
   pnpm litestream:install                   one-time local setup for the cloud commands
@@ -682,6 +731,8 @@ case "${1:-}" in
 	pull-cloud) shift; cmd_pull_cloud "$@" ;;
 	backup) cmd_backup ;;
 	backups) cmd_backups ;;
+	translations) shift; cmd_translations "$@" ;;
+	purge-translations) shift; cmd_purge_translations "$@" ;;
 	cloud-snapshots) cmd_cloud_snapshots ;;
 	verify) cmd_verify ;;
 	reset) shift; cmd_reset "${1:-}" ;;

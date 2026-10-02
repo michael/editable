@@ -1164,11 +1164,18 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 			'INSERT OR REPLACE INTO document_refs (target_document_id, source_document_id, ref_order) VALUES (?, ?, ?)'
 		);
 
+		const translations = db.prepare('SELECT rowid, language, value FROM translations').all() as {
+			rowid: number;
+			language: string;
+			value: string;
+		}[];
+		const link_languages = [...new Set([...languages, ...translations.map((row) => row.language)])];
+
 		const now_iso = new Date().toISOString();
 
 		for (const row of page_rows) {
 			const doc = JSON.parse(row.data);
-			rewrite_internal_page_hrefs(doc.nodes, input.document_id, active_slug);
+			rewrite_internal_page_hrefs(doc.nodes, input.document_id, active_slug, link_languages);
 			upsert.run(
 				row.document_id,
 				row.type,
@@ -1187,27 +1194,22 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 			);
 		}
 
-		if (languages.length) {
-			const translations = db.prepare('SELECT rowid, language, value FROM translations').all() as {
-				rowid: number;
-				language: string;
-				value: string;
-			}[];
-			for (const row of translations) {
-				const map: TranslationMap = JSON.parse(row.value);
-				for (const payload of translation_payloads(map))
-					rewrite_internal_page_hrefs(payload.nodes ?? {}, input.document_id, active_slug, [
-						...languages,
-						row.language
-					]);
-				const value = JSON.stringify(map);
-				if (value !== row.value)
-					db.prepare('UPDATE translations SET value = ?, updated_at = ? WHERE rowid = ?').run(
-						value,
-						now_iso,
-						row.rowid
-					);
-			}
+		for (const row of translations) {
+			const map: TranslationMap = JSON.parse(row.value);
+			for (const payload of translation_payloads(map))
+				rewrite_internal_page_hrefs(
+					payload.nodes ?? {},
+					input.document_id,
+					active_slug,
+					link_languages
+				);
+			const value = JSON.stringify(map);
+			if (value !== row.value)
+				db.prepare('UPDATE translations SET value = ?, updated_at = ? WHERE rowid = ?').run(
+					value,
+					now_iso,
+					row.rowid
+				);
 		}
 		return active_slug;
 	});
