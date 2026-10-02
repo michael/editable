@@ -21,8 +21,12 @@ it('verification finds translation-only assets and cleanup respects references a
 		db.exec('CREATE TABLE documents (data TEXT); CREATE TABLE translations (value TEXT)');
 		db.prepare('INSERT INTO translations VALUES (?)').run(
 			JSON.stringify({
-				node_id: 'media',
-				nodes: { media: { id: 'media', type: 'image', src: asset_id } }
+				page: {
+					image: {
+						node_id: 'media',
+						nodes: { media: { id: 'media', type: 'image', src: asset_id } }
+					}
+				}
 			})
 		);
 		expect(referenced_assets(db)).toEqual(new Set([asset_id]));

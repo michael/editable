@@ -42,7 +42,12 @@ import {
 	save_translated_document,
 	translated_document
 } from './server_translations.js';
-import { property_payload, replace_translation, translation_properties } from './translations.js';
+import {
+	property_payload,
+	replace_translation,
+	translation_properties,
+	type TranslationMap
+} from './translations.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { referenced_assets } from '../../scripts/asset-references.js';
 
@@ -61,6 +66,37 @@ beforeEach(() => {
 		db.prepare('INSERT INTO documents VALUES (?, ?)').run(doc.document_id, JSON.stringify(doc));
 	}
 });
+
+function stored_map(document_id: string, language = 'de'): TranslationMap {
+	const row = db
+		.prepare('SELECT value FROM translations WHERE document_id = ? AND language = ?')
+		.get(document_id, language) as { value: string } | undefined;
+	return row ? JSON.parse(row.value) : {};
+}
+
+function store_translation(
+	document_id: string,
+	language: string,
+	node_id: string,
+	property_id: string,
+	value: string,
+	updated_at = '2026-10-02T00:00:00.000Z'
+) {
+	const map = stored_map(document_id, language);
+	let payload;
+	try {
+		payload = JSON.parse(value);
+	} catch {
+		payload = value;
+	}
+	(map[node_id] ??= {})[property_id] = payload;
+	db.prepare('INSERT OR REPLACE INTO translations VALUES (?, ?, ?, ?)').run(
+		document_id,
+		language,
+		JSON.stringify(map),
+		updated_at
+	);
+}
 
 it('saves sparse page/shared translations, protects originals, rejects stale and structural saves, and resets equal text', () => {
 	const originals = db.prepare('SELECT * FROM documents ORDER BY document_id').all();
@@ -82,10 +118,7 @@ it('saves sparse page/shared translations, protects originals, rejects stale and
 	input.nodes[footer_property.node_id][footer_property.property_id].content = 'Deutsche Fußzeile';
 	save_translated_document(input);
 	expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(2);
-	const stored = db
-		.prepare('SELECT value FROM translations WHERE node_id = ? AND property_id = ?')
-		.get(id, 'title') as { value: string };
-	expect(JSON.parse(stored.value)).toEqual({
+	expect(stored_map(id)[id].title).toEqual({
 		content: 'Deutscher Titel',
 		marks: [],
 		annotations: [],
@@ -158,10 +191,8 @@ it('stores media overrides, loads original fallback, and retains assets across l
 	const input = load_input();
 	replace_image(input, id, 'image', asset_a);
 	save_translated_document(input);
-	const row = db
-		.prepare('SELECT value FROM translations WHERE node_id = ? AND property_id = ?')
-		.get(id, 'image') as { value: string };
-	const payload = JSON.parse(row.value);
+	const payload = stored_map(id)[id].image;
+	if (!('node_id' in payload)) throw new Error('Expected media override');
 	expect(payload.node_id).toBe('translated_media');
 	expect(payload.nodes.translated_media.src).toBe(asset_a);
 	const loaded = load_input();
@@ -279,7 +310,7 @@ it('removes incompatible media overrides and their asset references during origi
 		type: 'video',
 		src: asset_b
 	};
-	db.prepare('INSERT INTO translations VALUES (?, ?, ?, ?, ?, ?)').run(
+	store_translation(
 		id,
 		'de',
 		id,
@@ -314,9 +345,7 @@ it('persists deleted translated media as an empty override and releases its asse
 	save_translated_document({ ...loaded, ...session.to_json() });
 	const result = load_input();
 	expect(result.nodes[result.nodes[id].image]).toMatchObject(MEDIA_DEFAULTS);
-	expect(db.prepare('SELECT * FROM translations WHERE property_id = ?').all('image')).toHaveLength(
-		1
-	);
+	expect(stored_map(id)[id].image).toBeDefined();
 	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_a)).toHaveLength(0);
 	expect(translated_document(id, 'en').document).toEqual(original);
 	const french = translated_document(id, 'fr').document;
@@ -369,7 +398,6 @@ it('fails before removing existing references when a stored translation is malfo
 it('composes 500 translated paragraphs with one full-document validation', () => {
 	const page: Document = structuredClone(default_page_document);
 	const id = page.document_id;
-	const insert = db.prepare('INSERT INTO translations VALUES (?, ?, ?, ?, ?, ?)');
 	for (let index = 0; index < 500; index++) {
 		const paragraph_id = `paragraph${index}`;
 		const wrapper_id = `wrapper${index}`;
@@ -384,7 +412,7 @@ it('composes 500 translated paragraphs with one full-document validation', () =>
 			body: { nodes: [paragraph_id], marks: [], annotations: [] }
 		};
 		page.nodes[id].body.nodes.push(wrapper_id);
-		insert.run(
+		store_translation(
 			id,
 			'de',
 			paragraph_id,
@@ -394,6 +422,8 @@ it('composes 500 translated paragraphs with one full-document validation', () =>
 		);
 	}
 	db.prepare('UPDATE documents SET data = ? WHERE document_id = ?').run(JSON.stringify(page), id);
+	expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(1);
+	expect(Object.keys(stored_map(id))).toHaveLength(500);
 	const validate = vi.spyOn(svedit, 'validate_document');
 	try {
 		const loaded = translated_document(id, 'de');
@@ -425,8 +455,7 @@ it('rejects invalid overrides atomically while keeping valid translations and sh
 	wrapper.body.nodes.push('other_paragraph');
 	db.prepare('UPDATE documents SET data = ? WHERE document_id = ?').run(JSON.stringify(page), id);
 	const original_media = page.nodes[page.nodes[id].image];
-	const insert = db.prepare('INSERT OR REPLACE INTO translations VALUES (?, ?, ?, ?, ?, ?)');
-	insert.run(
+	store_translation(
 		id,
 		'de',
 		id,
@@ -451,14 +480,14 @@ it('rejects invalid overrides atomically while keeping valid translations and sh
 				nodes: { mark: { id: 'mark', type: 'link', href: 42, target: '_self' } }
 			})
 		]) {
-			insert.run(id, 'de', paragraph.id, 'content', value, '2026-10-02T00:00:00.000Z');
+			store_translation(id, 'de', paragraph.id, 'content', value, '2026-10-02T00:00:00.000Z');
 			const loaded = translated_document(id, 'de').document;
 			expect(loaded.nodes[paragraph.id].content).toEqual(paragraph.content);
 			expect(loaded.nodes.shared_mark).toEqual(page.nodes.shared_mark);
 			expect(loaded.nodes.mark).toBeUndefined();
 			expect(loaded.nodes[id].title.content).toBe('Valid title');
 		}
-		insert.run(
+		store_translation(
 			id,
 			'de',
 			paragraph.id,
@@ -466,7 +495,7 @@ it('rejects invalid overrides atomically while keeping valid translations and sh
 			JSON.stringify({ content: 'Valid paragraph', marks: [], annotations: [], nodes: {} }),
 			'2026-10-02T00:00:00.000Z'
 		);
-		insert.run(
+		store_translation(
 			id,
 			'de',
 			id,
@@ -489,6 +518,86 @@ it('rejects invalid overrides atomically while keeping valid translations and sh
 					.data
 			)
 		).toEqual(page);
+	} finally {
+		log.mockRestore();
+	}
+});
+
+it.each(['/de/about', '/fr/about', '/about', 'https://example.com/de/about'])(
+	'keeps %s stable across reloads and clears an override when restoring original text',
+	(href) => {
+		const page: Document = structuredClone(default_page_document);
+		const id = page.document_id;
+		const paragraph = Object.values(page.nodes).find((node) => node.type === 'paragraph')!;
+		paragraph.content = {
+			content: 'Original',
+			marks: [{ start_offset: 0, end_offset: 8, node_id: 'original_link' }],
+			annotations: []
+		};
+		page.nodes.original_link = { id: 'original_link', type: 'link', href, target: '_self' };
+		db.prepare('UPDATE documents SET data = ? WHERE document_id = ?').run(JSON.stringify(page), id);
+		const input = load_input();
+		input.nodes[paragraph.id].content.content = 'Deutsch!';
+		save_translated_document(input);
+		const loaded = load_input();
+		expect(load_input().nodes).toEqual(loaded.nodes);
+		const rows = db.prepare('SELECT * FROM translations').all();
+		save_translated_document(loaded);
+		expect(db.prepare('SELECT * FROM translations').all()).toEqual(rows);
+		loaded.nodes[paragraph.id].content.content = 'Original';
+		save_translated_document(loaded);
+		expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(0);
+		paragraph.content.content = 'Updated original';
+		paragraph.content.marks[0].end_offset = 16;
+		db.prepare('UPDATE documents SET data = ? WHERE document_id = ?').run(JSON.stringify(page), id);
+		expect(load_input().nodes[paragraph.id].content.content).toBe('Updated original');
+	}
+);
+
+it('stores multiple overrides in one row and saves languages independently', () => {
+	const id = default_page_document.document_id;
+	const german = load_input('de');
+	const french = load_input('fr');
+	german.nodes[id].title.content = 'German title';
+	german.nodes[id].description.content = 'German description';
+	save_translated_document(german);
+	french.nodes[id].title.content = 'French title';
+	save_translated_document(french);
+	expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(2);
+	expect(Object.keys(stored_map(id)[id])).toEqual(['title', 'description']);
+	const loaded = load_input();
+	loaded.nodes[id].title.content = default_page_document.nodes[id].title.content;
+	save_translated_document(loaded);
+	expect(Object.keys(stored_map(id)[id])).toEqual(['description']);
+	expect(load_input('fr').nodes[id].title.content).toBe('French title');
+	const columns = db.prepare('PRAGMA table_info(translations)').all() as {
+		name: string;
+		pk: number;
+	}[];
+	expect(columns.filter((column) => column.pk).map((column) => column.name)).toEqual([
+		'document_id',
+		'language'
+	]);
+	expect(columns.map((column) => column.name)).not.toContain('node_id');
+});
+
+it('falls back on malformed maps and removes them during original cleanup', () => {
+	const id = default_page_document.document_id;
+	const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+	try {
+		for (const value of ['{invalid', 'null', '[]', '{"broken":null}']) {
+			db.prepare('INSERT OR REPLACE INTO translations VALUES (?, ?, ?, ?)').run(
+				id,
+				'de',
+				value,
+				'2026-10-02T00:00:00.000Z'
+			);
+			expect(load_input().nodes[id].title.content).toBe(
+				default_page_document.nodes[id].title.content
+			);
+			cleanup_translations(id);
+			expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(0);
+		}
 	} finally {
 		log.mockRestore();
 	}

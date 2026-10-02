@@ -37,7 +37,11 @@ it.each([false, true])(
 			if (!legacy) {
 				db.exec('CREATE TABLE translations (value TEXT)');
 				db.prepare('INSERT INTO translations VALUES (?)').run(
-					JSON.stringify({ nodes: { video: { type: 'video', src: translated } } })
+					JSON.stringify({
+						page: {
+							media: { node_id: 'video', nodes: { video: { type: 'video', src: translated } } }
+						}
+					})
 				);
 			}
 		} finally {

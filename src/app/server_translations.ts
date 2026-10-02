@@ -17,14 +17,13 @@ import {
 	remove_unreferenced,
 	stable_json,
 	property_payload,
-	translation_properties
+	translation_properties,
+	type TranslationMap
 } from './translations.js';
 
 type TranslationRow = {
 	document_id: string;
 	language: string;
-	node_id: string;
-	property_id: string;
 	value: string;
 };
 
@@ -46,7 +45,7 @@ function load_records(document_id: string) {
 function read_rows(records: Document[], language: string): TranslationRow[] {
 	return db
 		.prepare(
-			`SELECT * FROM translations WHERE language = ? AND document_id IN (${records.map(() => '?').join(',')}) ORDER BY document_id, node_id, property_id`
+			`SELECT * FROM translations WHERE language = ? AND document_id IN (${records.map(() => '?').join(',')}) ORDER BY document_id`
 		)
 		.all(language, ...records.map((doc) => doc.document_id)) as TranslationRow[];
 }
@@ -78,43 +77,103 @@ export function translated_document(document_id: string, requested?: string) {
 	return { document, language, languages, translation_revision: revision(records, rows) };
 }
 
+function parse_map(value: string): TranslationMap {
+	const map = JSON.parse(value);
+	if (!map || typeof map !== 'object' || Array.isArray(map))
+		throw new Error('Invalid translation map');
+	for (const properties of Object.values(map)) {
+		if (!properties || typeof properties !== 'object' || Array.isArray(properties))
+			throw new Error('Invalid translation properties');
+	}
+	return map;
+}
+
 function overlay_document(source: Document, records: Document[], rows: TranslationRow[]) {
 	if (!rows.length) return source;
 	const document = structuredClone(source);
 	const removed_ids = new Set<string>();
 	const owners = new Map(records.map((record) => [record.document_id, record.nodes]));
 	for (const row of rows) {
+		let map: TranslationMap;
 		try {
-			if (!owners.get(row.document_id)?.[row.node_id]) continue;
-			const replacement = prepare_translation(
-				document,
-				row.node_id,
-				row.property_id,
-				JSON.parse(row.value)
-			);
-			// Validate against the pending nodes without copying the whole node map.
-			const candidate_nodes: Document['nodes'] = Object.assign(
-				Object.create(document.nodes),
-				replacement.nodes
-			);
-			for (const node of Object.values(replacement.nodes))
-				validate_node(node, document_schema, candidate_nodes);
-			Object.assign(document.nodes, replacement.nodes);
-			for (const id of replacement.removed_ids) removed_ids.add(id);
+			map = parse_map(row.value);
 		} catch (err) {
-			console.error(
-				'Ignoring invalid translation',
-				row.document_id,
-				row.node_id,
-				row.property_id,
-				err
-			);
+			console.error('Ignoring invalid translation map', row.document_id, row.language, err);
+			continue;
+		}
+		for (const [node_id, properties] of Object.entries(map)) {
+			if (!owners.get(row.document_id)?.[node_id]) continue;
+			for (const [property_id, payload] of Object.entries(properties)) {
+				try {
+					const replacement = prepare_translation(
+						document,
+						node_id,
+						property_id,
+						payload,
+						// Stable collision IDs let saves match attachments to the same baseline.
+						(id, attempt) =>
+							'translation_' +
+							createHash('sha256')
+								.update(
+									JSON.stringify([row.document_id, row.language, node_id, property_id, id, attempt])
+								)
+								.digest('hex')
+								.slice(0, 24)
+					);
+					// Validate pending nodes without copying the whole node map.
+					const candidate_nodes: Document['nodes'] = Object.assign(
+						Object.create(document.nodes),
+						replacement.nodes
+					);
+					for (const node of Object.values(replacement.nodes))
+						validate_node(node, document_schema, candidate_nodes);
+					Object.assign(document.nodes, replacement.nodes);
+					for (const id of replacement.removed_ids) removed_ids.add(id);
+				} catch (err) {
+					console.error('Ignoring invalid translation', row.document_id, node_id, property_id, err);
+				}
+			}
 		}
 	}
-	// Shared attachments survive until every replacement has been applied.
 	remove_unreferenced(document, removed_ids);
 	validate_document(document, document_schema);
 	return document;
+}
+
+function normalized_map(map: TranslationMap) {
+	return stable_json(
+		Object.fromEntries(
+			Object.entries(map).map(([node_id, properties]) => [
+				node_id,
+				Object.fromEntries(
+					Object.entries(properties).map(([property_id, payload]) => [
+						property_id,
+						normalized_payload(payload)
+					])
+				)
+			])
+		)
+	);
+}
+
+function write_map(document_id: string, language: string, map: TranslationMap, previous?: string) {
+	if (!Object.keys(map).length) {
+		db.prepare('DELETE FROM translations WHERE document_id = ? AND language = ?').run(
+			document_id,
+			language
+		);
+		return;
+	}
+	if (previous) {
+		try {
+			if (normalized_map(map) === normalized_map(parse_map(previous))) return;
+		} catch {
+			// Saving or cleanup replaces malformed stored overrides.
+		}
+	}
+	db.prepare(
+		'INSERT INTO translations (document_id, language, value, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(document_id, language) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at'
+	).run(document_id, language, JSON.stringify(map), new Date().toISOString());
 }
 
 export function translate_shared_document(source: Document, requested: string) {
@@ -171,43 +230,36 @@ export function save_translated_document(input: {
 			if (err && typeof err === 'object' && 'status' in err) throw err;
 			error(400, 'Invalid translated document');
 		}
-		const upsert = db.prepare(
-			'INSERT INTO translations (document_id, language, node_id, property_id, value, updated_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(document_id, language, node_id, property_id) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at'
-		);
-		const remove = db.prepare(
-			'DELETE FROM translations WHERE document_id = ? AND language = ? AND node_id = ? AND property_id = ?'
+		const maps = new Map(records.map((record) => [record.document_id, {} as TranslationMap]));
+		const owners = new Map(
+			records.flatMap((record) =>
+				Object.keys(record.nodes).map((node_id) => [node_id, record.document_id] as const)
+			)
 		);
 		for (const { node_id, property_id } of translation_properties(original)) {
-			const owner = records.find((doc) => doc.nodes[node_id]);
-			if (!owner) error(400, 'Unknown translation owner');
+			const owner_id = owners.get(node_id);
+			if (!owner_id) error(400, 'Unknown translation owner');
 			const payload = property_payload(edited, node_id, property_id);
-
-			const key = [owner.document_id, input.language, node_id, property_id];
 			if (
 				normalized_payload(payload) ===
 				normalized_payload(property_payload(original, node_id, property_id))
 			)
-				remove.run(...key);
-			else {
-				if ('node_id' in payload) {
-					const media = payload.nodes[payload.node_id];
-					if (media.src && (!ASSET_ID_REGEX.test(media.src) || !asset_exists(media.src))) {
-						error(400, 'Upload translated media before saving. Your draft is still open.');
-					}
-				}
-				const existing = rows.find(
-					(row) =>
-						row.document_id === owner.document_id &&
-						row.node_id === node_id &&
-						row.property_id === property_id
-				);
-				if (
-					!existing ||
-					normalized_payload(JSON.parse(existing.value)) !== normalized_payload(payload)
-				)
-					upsert.run(...key, JSON.stringify(payload), new Date().toISOString());
+				continue;
+			if ('node_id' in payload) {
+				const media = payload.nodes[payload.node_id];
+				if (media.src && (!ASSET_ID_REGEX.test(media.src) || !asset_exists(media.src)))
+					error(400, 'Upload translated media before saving. Your draft is still open.');
 			}
+			const map = maps.get(owner_id)!;
+			(map[node_id] ??= {})[property_id] = payload;
 		}
+		for (const [document_id, map] of maps)
+			write_map(
+				document_id,
+				input.language,
+				map,
+				rows.find((row) => row.document_id === document_id)?.value
+			);
 		for (const record of records) rebuild_asset_refs(record.document_id);
 		return { ok: true };
 	});
@@ -220,35 +272,46 @@ export function cleanup_translations(document_id: string) {
 		db.prepare('DELETE FROM translations WHERE document_id = ?').run(document_id);
 		return;
 	}
-	const doc: Document = JSON.parse(row.data);
+	const doc = fill_document_defaults(JSON.parse(row.data), document_schema);
 	const rows = db
 		.prepare('SELECT * FROM translations WHERE document_id = ?')
 		.all(document_id) as TranslationRow[];
 	for (const entry of rows) {
-		const property = document_schema[doc.nodes[entry.node_id]?.type]?.properties[entry.property_id];
-		let remove = property?.type !== 'text' && !is_media_property(property);
-		if (!remove) {
-			try {
-				const payload = JSON.parse(entry.value);
-				// A property may have changed its allowed types since this override was saved.
-				remove =
-					'node_id' in payload
-						? !is_media_property(property) ||
-							property.type !== 'node' ||
-							!property.node_types.includes(payload.nodes[payload.node_id]?.type)
-						: property.type !== 'text';
-				if (!remove)
-					remove =
-						normalized_payload(payload) ===
-						normalized_payload(property_payload(doc, entry.node_id, entry.property_id));
-			} catch {
-				// Invalid overrides already fall back on reads and must not retain orphaned assets.
-				remove = true;
-			}
+		let map: TranslationMap;
+		try {
+			map = parse_map(entry.value);
+		} catch {
+			db.prepare('DELETE FROM translations WHERE document_id = ? AND language = ?').run(
+				document_id,
+				entry.language
+			);
+			continue;
 		}
-		if (remove)
-			db.prepare(
-				'DELETE FROM translations WHERE document_id = ? AND language = ? AND node_id = ? AND property_id = ?'
-			).run(document_id, entry.language, entry.node_id, entry.property_id);
+		for (const [node_id, properties] of Object.entries(map)) {
+			for (const [property_id, payload] of Object.entries(properties)) {
+				const property = document_schema[doc.nodes[node_id]?.type]?.properties[property_id];
+				let remove = property?.type !== 'text' && !is_media_property(property);
+				if (!remove) {
+					try {
+						const replacement = prepare_translation(doc, node_id, property_id, payload);
+						const candidate_nodes: Document['nodes'] = Object.assign(
+							Object.create(doc.nodes),
+							replacement.nodes
+						);
+						// Shared nav/footer references live in their own document records.
+						for (const node of Object.values(replacement.nodes))
+							validate_node(node, document_schema, candidate_nodes, { require_references: false });
+						remove =
+							normalized_payload(payload) ===
+							normalized_payload(property_payload(doc, node_id, property_id));
+					} catch {
+						remove = true;
+					}
+				}
+				if (remove) delete properties[property_id];
+			}
+			if (!Object.keys(properties).length) delete map[node_id];
+		}
+		write_map(document_id, entry.language, map, entry.value);
 	}
 }
