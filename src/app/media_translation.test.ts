@@ -16,13 +16,10 @@ import {
 	replace_translation
 } from './translations.js';
 
-function shared_media() {
+function media_document() {
 	const doc: Document = structuredClone(default_site_document);
 	const page_id = doc.document_id;
 	const image_id = doc.nodes[page_id].image;
-	const old_logo = doc.nodes.nav_logo.media;
-	doc.nodes.nav_logo.media = image_id;
-	delete doc.nodes[old_logo];
 	return { doc, page_id, image_id };
 }
 
@@ -36,27 +33,9 @@ describe('translated media', () => {
 		expect(is_media_property({ type: 'node_array', node_types: ['image'] })).toBe(false);
 	});
 
-	it('detaches a media edit, preserves shared originals, and supports undo/redo', () => {
-		const { doc, page_id, image_id } = shared_media();
-		const session = new Session(document_schema, doc, {});
-		const tr = session.tr;
-		update_media(tr, [page_id, 'image'], { alt: 'Deutscher Alternativtext', scale: 1.5 });
-		session.apply(tr);
-		const next_id = session.doc.nodes[page_id].image;
-		expect(next_id).not.toBe(image_id);
-		expect(session.doc.nodes.nav_logo.media).toBe(image_id);
-		expect(session.doc.nodes[image_id]).toEqual(doc.nodes[image_id]);
-		expect(session.doc.nodes[next_id].alt).toBe('Deutscher Alternativtext');
-		expect(document_structure(session.doc)).toBe(document_structure(doc));
-		session.undo();
-		expect(session.doc.nodes[page_id].image).toBe(image_id);
-		expect(session.doc.nodes[next_id]).toBeUndefined();
-		session.redo();
-		expect(session.doc.nodes[page_id].image).toBe(next_id);
-	});
-
-	it('deletes only the selected translated media and can undo the deletion', () => {
-		const { doc, page_id, image_id } = shared_media();
+	it('clears owned media without changing its ID and supports undo/redo', () => {
+		const { doc, page_id, image_id } = media_document();
+		doc.nodes[image_id].src = 'shared.webp';
 		const session = new Session(document_schema, doc, {
 			handle_property_deletion: (tr, path) => delete_media(tr, path)
 		});
@@ -65,8 +44,8 @@ describe('translated media', () => {
 		);
 		const cleared = session.get([page_id, 'image']);
 		expect(cleared).toMatchObject(MEDIA_DEFAULTS);
-		expect(cleared.id).not.toBe(image_id);
-		expect(session.get(['nav_logo', 'media'])).toEqual(doc.nodes[image_id]);
+		expect(cleared.id).toBe(image_id);
+		expect(session.get(['nav_logo', 'media'])).toEqual(doc.nodes[doc.nodes.nav_logo.media]);
 		expect(document_structure(session.doc)).toBe(document_structure(doc));
 		session.undo();
 		expect(session.get([page_id, 'image'])).toEqual(doc.nodes[image_id]);
@@ -74,16 +53,17 @@ describe('translated media', () => {
 		expect(session.get([page_id, 'image'])).toMatchObject(MEDIA_DEFAULTS);
 	});
 
-	it('preserves media payload IDs unless occupied and leaves the payload and shared nodes untouched', () => {
-		const { doc, page_id, image_id } = shared_media();
+	it('remaps occupied media IDs and leaves the payload and unrelated nodes untouched', () => {
+		const { doc, page_id, image_id } = media_document();
 		const payload = property_payload(doc, page_id, 'image');
 		if (!('node_id' in payload)) throw new Error('Expected media');
 		payload.nodes[image_id].alt = 'Translated';
 		const snapshot = structuredClone(payload);
-		const original = structuredClone(doc.nodes[image_id]);
+		const original_logo = structuredClone(doc.nodes[doc.nodes.nav_logo.media]);
 		replace_translation(doc, page_id, 'image', payload);
 		expect(doc.nodes[page_id].image).not.toBe(image_id);
-		expect(doc.nodes[image_id]).toEqual(original);
+		expect(doc.nodes[image_id]).toBeUndefined();
+		expect(doc.nodes[doc.nodes.nav_logo.media]).toEqual(original_logo);
 		expect(payload).toEqual(snapshot);
 		expect(normalized_payload(property_payload(doc, page_id, 'image'))).toBe(
 			normalized_payload(payload)
@@ -91,7 +71,7 @@ describe('translated media', () => {
 	});
 
 	it('rejects an incompatible media type and unrelated included nodes', () => {
-		const { doc, page_id, image_id } = shared_media();
+		const { doc, page_id, image_id } = media_document();
 		const snapshot = structuredClone(doc);
 		const payload = {
 			node_id: 'translated',
@@ -117,8 +97,8 @@ function clipboard_html(payload: unknown) {
 	return `<span data-svedit="${btoa(encodeURIComponent(JSON.stringify(payload)))}"></span>`;
 }
 
-it('pastes copied media into a translation without changing shared originals and supports undo', () => {
-	const { doc, page_id, image_id } = shared_media();
+it('pastes copied media into a translation without changing unrelated fields and supports undo', () => {
+	const { doc, page_id, image_id } = media_document();
 	const session = new Session(document_schema, doc, {});
 	const copied = { ...doc.nodes[image_id], src: 'copied.webp', alt: 'Übersetztes Bild' };
 	const tr = session.tr;
@@ -136,14 +116,14 @@ it('pastes copied media into a translation without changing shared originals and
 	session.apply(tr);
 	expect(session.get([page_id, 'image'])).toMatchObject({ src: copied.src, alt: copied.alt });
 	expect(session.get([page_id, 'image']).id).not.toBe(image_id);
-	expect(session.get(['nav_logo', 'media'])).toEqual(doc.nodes[image_id]);
+	expect(session.get(['nav_logo', 'media'])).toEqual(doc.nodes[doc.nodes.nav_logo.media]);
 	expect(document_structure(session.doc)).toBe(document_structure(doc));
 	session.undo();
 	expect(session.get([page_id, 'image'])).toEqual(doc.nodes[image_id]);
 });
 
 it('rejects incompatible media, structural clipboard content, and malformed data', () => {
-	const { doc, page_id, image_id } = shared_media();
+	const { doc, page_id, image_id } = media_document();
 	const session = new Session(document_schema, doc, {});
 	for (const html of [
 		clipboard_html({
@@ -177,7 +157,7 @@ it('rejects incompatible media, structural clipboard content, and malformed data
 });
 
 it('recognizes media field selections independently of language and rejects structural edits', () => {
-	const { doc, page_id } = shared_media();
+	const { doc, page_id } = media_document();
 	const session = new Session(document_schema, doc, {});
 	session.selection = { type: 'property', path: [page_id, 'image'] };
 	expect(is_media_selection(session)).toBe(true);
@@ -186,4 +166,97 @@ it('recognizes media field selections independently of language and rejects stru
 	expect(update_media(session.tr, [page_id, 'body'], { src: 'image.webp' })).toBe(false);
 	expect(update_media(session.tr, [page_id, 'image'], { type: 'video' })).toBe(false);
 	expect(session.to_json()).toEqual(doc);
+});
+
+it('keeps an unshared image ID through pan, zoom, alt changes and same-type file replacement', () => {
+	const doc: Document = structuredClone(default_site_document);
+	const page_id = doc.document_id;
+	const image_id = doc.nodes[page_id].image;
+	const session = new Session(document_schema, doc, {});
+	const updates = [
+		{ focal_point_x: 0.2, focal_point_y: 0.7 },
+		{ scale: 1.5 },
+		{ alt: 'Updated alt' },
+		{ ...MEDIA_DEFAULTS, type: 'image', src: 'replacement.webp', width: 800, height: 600 }
+	];
+	for (const properties of updates) {
+		const tr = session.tr;
+		update_media(tr, [page_id, 'image'], properties);
+		expect(tr.created_node_ids).toEqual([]);
+		expect(tr.deleted_node_ids).toEqual([]);
+		session.apply(tr);
+		expect(session.get([page_id, 'image']).id).toBe(image_id);
+		expect(session.get([page_id, 'image'])).toMatchObject(properties);
+	}
+	session.undo();
+	expect(session.get([page_id, 'image'])).toMatchObject({
+		id: image_id,
+		alt: 'Updated alt',
+		scale: 1.5
+	});
+	session.redo();
+	expect(session.get([page_id, 'image'])).toMatchObject({ id: image_id, src: 'replacement.webp' });
+});
+
+it('creates new nodes for image/video type changes but keeps IDs for video edits and clearing', () => {
+	const doc: Document = structuredClone(default_site_document);
+	const owner = Object.values(doc.nodes).find((node) => node.type === 'supporting_media')!;
+	const session = new Session(document_schema, doc, {});
+	const image_id = owner.media;
+	let tr = session.tr;
+	update_media(tr, [owner.id, 'media'], { type: 'video', src: 'movie.mp4', width: 640 });
+	session.apply(tr);
+	const video_id = session.get([owner.id, 'media']).id;
+	expect(video_id).not.toBe(image_id);
+	tr = session.tr;
+	update_media(tr, [owner.id, 'media'], { scale: 2, src: 'replacement.mp4' });
+	session.apply(tr);
+	expect(session.get([owner.id, 'media']).id).toBe(video_id);
+	tr = session.tr;
+	delete_media(tr, [owner.id, 'media']);
+	session.apply(tr);
+	expect(session.get([owner.id, 'media'])).toMatchObject({
+		id: video_id,
+		type: 'video',
+		...MEDIA_DEFAULTS
+	});
+	tr = session.tr;
+	update_media(tr, [owner.id, 'media'], { type: 'image', src: 'new.webp' });
+	session.apply(tr);
+	expect(session.get([owner.id, 'media']).id).not.toBe(video_id);
+	session.undo();
+	expect(session.get([owner.id, 'media']).id).toBe(video_id);
+	session.redo();
+	expect(session.get([owner.id, 'media']).type).toBe('image');
+});
+
+it('ignores clipboard IDs and creates an independent copied media node even for the same type', () => {
+	const doc: Document = structuredClone(default_site_document);
+	const id = doc.document_id;
+	const image_id = doc.nodes[id].image;
+	const session = new Session(document_schema, doc, {});
+	const tr = session.tr;
+	paste_media(
+		tr,
+		[id, 'image'],
+		clipboard_html({
+			kind: 'property',
+			type: 'node',
+			value: { ...doc.nodes[image_id], id: 'copied_id', src: 'copied.webp' }
+		})
+	);
+	session.apply(tr);
+	const next = session.get([id, 'image']);
+	expect(next.id).not.toBe(image_id);
+	expect(next.id).not.toBe('copied_id');
+	expect(next.src).toBe('copied.webp');
+});
+
+it('does not record operations for unchanged media properties', () => {
+	const { doc, page_id, image_id } = media_document();
+	const session = new Session(document_schema, doc, {});
+	const tr = session.tr;
+	update_media(tr, [page_id, 'image'], { scale: doc.nodes[image_id].scale });
+	expect(tr.ops).toEqual([]);
+	expect(tr.created_node_ids).toEqual([]);
 });

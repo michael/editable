@@ -25,18 +25,35 @@ export function is_media_selection(session: Pick<Session, 'selection' | 'inspect
 	);
 }
 
-/** Media belongs to its field: replacing it must leave other references untouched. */
+/** Image/video nodes have one owning field; edits preserve identity unless the type changes. */
 export function update_media(
 	tr: Transaction,
 	path: DocumentPath,
-	properties: Partial<DocumentNode>
+	properties: Partial<DocumentNode>,
+	replace_node = false
 ) {
 	const property = tr.inspect(path);
 	if (!is_media_property(property)) return false;
-	const node = { ...tr.get(path), ...properties, id: tr.generate_id() };
-	if (!property.node_types.includes(node.type)) return false;
-	tr.create(node);
-	tr.set(path, node.id);
+	const current = tr.get(path);
+	const type = properties.type ?? current.type;
+	if (!property.node_types.includes(type)) return false;
+	const { id: _id, ...changes } = properties;
+	if (!replace_node && Object.entries(changes).every(([key, value]) => current[key] === value))
+		return true;
+	if (replace_node || type !== current.type) {
+		const node = {
+			...(type === current.type ? current : MEDIA_DEFAULTS),
+			...changes,
+			type,
+			id: tr.generate_id()
+		};
+		tr.create(node);
+		tr.set(path, node.id);
+	} else {
+		for (const [key, value] of Object.entries(changes)) {
+			if (current[key] !== value) tr.set([current.id, key], value);
+		}
+	}
 	return true;
 }
 
@@ -55,5 +72,5 @@ export function paste_media(tr: Transaction, path: DocumentPath, html: string): 
 		return false;
 	}
 	if (payload?.kind !== 'property' || payload.type !== 'node' || !payload.value?.type) return false;
-	return update_media(tr, path, payload.value);
+	return update_media(tr, path, payload.value, true);
 }

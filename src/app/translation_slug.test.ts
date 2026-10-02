@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, expect, it, vi } from 'vitest';
 import { fill_document_defaults } from 'svedit';
 import { document_schema } from './document_schema.js';
-import { default_page_document } from './default_site.js';
+import { default_page_document, default_site_document } from './default_site.js';
 import initial_schema from './migrations/20260803T131059242Z_editable_initial_schema.js';
 import translations_schema from './migrations/20260923T180000000Z_editable_translations.js';
 
@@ -44,10 +44,13 @@ vi.mock('./services.js', async () => {
 
 import { db } from './services.js';
 import { languages } from './server_languages.js';
-import { update_page_slug, delete_page } from './api.remote.js';
+import { update_page_slug, delete_page, save_document } from './api.remote.js';
+import { warn_about_language_slug_collisions } from './server_language_slugs.js';
+import * as markdown_registry from './markdown/registry.js';
 
 afterAll(() => db.close());
 beforeEach(() => {
+	vi.restoreAllMocks();
 	languages.splice(0, languages.length, 'en', 'de');
 	for (const table of [
 		'documents',
@@ -61,6 +64,80 @@ beforeEach(() => {
 		db.exec(`DROP TABLE IF EXISTS ${table}`);
 	initial_schema.up({ db });
 	translations_schema.up({ db });
+});
+
+it('rejects a language homepage slug without changing the page or its links', async () => {
+	const page = structuredClone(default_page_document);
+	db.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)').run(
+		page.document_id,
+		'page',
+		JSON.stringify(page)
+	);
+	db.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)').run(
+		'about',
+		page.document_id,
+		1,
+		'now'
+	);
+	expect(await update_page_slug({ document_id: page.document_id, slug: ' DE ' })).toMatchObject({
+		ok: false,
+		code: 'page_url_reserved'
+	});
+	expect(db.prepare('SELECT slug FROM document_slugs WHERE is_active = 1').get()).toMatchObject({
+		slug: 'about'
+	});
+	expect(db.prepare('SELECT data FROM documents').get()).toMatchObject({
+		data: JSON.stringify(page)
+	});
+});
+
+it.each([
+	{ configured: ['en', 'de'], title: 'De', expected: 'de-3' },
+	{ configured: ['en', 'de'], title: 'En', expected: 'en' },
+	{ configured: [], title: 'De', expected: 'de' }
+])(
+	'generates an available page URL with languages $configured and title $title',
+	async ({ configured, title, expected }) => {
+		languages.splice(0, languages.length, ...configured);
+		const page = structuredClone(default_site_document);
+		page.nodes[page.document_id].title = { content: title, marks: [], annotations: [] };
+		db.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)').run(
+			'de-2',
+			'other-page',
+			1,
+			'now'
+		);
+		expect(await save_document({ ...page, create: true })).toMatchObject({
+			ok: true,
+			slug: expected
+		});
+	}
+);
+
+it('warns about active pages, historical redirects, and markdown language collisions at startup', () => {
+	const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+	vi.spyOn(markdown_registry, 'get_markdown_page_pathnames').mockReturnValue(['/de', '/manual']);
+	db.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)').run(
+		'page',
+		'page',
+		'{}'
+	);
+	const insert = db.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)');
+	insert.run('de', 'page', 1, 'now');
+	insert.run('es', 'page', 0, 'now');
+	insert.run('en', 'page', 0, 'now');
+	languages.push('es');
+	warn_about_language_slug_collisions();
+	expect(warn.mock.calls.map(([message]) => message)).toEqual([
+		expect.stringContaining('Page "/de" (page)'),
+		expect.stringContaining('Historical redirect "/es" (page)'),
+		expect.stringContaining('Markdown page "/de"')
+	]);
+	warn.mockClear();
+	languages.splice(0);
+	warn_about_language_slug_collisions();
+	expect(warn).not.toHaveBeenCalled();
+	expect(db.prepare('SELECT slug FROM document_slugs').all()).toHaveLength(3);
 });
 
 it.each([false, true])(

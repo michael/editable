@@ -18,9 +18,9 @@ it.each([
 		expect(languages).toEqual(expected);
 		const url = new URL('https://example.com/de');
 		if (!expected.length)
-			Object.defineProperty(url, 'searchParams', {
+			Object.defineProperty(url, 'pathname', {
 				get() {
-					throw new Error('Prerender cannot read query parameters');
+					throw new Error('Disabled languages must not create a navigation dependency');
 				}
 			});
 		expect(request_language(url)).toBe(expected.length ? 'de' : '');

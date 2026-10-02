@@ -5,5 +5,6 @@ import { parse_languages, language_path } from './languages.js';
 export const languages = VERCEL ? [] : parse_languages(LANGUAGES);
 
 export function request_language(url: URL) {
+	if (!languages.length) return '';
 	return language_path(url.pathname, languages).language;
 }
