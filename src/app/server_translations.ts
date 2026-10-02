@@ -6,14 +6,15 @@ import { restore_document_links, translate_document_links } from './document_lin
 import { createHash } from 'node:crypto';
 import { ORIGIN } from '$app/env/private';
 import { error } from '@sveltejs/kit';
-import { fill_document_defaults, validate_document, type Document } from 'svedit';
+import { fill_document_defaults, validate_document, validate_node, type Document } from 'svedit';
 import { db, with_transaction, asset_exists } from './services.js';
 import { document_schema } from './document_schema.js';
 import { select_language } from './languages.js';
 import {
 	document_structure,
 	normalized_payload,
-	replace_translation,
+	prepare_translation,
+	remove_unreferenced,
 	stable_json,
 	property_payload,
 	translation_properties
@@ -78,15 +79,28 @@ export function translated_document(document_id: string, requested?: string) {
 }
 
 function overlay_document(source: Document, records: Document[], rows: TranslationRow[]) {
-	let document = source;
+	if (!rows.length) return source;
+	const document = structuredClone(source);
+	const removed_ids = new Set<string>();
+	const owners = new Map(records.map((record) => [record.document_id, record.nodes]));
 	for (const row of rows) {
 		try {
-			if (!records.find((record) => record.document_id === row.document_id)?.nodes[row.node_id])
-				continue;
-			const next = structuredClone(document);
-			replace_translation(next, row.node_id, row.property_id, JSON.parse(row.value));
-			validate_document(next, document_schema);
-			document = next;
+			if (!owners.get(row.document_id)?.[row.node_id]) continue;
+			const replacement = prepare_translation(
+				document,
+				row.node_id,
+				row.property_id,
+				JSON.parse(row.value)
+			);
+			// Validate against the pending nodes without copying the whole node map.
+			const candidate_nodes: Document['nodes'] = Object.assign(
+				Object.create(document.nodes),
+				replacement.nodes
+			);
+			for (const node of Object.values(replacement.nodes))
+				validate_node(node, document_schema, candidate_nodes);
+			Object.assign(document.nodes, replacement.nodes);
+			for (const id of replacement.removed_ids) removed_ids.add(id);
 		} catch (err) {
 			console.error(
 				'Ignoring invalid translation',
@@ -97,6 +111,9 @@ function overlay_document(source: Document, records: Document[], rows: Translati
 			);
 		}
 	}
+	// Shared attachments survive until every replacement has been applied.
+	remove_unreferenced(document, removed_ids);
+	validate_document(document, document_schema);
 	return document;
 }
 
