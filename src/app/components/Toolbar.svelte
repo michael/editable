@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { language_path } from '#app/languages.js';
+	import { is_media_selection } from '#app/media.js';
 	import { get_app_context } from '#app/app_context.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -84,7 +86,15 @@
 	);
 
 	// Home is served from `/` and has no editable slug.
-	let is_home_page = $derived(page.url.pathname === '/');
+	let is_home_page = $derived(language_path(page.url.pathname, app.languages).pathname === '/');
+
+	// The nav isn't sticky while editing, so the toolbar shows the language being edited.
+	let editing_language_name = $derived(
+		app.languages.length > 1
+			? (new Intl.DisplayNames([app.language], { type: 'language' }).of(app.language) ??
+					app.language)
+			: null
+	);
 
 	function open_page_delete_dialog() {
 		if (is_home_page) return;
@@ -97,12 +107,8 @@
 		});
 	}
 
-	let selected_property = $derived(
-		session.selection?.type === 'property' ? session.get(session.selection.path) : null
-	);
-	let is_media_selected = $derived(
-		selected_property?.type === 'image' || selected_property?.type === 'video'
-	);
+	let is_media_selected = $derived(is_media_selection(session));
+	let can_delete_selection = $derived(app.allow_structural_changes || is_media_selected);
 	let is_node_caret = $derived(
 		session.selection?.type === 'node' &&
 			session.selection.anchor_offset === session.selection.focus_offset
@@ -111,7 +117,9 @@
 	let can_select_parent = $derived(
 		!!session.commands.select_parent && !session.commands.select_parent.disabled
 	);
-	let can_show_variant_selector = $derived(get_selection_node_ancestors(session).length > 0);
+	let can_show_variant_selector = $derived(
+		app.allow_structural_changes && get_selection_node_ancestors(session).length > 0
+	);
 	let can_show_selection_tool_group = $derived(can_select_parent || can_show_variant_selector);
 
 	// Hidden in CSS on narrow screens; derived here so the breakpoint stays in one place.
@@ -171,6 +179,7 @@
 	}
 
 	function handle_delete_selection_click(event) {
+		if (!can_delete_selection) return;
 		session.apply(session.tr.delete_selection('backward'));
 		restore_canvas_focus(event);
 	}
@@ -303,8 +312,50 @@
 	{/if}
 {/snippet}
 
+{#snippet copy_link_to_block_button()}
+	<button
+		class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
+		onmousedown={handle_btn_mousedown}
+		onclick={(e) => handle_btn_click(e, app_commands.copy_link_to_block)}
+		use:tooltip={{ label: 'Copy link to block', keys: ['⌃', '⇧', 'K'] }}
+		aria-keyshortcuts="Control+Shift+K"
+		aria-label="Copy link to block"
+	>
+		<svg class="size-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+			{#if app_commands.copy_link_to_block.copied}
+				<path
+					d="M5 12.5L9.5 17L19 7.5"
+					stroke="currentColor"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
+			{:else}
+				<path
+					d="M14.6668 11.5189C14.4506 11.0529 14.1503 10.6163 13.7659 10.2319C12.0086 8.47455 9.23819 8.5329 7.40199 10.2319C6.66799 10.9111 5.95984 11.6192 5.28067 12.3532C3.58406 14.1867 3.52331 16.9598 5.28067 18.7172C7.03802 20.4745 9.81111 20.4138 11.6446 18.7172C12.0107 18.3785 12.3703 18.0326 12.7231 17.6798"
+					stroke="currentColor"
+					stroke-linecap="round"
+				/>
+				<path
+					d="M9.32925 12.4811C9.54548 12.9471 9.84578 13.3837 10.2301 13.7681C11.9875 15.5255 14.7579 15.4671 16.5941 13.7681C17.3281 13.0889 18.0363 12.3808 18.7154 11.6468C20.412 9.81325 20.4728 7.04017 18.7154 5.28281C16.9581 3.52545 14.185 3.58621 12.3515 5.28281C11.9854 5.62151 11.6258 5.96742 11.273 6.32015"
+					stroke="currentColor"
+					stroke-linecap="round"
+				/>
+			{/if}
+		</svg>
+	</button>
+	<span class="sr-only" aria-live="polite"
+		>{app_commands.copy_link_to_block.copied ? 'Link copied' : ''}</span
+	>
+{/snippet}
+
 {#snippet save_group_contents()}
 	<span class="mx-1 h-5 w-px shrink-0 bg-(--stroke)" aria-hidden="true"></span>
+	{#if editing_language_name}
+		<span
+			class="pointer-events-auto inline-flex min-h-9 shrink-0 cursor-default items-center px-2 text-sm leading-5 font-medium text-(--muted-foreground)"
+			use:tooltip={{ label: `Editing ${editing_language_name}` }}>{app.language.toUpperCase()}</span
+		>
+	{/if}
 	{#if cancel_command && !cancel_command.disabled}
 		<button
 			class="pointer-events-auto inline-flex min-h-9 w-9 min-w-9 shrink-0 cursor-pointer items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 text-sm leading-5 font-medium text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 sm:w-auto sm:px-3 sm:py-2"
@@ -689,7 +740,7 @@
 							{/if}
 
 							<!-- Media actions (visible when media is selected) -->
-							{#if is_media_selected}
+							{#if is_media_selected && !session.commands.replace_media?.disabled}
 								<div class="flex items-center gap-1">
 									<button
 										class="{tw_toolbar_btn} {session.commands.edit_image?.disabled
@@ -733,7 +784,11 @@
 								</div>
 							{/if}
 
-							{#if session.selection?.type === 'node' || is_media_selected}
+							{#if !app_commands.copy_link_to_block.disabled}
+								{@render copy_link_to_block_button()}
+							{/if}
+
+							{#if can_delete_selection && (session.selection?.type === 'node' || is_media_selected)}
 								<div class="flex items-center gap-1">
 									{#if is_node_caret && !session.commands.insert_default_node?.disabled}
 										<button

@@ -1,7 +1,9 @@
+import { redirect } from '@sveltejs/kit';
+import type { Handle, ServerInit } from '@sveltejs/kit/hooks';
+import { request_language } from '#app/server_languages.js';
 import { ORIGIN, VERCEL } from '$app/env/private';
 import { dev } from '$app/env';
-import { redirect } from '@sveltejs/kit';
-import type { Handle, ServerInit } from '@sveltejs/kit';
+
 import {
 	admin_session_cookie_name,
 	clear_admin_session_cookie,
@@ -46,6 +48,9 @@ export const init: ServerInit = async () => {
 
 		const { warn_about_shadowed_pages } = await import('#app/markdown/shadowed.js');
 		warn_about_shadowed_pages();
+
+		const { warn_about_language_slug_collisions } = await import('#app/server_language_slugs.js');
+		warn_about_language_slug_collisions();
 	}
 };
 
@@ -90,6 +95,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	const response = await resolve(event);
-	return response;
+	const language = request_language(event.url) || 'en';
+	return resolve(event, {
+		transformPageChunk: ({ html }) => html.replace('%lang%', language)
+	});
 };

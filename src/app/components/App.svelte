@@ -1,16 +1,19 @@
 <script lang="ts">
-	import { setContext, type Snippet } from 'svelte';
+	import { setContext, untrack, type Snippet } from 'svelte';
 	import { dev } from '$app/env';
 	import { DEMO_MODE } from '$app/env/public';
-	import { goto, invalidate, refreshAll } from '$app/navigation';
+	import { beforeNavigate, goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { Svedit, KeyMapper, Command, define_keymap } from 'svedit';
+	import { Svedit, KeyMapper, Command, define_keymap, get_char_length } from 'svedit';
 	import Toolbar from './Toolbar.svelte';
 	import SaveProgressModal from './SaveProgressModal.svelte';
 
+	import { paste_media, is_media_selection } from '#app/media.js';
+	import { language_href, language_path } from '#app/languages.js';
 	import { EXT_TO_MIME } from '#app/config.js';
 	import { create_session } from '#app/session.js';
+	import type { AppSession } from '#app/session.js';
 	import { create_page_browser, set_page_browser } from '#app/page_browser_context.svelte.js';
 	import type { PageBrowser } from '#app/page_browser_context.svelte.js';
 	import {
@@ -33,6 +36,10 @@
 		can_edit = true,
 		origin = null,
 		document_title = null,
+		languages = [],
+		language = '',
+		translation_revision = '',
+		canonical_path = null,
 		children
 	}: {
 		document?: any;
@@ -43,6 +50,10 @@
 		can_edit?: boolean;
 		origin?: string | null;
 		document_title?: string | null;
+		languages?: string[];
+		language?: string;
+		translation_revision?: string;
+		canonical_path?: string | null;
 		children?: Snippet;
 	} = $props();
 
@@ -57,8 +68,11 @@
 	let svedit_ref = $state<{ focus_canvas: () => void }>();
 	let toolbar_ref = $state<{ open_page_menu: () => void; close_page_menu: () => void }>();
 	let editable = $state(false);
-	let current_is_new = $state(false);
-	let edit_for_fun_saved_doc = $state<{ document_id: string; doc_json: string } | null>(null);
+	let edit_for_fun_saved_doc = $state<{
+		document_id: string;
+		language: string;
+		doc_json: string;
+	} | null>(null);
 	let is_admin = $derived(server_is_admin);
 	let is_admin_mode = $derived(editable && is_admin);
 	const is_demo_mode = DEMO_MODE;
@@ -76,7 +90,134 @@
 	let mobile_touch_active = $state(false);
 	let mobile_touch_started_at_page_end = $state(false);
 
+	let switching_language = $state(false);
+	let translation_mode = $derived(!is_new && languages.length > 1 && language !== languages[0]);
+	let allow_structural_changes = $derived(!translation_mode);
+
+	async function switch_language(next_language: string) {
+		if (
+			editable ||
+			save_progress_visible ||
+			switching_language ||
+			!languages.includes(next_language)
+		)
+			return;
+		switching_language = true;
+		try {
+			await goto(language_href(page.url.href, next_language, languages), { reset: false });
+		} finally {
+			switching_language = false;
+		}
+	}
+
+	beforeNavigate((navigation) => {
+		if (navigation.shallow) return;
+		if (!languages.length || switching_language) return;
+		if (
+			save_progress_visible ||
+			(editable &&
+				JSON.stringify(session.to_json()) !== initial_doc_json &&
+				!confirm('Discard your unsaved changes?'))
+		)
+			navigation.cancel();
+	});
+
+	$effect(() => {
+		if (!editable || !app_el) return;
+		const element = app_el;
+		const current_session = session;
+		const in_canvas = (event: Event) =>
+			event.target instanceof Element && !!event.target.closest('.svedit-canvas');
+		const prevent_drop = (event: DragEvent) => {
+			if (allow_structural_changes || !in_canvas(event)) return;
+			event.preventDefault();
+			event.stopPropagation();
+			if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
+		};
+		const handle_paste = (event: ClipboardEvent) => {
+			if (!in_canvas(event)) return;
+			if (is_media_selection(current_session)) {
+				// File pastes use Svedit's media upload hook; copied properties use our media primitive.
+				if (
+					Array.from(event.clipboardData?.items ?? []).some(
+						(item) => item.type.startsWith('image/') || item.type.startsWith('video/')
+					)
+				)
+					return;
+				event.preventDefault();
+				event.stopPropagation();
+				const tr = current_session.tr;
+				if (
+					paste_media(
+						tr,
+						current_session.selection.path,
+						event.clipboardData?.getData('text/html') ?? ''
+					)
+				)
+					current_session.apply(tr);
+				return;
+			}
+			if (allow_structural_changes) return;
+			event.preventDefault();
+			event.stopPropagation();
+			if (current_session.selection?.type !== 'text') return;
+			let text = event.clipboardData?.getData('text/plain');
+			if (!text) return;
+			text = text.replace(/\r\n?/g, '\n');
+			if (!current_session.inspect(current_session.selection.path).allow_newlines)
+				text = text.replace(/\n/g, ' ');
+			current_session.apply(current_session.tr.insert_text(text));
+		};
+		const prevent_structural_input = (event: InputEvent | ClipboardEvent) => {
+			if (allow_structural_changes || !in_canvas(event)) return;
+			const selection = current_session.selection;
+			const input_type = event instanceof InputEvent ? event.inputType : 'deleteByCut';
+			const media_deletion = is_media_selection(current_session) && input_type.startsWith('delete');
+			let blocked = selection?.type !== 'text' && !media_deletion;
+			if (selection?.type === 'text' && selection.anchor_offset === selection.focus_offset) {
+				const offset = selection.focus_offset;
+				const length = get_char_length(current_session.get(selection.path).content);
+				// Deleting across a property boundary would merge or remove blocks.
+				blocked =
+					input_type.startsWith('delete') &&
+					(input_type.endsWith('Forward') ? offset === length : offset === 0);
+			}
+			if (blocked) {
+				event.preventDefault();
+				event.stopPropagation();
+			}
+		};
+		element.addEventListener('beforeinput', prevent_structural_input, true);
+		element.addEventListener('cut', prevent_structural_input, true);
+		element.addEventListener('paste', handle_paste, true);
+		element.addEventListener('dragover', prevent_drop, true);
+		element.addEventListener('drop', prevent_drop, true);
+		return () => {
+			element.removeEventListener('beforeinput', prevent_structural_input, true);
+			element.removeEventListener('cut', prevent_structural_input, true);
+			element.removeEventListener('paste', handle_paste, true);
+			element.removeEventListener('dragover', prevent_drop, true);
+			element.removeEventListener('drop', prevent_drop, true);
+		};
+	});
+
 	const app = {
+		get canonical_path() {
+			return canonical_path;
+		},
+		get languages() {
+			return is_new ? [] : languages;
+		},
+		get language() {
+			return language;
+		},
+		get allow_structural_changes() {
+			return allow_structural_changes;
+		},
+		get saving() {
+			return save_progress_visible || switching_language;
+		},
+		switch_language,
 		get page_content() {
 			return can_edit ? undefined : children;
 		},
@@ -102,7 +243,7 @@
 			return slug;
 		},
 		get is_new() {
-			return current_is_new;
+			return is_new;
 		},
 		get auth_dialog_open() {
 			return auth_dialog_open;
@@ -139,13 +280,6 @@
 
 	$effect(() => {
 		document.documentElement.style.scrollBehavior = editable ? 'auto' : 'smooth';
-	});
-
-	$effect(() => {
-		current_is_new = !!is_new;
-		if (current_is_new) {
-			editable = true;
-		}
 	});
 
 	function focus_canvas() {
@@ -326,26 +460,30 @@
 		async execute() {
 			session.selection = null;
 
-			if (current_is_new) {
+			if (is_new) {
 				await goto(resolve('/'));
 				return;
 			}
 
 			const saved_doc_json =
-				has_backend && !is_admin && edit_for_fun_saved_doc?.document_id === loaded_document_id
+				has_backend &&
+				!is_admin &&
+				edit_for_fun_saved_doc?.document_id === loaded_document_id &&
+				edit_for_fun_saved_doc.language === language
 					? edit_for_fun_saved_doc.doc_json
 					: initial_doc_json;
-			session = create_session(JSON.parse(saved_doc_json));
+			session = create_session(JSON.parse(saved_doc_json), app);
 			this.context.editable = false;
 		}
 	}
 
 	class SaveCommand extends Command {
 		is_enabled() {
-			return can_edit && editable;
+			return can_edit && editable && !save_progress_visible;
 		}
 
 		async execute() {
+			if (save_progress_visible) return;
 			// Keep this log so the saved document can be copied into default_site.js.
 			const doc_json = session.to_json();
 			if (dev) console.log('Saved', doc_json);
@@ -354,6 +492,7 @@
 				if (has_backend && !is_admin) {
 					edit_for_fun_saved_doc = {
 						document_id: loaded_document_id,
+						language,
 						doc_json: JSON.stringify(doc_json)
 					};
 				}
@@ -417,10 +556,13 @@
 				}
 
 				const result: { ok: boolean; document_id?: string; slug?: string; created?: boolean } =
-					await save_document({
-						...doc_json,
-						create: current_is_new
-					});
+					translation_mode
+						? await api_module.save_translations({ ...doc_json, language, translation_revision })
+						: await save_document({
+								...doc_json,
+								create: is_new,
+								language: languages.length ? languages[0] : undefined
+							});
 
 				if (mapping) {
 					const tr = session.tr;
@@ -445,17 +587,17 @@
 
 				// When a new document has been created, return and redirect to the new url
 				if (result?.created && result.document_id && result.slug) {
-					current_is_new = false;
+					this.context.editable = false;
+					save_progress_visible = false;
 					await goto(resolve('/[page_id]', { page_id: result.slug }), {
-						replaceState: true,
-						invalidate: ['app:site_metadata']
+						replace: true,
+						refreshAll: true
 					});
 					return;
 				}
 
 				this.context.editable = false;
-				invalidate_page_browser_data();
-				await invalidate('app:site_metadata');
+				await refreshAll();
 
 				// Display "saved" message only if saving took longer than 3 seconds
 				if (Date.now() - save_start > 3000) {
@@ -468,7 +610,8 @@
 			} catch (err) {
 				console.error('Save failed:', err);
 				save_progress_visible = false;
-				alert('Save failed. Your changes have not been lost — please try again.');
+				const message = err?.body?.message ?? (err instanceof Error ? err.message : 'Save failed.');
+				alert(`${message} Your changes have not been lost — please try again.`);
 			}
 		}
 	}
@@ -525,11 +668,11 @@
 		}
 
 		execute() {
-			return goto(resolve('/new'));
+			return goto(resolve('new'));
 		}
 	}
 
-	let is_home_page = $derived(page.url.pathname === '/');
+	let is_home_page = $derived(language_path(page.url.pathname, languages).pathname === '/');
 	let duplicate_source = $derived(is_home_page ? '/' : slug);
 
 	class DuplicatePageCommand extends Command {
@@ -540,7 +683,7 @@
 		execute() {
 			if (!duplicate_source) return;
 			toolbar_ref?.close_page_menu();
-			return goto(`${resolve('/new')}?from=${encodeURIComponent(duplicate_source)}`);
+			return goto(`${resolve('new')}?from=${encodeURIComponent(duplicate_source)}`);
 		}
 	}
 
@@ -568,6 +711,32 @@
 		}
 	}
 
+	function get_selected_block_id(current_session: AppSession) {
+		const selection = current_session.selection;
+		if (selection?.type !== 'node' || selection.anchor_offset === selection.focus_offset)
+			return null;
+		const start = Math.min(selection.anchor_offset, selection.focus_offset);
+		return current_session.get([...selection.path, start])?.id ?? null;
+	}
+
+	class CopyLinkToBlockCommand extends Command {
+		copied = $state(false);
+		copied_timeout: ReturnType<typeof setTimeout> | undefined;
+
+		is_enabled() {
+			return this.context.editable && !is_new && !!get_selected_block_id(this.context.session);
+		}
+
+		async execute() {
+			const block_id = get_selected_block_id(this.context.session);
+			if (!block_id) return;
+			await navigator.clipboard.writeText(`${location.origin}${location.pathname}#${block_id}`);
+			this.copied = true;
+			clearTimeout(this.copied_timeout);
+			this.copied_timeout = setTimeout(() => (this.copied = false), 1500);
+		}
+	}
+
 	const app_commands = {
 		duplicate_page: new DuplicatePageCommand(app_command_context),
 		edit_page_url: new EditPageUrlCommand(app_command_context),
@@ -577,7 +746,8 @@
 		cancel_editing: new CancelCommand(app_command_context),
 		save_document: new SaveCommand(app_command_context),
 		logout_admin: new LogoutCommand(app_command_context),
-		browse_pages: new BrowsePagesCommand(app_command_context)
+		browse_pages: new BrowsePagesCommand(app_command_context),
+		copy_link_to_block: new CopyLinkToBlockCommand(app_command_context)
 	};
 
 	const app_key_map = define_keymap({
@@ -588,11 +758,18 @@
 		'ctrl+shift+u': [app_commands.edit_page_url],
 		'ctrl+shift+m': [app_commands.page_menu],
 		'meta+p,ctrl+p': [app_commands.browse_pages],
+		'ctrl+shift+k': [app_commands.copy_link_to_block],
 		'meta+s,ctrl+s': [app_commands.save_document]
 	});
 	key_mapper.push_scope(app_key_map);
 
-	let session = $derived.by(() => create_session(initial_doc));
+	let session = $derived.by(() => {
+		// Equal load data must not reset the editor; language changes still reset history.
+		language;
+		const doc_json = initial_doc_json;
+		// Session construction reads reactive internals. Only load data belongs in this dependency list.
+		return untrack(() => create_session(JSON.parse(doc_json), app));
+	});
 	let loaded_document_id = $derived(initial_doc.document_id);
 
 	$effect(() => {
@@ -620,6 +797,7 @@
 
 <div class="antialiased" bind:this={app_el}>
 	<Toolbar bind:this={toolbar_ref} {session} {app_commands} {editable} {focus_canvas} />
+
 	<Svedit {session} bind:editable bind:this={svedit_ref} path={[session.doc.document_id]} />
 
 	{#if has_backend}

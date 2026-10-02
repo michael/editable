@@ -6,6 +6,7 @@
 	import { slide } from 'svelte/transition';
 	import NavMedia from './NavMedia.svelte';
 	import NavButton from './NavButton.svelte';
+	import LanguageSwitcher from './LanguageSwitcher.svelte';
 
 	let { path }: { path: DocumentPath } = $props();
 
@@ -96,11 +97,14 @@
 				class="flex w-max flex-wrap items-center gap-x-6 gap-y-1 [--row:1] *:min-w-max max-lg:flex-nowrap [&>.empty-node-placeholder]:min-h-9"
 				path={[...path, 'middle_items']}
 			/>
-			<NodeArrayProperty
-				tag="div"
-				class="flex flex-wrap items-center justify-end gap-2 [--row:1] *:min-w-max max-lg:flex-nowrap [&>.empty-node-placeholder]:min-h-9"
-				path={[...path, 'end_items']}
-			/>
+			<div class="flex items-center justify-end gap-2">
+				<LanguageSwitcher />
+				<NodeArrayProperty
+					tag="div"
+					class="flex flex-wrap items-center justify-end gap-2 [--row:1] *:min-w-max max-lg:flex-nowrap [&>.empty-node-placeholder]:min-h-9"
+					path={[...path, 'end_items']}
+				/>
+			</div>
 		</div>
 	</div>
 
@@ -112,6 +116,7 @@
 			{/if}
 			<div class="flex-1"></div>
 			<div class="flex items-center gap-2">
+				<LanguageSwitcher />
 				{#if mobile_nav_cta_path}
 					<NavButton path={mobile_nav_cta_path} />
 				{/if}

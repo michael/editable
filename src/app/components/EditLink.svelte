@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { get_app_context } from '#app/app_context.js';
 	import { MEDIA_DEFAULTS } from '#app/document_schema.js';
@@ -6,6 +7,7 @@
 	import type { DocumentNode, DocumentPath, Transaction } from 'svedit';
 	import { serialize_path } from 'svedit';
 	import { get_page_browser } from '#app/page_browser_context.svelte.js';
+	import { language_path } from '#app/languages.js';
 
 	const svedit = get_svedit_context();
 	const app = get_app_context();
@@ -143,6 +145,32 @@
 		}
 	}
 
+	// Internal links are stored without a language prefix so they follow the reader's language.
+	function get_internal_href(url: URL) {
+		return `${language_path(url.pathname, app.languages).pathname}${url.search}${url.hash}`;
+	}
+
+	// Shortens pasted URLs of this site, e.g. from Copy link to block, to internal links.
+	function get_same_site_href(text: string) {
+		if (!URL.canParse(text)) return null;
+		const url = new URL(text);
+		return url.origin === location.origin ? get_internal_href(url) : null;
+	}
+
+	function handle_paste(event: ClipboardEvent) {
+		const input = href_input_ref;
+		if (!input || input.selectionStart !== 0 || input.selectionEnd !== input.value.length) return;
+
+		const pasted_href = get_same_site_href(event.clipboardData?.getData('text/plain').trim() ?? '');
+		if (!pasted_href) return;
+
+		// Native insertion preserves undo history. Fall back to ordinary paste if unavailable.
+		if (!document.execCommand?.('insertText', false, pasted_href)) return;
+
+		event.preventDefault();
+		href_input_value = input.value;
+	}
+
 	function handle_backdrop_click(event) {
 		if (event.target === dialog_ref) {
 			close();
@@ -160,8 +188,12 @@
 			}
 
 			if (href_input_ref) {
-				href_input_ref.focus();
-				href_input_ref.select();
+				// Select after the bound URL reaches the input.
+				void tick().then(() => {
+					if (!dialog_ref?.open) return;
+					href_input_ref?.focus();
+					href_input_ref?.select();
+				});
 			}
 		} else if (dialog_ref?.open) {
 			dialog_ref.close();
@@ -181,11 +213,13 @@
 				<input
 					id="edit-link-url-input"
 					bind:this={href_input_ref}
-					type="url"
+					type="text"
+					inputmode="url"
 					bind:value={href_input_value}
 					placeholder="https://example.com"
 					class="edit-link-input min-h-9 w-72 min-w-0 flex-1 rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border border-(--stroke) bg-(--background) px-3 py-1 text-base leading-6 text-(--foreground) outline-none focus:border-(--editing) focus:ring-0"
 					onkeydown={handle_keydown}
+					onpaste={handle_paste}
 				/>
 				{#if app.has_backend && app.is_admin}
 					<button

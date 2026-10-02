@@ -1,4 +1,15 @@
+import type { TranslationMap } from './translations.js';
+import { translation_payloads } from '../lib/asset_references.js';
+import { languages, request_language } from './server_languages.js';
+import { rebuild_asset_refs } from './server_asset_refs.js';
+import { translated_href, parse_internal_page_href } from './document_links.js';
+import { language_path, language_href, is_reserved_language_slug } from './languages.js';
 import { getRequestEvent, query, command } from '$app/server';
+import {
+	cleanup_translations,
+	save_translated_document,
+	translated_document
+} from './server_translations.js';
 import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import slugify from 'slugify';
@@ -8,10 +19,12 @@ import { db, with_transaction, delete_orphaned_assets, touch_asset } from '#app/
 
 import { build_page_forest } from '#app/page_tree.js';
 import type { SitemapEntry } from '#lib/server/sitemap.js';
+import { latest_modified } from '#lib/server/sitemap.js';
+import { language_alternates } from './seo.js';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
 import { document_schema } from '#app/document_schema.js';
 import { collect_node_ids_in_order } from '#lib/document_graph.js';
-import { is_reserved_markdown_slug } from '#app/markdown/registry.js';
+import { is_reserved_markdown_slug, get_markdown_page_pathnames } from '#app/markdown/registry.js';
 import {
 	extract_page_metadata,
 	extract_site_metadata,
@@ -88,6 +101,7 @@ export type PageSummary = {
 	page_href: string;
 	slug: string;
 	shadowed_by_markdown: boolean;
+	shadowed_by_language: boolean;
 	created_at: string | null;
 	updated_at: string | null;
 };
@@ -100,6 +114,7 @@ export type InternalLinkPreview = {
 };
 
 export type PageTreeNode = {
+	navigation_href?: string;
 	document_id: string;
 	title: string;
 	description: string | null;
@@ -107,6 +122,7 @@ export type PageTreeNode = {
 	page_href: string;
 	slug: string;
 	shadowed_by_markdown: boolean;
+	shadowed_by_language: boolean;
 	created_at: string | null;
 	updated_at: string | null;
 	children: PageTreeNode[];
@@ -115,7 +131,8 @@ export type PageTreeNode = {
 const save_document_input_schema = v.object({
 	document_id: v.string(),
 	nodes: v.record(v.string(), v.any()),
-	create: v.optional(v.boolean())
+	create: v.optional(v.boolean()),
+	language: v.optional(v.string())
 });
 
 const update_page_slug_input_schema = v.object({
@@ -281,38 +298,18 @@ function create_unique_slug(base_slug: string): string {
 
 	while (true) {
 		const row = slug_exists_stmt.get(slug) as unknown as { document_id: string } | undefined;
-		if (!row && !is_reserved_markdown_slug(slug)) return slug;
+		if (!row && !is_reserved_markdown_slug(slug) && !is_reserved_language_slug(slug, languages))
+			return slug;
 		slug = `${base_slug}-${suffix}`;
 		suffix += 1;
 	}
-}
-
-function parse_internal_page_href(href: string): { slug: string; fragment: string } | null {
-	if (!href) return null;
-	if (/^[a-z][a-z0-9+.-]*:/i.test(href)) return null;
-	if (href.startsWith('//')) return null;
-	if (!href.startsWith('/')) return null;
-
-	const [path_part, fragment_part] = href.split('#');
-	if (!path_part || path_part === '/') return null;
-
-	const segments = path_part.split('/').filter(Boolean);
-	if (segments.length !== 1) return null;
-
-	const slug = segments[0];
-	if (!slug) return null;
-
-	return {
-		slug,
-		fragment: fragment_part ? `#${fragment_part}` : ''
-	};
 }
 
 function normalize_internal_page_href(
 	href: string,
 	source_document_id: string | undefined
 ): string | null {
-	const parsed = parse_internal_page_href(href);
+	const parsed = parse_internal_page_href(href, languages);
 	if (!parsed) return null;
 
 	const resolved = resolve_slug(parsed.slug);
@@ -371,34 +368,6 @@ function collect_document_refs(
 	}
 
 	return refs;
-}
-
-function update_asset_refs(
-	document_id: string,
-	node_ids: Iterable<string>,
-	all_nodes: Record<string, DocumentNode>,
-	delete_stmt: StatementSync,
-	insert_stmt: StatementSync
-) {
-	const asset_ids = new Set<string>();
-
-	for (const node_id of node_ids) {
-		const node = all_nodes[node_id];
-		if (
-			node &&
-			(node.type === 'image' || node.type === 'video') &&
-			typeof node.src === 'string' &&
-			node.src &&
-			!node.src.startsWith('blob:')
-		) {
-			asset_ids.add(node.src);
-		}
-	}
-
-	delete_stmt.run(document_id);
-	for (const asset_id of asset_ids) {
-		insert_stmt.run(asset_id, document_id);
-	}
 }
 
 function update_document_refs(
@@ -463,6 +432,7 @@ function summarize_page_document(page_doc: PageDocumentRecord): PageSummary {
 		page_href: active_slug ? `/${active_slug}` : '/',
 		slug: active_slug ?? '',
 		shadowed_by_markdown: active_slug ? is_reserved_markdown_slug(active_slug) : false,
+		shadowed_by_language: active_slug ? is_reserved_language_slug(active_slug, languages) : false,
 		created_at: page_doc.created_at ?? null,
 		updated_at: page_doc.updated_at ?? null
 	};
@@ -643,17 +613,6 @@ export const get_shared_documents = query(v.void(), async () => {
 	};
 });
 
-/**
- * Return page browser data for the pages drawer.
- */
-export const get_auth_status = query(v.void(), async () => {
-	const { locals } = getRequestEvent();
-
-	return {
-		is_admin: !!locals.is_admin
-	};
-});
-
 export const login_admin = command(admin_login_input_schema, async ({ password }) => {
 	const { cookies } = getRequestEvent();
 	const admin_password = get_required_admin_password();
@@ -703,20 +662,69 @@ export const logout_admin = command(v.void(), async () => {
 /**
  * Return page browser data for the pages drawer.
  */
-export const get_page_browser_data = query(v.string(), async (pathname) => {
-	require_admin_session(getRequestEvent().locals);
-	return build_page_browser_data(pathname);
+export const get_page_browser_data = query(v.string(), async (href) => {
+	const event = getRequestEvent();
+	require_admin_session(event.locals);
+	const url = new URL(href);
+	const result = build_page_browser_data(language_path(url.pathname, languages).pathname);
+	const language = request_language(url);
+	if (language && language !== languages[0] && url.pathname !== '/new') {
+		const visit = (nodes: PageTreeNode[]) => {
+			for (const node of nodes) {
+				node.navigation_href = translated_href(node.page_href, language, url.origin, languages);
+				visit(node.children);
+			}
+		};
+		visit(result.page_forest);
+	}
+	return result;
 });
 
 /** Return public URLs and saved timestamps for pages reachable from Home. */
 export const get_sitemap_entries = query(async () => {
 	const { page_forest } = build_page_browser_data('/', true);
+	const records = db
+		.prepare(
+			`SELECT document_id, COALESCE(updated_at, created_at) AS modified,
+		 json_extract(data, '$.nodes."' || document_id || '".nav') AS nav,
+		 json_extract(data, '$.nodes."' || document_id || '".footer') AS footer
+		 FROM documents WHERE type IN ('page', 'nav', 'footer')`
+		)
+		.all() as {
+		document_id: string;
+		modified: string | null;
+		nav: string | null;
+		footer: string | null;
+	}[];
+	const records_by_id = new Map(records.map((record) => [record.document_id, record]));
+	const translations = db
+		.prepare('SELECT document_id, language, updated_at FROM translations')
+		.all() as { document_id: string; language: string; updated_at: string }[];
+	const modified_by_language = new Map(
+		translations.map((row) => [JSON.stringify([row.document_id, row.language]), row.updated_at])
+	);
 	const entries: SitemapEntry[] = [];
 	const queue = [...page_forest];
 	for (const page of queue) {
-		if (page.shadowed_by_markdown) continue;
-		entries.push({ path: page.page_href, lastmod: page.updated_at ?? page.created_at });
 		queue.push(...page.children);
+		if (page.shadowed_by_markdown || page.shadowed_by_language) continue;
+		const record = records_by_id.get(page.document_id);
+		const ids = [page.document_id, record?.nav, record?.footer].filter((id): id is string => !!id);
+		const original_dates = ids.map((id) => records_by_id.get(id)?.modified);
+		const alternates = language_alternates(page.page_href, languages);
+		for (const language of languages.length ? languages : ['']) {
+			entries.push({
+				path: language ? language_href(page.page_href, language, languages) : page.page_href,
+				lastmod: latest_modified([
+					...original_dates,
+					...ids.map((id) => modified_by_language.get(JSON.stringify([id, language])))
+				]),
+				alternates
+			});
+		}
+	}
+	for (const path of get_markdown_page_pathnames()) {
+		if (!is_reserved_language_slug(path.slice(1), languages)) entries.push({ path, lastmod: null });
 	}
 	return entries;
 });
@@ -760,6 +768,7 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
 		delete_incoming_document_refs.run(document_id);
 		delete_document_slugs.run(document_id);
 		delete_document.run(document_id, 'page');
+		cleanup_translations(document_id);
 	});
 
 	await cleanup_orphaned_assets(refs_before);
@@ -774,7 +783,7 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
  * Return a lightweight preview for a simple internal page href like `/some-slug`.
  */
 export const get_internal_link_preview = query(v.string(), async (href) => {
-	const parsed = parse_internal_page_href(href);
+	const parsed = parse_internal_page_href(href, languages);
 	if (!parsed) {
 		return null;
 	}
@@ -806,26 +815,37 @@ export const get_internal_link_preview = query(v.string(), async (href) => {
 /**
  * Save a document to the database, splitting shared documents (nav, footer) back out.
  */
-function rewrite_internal_page_href(href: string, target_document_id: string, new_slug: string) {
-	const parsed = parse_internal_page_href(href);
+function rewrite_internal_page_href(
+	href: string,
+	target_document_id: string,
+	new_slug: string,
+	link_languages: string[]
+) {
+	const parsed = parse_internal_page_href(href, link_languages);
 	if (!parsed) return href;
 
 	const resolved = resolve_slug(parsed.slug);
 	if (resolved?.document_id !== target_document_id) return href;
 
-	return `/${new_slug}${parsed.fragment}`;
+	return `${parsed.prefix}/${new_slug}${parsed.suffix}`;
 }
 
 function rewrite_internal_page_hrefs(
 	nodes: Record<string, DocumentNode>,
 	target_document_id: string,
-	new_slug: string
+	new_slug: string,
+	link_languages = languages
 ) {
 	for (const node of Object.values(nodes)) {
 		if (!node || typeof node !== 'object') continue;
 
 		if (typeof node.href === 'string') {
-			node.href = rewrite_internal_page_href(node.href, target_document_id, new_slug);
+			node.href = rewrite_internal_page_href(
+				node.href,
+				target_document_id,
+				new_slug,
+				link_languages
+			);
 		}
 
 		const type_schema: NodeSchema | undefined = document_schema[node.type];
@@ -843,7 +863,12 @@ function rewrite_internal_page_hrefs(
 				if (!range_node || range_node.type !== 'link') continue;
 				if (typeof range_node.href !== 'string') continue;
 
-				range_node.href = rewrite_internal_page_href(range_node.href, target_document_id, new_slug);
+				range_node.href = rewrite_internal_page_href(
+					range_node.href,
+					target_document_id,
+					new_slug,
+					link_languages
+				);
 			}
 		}
 	}
@@ -885,8 +910,34 @@ function assign_active_slug(
 	insert_active_slug(document_id, slug, insert_slug_stmt, deactivate_slug_stmt);
 }
 
+export const get_translated_document = query(
+	v.object({ document_id: v.string(), language: v.string() }),
+	async (input) => {
+		return translated_document(input.document_id, input.language);
+	}
+);
+
+export const save_translations = command(
+	v.object({
+		document_id: v.string(),
+		nodes: v.record(v.string(), v.any()),
+		language: v.string(),
+		translation_revision: v.string()
+	}),
+	async (input) => {
+		require_admin_session(getRequestEvent().locals);
+		const refs_before = get_referenced_asset_ids();
+		const result = save_translated_document(input);
+		await cleanup_orphaned_assets(refs_before);
+		void snapshot_if_stale();
+		return result;
+	}
+);
+
 export const save_document = command(save_document_input_schema, async (combined_doc) => {
 	require_admin_session(getRequestEvent().locals);
+	if (combined_doc.language && combined_doc.language !== languages[0])
+		error(400, 'Use the translation save command for additional languages.');
 
 	const all_nodes = structuredClone(combined_doc.nodes);
 	const page_node = all_nodes[combined_doc.document_id];
@@ -931,11 +982,6 @@ export const save_document = command(save_document_input_schema, async (combined
 		'INSERT INTO documents (document_id, type, data, created_at, updated_at) VALUES(?, ?, ?, ?, ?) ON CONFLICT(document_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at'
 	);
 
-	const delete_asset_refs = db.prepare('DELETE FROM asset_refs WHERE document_id = ?');
-	const insert_asset_ref = db.prepare(
-		'INSERT OR IGNORE INTO asset_refs (asset_id, document_id) VALUES (?, ?)'
-	);
-
 	const delete_document_refs = db.prepare('DELETE FROM document_refs WHERE source_document_id = ?');
 	const insert_document_ref = db.prepare(
 		'INSERT OR REPLACE INTO document_refs (target_document_id, source_document_id, ref_order) VALUES (?, ?, ?)'
@@ -958,13 +1004,6 @@ export const save_document = command(save_document_input_schema, async (combined
 		const created_at = existing_page_row?.created_at ?? now_iso;
 
 		upsert.run(combined_doc.document_id, 'page', JSON.stringify(page_doc), created_at, now_iso);
-		update_asset_refs(
-			combined_doc.document_id,
-			page_node_ids,
-			all_nodes,
-			delete_asset_refs,
-			insert_asset_ref
-		);
 		update_document_refs(
 			combined_doc.document_id,
 			collect_document_refs(all_nodes, page_node_ids, combined_doc.document_id),
@@ -979,7 +1018,6 @@ export const save_document = command(save_document_input_schema, async (combined
 				.get(nav_root_id) as unknown as DocumentRow | undefined;
 			const nav_created_at = existing_nav_row?.created_at ?? now_iso;
 			upsert.run(nav_root_id, 'nav', JSON.stringify(nav_doc), nav_created_at, now_iso);
-			update_asset_refs(nav_root_id, nav_node_ids, all_nodes, delete_asset_refs, insert_asset_ref);
 			update_document_refs(
 				nav_root_id,
 				collect_document_refs(all_nodes, nav_node_ids, nav_root_id),
@@ -995,19 +1033,19 @@ export const save_document = command(save_document_input_schema, async (combined
 				.get(footer_root_id) as unknown as DocumentRow | undefined;
 			const footer_created_at = existing_footer_row?.created_at ?? now_iso;
 			upsert.run(footer_root_id, 'footer', JSON.stringify(footer_doc), footer_created_at, now_iso);
-			update_asset_refs(
-				footer_root_id,
-				footer_node_ids,
-				all_nodes,
-				delete_asset_refs,
-				insert_asset_ref
-			);
 			update_document_refs(
 				footer_root_id,
 				collect_document_refs(all_nodes, footer_node_ids, footer_root_id),
 				delete_document_refs,
 				insert_document_ref
 			);
+		}
+
+		for (const id of [combined_doc.document_id, nav_root_id, footer_root_id]) {
+			if (id) {
+				cleanup_translations(id);
+				rebuild_asset_refs(id);
+			}
 		}
 
 		let active_slug = get_active_slug_for_document_id(combined_doc.document_id);
@@ -1060,6 +1098,13 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 
 	if (!normalized_slug) {
 		return create_page_url_error_result('page_url_empty', 'Page URL cannot be empty');
+	}
+
+	if (is_reserved_language_slug(normalized_slug, languages)) {
+		return create_page_url_error_result(
+			'page_url_reserved',
+			'That Page URL is reserved by a language homepage and cannot be used.'
+		);
 	}
 
 	if (is_reserved_markdown_slug(normalized_slug)) {
@@ -1157,11 +1202,18 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 			'INSERT OR REPLACE INTO document_refs (target_document_id, source_document_id, ref_order) VALUES (?, ?, ?)'
 		);
 
+		const translations = db.prepare('SELECT rowid, language, value FROM translations').all() as {
+			rowid: number;
+			language: string;
+			value: string;
+		}[];
+		const link_languages = [...new Set([...languages, ...translations.map((row) => row.language)])];
+
 		const now_iso = new Date().toISOString();
 
 		for (const row of page_rows) {
 			const doc = JSON.parse(row.data);
-			rewrite_internal_page_hrefs(doc.nodes, input.document_id, active_slug);
+			rewrite_internal_page_hrefs(doc.nodes, input.document_id, active_slug, link_languages);
 			upsert.run(
 				row.document_id,
 				row.type,
@@ -1180,6 +1232,23 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 			);
 		}
 
+		for (const row of translations) {
+			const map: TranslationMap = JSON.parse(row.value);
+			for (const payload of translation_payloads(map))
+				rewrite_internal_page_hrefs(
+					payload.nodes ?? {},
+					input.document_id,
+					active_slug,
+					link_languages
+				);
+			const value = JSON.stringify(map);
+			if (value !== row.value)
+				db.prepare('UPDATE translations SET value = ?, updated_at = ? WHERE rowid = ?').run(
+					value,
+					now_iso,
+					row.rowid
+				);
+		}
 		return active_slug;
 	});
 

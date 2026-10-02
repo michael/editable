@@ -1,9 +1,13 @@
+import { delete_media, update_media, is_media_selection } from './media.js';
 /**
  * The application's Svedit configuration: components, commands, inserters, and exporters.
  * `session.ts` composes this configuration with the schema and default site document.
  */
 import {
 	Session,
+	export_text_html,
+	escape_html,
+	safe_html_href,
 	define_keymap,
 	SelectAllCommand,
 	InsertDefaultNodeCommand,
@@ -14,7 +18,16 @@ import {
 	RedoCommand,
 	SelectParentCommand
 } from 'svedit';
-import type { DocumentNode, DocumentPath, NodeSelection, Text, Transaction } from 'svedit';
+import type {
+	DocumentNode,
+	DocumentPath,
+	NodeSelection,
+	Text,
+	Transaction,
+	HtmlPasteConfig,
+	MarkHtmlExporter
+} from 'svedit';
+import type { AppCommandContext } from './commands.svelte.js';
 import nanoid from './nanoid.js';
 import {
 	CycleLayoutCommand,
@@ -82,7 +95,6 @@ import Section from './components/Section.svelte';
 
 import { document_schema, MEDIA_DEFAULTS } from '#app/document_schema.js';
 import { start_processing } from '#app/asset_upload.js';
-import { set_properties } from 'svedit';
 import { get_media_dimensions } from '#lib/client/media_dimensions.js';
 
 type AppSession = Session<typeof document_schema>;
@@ -142,9 +154,6 @@ async function replace_media(
 	file: File,
 	blob_url: string
 ) {
-	const node = session.get(path);
-	if (node.type !== 'image' && node.type !== 'video') return;
-
 	const media_type = get_media_type(file);
 	const dims = await get_media_dimensions(file);
 
@@ -153,31 +162,17 @@ async function replace_media(
 	session.selection = { type: 'property', path };
 	const tr = session.tr;
 
-	if (media_type === node.type) {
-		// Same type — replace src and dimensions, reset crop
-		set_properties(tr, path, {
+	if (
+		!update_media(tr, path, {
 			...MEDIA_DEFAULTS,
-			src: blob_url,
-			mime_type: file.type,
-			width: dims.width,
-			height: dims.height
-		});
-	} else {
-		// Different type — replace the entire node
-		const new_node = {
-			...MEDIA_DEFAULTS,
-			id: nanoid(),
 			type: media_type,
 			src: blob_url,
 			mime_type: file.type,
 			width: dims.width,
 			height: dims.height
-		};
-		tr.create(new_node);
-		const parent_path = path.slice(0, -1);
-		const property_name = path[path.length - 1];
-		tr.set([...parent_path, property_name], new_node.id);
-	}
+		})
+	)
+		return;
 
 	// Set selection on the transaction so undo/redo restores it correctly
 	tr.selection = { type: 'property', path };
@@ -187,6 +182,49 @@ async function replace_media(
 
 // App-specific config object, always available via session.config for introspection
 export const document_config = {
+	// External HTML uses semantic sizes; native clipboard data retains exact variants.
+	html_paste: {
+		blocks: {
+			p: { type: 'paragraph', text_property: 'content' },
+			h1: { type: 'heading_1', text_property: 'content' },
+			h2: { type: 'heading_2', text_property: 'content' },
+			h3: { type: 'heading_3', text_property: 'content' },
+			h4: { type: 'heading_4', text_property: 'content' },
+			h5: { type: 'heading_4', text_property: 'content' },
+			h6: { type: 'heading_4', text_property: 'content' }
+		},
+		lists: {
+			ul: {
+				type: 'list',
+				children_property: 'list_items',
+				item: { type: 'list_item', text_property: 'content' },
+				properties: { layout: 'square' }
+			},
+			ol: {
+				type: 'list',
+				children_property: 'list_items',
+				item: { type: 'list_item', text_property: 'content' },
+				properties: { layout: 'decimal' }
+			}
+		},
+		wrapper: { type: 'prose', children_property: 'body' },
+		marks: {
+			bold: { type: 'strong' },
+			link: ({ href }) => ({ type: 'link', properties: { href, target: '_self' } })
+		}
+	} satisfies HtmlPasteConfig,
+	mark_html_exporters: {
+		strong: (_node, content) => `<strong>${content}</strong>`,
+		emphasis: (_node, content) => `<em>${content}</em>`,
+		code: (_node, content) => `<code>${content}</code>`,
+		highlight: (_node, content) => `<mark>${content}</mark>`,
+		link: (node, content) => {
+			const href = safe_html_href(node.href || '');
+			if (!href) return content;
+			const target = node.target === '_blank' ? ' target="_blank" rel="noopener noreferrer"' : '';
+			return `<a href="${escape_html(href)}"${target}>${content}</a>`;
+		}
+	} satisfies Record<string, MarkHtmlExporter>,
 	// Custom ID generator function
 	generate_id: nanoid,
 	// Provide definitions/overrides for system native components,
@@ -248,19 +286,10 @@ export const document_config = {
 		section: Section
 	},
 	replace_media,
-	handle_property_deletion: (tr, path) => {
-		const property_definition = tr.inspect(path);
-		if (property_definition?.type !== 'node') return;
-
-		const target_node = tr.get(path);
-		if (target_node?.type !== 'image' && target_node?.type !== 'video') return;
-
-		set_properties(tr, [target_node.id], MEDIA_DEFAULTS);
-	},
+	handle_property_deletion: delete_media,
 	handle_media_paste: async (session, pasted_media) => {
 		if (session.selection.type === 'property') {
-			const node = session.get(session.selection.path);
-			if (node.type === 'image' || node.type === 'video') {
+			if (is_media_selection(session)) {
 				await replace_media(
 					session,
 					session.selection.path,
@@ -319,7 +348,7 @@ export const document_config = {
 	// HTML exporters for different node types
 	html_exporters: {
 		prose: (node, session, html_exporters) => {
-			let html = '<div class="prose">\n';
+			let html = '<div class="ew-prose">\n';
 			for (const child_id of node.body.nodes) {
 				const child = session.get(child_id);
 				const exporter = html_exporters[child.type];
@@ -330,56 +359,67 @@ export const document_config = {
 			html += '</div>\n';
 			return html;
 		},
-		paragraph: (node) => `<p>${node.content.content}</p>\n`,
-		paragraph_sm: (node) => `<p>${node.content.content}</p>\n`,
-		paragraph_lg: (node) => `<p>${node.content.content}</p>\n`,
-		paragraph_xl: (node) => `<p>${node.content.content}</p>\n`,
-		heading_1_xl: (node) => `<h1>${node.content.content}</h1>\n`,
-		heading_1: (node) => `<h1>${node.content.content}</h1>\n`,
-		heading_2: (node) => `<h2>${node.content.content}</h2>\n`,
-		heading_3: (node) => `<h3>${node.content.content}</h3>\n`,
-		heading_4: (node) => `<h4>${node.content.content}</h4>\n`,
-		preformatted: (node) => `<pre>${node.content.content}</pre>\n`,
+		paragraph: (node, session) => `<p>${export_text_html(node.content, session)}</p>\n`,
+		paragraph_sm: (node, session) => `<p>${export_text_html(node.content, session)}</p>\n`,
+		paragraph_lg: (node, session) => `<p>${export_text_html(node.content, session)}</p>\n`,
+		paragraph_xl: (node, session) => `<p>${export_text_html(node.content, session)}</p>\n`,
+		heading_1_xl: (node, session) => `<h1>${export_text_html(node.content, session)}</h1>\n`,
+		heading_1: (node, session) => `<h1>${export_text_html(node.content, session)}</h1>\n`,
+		heading_2: (node, session) => `<h2>${export_text_html(node.content, session)}</h2>\n`,
+		heading_3: (node, session) => `<h3>${export_text_html(node.content, session)}</h3>\n`,
+		heading_4: (node, session) => `<h4>${export_text_html(node.content, session)}</h4>\n`,
+		preformatted: (node) => `<pre>${escape_html(node.content.content)}</pre>\n`,
 		list: (node, session, html_exporters) => {
-			let html = '<ul>\n';
+			const tag = ['decimal', 'lower-alpha'].includes(node.layout) ? 'ol' : 'ul';
+			const attributes = node.layout === 'lower-alpha' ? ' type="a"' : '';
+			let html = `<${tag}${attributes}>\n`;
 			for (const list_item_id of node.list_items.nodes) {
-				html += html_exporters.list_item(session.get(list_item_id));
+				html += html_exporters.list_item(session.get(list_item_id), session, html_exporters);
 			}
-			return `${html}</ul>\n`;
+			return `${html}</${tag}>\n`;
 		},
-		list_item: (node) => `<li>${node.content.content}</li>\n`
+		list_item: (node, session) => `<li>${export_text_html(node.content, session)}</li>\n`
 	},
 
 	/**
 	 * Factory function to create Svedit commands and keymap.
 	 * Called by Svedit component with the svedit context.
 	 */
-	create_commands_and_keymap: (context) => {
+	create_commands_and_keymap: (context: AppCommandContext) => {
+		// Structural commands share a capability without knowing why it is disabled.
+		const structural_context = {
+			get session() {
+				return context.session;
+			},
+			get editable() {
+				return context.editable && context.allow_structural_changes;
+			}
+		};
 		// Create command instances with the provided context
 		const commands = {
 			select_all: new SelectAllCommand(context),
-			insert_default_node: new InsertDefaultNodeCommand(context),
+			insert_default_node: new InsertDefaultNodeCommand(structural_context),
 			add_new_line: new AddNewLineCommand(context),
-			break_text_node: new BreakTextNodeCommand(context),
+			break_text_node: new BreakTextNodeCommand(structural_context),
 			toggle_strong: new ToggleMarkCommand('strong', context),
 			toggle_emphasis: new ToggleMarkCommand('emphasis', context),
 			toggle_code: new ToggleMarkCommand('code', context),
 			toggle_highlight: new ToggleMarkCommand('highlight', context),
-			toggle_section: new ToggleMarkCommand('section', context),
+			toggle_section: new ToggleMarkCommand('section', structural_context),
 			undo: new UndoCommand(context),
 			redo: new RedoCommand(context),
 			select_parent: new SelectParentCommand(context),
-			cycle_layout_next: new CycleLayoutCommand('next', context),
-			cycle_layout_previous: new CycleLayoutCommand('previous', context),
-			cycle_node_type_next: new CycleNodeTypeCommand('next', context),
-			cycle_node_type_previous: new CycleNodeTypeCommand('previous', context),
+			cycle_layout_next: new CycleLayoutCommand('next', structural_context),
+			cycle_layout_previous: new CycleLayoutCommand('previous', structural_context),
+			cycle_node_type_next: new CycleNodeTypeCommand('next', structural_context),
+			cycle_node_type_previous: new CycleNodeTypeCommand('previous', structural_context),
 			toggle_accordion: new ToggleAccordionCommand(context),
 			toggle_link: new ToggleLinkCommand(context),
 			remove_link: new RemoveLinkCommand(context),
 			edit_link: new EditLinkCommand(context),
 			edit_image: new EditImageCommand(context),
 			replace_media: new ReplaceMediaCommand(context),
-			duplicate_nodes: new DuplicateNodesCommand(context)
+			duplicate_nodes: new DuplicateNodesCommand(structural_context)
 		};
 
 		// Define keymap binding keys to commands

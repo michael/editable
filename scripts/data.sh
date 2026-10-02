@@ -23,13 +23,13 @@
 # Usage
 #   ./scripts/data.sh pull                        # remote -> local
 #   ./scripts/data.sh push [--yes]                # local  -> remote
-#   ./scripts/data.sh restore <name>              # roll remote back to a backup
+#   ./scripts/data.sh restore <name> [--remote]   # restore local or remote from a backup
 #   ./scripts/data.sh restore-cloud [--at <ts>]   # roll remote back via the backup bucket (PITR)
 #   ./scripts/data.sh pull-cloud [--at <ts>]      # rebuild local data/ from the backup bucket
-#   ./scripts/data.sh backups                     # list remote backups
-#   ./scripts/data.sh backup                      # take a remote backup only
+#   ./scripts/data.sh backups [--remote]          # list local or remote backups
+#   ./scripts/data.sh backup [--remote]           # take a local or remote backup
 #   ./scripts/data.sh cloud-snapshots             # list restore points in the backup bucket
-#   ./scripts/data.sh verify                      # health-check the deployed database + assets
+#   ./scripts/data.sh verify [--remote]           # check local or remote database + assets
 #   ./scripts/data.sh reset                       # reset local database to fresh demo content
 #   ./scripts/data.sh help                        # print the command reference
 #
@@ -73,6 +73,29 @@ while [ $# -gt 0 ]; do
 	shift
 done
 set -- ${ARGS[@]+"${ARGS[@]}"}
+
+# Only commands with both local and remote implementations accept a target flag.
+TARGET_REMOTE=false
+case "${1:-}" in
+	backup | backups | restore | verify | translations | purge-translations)
+		TARGET_ARGS=()
+		for target_arg in "$@"; do
+			case "$target_arg" in
+				--remote) TARGET_REMOTE=true ;;
+				--local) echo "Error: Local is the default; omit --local" >&2; exit 2 ;;
+				*) TARGET_ARGS+=("$target_arg") ;;
+			esac
+		done
+		set -- "${TARGET_ARGS[@]}"
+		;;
+	*)
+		for target_arg in "$@"; do
+			case "$target_arg" in
+				--remote | --local) echo "Error: ${1:-Command} has a fixed target and does not accept $target_arg" >&2; exit 2 ;;
+			esac
+		done
+		;;
+esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -119,7 +142,7 @@ REMOTE_EXEC="${REMOTE_EXEC:-}"
 # and the explicit keys below stay required.
 SSH_CONFIG_DISCOVERED=false
 discover_ssh_config() {
-	[ "$SSH_CONFIG_DISCOVERED" = false ] || return
+	[ "$SSH_CONFIG_DISCOVERED" = false ] || return 0
 	SSH_CONFIG_DISCOVERED=true
 
 	if [ "$DRIVER" = "ssh" ] && [ -n "$DEPLOY_HOST" ] &&
@@ -204,10 +227,10 @@ remote_retry() {
 verify_remote() {
 	local ctx="$1" out
 	out="$(remote_retry integrity)" ||
-		die "Could not reach '$APP' to verify (the machine may still be coming up) — the data operation itself succeeded; verify later with: pnpm data:verify"
+		die "Could not reach '$APP' to verify (the machine may still be coming up) — the data operation itself succeeded; verify later with: pnpm data:verify --remote"
 	printf '%s' "$out" | grep -qx 'ok' || die "Remote integrity_check failed — $ctx"
 	out="$(remote_retry check-assets)" ||
-		die "Could not reach '$APP' to verify assets — the data operation itself succeeded; verify later with: pnpm data:verify"
+		die "Could not reach '$APP' to verify assets — the data operation itself succeeded; verify later with: pnpm data:verify --remote"
 	printf '%s' "$out" | grep -q '^OK:' || die "Remote references missing assets — $ctx"
 }
 
@@ -334,14 +357,14 @@ cmd_push() {
 	restart_app
 
 	info "Verifying…"
-	verify_remote "restore with: pnpm data:restore $ts"
+	verify_remote "restore with: pnpm data:restore $ts --remote"
 
 	echo
 	echo "✓ Pushed to '$APP'. Undo with:"
 	if [ "$DRIVER" = "fly" ]; then
-		echo "    pnpm data:restore $ts -a $APP"
+		echo "    pnpm data:restore $ts --remote -a $APP"
 	else
-		echo "    pnpm data:restore $ts"
+		echo "    pnpm data:restore $ts --remote"
 	fi
 }
 
@@ -409,17 +432,19 @@ cmd_pull() {
 }
 
 # ---- restore: roll remote back to a backup ---------------------------------
-cmd_restore() {
+cmd_restore_remote() {
 	need_app "restore <name>"
-	local name="" yes=""
+	local name="" yes="" arg
 	for arg in "$@"; do
 		case "$arg" in
 			--yes) yes="--yes" ;;
-			*) name="$arg" ;;
+			--*) die "Unknown argument: $arg" ;;
+			*) [ -z "$name" ] || die "Specify only one backup"; name="$arg" ;;
 		esac
 	done
-	[ -n "$name" ] || die "Usage: pnpm data:restore <name> [--yes]   (see: pnpm data:backups)"
+	[ -n "$name" ] || die "Usage: pnpm data:restore <name> [--remote] [--yes]   (see: pnpm data:backups --remote)"
 	name="${name%.sqlite3}"
+	[[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || die "Invalid backup name"
 
 	ensure_running
 	[ "$yes" = "--yes" ] || confirm "Roll the database on '$APP' back to backup '$name'?"
@@ -454,7 +479,7 @@ cmd_restore() {
 	info "Verifying…"
 	local out
 	out="$(remote_retry integrity)" ||
-		die "Could not reach '$APP' to verify (the machine may still be coming up) — the restore itself succeeded; verify later with: pnpm data:verify"
+		die "Could not reach '$APP' to verify (the machine may still be coming up) — the restore itself succeeded; verify later with: pnpm data:verify --remote"
 	printf '%s' "$out" | grep -qx 'ok' || die "Remote integrity_check failed"
 	out="$(remote_retry check-assets)" || out=""
 	printf '%s' "$out" | grep -q '^OK:' ||
@@ -514,7 +539,7 @@ cmd_restore_cloud() {
 	restart_app
 
 	info "Verifying…"
-	verify_remote "roll back with: pnpm data:restore $ts"
+	verify_remote "roll back with: pnpm data:restore $ts --remote"
 
 	echo
 	echo "✓ Restored '$APP' from the bucket${at:+ (as of $at)}: $(remote summary 2>/dev/null | tr '\n' ' ' | sed 's/ $//')."
@@ -615,6 +640,65 @@ cmd_reset() {
 }
 
 cmd_backup() {
+	[ "$#" -eq 0 ] || die "Usage: pnpm data:backup [--remote]"
+	if [ "$TARGET_REMOTE" = true ]; then cmd_backup_remote; return; fi
+	[ -f "$DATA_DIR_LOCAL/db.sqlite3" ] || die "No local database at $DATA_DIR_LOCAL/db.sqlite3"
+	mkdir -p "$BACKUP_DIR_LOCAL"
+	local backup_path="$BACKUP_DIR_LOCAL/local-$(date -u +%Y%m%dT%H%M%SZ)-$(printf '%04x' "$RANDOM").sqlite3"
+	sqlite3 -cmd '.timeout 10000' "$DATA_DIR_LOCAL/db.sqlite3" "VACUUM INTO '$backup_path'"
+	[ "$(sqlite3 "$backup_path" 'PRAGMA integrity_check')" = "ok" ] || die "Local backup failed integrity_check"
+	echo "✓ Local backup: $backup_path"
+}
+
+cmd_backups() {
+	[ "$#" -eq 0 ] || die "Usage: pnpm data:backups [--remote]"
+	if [ "$TARGET_REMOTE" = true ]; then cmd_backups_remote; return; fi
+	echo "Local backups in $BACKUP_DIR_LOCAL (includes remote mirrors):"
+	local backup
+	for backup in "$BACKUP_DIR_LOCAL"/*.sqlite3; do
+		[ -f "$backup" ] || continue
+		basename "$backup"
+	done
+}
+
+cmd_verify() {
+	[ "$#" -eq 0 ] || die "Usage: pnpm data:verify [--remote]"
+	if [ "$TARGET_REMOTE" = true ]; then cmd_verify_remote; return; fi
+	[ -f "$DATA_DIR_LOCAL/db.sqlite3" ] || die "No local database at $DATA_DIR_LOCAL/db.sqlite3"
+	[ "$(sqlite3 "$DATA_DIR_LOCAL/db.sqlite3" 'PRAGMA integrity_check')" = "ok" ] || die "Local integrity_check failed"
+	node --disable-warning=ExperimentalWarning "$SCRIPT_DIR/check-assets.js" "$DATA_DIR_LOCAL/db.sqlite3" "$DATA_DIR_LOCAL/assets"
+	echo "✓ Local database and assets are healthy ($DATA_DIR_LOCAL)."
+}
+
+cmd_restore() {
+	if [ "$TARGET_REMOTE" = true ]; then cmd_restore_remote "$@"; return; fi
+	local name="" yes="" arg
+	for arg in "$@"; do
+		case "$arg" in
+			--yes) yes=--yes ;;
+			--*) die "Unknown argument: $arg" ;;
+			*) [ -z "$name" ] || die "Specify only one backup"; name="$arg" ;;
+		esac
+	done
+	name="${name%.sqlite3}"
+	[[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || die "Usage: pnpm data:restore <name> [--remote] [--yes] (see: pnpm data:backups)"
+	[ -f "$BACKUP_DIR_LOCAL/$name.sqlite3" ] || die "Backup '$name' not found in $BACKUP_DIR_LOCAL/"
+	if command -v lsof >/dev/null 2>&1 && lsof "$DATA_DIR_LOCAL/db.sqlite3" >/dev/null 2>&1; then
+		die "Local database is open — stop the dev server before restoring."
+	fi
+	# Stage a consistent snapshot and verify it before replacing local data.
+	sqlite3 "$BACKUP_DIR_LOCAL/$name.sqlite3" "VACUUM INTO '$TMP/restore.db'"
+	[ "$(sqlite3 "$TMP/restore.db" 'PRAGMA integrity_check')" = "ok" ] || die "Backup failed integrity_check"
+	node --disable-warning=ExperimentalWarning "$SCRIPT_DIR/check-assets.js" "$TMP/restore.db" "$DATA_DIR_LOCAL/assets"
+	[ "$yes" = "--yes" ] || confirm "Restore your local database ($DATA_DIR_LOCAL/db.sqlite3) from '$name'?"
+	if [ -f "$DATA_DIR_LOCAL/db.sqlite3" ]; then cmd_backup; fi
+	mkdir -p "$DATA_DIR_LOCAL"
+	rm -f "$DATA_DIR_LOCAL/db.sqlite3-wal" "$DATA_DIR_LOCAL/db.sqlite3-shm"
+	mv "$TMP/restore.db" "$DATA_DIR_LOCAL/db.sqlite3"
+	echo "✓ Restored local database from '$name'."
+}
+
+cmd_backup_remote() {
 	need_app backup
 	ensure_running
 	mkdir -p "$BACKUP_DIR_LOCAL"
@@ -626,7 +710,50 @@ cmd_backup() {
 	echo "✓ Backup '$ts' (remote volume + $BACKUP_DIR_LOCAL/$ts.sqlite3)"
 }
 
-cmd_backups() {
+cmd_translations() {
+	[ "$#" -eq 0 ] || die "Usage: pnpm data:translations [--remote]"
+	if [ "$TARGET_REMOTE" = false ]; then
+		[ -f "$DATA_DIR_LOCAL/db.sqlite3" ] || die "No local database at $DATA_DIR_LOCAL/db.sqlite3"
+		info "Local translations ($DATA_DIR_LOCAL/db.sqlite3)"
+		node --disable-warning=ExperimentalWarning "$SCRIPT_DIR/translations.js" "$DATA_DIR_LOCAL/db.sqlite3" list
+		return
+	fi
+	need_app translations
+	ensure_running
+	info "Remote translations on '$APP'"
+	remote translations
+}
+
+cmd_purge_translations() {
+	local language="" yes="" remote_mode="$TARGET_REMOTE" out arg
+	for arg in "$@"; do
+		case "$arg" in
+			--yes) yes=--yes ;;
+			--*) die "Unknown argument: $arg" ;;
+			*) [ -z "$language" ] || die "Specify only one language"; language="$arg" ;;
+		esac
+	done
+	[[ "$language" =~ ^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$ ]] ||
+		die "Usage: pnpm data:purge-translations <language> [--remote] [--yes]"
+	if [ "$remote_mode" = false ]; then
+		cmd_translations
+		[ "$yes" = "--yes" ] || confirm "Permanently delete all '$language' translations in your local database ($DATA_DIR_LOCAL/db.sqlite3)?"
+		cmd_backup
+		node --disable-warning=ExperimentalWarning "$SCRIPT_DIR/translations.js" "$DATA_DIR_LOCAL/db.sqlite3" purge "$language" --yes
+		return
+	fi
+	need_app purge-translations
+	ensure_running
+	info "Remote translations on '$APP'"
+	remote translations
+	[ "$yes" = "--yes" ] || confirm "Permanently delete all '$language' translations on '$APP'?"
+	cmd_backup_remote
+	out="$(remote purge-translations "$language" 2>&1)" || die "$out"
+	printf '%s\n' "$out"
+	[[ "$out" == *"OK: purged $language translations"* ]] || die "Purge was not confirmed by the server; inspect its output before retrying."
+}
+
+cmd_backups_remote() {
 	need_app backups
 	ensure_running
 	echo "Remote backups on '$APP':"
@@ -634,11 +761,11 @@ cmd_backups() {
 }
 
 # ---- verify: health-check the deployment ------------------------------------
-cmd_verify() {
+cmd_verify_remote() {
 	need_app verify
 	ensure_running
 	info "Verifying '$APP'…"
-	verify_remote "list restore points with: pnpm data:backups"
+	verify_remote "list restore points with: pnpm data:backups --remote"
 	echo "✓ '$APP' is healthy: $(remote summary 2>/dev/null | tr '\n' ' ' | sed 's/ $//')."
 }
 
@@ -656,19 +783,23 @@ Data commands (via pnpm; arguments are forwarded directly):
 
   pnpm data:pull                            copy the live site's data to your machine
   pnpm data:push [--yes]                    replace the live site's data with your local state
-  pnpm data:backup                          snapshot the live database
-  pnpm data:backups                         list the live site's snapshots
-  pnpm data:restore <name> [--yes]          roll the live site back to a snapshot
+  pnpm data:backup [--remote]               snapshot the local or remote database
+  pnpm data:backups [--remote]              list local or remote snapshots
+  pnpm data:restore <name> [--remote] [--yes] restore a local or remote snapshot
   pnpm data:cloud-snapshots                 list restore points in the backup bucket
   pnpm data:restore-cloud [--at <ts>]       roll the live site back to a point in time
   pnpm data:pull-cloud [--at <ts>]          rebuild local data/ from the backup bucket
-  pnpm data:verify                          health-check the deployed database + assets
+  pnpm data:translations [--remote]         list stored languages (local by default)
+  pnpm data:purge-translations <lang> [--remote] [--yes]
+                                           back up, then purge a language without restarting
+  pnpm data:verify [--remote]               health-check the local or remote database + assets
   pnpm data:reset [--yes]                   reset local database to fresh demo content (assets stay)
   pnpm litestream:install                   one-time local setup for the cloud commands
 
-The target comes from fly.toml (Fly.io, override with: -a <app>) or from
+Maintenance commands default to local data/. Add --remote to target a deployment.
+The remote target comes from fly.toml (Fly.io, override with: -a <app>) or from
 DEPLOY_HOST in .env (any VPS over plain ssh — see README → Deploy to a VPS).
-Snapshot names (<name>) look like my-site-20260712T143535Z-3f2a (file extension optional) — list them with data:backups.
+Local backups start with local-. Remote snapshot names (<name>) look like my-site-20260712T143535Z-3f2a (file extension optional) — list them with data:backups.
 Timestamps (<ts>) are RFC3339 UTC, e.g. 2026-07-12T14:35:35Z — list them with data:cloud-snapshots.
 See README → Backup, sync & recovery for details.
 EOF
@@ -680,10 +811,12 @@ case "${1:-}" in
 	restore) shift; cmd_restore "$@" ;;
 	restore-cloud) shift; cmd_restore_cloud "$@" ;;
 	pull-cloud) shift; cmd_pull_cloud "$@" ;;
-	backup) cmd_backup ;;
-	backups) cmd_backups ;;
+	backup) shift; cmd_backup "$@" ;;
+	backups) shift; cmd_backups "$@" ;;
+	translations) shift; cmd_translations "$@" ;;
+	purge-translations) shift; cmd_purge_translations "$@" ;;
 	cloud-snapshots) cmd_cloud_snapshots ;;
-	verify) cmd_verify ;;
+	verify) shift; cmd_verify "$@" ;;
 	reset) shift; cmd_reset "${1:-}" ;;
 	help) usage ;;
 	*) usage >&2; exit 2 ;;

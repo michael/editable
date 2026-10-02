@@ -15,11 +15,15 @@
 	has_backend={page.data.has_backend}
 	is_admin={page.data.is_admin}
 	origin={page.data.origin}
+	languages={page.data.languages}
+	language={page.data.language}
 	document_title={is_not_found ? 'Page not found' : 'Something went wrong'}
 	slug={null}
 	can_edit={false}
 >
-	<main class="mx-auto flex min-h-[60vh] w-full max-w-7xl items-center justify-center px-5 py-24 sm:px-7 sm:py-32">
+	<main
+		class="mx-auto flex min-h-[60vh] w-full max-w-7xl items-center justify-center px-5 py-24 sm:px-7 sm:py-32"
+	>
 		<div class="max-w-2xl space-y-5 text-center text-balance">
 			<p class="font-mono text-sm font-medium text-(--editing)">{page.status}</p>
 			<h1 class="display-2">

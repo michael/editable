@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { get_svedit_context } from '#app/svedit_context.js';
+	import { is_media_property, is_media_selection } from '#app/media.js';
 	import { get_app_context } from '#app/app_context.js';
 	import { deserialize_path, serialize_path } from 'svedit';
 	import { get_page_browser } from '#app/page_browser_context.svelte.js';
@@ -50,8 +51,7 @@
 		const path_str = prop_el.getAttribute('data-path');
 		if (!path_str) return null;
 		const path = deserialize_path(path_str);
-		const node = svedit.session.get(path);
-		if (node?.type !== 'image' && node?.type !== 'video') return null;
+		if (!is_media_property(svedit.session.inspect(path))) return null;
 		return path;
 	}
 
@@ -117,9 +117,7 @@
 			: null
 	);
 
-	let is_media_selected = $derived(
-		selected_property?.type === 'image' || selected_property?.type === 'video'
-	);
+	let is_media_selected = $derived(is_media_selection(svedit.session));
 
 	let viewbox_context = $derived.by(() => {
 		if (!is_media_selected) return null;
@@ -148,7 +146,7 @@
 		if (!sel) return null;
 
 		const selected_node = svedit.session.selected_node;
-		if (selected_node && 'href' in selected_node) {
+		if (app.allow_structural_changes && selected_node && 'href' in selected_node) {
 			if (sel.type === 'node') {
 				const start = Math.min(sel.anchor_offset, sel.focus_offset);
 				const end = Math.max(sel.anchor_offset, sel.focus_offset);
@@ -187,7 +185,7 @@
 		></div>
 	{/if}
 
-	{#if !file_drag_active}
+	{#if !file_drag_active && (app.allow_structural_changes || is_media_selected)}
 		{#if svedit.session.selection?.type === 'property'}
 			{@const anchor_style = `position-anchor: --${serialize_path(svedit.session.selection.path)};`}
 			{#if is_media_selected}
@@ -201,7 +199,7 @@
 			{/if}
 		{/if}
 
-		{#if viewbox_context}
+		{#if viewbox_context && app.allow_structural_changes}
 			<SizableViewboxControls
 				path={viewbox_context.parent_path}
 				media_property={viewbox_context.media_property as string}

@@ -340,6 +340,8 @@ Editable's content model defines the nodes and properties available to pages and
 
 Documents are graphs of nodes stored by id. Each node has an `id`, a `type`, and type-specific properties. A few naming conventions hold throughout: `content` is the string payload of text properties, `body` holds authored nested content, `items` holds repeated structured children, and `label`/`title`/`description`/`meta` are text properties with semantic meaning.
 
+Nodes have a single owner within their document: one node field, one entry in a node array, or one mark or annotation range. Reusing content means copying it with a fresh id, not referencing the same node twice. Navigation and footer are shared as whole documents, while their children retain this ownership rule. Image and video nodes can use the same asset file without sharing node identity. Ordinary media edits and same-type file replacement keep the node id; switching between image and video or pasting a copied node creates a new id. Splitting or duplicating formatted text must give each new mark or annotation occurrence an independent attachment node, so editing one link does not change another.
+
 A **text property** value looks like this in a document. Marks and annotations reference separate nodes by id:
 
 ```js
@@ -911,17 +913,25 @@ That folder is `data/`: an SQLite database (`db.sqlite3`) and uploaded assets (`
 
 - **pnpm data:pull** — Copy the live site's data to your machine
 - **pnpm data:push [--yes]** — Replace the live site's data with your local state — guarded, undoable
-- **pnpm data:backup** — Snapshot the live database, kept on the server and mirrored locally
-- **pnpm data:backups** — List the live site's snapshots
-- **pnpm data:restore &lt;name> [--yes]** — Roll the live database back to a snapshot — pass a name from data:backups
+- **pnpm data:backup [--remote]** — Snapshot the local database; remote backups are kept on the server and mirrored locally
+- **pnpm data:backups [--remote]** — List local snapshots; add --remote to list server snapshots
+- **pnpm data:restore &lt;name> [--remote] [--yes]** — Restore the local database from a snapshot; add --remote to restore the deployed database
 - **pnpm data:cloud-snapshots** — List points in time you can restore to — requires automated backups
 - **pnpm data:restore-cloud [--at &lt;timestamp>] [--yes]** — Roll the live site back to a point in time — requires automated backups
 - **pnpm data:pull-cloud [--at &lt;timestamp>]** — Rebuild your local data folder from the bucket — requires automated backups
-- **pnpm data:verify** — Health-check the deployed database and assets
+- **pnpm data:translations [--remote]** — List stored translation languages and document counts, including disabled languages; defaults to local data
+- **pnpm data:purge-translations &lt;language> [--remote] [--yes]** — Back up the database, then permanently delete one language's translations without restarting; defaults to local data
+- **pnpm data:verify [--remote]** — Health-check the local database and assets; add --remote to check the deployment
 - **pnpm data:reset [--yes]** — Reset your local database to fresh default site content, keeping assets
 - **pnpm litestream:install** — One-time local setup for data:pull-cloud — requires automated backups
 
-Arguments in brackets are optional; pnpm forwards them directly to the script, without an extra `--` separator. The cloud commands require [Automated backups](#automated-backups-optional). Every command reads the target app from `fly.toml`; only append `-a <app>` if no app name is set there, or to override it. Every restore prints a summary of the restored state (documents, last edited, assets) so you can confirm you got the moment you meant, and backs up the state it replaces first. `pnpm data:help` prints this reference, with arguments, in the terminal.
+Maintenance commands (`backup`, `backups`, `restore`, `verify`, `translations`, and `purge-translations`) operate locally by default; add `--remote` for the configured deployment. `pull` and `push` retain their remote-to-local and local-to-remote directions. `reset` remains local only; cloud commands retain their existing destinations. Local backups go into `data-backups/`, which also holds remote backup mirrors. Local restore requires stopping the dev server and verifies the snapshot and its referenced assets before replacing the database; local backup, verification, and translation maintenance can run while the server is active.
+
+Disabling a language in `LANGUAGES` preserves its translations and media references. Original node deletions and page slug changes continue to update stored translations, even when multilingual support is completely disabled. To permanently remove a language, deploy the maintenance scripts, then run `pnpm data:translations --remote` and `pnpm data:purge-translations es --remote`. The purge asks for confirmation, takes a backup, and deletes the language's maps and rebuilds affected asset references in a single transaction on the live server. It does not replace the database or restart the app; concurrent writes may briefly wait for the transaction. Media files remain on disk and become eligible for normal cleanup after the configured grace period if nothing else references them. With `--remote`, the command uses the same Fly.io or VPS target as pull and push. Avoid editing that language during a purge: an open draft will become stale, but a fresh save can create translations again if the language remains enabled.
+
+For your local database, run `pnpm data:translations` or `pnpm data:purge-translations es`. These use `DATA_DIR` from your shell environment (default `./data`), require no deployment connection, and can run while the dev server is active. A local purge first saves a consistent snapshot in `data-backups/local-<timestamp>-<id>.sqlite3` and uses the same transaction and media grace-period behavior as the live command.
+
+Arguments in brackets are optional; pnpm forwards them directly to the script, without an extra `--` separator. The cloud commands require [Automated backups](#automated-backups-optional). Commands that connect to a deployment read the target app from `fly.toml`; only append `-a <app>` if no app name is set there, or to override it. Remote restores print a summary of the restored state (documents, last edited, assets). Both local and remote restores back up the state they replace first. `pnpm data:help` prints this reference, with arguments, in the terminal.
 
 Pull the live site down to work on it locally, or push a local state up to production. Both directions sync the database and any missing assets.
 
@@ -943,11 +953,11 @@ Assets are content-addressed and immutable, so they only ever need to be added, 
 Every push prints an undo command. To roll back:
 
 ```
-pnpm data:backups          # list the live site's snapshots
-pnpm data:restore <name>   # roll the live site back to one (name from the listing; file extension optional)
+pnpm data:backups --remote # list the live site's snapshots
+pnpm data:restore <name> --remote # roll the live site back to one (name from the listing; file extension optional)
 ```
 
-Snapshots are taken automatically before every push and restore, and on demand with `pnpm data:backup` — each lives on the server (last 10 kept) and is mirrored to `data-backups/` on your machine (kept forever, prune by hand). `restore` finds it in either place.
+Snapshots are taken automatically before every push and restore, and on demand with `pnpm data:backup --remote` — each lives on the server (last 10 kept) and is mirrored to `data-backups/` on your machine (kept forever, prune by hand). `restore --remote` finds it in either place.
 
 A rollback restores only the database; it re-points at the same immutable asset pool, which is why `ASSET_GRACE_PERIOD_DAYS` (see [Deploy](#deploy)) defines how far back you can safely go — restores from the backup bucket don't have this limit.
 
@@ -1032,7 +1042,7 @@ New Editable releases are one `git pull` away.
 Because your site keeps Editable as the `upstream` remote (see [Your site is your repo](#your-site-is-your-repo)), improvements flow in with ordinary git. The ritual, in order:
 
 ```sh
-pnpm data:backup            # snapshot the live database first
+pnpm data:backup --remote   # snapshot the live database first
 git fetch upstream          # download available Editable releases
 git merge upstream/stable   # merge the latest Editable release
 pnpm install                # update dependencies (including svedit)
@@ -1134,6 +1144,26 @@ pnpm migration:create reconcile-heading \
 ```
 
 The generated `before` array overrides timestamp order for that relationship only. The target must exist and still be pending; missing targets, already-applied targets, and dependency cycles abort the upgrade before any changes are committed. Prefer tolerant migrations that safely do nothing when their source shape is absent, and reserve `before` for genuine conflicts.
+
+## Translations (experimental)
+
+Publish your website in multiple languages.
+
+Enable translations with a comma-separated language list in `.env` or your deployment environment:
+
+```dotenv
+LANGUAGES="en,de"
+```
+
+The first language is the original and keeps unprefixed URLs. Additional languages appear in the navigation switcher and use URLs such as `/de/about` and `/de` for the homepage. Keep the original language first when changing the list.
+
+Choose a language before entering edit mode, edit its text or media, and save. Titles, descriptions, navigation, and footer labels can be translated; images and videos can have separate alt text and crop settings. Missing translations show the original content. Structure and layouts stay shared and are edited in the original language.
+
+On backend deployments, language versions are included automatically in the sitemap and page metadata for search engines.
+
+Removing a language from the list hides its translations without deleting them. Leave `LANGUAGES` unset or blank for a single-language site.
+
+This feature is experimental: its behavior and storage format may change. Back up your database before upgrading.
 
 ## Markdown pages (experimental)
 
