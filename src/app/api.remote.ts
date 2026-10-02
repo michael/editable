@@ -613,17 +613,6 @@ export const get_shared_documents = query(v.void(), async () => {
 	};
 });
 
-/**
- * Return page browser data for the pages drawer.
- */
-export const get_auth_status = query(v.void(), async () => {
-	const { locals } = getRequestEvent();
-
-	return {
-		is_admin: !!locals.is_admin
-	};
-});
-
 export const login_admin = command(admin_login_input_schema, async ({ password }) => {
 	const { cookies } = getRequestEvent();
 	const admin_password = get_required_admin_password();

@@ -9,12 +9,8 @@ import {
 	is_media_property,
 	is_media_selection
 } from './media.js';
-import {
-	document_structure,
-	normalized_payload,
-	property_payload,
-	replace_translation
-} from './translations.js';
+import { document_structure, normalized_payload, property_payload } from './translations.js';
+import { replace_translation } from './test_helpers/translations.js';
 
 function media_document() {
 	const doc: Document = structuredClone(default_site_document);

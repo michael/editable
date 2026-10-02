@@ -179,18 +179,6 @@ export function prepare_translation(
 	return { nodes: replacements, removed_ids: Object.keys(original.nodes) };
 }
 
-/** Substitute on a disposable graph; the canonical document remains untouched. */
-export function replace_translation(
-	doc: Document,
-	node_id: string,
-	property_id: string,
-	payload: TranslationPayload
-) {
-	const replacement = prepare_translation(doc, node_id, property_id, payload);
-	Object.assign(doc.nodes, replacement.nodes);
-	remove_unreferenced(doc, replacement.removed_ids);
-}
-
 /** Compare structure independently of text and property-owned attachment IDs. */
 export function document_structure(doc: Document) {
 	const copy = structuredClone(doc);

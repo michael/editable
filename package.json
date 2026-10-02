@@ -5,7 +5,6 @@
 	"packageManager": "pnpm@12.8.1",
 	"type": "module",
 	"imports": {
-		"#lib": "./src/lib/index.js",
 		"#lib/*": "./src/lib/*",
 		"#app/*": "./src/app/*"
 	},

@@ -5,12 +5,8 @@ import {
 } from './document_links.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Document } from 'svedit';
-import {
-	document_structure,
-	normalized_payload,
-	replace_translation,
-	property_payload
-} from './translations.js';
+import { document_structure, normalized_payload, property_payload } from './translations.js';
+import { replace_translation } from './test_helpers/translations.js';
 import { language_href, parse_languages } from './languages.js';
 import * as id_generator from './nanoid.js';
 

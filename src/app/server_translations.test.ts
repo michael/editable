@@ -43,12 +43,8 @@ import {
 	save_translated_document,
 	translated_document
 } from './server_translations.js';
-import {
-	property_payload,
-	replace_translation,
-	translation_properties,
-	type TranslationMap
-} from './translations.js';
+import { property_payload, translation_properties, type TranslationMap } from './translations.js';
+import { replace_translation } from './test_helpers/translations.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { referenced_assets } from '../../scripts/asset-references.js';
 
