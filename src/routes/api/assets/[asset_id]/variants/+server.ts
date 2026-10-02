@@ -1,5 +1,5 @@
 import { unlink } from 'node:fs/promises';
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { ASSET_ID_REGEX, VARIANT_WIDTHS_SET } from '#app/config.js';
 import { asset_exists, write_variant, variant_path } from '#app/services.js';
 import { require_admin_session } from '#lib/server/auth.js';
@@ -63,5 +63,5 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	}
 
 	const variant = `w${width}.webp`;
-	return json({ ok: true, variant });
+	return Response.json({ ok: true, variant });
 };

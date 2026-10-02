@@ -1,5 +1,5 @@
 import { unlink } from 'node:fs/promises';
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { ASSET_ID_REGEX } from '#app/config.js';
 import { asset_exists, poster_path, write_poster } from '#app/services.js';
 import { require_admin_session } from '#lib/server/auth.js';
@@ -43,5 +43,5 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		error(400, 'Empty poster data');
 	}
 
-	return json({ ok: true, poster: 'poster.webp' });
+	return Response.json({ ok: true, poster: 'poster.webp' });
 };

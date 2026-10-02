@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { UPLOAD_MIME_TO_EXT } from '#app/config.js';
 import { asset_exists, write_asset, delete_asset } from '#app/services.js';
 import { require_admin_session } from '#lib/server/auth.js';
@@ -41,7 +41,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			}
 		}
 
-		return json({ asset_id, width, height, deduplicated: true });
+		return Response.json({ asset_id, width, height, deduplicated: true });
 	}
 
 	if (!request.body) {
@@ -69,5 +69,5 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		error(400, 'Content does not match X-Content-Hash');
 	}
 
-	return json({ asset_id, width, height, deduplicated: false });
+	return Response.json({ asset_id, width, height, deduplicated: false });
 };
