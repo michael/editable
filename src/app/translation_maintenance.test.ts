@@ -142,12 +142,12 @@ it('lists and purges a custom local data directory while backing up its unpurged
 			},
 			encoding: 'utf8' as const
 		};
-		const listing = execFileSync('bash', [script_path, 'translations', '--local'], options);
+		const listing = execFileSync('bash', [script_path, 'translations'], options);
 		expect(listing).toContain('Local translations');
 		expect(listing).toContain('es: 1 document(s)');
 		const result = execFileSync(
 			'bash',
-			[script_path, 'purge-translations', '--local', 'es', '--yes'],
+			[script_path, 'purge-translations', 'es', '--yes'],
 			options
 		);
 		expect(result).toContain('OK: purged es translations from 1 document(s)');
