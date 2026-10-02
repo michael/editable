@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { get_app_context } from '#app/app_context.js';
+	import { page } from '$app/state';
+	import { absolute_page_url, language_alternates } from '#app/seo.js';
 	import type { DocumentPath } from 'svedit';
 	import type { Nodes } from '#app/document_schema.js';
 	import { TextProperty, Node, NodeArrayProperty } from 'svedit';
@@ -25,9 +27,14 @@
 			: page_image?.src?.toLowerCase().endsWith('.svg')
 	);
 	let canonical_url = $derived(
-		app.origin && !app.is_new
-			? `${app.origin}${app.canonical_path ?? (app.slug ? `/${app.slug}` : '/')}`
+		app.origin && !app.is_new && page.status < 400
+			? absolute_page_url(app.canonical_path ?? (app.slug ? `/${app.slug}` : '/'), app.origin)
 			: null
+	);
+	let alternates = $derived(
+		canonical_url && app.can_edit
+			? language_alternates(new URL(canonical_url).pathname, app.languages)
+			: []
 	);
 	let social_image = $derived(get_social_image(head_metadata.preview_media_node));
 	let social_image_url = $derived(social_image ? `${app.origin || ''}${social_image.url}` : null);
@@ -114,6 +121,13 @@
 	{#if canonical_url}
 		<link rel="canonical" href={canonical_url} />
 		<meta property="og:url" content={canonical_url} />
+		{#each alternates as alternate (alternate.language)}
+			<link
+				rel="alternate"
+				hreflang={alternate.language}
+				href={absolute_page_url(alternate.path, app.origin!)}
+			/>
+		{/each}
 	{/if}
 	<meta name="twitter:card" content={social_image_url ? 'summary_large_image' : 'summary'} />
 	<meta name="twitter:title" content={page_title} />

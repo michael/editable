@@ -85,7 +85,7 @@
 		"mediabunny": "^1.61.0",
 		"nanoid": "^6.0.1",
 		"slugify": "^1.6.9",
-		"svedit": "^0.15.0",
+		"svedit": "^0.15.1",
 		"valibot": "^1.5.0"
 	}
 }
