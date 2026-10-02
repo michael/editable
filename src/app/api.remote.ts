@@ -99,6 +99,7 @@ export type PageSummary = {
 	page_href: string;
 	slug: string;
 	shadowed_by_markdown: boolean;
+	shadowed_by_language: boolean;
 	created_at: string | null;
 	updated_at: string | null;
 };
@@ -119,6 +120,7 @@ export type PageTreeNode = {
 	page_href: string;
 	slug: string;
 	shadowed_by_markdown: boolean;
+	shadowed_by_language: boolean;
 	created_at: string | null;
 	updated_at: string | null;
 	children: PageTreeNode[];
@@ -428,6 +430,7 @@ function summarize_page_document(page_doc: PageDocumentRecord): PageSummary {
 		page_href: active_slug ? `/${active_slug}` : '/',
 		slug: active_slug ?? '',
 		shadowed_by_markdown: active_slug ? is_reserved_markdown_slug(active_slug) : false,
+		shadowed_by_language: active_slug ? is_reserved_language_slug(active_slug, languages) : false,
 		created_at: page_doc.created_at ?? null,
 		updated_at: page_doc.updated_at ?? null
 	};

@@ -14,6 +14,7 @@ function build_tree(root_ids: string[], links: Record<string, string[]>) {
 				page_href: `/${document_id}`,
 				slug: document_id,
 				shadowed_by_markdown: false,
+				shadowed_by_language: false,
 				created_at: null,
 				updated_at: null
 			}

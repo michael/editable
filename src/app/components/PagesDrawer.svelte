@@ -752,7 +752,7 @@ Updated: ${updated_at_label}`;
 								</div>
 
 								<div class="tree-row-meta">
-									{#if node.shadowed_by_markdown}
+									{#if node.shadowed_by_markdown || node.shadowed_by_language}
 										<button
 											type="button"
 											class="unlisted-badge shadowed-badge"
@@ -762,7 +762,8 @@ Updated: ${updated_at_label}`;
 												open_shadowed_info(event, {
 													document_id: node.document_id,
 													title: node.title,
-													slug: node.slug
+													slug: node.slug,
+													shadowed_by_language: node.shadowed_by_language
 												})}
 										>
 											URL TAKEN
@@ -936,11 +937,22 @@ Updated: ${updated_at_label}`;
 >
 	{#if shadowed_info_item}
 		<div class="confirm-panel unlisted-info-panel">
-			<h3 class="confirm-title">URL taken by a markdown page</h3>
+			<h3 class="confirm-title">
+				URL taken by {shadowed_info_item.shadowed_by_language
+					? 'a language homepage'
+					: 'a markdown page'}
+			</h3>
 			<p class="confirm-message">
-				A markdown page from the repository is served at <code>/{shadowed_info_item.slug}</code>, so
-				this page cannot be reached. Give it a different Page URL to make it visible again — or ask
-				a developer to remove that markdown page.
+				{#if shadowed_info_item.shadowed_by_language}
+					The homepage for language <code>{shadowed_info_item.slug}</code> is served at
+					<code>/{shadowed_info_item.slug}</code>, so this page cannot be reached at its current
+					URL. Use this page's actions menu to give it a different Page URL. Its content is still
+					stored.
+				{:else}
+					A markdown page from the repository is served at <code>/{shadowed_info_item.slug}</code>,
+					so this page cannot be reached. Give it a different Page URL to make it visible again — or
+					ask a developer to remove that markdown page.
+				{/if}
 			</p>
 			<div class="confirm-actions">
 				<button
