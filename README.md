@@ -340,6 +340,8 @@ Editable's content model defines the nodes and properties available to pages and
 
 Documents are graphs of nodes stored by id. Each node has an `id`, a `type`, and type-specific properties. A few naming conventions hold throughout: `content` is the string payload of text properties, `body` holds authored nested content, `items` holds repeated structured children, and `label`/`title`/`description`/`meta` are text properties with semantic meaning.
 
+Nodes have a single owner within their document: one node field, one entry in a node array, or one mark or annotation range. Reusing content means copying it with a fresh id, not referencing the same node twice. Navigation and footer are shared as whole documents, while their children retain this ownership rule. Image and video nodes can use the same asset file without sharing node identity. Ordinary media edits and same-type file replacement keep the node id; switching between image and video or pasting a copied node creates a new id. Splitting or duplicating formatted text must give each new mark or annotation occurrence an independent attachment node, so editing one link does not change another.
+
 A **text property** value looks like this in a document. Marks and annotations reference separate nodes by id:
 
 ```js
@@ -1152,6 +1154,8 @@ LANGUAGES="en,de"
 ```
 
 The first language is the original. Additional languages appear in the navigation switcher. Translated pages use URLs such as `/de/about` and `/de` for the homepage. The original language keeps unprefixed URLs. Choose a language before entering edit mode, edit its text or media, and save. Missing translations show the original content.
+
+Secondary-language prefixes are reserved Page URLs: with `LANGUAGES=en,de`, a new page titled “De” receives `/de-2`, and renaming a page to `/de` is rejected. Before enabling another language, rename any existing page using its prefix and update its links. Startup logs warn about conflicting pages, historical redirects, and configured markdown paths. Existing data is preserved; a historical redirect at `/de` cannot work while `/de` serves the German homepage.
 
 Text, including page titles, descriptions, and shared navigation/footer labels, can be translated. Media properties allowing images and/or videos can also be replaced, with separate alt text and crop settings per language. Media uploads use the same asset storage as the original language. Structure, layouts, and other ordinary string properties remain shared; make those changes in the original language. Structural controls are disabled in translation mode.
 

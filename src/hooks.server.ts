@@ -48,6 +48,9 @@ export const init: ServerInit = async () => {
 
 		const { warn_about_shadowed_pages } = await import('#app/markdown/shadowed.js');
 		warn_about_shadowed_pages();
+
+		const { warn_about_language_slug_collisions } = await import('#app/server_language_slugs.js');
+		warn_about_language_slug_collisions();
 	}
 };
 

@@ -39,6 +39,9 @@ Svedit is a Svelte 5 rich content editor built around a graph-based document mod
 
 - `Session` owns document state, transactions, and history; `Transaction` performs atomic changes.
 - Documents are graphs of nodes with properties and references.
+- Within a document, nodes (including image, video, mark, and annotation nodes) have exactly one owning `node` field, `node_array` entry, mark range, or annotation range. Do not reference the same node from multiple fields, array entries, or ranges; copy it with a fresh id instead. Image/video edits and same-type file replacement preserve the owned node's id; changing type or pasting a copied node creates a new id.
+- Navigation and footer are shared as separate documents referenced by pages; their child nodes still follow the single-owner rule. Multiple image/video nodes may use the same asset `src`.
+- Each text mark or annotation range owns its attachment node. Splitting or duplicating a range must create an independent attachment node for the additional occurrence, so editing a link in one place cannot change another.
 - Selection supports text, node, and property selections and maps between the model and the DOM.
 - `Svedit.svelte` manages the editor and selection; `NodeArrayProperty.svelte` renders node sequences; `TextProperty.svelte` renders editable text with marks and annotations.
 

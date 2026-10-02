@@ -3,7 +3,7 @@ import { translation_payloads } from '../lib/asset_references.js';
 import { languages, request_language } from './server_languages.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { translated_href, parse_internal_page_href } from './document_links.js';
-import { language_path } from './languages.js';
+import { language_path, is_reserved_language_slug } from './languages.js';
 import { getRequestEvent, query, command } from '$app/server';
 import {
 	cleanup_translations,
@@ -294,7 +294,8 @@ function create_unique_slug(base_slug: string): string {
 
 	while (true) {
 		const row = slug_exists_stmt.get(slug) as unknown as { document_id: string } | undefined;
-		if (!row && !is_reserved_markdown_slug(slug)) return slug;
+		if (!row && !is_reserved_markdown_slug(slug) && !is_reserved_language_slug(slug, languages))
+			return slug;
 		slug = `${base_slug}-${suffix}`;
 		suffix += 1;
 	}
@@ -1067,6 +1068,13 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 
 	if (!normalized_slug) {
 		return create_page_url_error_result('page_url_empty', 'Page URL cannot be empty');
+	}
+
+	if (is_reserved_language_slug(normalized_slug, languages)) {
+		return create_page_url_error_result(
+			'page_url_reserved',
+			'That Page URL is reserved by a language homepage and cannot be used.'
+		);
 	}
 
 	if (is_reserved_markdown_slug(normalized_slug)) {

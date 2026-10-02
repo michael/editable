@@ -18,6 +18,11 @@ export function select_language(languages: string[], requested: string | null | 
 	return languages.includes(requested ?? '') ? requested! : (languages[0] ?? '');
 }
 
+/** Secondary languages own their root URL instead of a page slug. */
+export function is_reserved_language_slug(slug: string, languages: string[]) {
+	return languages.slice(1).includes(slug);
+}
+
 /** Resolve only configured secondary-language prefixes. */
 export function language_path(pathname: string, languages: string[]) {
 	const prefix = pathname.split('/')[1];
