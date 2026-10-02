@@ -17,16 +17,8 @@
 // Do not import this module from client code. Use `#app/config.js` for universal
 // constants instead.
 import readme_md from '../../README.md?raw';
-import product_md from '../../PRODUCT.md?raw';
 
 export const MARKDOWN_SOURCES = [
 	// The developer manual is the repository README.
 	{ markdown: readme_md, source: 'README.md', pathname: '/manual', toc: true },
-	// Product overview and audience use cases.
-	{
-		markdown: product_md,
-		source: 'PRODUCT.md',
-		pathname: '/product',
-		toc: true
-	}
 ];
