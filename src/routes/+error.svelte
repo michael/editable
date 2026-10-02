@@ -21,7 +21,7 @@
 	slug={null}
 	can_edit={false}
 >
-	<main
+	<div
 		class="mx-auto flex min-h-[60vh] w-full max-w-7xl items-center justify-center px-5 py-24 sm:px-7 sm:py-32"
 	>
 		<div class="max-w-2xl space-y-5 text-center text-balance">
@@ -41,5 +41,5 @@
 				Back home
 			</a>
 		</div>
-	</main>
+	</div>
 </App>

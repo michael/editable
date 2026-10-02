@@ -6,12 +6,10 @@
 		layout viewport when the virtual keyboard opens, so a fixed bottom toolbar
 		stays above it. iOS Safari ignores this and keeps the layout viewport at full
 		height, which the visualViewport follower in Toolbar.svelte compensates for.
-		maximum-scale=1 suppresses iOS input auto-zoom. It also disables pinch-zoom on
-		browsers that honor it (iOS ignores it, Android Chrome does not), so drop it
-		if that tradeoff is not wanted — it is unrelated to the keyboard handling. -->
+		Do not restrict page zoom; the keyboard handling does not require it. -->
 		<meta
 			name="viewport"
-			content="width=device-width, initial-scale=1, maximum-scale=1, interactive-widget=resizes-content"
+			content="width=device-width, initial-scale=1, interactive-widget=resizes-content"
 		/>
 
 		%sveltekit.head%
