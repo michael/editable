@@ -193,6 +193,21 @@ export const document_config = {
 			h5: { type: 'heading_4', text_property: 'content' },
 			h6: { type: 'heading_4', text_property: 'content' }
 		},
+		lists: {
+			ul: {
+				type: 'list',
+				children_property: 'list_items',
+				item: { type: 'list_item', text_property: 'content' },
+				properties: { layout: 'square' }
+			},
+			ol: {
+				type: 'list',
+				children_property: 'list_items',
+				item: { type: 'list_item', text_property: 'content' },
+				properties: { layout: 'decimal' }
+			}
+		},
+		wrapper: { type: 'prose', children_property: 'body' },
 		marks: {
 			bold: { type: 'strong' },
 			link: ({ href }) => ({ type: 'link', properties: { href, target: '_self' } })
