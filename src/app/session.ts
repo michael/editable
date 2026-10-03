@@ -1,3 +1,4 @@
+import { normalize_code_blocks } from './normalize_code_blocks.js';
 import { is_media_selection } from './media.js';
 import type { AppContext } from './app_context.js';
 import { Session, fill_document_defaults } from 'svedit';
@@ -13,7 +14,10 @@ export function create_session(
 	doc: Document = default_site_document,
 	app: Pick<AppContext, 'allow_structural_changes'> = { allow_structural_changes: true }
 ): AppSession {
-	const document_with_defaults = fill_document_defaults(doc, document_schema);
+	const document_with_defaults = fill_document_defaults(
+		normalize_code_blocks(doc),
+		document_schema
+	);
 	return new Session(document_schema, document_with_defaults, {
 		...document_config,
 		create_commands_and_keymap: (context) =>

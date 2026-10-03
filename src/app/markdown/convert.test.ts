@@ -43,8 +43,22 @@ describe('convert_markdown', () => {
 	it('wraps text blocks in prose and splits prose runs at code blocks', () => {
 		const doc = convert('One.\n\n```\ncode\n```\n\nTwo.');
 		const body = page_body_nodes(doc);
-		expect(body.map((node) => node.type)).toEqual(['prose', 'preformatted', 'prose']);
+		expect(body.map((node) => node.type)).toEqual(['prose', 'code_block', 'prose']);
 		expect(body[1].content.content).toBe('code');
+		expect(body[1].layout).toBe('plain');
+	});
+
+	it.each([
+		['js', 'javascript'],
+		['ts', 'typescript'],
+		['jsx', 'tsx'],
+		['svelte', 'svelte'],
+		['yml', 'yaml'],
+		['unknown', 'plain']
+	])('imports a %s fence as %s', (language, layout) => {
+		const doc = convert('```' + language + '\nconst value = 1;\n```');
+		expect(page_body_nodes(doc)[0]).toMatchObject({ type: 'code_block', layout });
+		expect(() => compose_markdown_document(doc, SHARED_DOCUMENTS)).not.toThrow();
 	});
 
 	it('maps markdown headings 1-4 directly to Editable headings 1-4', () => {
@@ -355,7 +369,7 @@ describe('convert_markdown', () => {
 			expect(page.body.nodes.map((id) => doc.nodes[id].type)).toEqual([
 				'prose',
 				'prose',
-				'preformatted',
+				'code_block',
 				'prose',
 				'prose'
 			]);

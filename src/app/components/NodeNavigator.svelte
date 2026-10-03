@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { code_language_label } from '#app/code_languages.js';
 	import { serialize_path } from 'svedit';
 	import { get_selection_node_ancestors } from '#app/app_utils.js';
 	import { tooltip } from '#app/tooltip.js';
@@ -39,9 +40,13 @@
 		return capitalize ? words.charAt(0).toUpperCase() + words.slice(1) : words;
 	}
 
+	function get_layout_label(node_type, layout) {
+		return node_type === 'code_block' ? code_language_label(layout) : humanize_node_id(layout);
+	}
+
 	function get_variant_label(node_type, layout) {
 		const type_label = humanize_node_id(node_type, true);
-		const layout_label = humanize_node_id(layout);
+		const layout_label = get_layout_label(node_type, layout);
 		return layout_label ? `${type_label} (${layout_label})` : type_label;
 	}
 
@@ -86,7 +91,7 @@
 			current_value,
 			label: get_variant_label(ancestor.node.type, current_layout),
 			type_label: humanize_node_id(ancestor.node.type, true),
-			layout_label: humanize_node_id(current_layout),
+			layout_label: get_layout_label(ancestor.node.type, current_layout),
 			groups,
 			option_count: groups.reduce((count, group) => count + group.options.length, 0)
 		};

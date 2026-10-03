@@ -54,7 +54,7 @@ import FooterLink from './components/FooterLink.svelte';
 import Prose from './components/Prose.svelte';
 import ProseGrid from './components/ProseGrid.svelte';
 import ProseGridItem from './components/ProseGridItem.svelte';
-import Preformatted from './components/Preformatted.svelte';
+import CodeBlock from './components/CodeBlock.svelte';
 import Paragraph from './components/Paragraph.svelte';
 import ParagraphLG from './components/ParagraphLG.svelte';
 import ParagraphXL from './components/ParagraphXL.svelte';
@@ -248,7 +248,7 @@ export const document_config = {
 		prose: Prose,
 		prose_grid: ProseGrid,
 		prose_grid_item: ProseGridItem,
-		preformatted: Preformatted,
+		code_block: CodeBlock,
 		paragraph: Paragraph,
 		paragraph_lg: ParagraphLG,
 		paragraph_xl: ParagraphXL,
@@ -368,7 +368,7 @@ export const document_config = {
 		heading_2: (node, session) => `<h2>${export_text_html(node.content, session)}</h2>\n`,
 		heading_3: (node, session) => `<h3>${export_text_html(node.content, session)}</h3>\n`,
 		heading_4: (node, session) => `<h4>${export_text_html(node.content, session)}</h4>\n`,
-		preformatted: (node) => `<pre>${escape_html(node.content.content)}</pre>\n`,
+		code_block: (node) => `<pre>${escape_html(node.content.content)}</pre>\n`,
 		list: (node, session, html_exporters) => {
 			const tag = ['decimal', 'lower-alpha'].includes(node.layout) ? 'ol' : 'ul';
 			const attributes = node.layout === 'lower-alpha' ? ' type="a"' : '';
@@ -590,14 +590,15 @@ export const document_config = {
 		heading_4: function (tr, content = { content: '', marks: [], annotations: [] }) {
 			insert_text_node(tr, 'heading_4', content, 'regular');
 		},
-		preformatted: function (tr, content = { content: '', marks: [], annotations: [] }) {
-			const new_preformatted = {
+		code_block: function (tr, content = { content: '', marks: [], annotations: [] }) {
+			const new_code_block = {
 				id: nanoid(),
-				type: 'preformatted',
+				type: 'code_block',
+				layout: 'plain',
 				content: { ...content, marks: [], annotations: [] }
 			};
-			tr.create(new_preformatted);
-			tr.insert_nodes([new_preformatted.id]);
+			tr.create(new_code_block);
+			tr.insert_nodes([new_code_block.id]);
 			tr.set_selection({
 				type: 'text',
 				path: [...tr.selection.path, tr.selection.focus_offset - 1, 'content'],
