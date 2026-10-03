@@ -1,5 +1,9 @@
 import { tokenize_code, code_token_color } from './code_highlighting.js';
 
+// Bound main-thread tokenization and native range allocation while typing.
+export const max_editable_code_length = 50_000;
+export const max_editable_code_ranges = 4_000;
+
 type HighlightOptions = {
 	content: string;
 	language: string;
@@ -32,11 +36,26 @@ export function highlight_editable_code(element: HTMLElement, options: Highlight
 		owned_ranges.clear();
 	}
 
+	function can_highlight(options: HighlightOptions) {
+		return (
+			options.enabled &&
+			!options.composing &&
+			options.content.length > 0 &&
+			options.content.length <= max_editable_code_length &&
+			options.language !== 'plain'
+		);
+	}
+
+	function cancel_paint() {
+		if (frame !== null) view.cancelAnimationFrame(frame);
+		frame = null;
+	}
+
 	function paint() {
 		frame = null;
 		clear_ranges();
-		const { content, language, enabled, composing } = current_options;
-		if (!enabled || composing || !content || language === 'plain') return;
+		const { content, language } = current_options;
+		if (!can_highlight(current_options)) return;
 		const text_element = element.querySelector('[data-type="text"]');
 		if (!text_element) return;
 
@@ -53,6 +72,9 @@ export function highlight_editable_code(element: HTMLElement, options: Highlight
 		if (text_content !== content) return;
 		if (cached_content !== content || cached_language !== language) {
 			cached_tokens = tokenize_code(content, language);
+			if (cached_tokens && cached_tokens.tokens.length / 3 > max_editable_code_ranges) {
+				cached_tokens = null;
+			}
 			cached_content = content;
 			cached_language = language;
 		}
@@ -91,7 +113,15 @@ export function highlight_editable_code(element: HTMLElement, options: Highlight
 	}
 
 	function schedule_paint() {
-		if (!destroyed && frame === null) frame = view.requestAnimationFrame(paint);
+		if (destroyed || !can_highlight(current_options)) return;
+		// An over-budget result stays plain until its content or language changes.
+		if (
+			cached_content === current_options.content &&
+			cached_language === current_options.language &&
+			!cached_tokens
+		)
+			return;
+		if (frame === null) frame = view.requestAnimationFrame(paint);
 	}
 
 	// Svedit can split text nodes for an unfocused selection or replace them after undo.
@@ -101,14 +131,26 @@ export function highlight_editable_code(element: HTMLElement, options: Highlight
 
 	return {
 		update(next_options: HighlightOptions) {
+			const changed =
+				next_options.content !== current_options.content ||
+				next_options.language !== current_options.language ||
+				next_options.enabled !== current_options.enabled ||
+				next_options.composing !== current_options.composing;
 			current_options = next_options;
-			if (!next_options.enabled || next_options.composing) clear_ranges();
-			schedule_paint();
+			if (!can_highlight(next_options)) {
+				cancel_paint();
+				clear_ranges();
+				cached_tokens = null;
+				cached_content = null;
+				cached_language = null;
+			} else if (changed) {
+				schedule_paint();
+			}
 		},
 		destroy() {
 			destroyed = true;
 			observer.disconnect();
-			if (frame !== null) view.cancelAnimationFrame(frame);
+			cancel_paint();
 			clear_ranges();
 		}
 	};

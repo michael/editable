@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Window } from 'happy-dom';
-import { highlight_editable_code } from './highlight_editable_code.js';
+import {
+	highlight_editable_code,
+	max_editable_code_length,
+	max_editable_code_ranges
+} from './highlight_editable_code.js';
 import * as code_highlighting from './code_highlighting.js';
 
 const cleanups: (() => void)[] = [];
@@ -149,6 +153,68 @@ describe('editable syntax highlighting', () => {
 		second.action.destroy();
 		expect(frames.size).toBe(0);
 		expect(registry.size).toBe(0);
+	});
+
+	it('keeps existing ranges when an update has no highlighting changes', async () => {
+		const { window, mount, flush_frames, frames, ranges } = setup();
+		const { action, options } = mount('const x = 1;');
+		flush_frames();
+		await window.happyDOM.waitUntilComplete();
+		flush_frames();
+		const keyword_range = ranges('keyword')[0];
+		const create_range = vi.spyOn(window.document, 'createRange');
+		action.update({ ...options });
+		expect(frames.size).toBe(0);
+		flush_frames();
+		expect(create_range).not.toHaveBeenCalled();
+		expect(ranges('keyword')[0]).toBe(keyword_range);
+	});
+
+	it('skips tokenization for oversized source and cancels pending work after a large paste', async () => {
+		const { window, mount, flush_frames, frames, registry } = setup();
+		const tokenize = vi.spyOn(code_highlighting, 'tokenize_code');
+		const source = 'x'.repeat(max_editable_code_length + 1);
+		const large = mount(source);
+		expect(frames.size).toBe(0);
+		flush_frames();
+		expect(tokenize).not.toHaveBeenCalled();
+		expect(large.pre.textContent).toBe(source);
+		const small = mount('const x = 1;');
+		flush_frames();
+		expect(registry.size).toBeGreaterThan(0);
+		small.pre.textContent = source;
+		small.action.update({ ...small.options, content: source });
+		await window.happyDOM.waitUntilComplete();
+		expect(frames.size).toBe(0);
+		expect(registry.size).toBe(0);
+		expect(tokenize).toHaveBeenCalledTimes(1);
+	});
+
+	it('limits dense token ranges and resumes highlighting after the block is shortened', async () => {
+		const { window, mount, flush_frames, frames, registry, ranges } = setup();
+		const source = 'x=1;\n'.repeat(max_editable_code_ranges);
+		expect(source.length).toBeLessThan(max_editable_code_length);
+		expect(
+			code_highlighting.tokenize_code(source, 'javascript')!.tokens.length / 3
+		).toBeGreaterThan(max_editable_code_ranges);
+		const tokenize = vi.spyOn(code_highlighting, 'tokenize_code');
+		const create_range = vi.spyOn(window.document, 'createRange');
+		const { pre, options, action } = mount(source);
+		flush_frames();
+		expect(tokenize).toHaveBeenCalledTimes(1);
+		expect(create_range).not.toHaveBeenCalled();
+		expect(registry.size).toBe(0);
+		action.update({ ...options });
+		pre.append(window.document.createElement('br'));
+		await window.happyDOM.waitUntilComplete();
+		expect(frames.size).toBe(0);
+		expect(tokenize).toHaveBeenCalledTimes(1);
+		pre.textContent = 'const x = 1;';
+		action.update({ ...options, content: pre.textContent });
+		await window.happyDOM.waitUntilComplete();
+		flush_frames();
+		expect(ranges('keyword')[0].toString()).toBe('const');
+		expect(tokenize).toHaveBeenCalledTimes(2);
 	});
 
 	it('leaves editing alone when native highlights are unavailable', () => {
