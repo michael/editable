@@ -86,6 +86,63 @@
 	--image-border-radius: 2.2rem;
 }
 
+/* Native syntax ranges leave the editable text and selection DOM untouched. */
+.ew-code-block ::highlight(ew-code-foreground) {
+	color: var(--code-foreground);
+}
+
+.ew-code-block ::highlight(ew-code-comment) {
+	color: var(--code-comment);
+}
+
+.ew-code-block ::highlight(ew-code-deleted) {
+	color: var(--code-deleted);
+}
+
+.ew-code-block ::highlight(ew-code-inserted) {
+	color: var(--code-inserted);
+}
+
+.ew-code-block ::highlight(ew-code-escape) {
+	color: var(--code-escape);
+}
+
+.ew-code-block ::highlight(ew-code-keyword) {
+	color: var(--code-keyword);
+}
+
+.ew-code-block ::highlight(ew-code-string) {
+	color: var(--code-string);
+}
+
+.ew-code-block ::highlight(ew-code-number) {
+	color: var(--code-number);
+}
+
+.ew-code-block ::highlight(ew-code-constant) {
+	color: var(--code-constant);
+}
+
+.ew-code-block ::highlight(ew-code-function) {
+	color: var(--code-function);
+}
+
+.ew-code-block ::highlight(ew-code-property) {
+	color: var(--code-property);
+}
+
+.ew-code-block ::highlight(ew-code-type) {
+	color: var(--code-type);
+}
+
+.ew-code-block ::highlight(ew-code-attribute) {
+	color: var(--code-attribute);
+}
+
+.ew-code-block ::highlight(ew-code-punctuation) {
+	color: var(--code-punctuation);
+}
+
 /* Dim custom selection frames when the editor canvas loses focus. */
 .svedit:not(:has(.svedit-canvas:focus-within))
 	:is(.selected-node-overlay, .selected-property-overlay) {

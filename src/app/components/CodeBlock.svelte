@@ -2,6 +2,7 @@
 	import type { Nodes } from '#app/document_schema.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { Node, TextProperty } from 'svedit';
+	import { highlight_editable_code } from '#lib/highlight_editable_code.js';
 	import { highlight_code } from '#lib/code_highlighting.js';
 
 	const svedit = get_svedit_context();
@@ -26,6 +27,12 @@
 			<div
 				class="border border-(--stroke) bg-(--muted) p-3 font-mono text-sm subpixel-antialiased lg:p-6"
 				style:border-radius="var(--image-border-radius)"
+				use:highlight_editable_code={{
+					content: node.content?.content ?? '',
+					language: node.layout,
+					enabled: svedit.editable,
+					composing: svedit.is_composing
+				}}
 			>
 				{#if highlighted_segments}
 					<pre
@@ -35,6 +42,7 @@
 				{:else}
 					<TextProperty
 						tag="pre"
+						spellcheck={false}
 						class="overflow-x-auto! wrap-normal! whitespace-pre! tab-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 						path={[...path, 'content']}
 						placeholder="Code or plain text"

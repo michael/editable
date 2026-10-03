@@ -49,7 +49,7 @@ const language_factories: Record<string, LanguageFactory> = {
 
 const tokenizers = new Map<string, ReturnType<LanguageFactory>>();
 
-export function highlight_code(content: string, layout: string) {
+export function tokenize_code(content: string, layout: string) {
 	if (!Object.hasOwn(language_factories, layout)) return null;
 	const factory = language_factories[layout];
 	if (!factory) return null;
@@ -58,7 +58,13 @@ export function highlight_code(content: string, layout: string) {
 		tokenize = factory();
 		tokenizers.set(layout, tokenize);
 	}
-	const { tokens, token_types } = tokenize(content);
+	return tokenize(content);
+}
+
+export function highlight_code(content: string, layout: string) {
+	const result = tokenize_code(content, layout);
+	if (!result) return null;
+	const { tokens, token_types } = result;
 	const segments: { text: string; class_name: string }[] = [];
 	let offset = 0;
 	for (let index = 0; index < tokens.length; index += 3) {
@@ -67,7 +73,7 @@ export function highlight_code(content: string, layout: string) {
 		if (start > offset) segments.push({ text: content.slice(offset, start), class_name: '' });
 		segments.push({
 			text: content.slice(start, end),
-			class_name: token_class(token_types[tokens[index]])
+			class_name: code_token_classes[code_token_color(token_types[tokens[index]])]
 		});
 		offset = end;
 	}
@@ -75,21 +81,38 @@ export function highlight_code(content: string, layout: string) {
 	return segments;
 }
 
-function token_class(type: string): string {
-	if (/comment/.test(type)) return 'text-(--code-comment)';
-	if (/deleted|removed/.test(type)) return 'text-(--code-deleted)';
-	if (/inserted|added/.test(type)) return 'text-(--code-inserted)';
-	if (/escape/.test(type)) return 'text-(--code-escape)';
-	if (/keyword|storage|preproc/.test(type)) return 'text-(--code-keyword)';
-	if (/regex/.test(type)) return 'text-(--code-number)';
-	if (/string|template|char|code/.test(type)) return 'text-(--code-string)';
-	if (/number|boolean|changed/.test(type)) return 'text-(--code-number)';
-	if (/constant/.test(type)) return 'text-(--code-constant)';
-	if (/function|method/.test(type)) return 'text-(--code-function)';
-	if (/property|parameter|heading/.test(type)) return 'text-(--code-property)';
-	if (/type|class|enum|operator|url/.test(type)) return 'text-(--code-type)';
-	if (/tag|attribute|label/.test(type)) return 'text-(--code-attribute)';
-	if (/link/.test(type)) return 'text-(--code-function)';
-	if (/punctuation/.test(type)) return 'text-(--code-punctuation)';
-	return 'text-(--code-foreground)';
+export const code_token_classes: Record<string, string> = {
+	foreground: 'text-(--code-foreground)',
+	comment: 'text-(--code-comment)',
+	deleted: 'text-(--code-deleted)',
+	inserted: 'text-(--code-inserted)',
+	escape: 'text-(--code-escape)',
+	keyword: 'text-(--code-keyword)',
+	string: 'text-(--code-string)',
+	number: 'text-(--code-number)',
+	constant: 'text-(--code-constant)',
+	function: 'text-(--code-function)',
+	property: 'text-(--code-property)',
+	type: 'text-(--code-type)',
+	attribute: 'text-(--code-attribute)',
+	punctuation: 'text-(--code-punctuation)'
+};
+
+export function code_token_color(type: string): string {
+	if (/comment/.test(type)) return 'comment';
+	if (/deleted|removed/.test(type)) return 'deleted';
+	if (/inserted|added/.test(type)) return 'inserted';
+	if (/escape/.test(type)) return 'escape';
+	if (/keyword|storage|preproc/.test(type)) return 'keyword';
+	if (/regex/.test(type)) return 'number';
+	if (/string|template|char|code/.test(type)) return 'string';
+	if (/number|boolean|changed/.test(type)) return 'number';
+	if (/constant/.test(type)) return 'constant';
+	if (/function|method/.test(type)) return 'function';
+	if (/property|parameter|heading/.test(type)) return 'property';
+	if (/type|class|enum|operator|url/.test(type)) return 'type';
+	if (/tag|attribute|label/.test(type)) return 'attribute';
+	if (/link/.test(type)) return 'function';
+	if (/punctuation/.test(type)) return 'punctuation';
+	return 'foreground';
 }
