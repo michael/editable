@@ -1,10 +1,15 @@
-import { tokenize_code, code_token_color } from './code_highlighting.js';
+import {
+	tokenize_code,
+	code_token_color,
+	load_code_language,
+	code_language_loaded
+} from './code_highlighting.js';
 
 // Bound main-thread tokenization and native range allocation while typing.
 export const max_editable_code_length = 50_000;
 export const max_editable_code_ranges = 4_000;
 
-type HighlightOptions = {
+export type HighlightOptions = {
 	content: string;
 	language: string;
 	enabled: boolean;
@@ -24,6 +29,7 @@ export function highlight_editable_code(element: HTMLElement, options: Highlight
 	let cached_content: string | null = null;
 	let cached_language: string | null = null;
 	let cached_tokens: ReturnType<typeof tokenize_code> = null;
+	const loading_languages = new Set<string>();
 	const owned_ranges = new Map<string, Range[]>();
 
 	function clear_ranges() {
@@ -55,7 +61,7 @@ export function highlight_editable_code(element: HTMLElement, options: Highlight
 		frame = null;
 		clear_ranges();
 		const { content, language } = current_options;
-		if (!can_highlight(current_options)) return;
+		if (!can_highlight(current_options) || !code_language_loaded(language)) return;
 		const text_element = element.querySelector('[data-type="text"]');
 		if (!text_element) return;
 
@@ -114,6 +120,17 @@ export function highlight_editable_code(element: HTMLElement, options: Highlight
 
 	function schedule_paint() {
 		if (destroyed || !can_highlight(current_options)) return;
+		const language = current_options.language;
+		if (!code_language_loaded(language)) {
+			if (!loading_languages.has(language)) {
+				loading_languages.add(language);
+				void load_code_language(language).then(() => {
+					loading_languages.delete(language);
+					schedule_paint();
+				});
+			}
+			return;
+		}
 		// An over-budget result stays plain until its content or language changes.
 		if (
 			cached_content === current_options.content &&
@@ -144,6 +161,7 @@ export function highlight_editable_code(element: HTMLElement, options: Highlight
 				cached_content = null;
 				cached_language = null;
 			} else if (changed) {
+				if (next_options.language !== cached_language) clear_ranges();
 				schedule_paint();
 			}
 		},

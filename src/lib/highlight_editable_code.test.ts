@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { Window } from 'happy-dom';
 import {
 	highlight_editable_code,
@@ -6,6 +6,8 @@ import {
 	max_editable_code_ranges
 } from './highlight_editable_code.js';
 import * as code_highlighting from './code_highlighting.js';
+
+beforeAll(() => code_highlighting.load_code_language('javascript'));
 
 const cleanups: (() => void)[] = [];
 

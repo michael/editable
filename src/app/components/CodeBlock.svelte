@@ -2,7 +2,7 @@
 	import type { Nodes } from '#app/document_schema.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { Node, TextProperty } from 'svedit';
-	import { highlight_editable_code } from '#lib/highlight_editable_code.js';
+	import { lazy_highlight_editable_code as highlight_editable_code } from '#lib/lazy_highlight_editable_code.js';
 	import { highlight_code } from '#lib/code_highlighting.js';
 
 	const svedit = get_svedit_context();
@@ -11,7 +11,7 @@
 	let padding_top_generous = $derived(!section || section.is_start);
 	let padding_bottom_generous = $derived(!section || section.is_end);
 	let highlighted_segments = $derived(
-		!svedit.editable ? highlight_code(node.content?.content ?? '', node.layout) : null
+		!svedit.editable ? await highlight_code(node.content?.content ?? '', node.layout) : null
 	);
 </script>
 

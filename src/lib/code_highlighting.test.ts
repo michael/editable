@@ -5,17 +5,17 @@ import { highlight_code } from './code_highlighting.js';
 describe('code highlighting', () => {
 	it.each(code_layouts.filter((layout) => layout !== 'plain'))(
 		'preserves source text for %s',
-		(layout) => {
+		async (layout) => {
 			const source = '\tconst message = "<script>alert(1)</script> & 🦊";\r\n// comment\n';
-			const segments = highlight_code(source, layout);
+			const segments = await highlight_code(source, layout);
 			expect(segments).not.toBeNull();
 			expect(segments?.map((segment) => segment.text).join('')).toBe(source);
-			expect(highlight_code('', layout)).toEqual([]);
+			expect(await highlight_code('', layout)).toEqual([]);
 		}
 	);
 
-	it('distinguishes JavaScript keywords, strings, and comments', () => {
-		const segments = highlight_code('const value = "hello"; // comment', 'javascript')!;
+	it('distinguishes JavaScript keywords, strings, and comments', async () => {
+		const segments = (await highlight_code('const value = "hello"; // comment', 'javascript'))!;
 		expect(segments.find((segment) => segment.text === 'const')?.class_name).toBe(
 			'text-(--code-keyword)'
 		);
@@ -27,9 +27,9 @@ describe('code highlighting', () => {
 		);
 	});
 
-	it('leaves plain text and unknown languages unhighlighted', () => {
-		expect(highlight_code('const value = 1;', 'plain')).toBeNull();
-		expect(highlight_code('const value = 1;', 'unknown')).toBeNull();
-		expect(highlight_code('const value = 1;', 'constructor')).toBeNull();
+	it('leaves plain text and unknown languages unhighlighted', async () => {
+		expect(await highlight_code('const value = 1;', 'plain')).toBeNull();
+		expect(await highlight_code('const value = 1;', 'unknown')).toBeNull();
+		expect(await highlight_code('const value = 1;', 'constructor')).toBeNull();
 	});
 });

@@ -1,67 +1,62 @@
 import type { LanguageFactory } from '@twinkleplop/core';
-import { tokenize as tokenize_bash } from '@twinkleplop/bash';
-import { tokenize as tokenize_css } from '@twinkleplop/css';
-import { tokenize as tokenize_diff } from '@twinkleplop/diff';
-import { tokenize as tokenize_diff_basic } from '@twinkleplop/diff-basic';
-import { tokenize as tokenize_dotenv } from '@twinkleplop/dotenv';
-import { tokenize as tokenize_go } from '@twinkleplop/go';
-import { tokenize as tokenize_html } from '@twinkleplop/html';
-import { tokenize as tokenize_http } from '@twinkleplop/http';
-import { tokenize as tokenize_ini } from '@twinkleplop/ini';
-import { tokenize as tokenize_javascript } from '@twinkleplop/javascript';
-import { tokenize as tokenize_json } from '@twinkleplop/json';
-import { tokenize as tokenize_jsonc } from '@twinkleplop/jsonc';
-import { tokenize as tokenize_markdown } from '@twinkleplop/markdown';
-import { tokenize as tokenize_python } from '@twinkleplop/python';
-import { tokenize as tokenize_rust } from '@twinkleplop/rust';
-import { tokenize as tokenize_shellsession } from '@twinkleplop/shellsession';
-import { tokenize as tokenize_sql } from '@twinkleplop/sql';
-import { tokenize as tokenize_svelte } from '@twinkleplop/svelte';
-import { tokenize as tokenize_toml } from '@twinkleplop/toml';
-import { tokenize as tokenize_tsx } from '@twinkleplop/tsx';
-import { tokenize as tokenize_typescript } from '@twinkleplop/typescript';
-import { tokenize as tokenize_yaml } from '@twinkleplop/yaml';
 
-const language_factories: Record<string, LanguageFactory> = {
-	bash: tokenize_bash,
-	css: tokenize_css,
-	diff: tokenize_diff,
-	'diff-basic': tokenize_diff_basic,
-	dotenv: tokenize_dotenv,
-	go: tokenize_go,
-	html: tokenize_html,
-	http: tokenize_http,
-	ini: tokenize_ini,
-	javascript: tokenize_javascript,
-	json: tokenize_json,
-	jsonc: tokenize_jsonc,
-	markdown: tokenize_markdown,
-	python: tokenize_python,
-	rust: tokenize_rust,
-	shellsession: tokenize_shellsession,
-	sql: tokenize_sql,
-	svelte: tokenize_svelte,
-	toml: tokenize_toml,
-	tsx: tokenize_tsx,
-	typescript: tokenize_typescript,
-	yaml: tokenize_yaml
+const language_loaders: Record<string, () => Promise<{ tokenize: LanguageFactory }>> = {
+	bash: () => import('@twinkleplop/bash'),
+	css: () => import('@twinkleplop/css'),
+	diff: () => import('@twinkleplop/diff'),
+	'diff-basic': () => import('@twinkleplop/diff-basic'),
+	dotenv: () => import('@twinkleplop/dotenv'),
+	go: () => import('@twinkleplop/go'),
+	html: () => import('@twinkleplop/html'),
+	http: () => import('@twinkleplop/http'),
+	ini: () => import('@twinkleplop/ini'),
+	javascript: () => import('@twinkleplop/javascript'),
+	json: () => import('@twinkleplop/json'),
+	jsonc: () => import('@twinkleplop/jsonc'),
+	markdown: () => import('@twinkleplop/markdown'),
+	python: () => import('@twinkleplop/python'),
+	rust: () => import('@twinkleplop/rust'),
+	shellsession: () => import('@twinkleplop/shellsession'),
+	sql: () => import('@twinkleplop/sql'),
+	svelte: () => import('@twinkleplop/svelte'),
+	toml: () => import('@twinkleplop/toml'),
+	tsx: () => import('@twinkleplop/tsx'),
+	typescript: () => import('@twinkleplop/typescript'),
+	yaml: () => import('@twinkleplop/yaml')
 };
 
-const tokenizers = new Map<string, ReturnType<LanguageFactory>>();
+const tokenizers = new Map<string, ReturnType<LanguageFactory> | null>();
+const pending_languages = new Map<string, Promise<void>>();
 
-export function tokenize_code(content: string, layout: string) {
-	if (!Object.hasOwn(language_factories, layout)) return null;
-	const factory = language_factories[layout];
-	if (!factory) return null;
-	let tokenize = tokenizers.get(layout);
-	if (!tokenize) {
-		tokenize = factory();
-		tokenizers.set(layout, tokenize);
-	}
-	return tokenize(content);
+export function code_language_loaded(layout: string) {
+	return tokenizers.has(layout) || !Object.hasOwn(language_loaders, layout);
 }
 
-export function highlight_code(content: string, layout: string) {
+export async function load_code_language(layout: string): Promise<void> {
+	if (code_language_loaded(layout)) return;
+	let pending = pending_languages.get(layout);
+	if (!pending) {
+		pending = language_loaders[layout]()
+			.then(({ tokenize }) => {
+				tokenizers.set(layout, tokenize());
+			})
+			.catch((error) => {
+				// Keep content readable if a grammar chunk cannot be downloaded.
+				console.warn(`Could not load code language ${layout}`, error);
+				tokenizers.set(layout, null);
+			})
+			.finally(() => pending_languages.delete(layout));
+		pending_languages.set(layout, pending);
+	}
+	await pending;
+}
+
+export function tokenize_code(content: string, layout: string) {
+	return tokenizers.get(layout)?.(content) ?? null;
+}
+
+export async function highlight_code(content: string, layout: string) {
+	await load_code_language(layout);
 	const result = tokenize_code(content, layout);
 	if (!result) return null;
 	const { tokens, token_types } = result;
