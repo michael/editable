@@ -63,10 +63,84 @@
 	/* Foreground color for content displayed on the editing accent. */
 	--editing-foreground: var(--background);
 
+	/* Syntax palette from Zed's One Light theme. */
+	/* https://github.com/zed-industries/zed/blob/main/assets/themes/one/one.json */
+	--code-foreground: #242529;
+	--code-comment: #a2a3a7;
+	--code-keyword: #a449ab;
+	--code-string: #649f57;
+	--code-number: #ad6e25;
+	--code-constant: #c18401;
+	--code-function: #5b79e3;
+	--code-type: #3882b7;
+	--code-property: #d3604f;
+	--code-attribute: #5c78e2;
+	--code-punctuation: #4d4f52;
+	--code-escape: #7c7e86;
+	--code-inserted: #50a14f;
+	--code-deleted: #e45649;
+
 	/* Rounded corners for controls; reference pills and popovers derive their shape from this. */
 	--button-border-radius: 3rem;
 	/* Rounded corners for images. */
 	--image-border-radius: 2.2rem;
+}
+
+/* Native syntax ranges leave the editable text and selection DOM untouched. */
+.ew-code-block ::highlight(ew-code-foreground) {
+	color: var(--code-foreground);
+}
+
+.ew-code-block ::highlight(ew-code-comment) {
+	color: var(--code-comment);
+}
+
+.ew-code-block ::highlight(ew-code-deleted) {
+	color: var(--code-deleted);
+}
+
+.ew-code-block ::highlight(ew-code-inserted) {
+	color: var(--code-inserted);
+}
+
+.ew-code-block ::highlight(ew-code-escape) {
+	color: var(--code-escape);
+}
+
+.ew-code-block ::highlight(ew-code-keyword) {
+	color: var(--code-keyword);
+}
+
+.ew-code-block ::highlight(ew-code-string) {
+	color: var(--code-string);
+}
+
+.ew-code-block ::highlight(ew-code-number) {
+	color: var(--code-number);
+}
+
+.ew-code-block ::highlight(ew-code-constant) {
+	color: var(--code-constant);
+}
+
+.ew-code-block ::highlight(ew-code-function) {
+	color: var(--code-function);
+}
+
+.ew-code-block ::highlight(ew-code-property) {
+	color: var(--code-property);
+}
+
+.ew-code-block ::highlight(ew-code-type) {
+	color: var(--code-type);
+}
+
+.ew-code-block ::highlight(ew-code-attribute) {
+	color: var(--code-attribute);
+}
+
+.ew-code-block ::highlight(ew-code-punctuation) {
+	color: var(--code-punctuation);
 }
 
 /* Dim custom selection frames when the editor canvas loses focus. */

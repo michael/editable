@@ -375,7 +375,7 @@ page {
 	image: image         // preview image for page metadata
 	body: [prose | prose_grid | figure | captioned_figure | gallery | feature |
 	       titled_gallery | descriptive_gallery | listing | descriptive_listing |
-	       accordion | preformatted]
+	       accordion | code_block]
 	                     // supports section marks for visual grouping
 	nav: nav
 	footer: footer
@@ -422,8 +422,10 @@ heading_1_xl, heading_1 … heading_4 {
 list { layout: square | check | decimal | lower-alpha, list_items: [list_item] }
 list_item { content: text }                        // marks: strong, emphasis, code, highlight, link
 
-preformatted { content: text }                     // monospaced, preserves whitespace, no marks
+code_block { layout: plain | [language id], content: text } // monospaced, preserves whitespace, no marks
 ```
+
+Code blocks use `layout` to select a language in the toolbar variant picker. `plain` (the default) leaves highlighting off. Twinkleplop highlights selected languages in both view and edit mode. Language grammars load on demand, and the native range painter loads only when editing. View rendering awaits its grammar during server rendering and hydration; editing stays plain until the grammar loads. Editing uses native CSS highlight ranges without changing Svedit’s text DOM. Updates are batched to animation frames and pause during IME composition. Blocks exceeding 50,000 UTF-16 code units or 4,000 syntax ranges use plain text editing to keep highlighting work bounded; they still highlight in view mode. Highlighting resumes automatically when the block is shortened. Browsers without the CSS Custom Highlight API retain plain text editing. Supported language ids are listed in [src/app/code_languages.ts](src/app/code_languages.ts). Markdown imports preserve supported fence languages and common aliases such as `js`, `ts`, and `sh`. Existing preformatted nodes migrate to plain code blocks.
 
 **Media** — `image` and `video` share one shape and are interchangeable wherever media is allowed:
 
