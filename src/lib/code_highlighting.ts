@@ -76,13 +76,20 @@ export function highlight_code(content: string, layout: string) {
 }
 
 function token_class(type: string): string {
-	if (/comment/.test(type)) return 'text-(--muted-foreground)';
-	if (/deleted|removed/.test(type)) return 'text-red-700';
-	if (/inserted|added/.test(type)) return 'text-green-700';
-	if (/keyword|storage|tag|heading/.test(type)) return 'text-purple-700';
-	if (/string|template|char|regex|code/.test(type)) return 'text-green-700';
-	if (/number|boolean|constant|changed/.test(type)) return 'text-orange-700';
-	if (/function|method|url|link/.test(type)) return 'text-blue-700';
-	if (/type|class|property|attribute/.test(type)) return 'text-teal-700';
-	return '';
+	if (/comment/.test(type)) return 'text-(--code-comment)';
+	if (/deleted|removed/.test(type)) return 'text-(--code-deleted)';
+	if (/inserted|added/.test(type)) return 'text-(--code-inserted)';
+	if (/escape/.test(type)) return 'text-(--code-escape)';
+	if (/keyword|storage|preproc/.test(type)) return 'text-(--code-keyword)';
+	if (/regex/.test(type)) return 'text-(--code-number)';
+	if (/string|template|char|code/.test(type)) return 'text-(--code-string)';
+	if (/number|boolean|changed/.test(type)) return 'text-(--code-number)';
+	if (/constant/.test(type)) return 'text-(--code-constant)';
+	if (/function|method/.test(type)) return 'text-(--code-function)';
+	if (/property|parameter|heading/.test(type)) return 'text-(--code-property)';
+	if (/type|class|enum|operator|url/.test(type)) return 'text-(--code-type)';
+	if (/tag|attribute|label/.test(type)) return 'text-(--code-attribute)';
+	if (/link/.test(type)) return 'text-(--code-function)';
+	if (/punctuation/.test(type)) return 'text-(--code-punctuation)';
+	return 'text-(--code-foreground)';
 }

@@ -63,6 +63,23 @@
 	/* Foreground color for content displayed on the editing accent. */
 	--editing-foreground: var(--background);
 
+	/* Syntax palette from Zed's One Light theme. */
+	/* https://github.com/zed-industries/zed/blob/main/assets/themes/one/one.json */
+	--code-foreground: #242529;
+	--code-comment: #a2a3a7;
+	--code-keyword: #a449ab;
+	--code-string: #649f57;
+	--code-number: #ad6e25;
+	--code-constant: #c18401;
+	--code-function: #5b79e3;
+	--code-type: #3882b7;
+	--code-property: #d3604f;
+	--code-attribute: #5c78e2;
+	--code-punctuation: #4d4f52;
+	--code-escape: #7c7e86;
+	--code-inserted: #50a14f;
+	--code-deleted: #e45649;
+
 	/* Rounded corners for controls; reference pills and popovers derive their shape from this. */
 	--button-border-radius: 3rem;
 	/* Rounded corners for images. */

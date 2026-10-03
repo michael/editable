@@ -17,13 +17,13 @@ describe('code highlighting', () => {
 	it('distinguishes JavaScript keywords, strings, and comments', () => {
 		const segments = highlight_code('const value = "hello"; // comment', 'javascript')!;
 		expect(segments.find((segment) => segment.text === 'const')?.class_name).toBe(
-			'text-purple-700'
+			'text-(--code-keyword)'
 		);
 		expect(segments.find((segment) => segment.text.includes('hello'))?.class_name).toBe(
-			'text-green-700'
+			'text-(--code-string)'
 		);
 		expect(segments.find((segment) => segment.text.includes('// comment'))?.class_name).toBe(
-			'text-(--muted-foreground)'
+			'text-(--code-comment)'
 		);
 	});
 
