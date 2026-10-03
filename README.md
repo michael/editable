@@ -815,14 +815,14 @@ Without this step, the site may redirect to its `fly.dev` address and generate t
 
 ### Cache assets with Cloudflare
 
-Cloudflare provides a free CDN and reduces bandwidth and file-serving work on your web server. Delegate your domain's nameservers to Cloudflare, and enable the proxy (orange cloud) for the DNS records that point to your site. Then add a **Cache Rule** for `/assets/`:
+Cloudflare provides a free CDN and reduces bandwidth and file-serving work on your web server. Delegate your domain's nameservers to Cloudflare, and enable the proxy (orange cloud) for the DNS records that point to your site. Add a **Cache Rule** for `/assets/`:
 
 - **Match:** `URI` starts with `/assets/`
 - **Action:** `Eligible for cache`
-- **Browser TTL:** `Respect origin TTL`
-- **Edge TTL:** `Use cache-control header if present, cache request with Cloudflare's default TTL for the response status if not`
+- **Browser TTL:** `Override origin and use this TTL` — `1 year`
+- **Edge TTL:** `Override origin and use this TTL` — `1 year`
 
-Editable's content-addressed assets send `Cache-Control: public, max-age=31536000, immutable`, so long-lived caching is safe. Do not cache pages or API routes. Turn off **Email Address Obfuscation** under **Security > Settings**, and be wary of any optimization that rewrites HTML or JavaScript, since changing SvelteKit's server-rendered output can break [hydration](https://svelte.dev/docs/kit/glossary#Hydration).
+Editable's uploaded, content-addressed assets send `Cache-Control: public, max-age=31536000, immutable`, so long-lived caching is safe. Static fonts are served from `static/assets/fonts/` at `/assets/fonts/...`; change a font's filename and its `@font-face` URL in `src/app.css` whenever its contents change. This makes the one-year cache safe for fonts too. See `static/assets/fonts/README.txt`. Do not cache pages or API routes. Turn off **Email Address Obfuscation** under **Security > Settings**, and be wary of any optimization that rewrites HTML or JavaScript, since changing SvelteKit's server-rendered output can break [hydration](https://svelte.dev/docs/kit/glossary#Hydration).
 
 Check response headers: the first asset request may show `CF-Cache-Status: MISS`; later requests should show `HIT`.
 
