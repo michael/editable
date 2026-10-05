@@ -954,7 +954,7 @@ Assets are content-addressed and immutable, so they only ever need to be added, 
 
 Every push prints an undo command. To roll back:
 
-```
+```bash
 pnpm data:backups --remote # list the live site's snapshots
 pnpm data:restore <name> --remote # roll the live site back to one (name from the listing; file extension optional)
 ```
@@ -1005,7 +1005,7 @@ All automatic uploads run only in the deployed app: local development never writ
 ```sh
 pnpm data:cloud-snapshots                              # what moments can I restore to?
 pnpm data:restore-cloud                                # latest bucket state
-pnpm data:restore-cloud --at "2026-07-10T15:00:00Z" # a specific moment
+pnpm data:restore-cloud --at "2026-07-10T15:00:00Z"    # a specific moment
 ```
 
 `--at` takes the UTC timestamps exactly as `data:cloud-snapshots` shows them.
@@ -1031,7 +1031,7 @@ Then:
 ```sh
 pnpm data:cloud-snapshots                           # list restore points
 pnpm data:pull-cloud                                # latest bucket state
-pnpm data:pull-cloud --at "2026-07-10T15:00:00Z" # a specific moment
+pnpm data:pull-cloud --at "2026-07-10T15:00:00Z"    # a specific moment
 pnpm dev                                            # inspect the restored state
 ```
 
@@ -1208,7 +1208,7 @@ Every `##` heading starts a new visual section: the heading and everything up to
 
 An unordered list where every item follows the pattern below is rendered as a `descriptive_listing` (title, description, and optional meta rows) instead of a plain list — the command reference in [Backup, sync & recovery](#backup-sync--recovery) is one:
 
-```s
+```md
 - **title** — description
 - **title** — description — meta
 ```
