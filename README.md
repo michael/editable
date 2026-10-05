@@ -1151,13 +1151,13 @@ The generated `before` array overrides timestamp order for that relationship onl
 
 Publish your website in multiple languages.
 
-Enable translations with a comma-separated language list in `.env` or your deployment environment:
+`LANGUAGES` (optional) accepts a comma-separated list of BCP 47 language tags in `.env` or your deployment environment. Put the original language first; each tag is a separate content variant:
 
 ```dotenv
 LANGUAGES="en,de"
 ```
 
-The first language is the original and keeps unprefixed URLs. Additional languages appear in the navigation switcher and use URLs such as `/de/about` and `/de` for the homepage. Keep the original language first when changing the list.
+Tags may include a region, such as `en-US`, `en-GB`, or `de-AT`. The original keeps unprefixed URLs. Additional entries appear in the navigation switcher and use URLs such as `/de/about` and `/de` for the homepage.
 
 Choose a language before entering edit mode, edit its text or media, and save. Titles, descriptions, navigation, and footer labels can be translated; images and videos can have separate alt text and crop settings. Missing translations show the original content. Structure and layouts stay shared and are edited in the original language.
 
