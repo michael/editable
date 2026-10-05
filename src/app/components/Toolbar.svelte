@@ -91,7 +91,10 @@
 	// The nav isn't sticky while editing, so the toolbar shows the language being edited.
 	let editing_language_name = $derived(
 		app.languages.length > 1
-			? (new Intl.DisplayNames([app.language], { type: 'language' }).of(app.language) ??
+			? (new Intl.DisplayNames([app.language], {
+									type: 'language',
+									languageDisplay: 'standard'
+								}).of(app.language) ??
 					app.language)
 			: null
 	);

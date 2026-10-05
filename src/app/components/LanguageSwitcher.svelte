@@ -85,7 +85,7 @@
 	});
 
 	function language_name(language: string) {
-		return new Intl.DisplayNames([language], { type: 'language' }).of(language) ?? language;
+		return new Intl.DisplayNames([language], { type: 'language', languageDisplay: 'standard' }).of(language) ?? language;
 	}
 
 	async function choose(event: MouseEvent, language: string) {
