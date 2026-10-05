@@ -10,3 +10,7 @@ minimumReleaseAgeExclude:
   - '@types/node@26.6.4'
   - globals@17.13.0
   - vite@8.3.2
+
+# Tailwind pins a parser that warns about the standard ::highlight() selector.
+overrides:
+  '@tailwindcss/node>lightningcss': 1.33.0

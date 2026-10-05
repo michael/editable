@@ -1,3 +1,4 @@
+
 import { is_media_selection } from './media.js';
 import type { AppContext } from './app_context.js';
 import { Session, fill_document_defaults } from 'svedit';

@@ -7,6 +7,7 @@
 // Unsupported constructs are rejected with a source-located error instead of
 // being silently dropped or degraded.
 
+import { normalize_code_language } from '#app/code_languages.js';
 import { fromMarkdown } from 'mdast-util-from-markdown';
 import { MEDIA_DEFAULTS } from '#app/document_schema.js';
 import { document_schema } from '#app/document_schema.js';
@@ -171,7 +172,8 @@ export function convert_markdown(
 				const id = next_id(ctx);
 				ctx.nodes[id] = {
 					id,
-					type: 'preformatted',
+					type: 'code_block',
+					layout: normalize_code_language(block.lang),
 					content: { content: block.value ?? '', marks: [], annotations: [] }
 				};
 				body_ids.push(id);
@@ -292,7 +294,7 @@ function collect_plain_text(children: any[]): string {
  * (bold leading title, " — " separators, plain text otherwise). Returns the
  * listing node id, or null when the list does not match — it then converts as
  * a plain list. `descriptive_listing` lives at the page body level, next to
- * prose and preformatted blocks.
+ * prose and code blocks.
  */
 function convert_descriptive_listing(ctx: Ctx, block: any): string | null {
 	if (block.ordered === true) return null;
