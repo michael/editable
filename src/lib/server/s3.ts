@@ -6,7 +6,7 @@
 // relative paths — keep this file free of #lib imports (the alias only
 // resolves inside the bundled app).
 
-import { readFile } from 'node:fs/promises';
+import { openAsBlob } from 'node:fs';
 import { AwsClient } from 'aws4fetch';
 
 export function s3_enabled() {
@@ -57,10 +57,16 @@ export async function put_object(key: string, body: Buffer | Uint8Array) {
 }
 
 /**
- * Upload a file from disk to the bucket.
+ * Stream a file from disk to the bucket without buffering the whole file in memory.
  */
 export async function put_file(key: string, file_path: string) {
-	await put_object(key, await readFile(file_path));
+	const body = await openAsBlob(file_path);
+	const res = await aws().fetch(bucket_url(key), {
+		method: 'PUT',
+		headers: { 'Content-Length': String(body.size) },
+		body
+	});
+	if (!res.ok) throw new Error(`S3 PUT ${key}: ${res.status} ${await res.text()}`);
 }
 
 /**
