@@ -5,6 +5,10 @@ import { compose_markdown_document } from './compose.js';
 const MAPPING = { source: 'manual.md', pathname: '/manual' };
 
 const SHARED_DOCUMENTS = {
+	banner_document: {
+		document_id: 'banner_1',
+		nodes: { banner_1: { id: 'banner_1', type: 'banner' } }
+	},
 	nav_document: { document_id: 'nav_1', nodes: { nav_1: { id: 'nav_1', type: 'nav' } } },
 	footer_document: {
 		document_id: 'footer_1',
@@ -397,11 +401,13 @@ describe('convert_markdown', () => {
 });
 
 describe('compose_markdown_document', () => {
-	it('merges shared nodes and sets nav/footer references', () => {
+	it('merges shared nodes and sets banner/nav/footer references', () => {
 		const doc = compose_markdown_document(convert('# Hi'), SHARED_DOCUMENTS);
 		const page = doc.nodes[doc.document_id];
+		expect(page.banner).toBe('banner_1');
 		expect(page.nav).toBe('nav_1');
 		expect(page.footer).toBe('footer_1');
+		expect(doc.nodes.banner_1.type).toBe('banner');
 		expect(doc.nodes.nav_1.type).toBe('nav');
 		expect(doc.nodes.footer_1.type).toBe('footer');
 	});
@@ -417,6 +423,6 @@ describe('compose_markdown_document', () => {
 	});
 
 	it('fails without shared documents', () => {
-		expect(() => compose_markdown_document(convert('# Hi'), {} as any)).toThrow(/nav document/);
+		expect(() => compose_markdown_document(convert('# Hi'), {} as any)).toThrow(/banner document/);
 	});
 });

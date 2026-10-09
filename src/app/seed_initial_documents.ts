@@ -1,4 +1,5 @@
 import {
+	default_banner_document,
 	default_nav_document,
 	default_footer_document,
 	default_page_document
@@ -24,6 +25,13 @@ export default function seed_initial_documents({ db }: { db: DatabaseSync }) {
 	const now = new Date().toISOString();
 	const insert_doc = db.prepare(
 		'INSERT INTO documents (document_id, type, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+	);
+	insert_doc.run(
+		'banner_1',
+		'banner',
+		JSON.stringify(reset_media_nodes(default_banner_document)),
+		now,
+		now
 	);
 	insert_doc.run('nav_1', 'nav', JSON.stringify(reset_media_nodes(default_nav_document)), now, now);
 	insert_doc.run(

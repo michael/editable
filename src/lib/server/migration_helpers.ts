@@ -1,7 +1,7 @@
 // Content helpers for migrations, so the common transformations do not have to
 // be written as SQL against the stored document JSON.
 //
-// Every helper scans all documents (pages, nav, footer), applies the change to
+// Every helper scans all documents (pages, banner, nav, footer), applies the change to
 // matching nodes, and writes back only the documents that actually changed.
 // `updated_at` is left untouched: a migration is not a content edit.
 

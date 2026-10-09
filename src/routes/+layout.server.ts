@@ -1,6 +1,7 @@
 import { languages, request_language } from '#app/server_languages.js';
 import { ORIGIN, VERCEL } from '$app/env/private';
 import {
+	default_banner_document,
 	default_footer_document,
 	default_nav_document,
 	default_site_document
@@ -19,6 +20,7 @@ function create_not_found_document(shared_documents): Document {
 	const document_id = 'notfoundpage000000000';
 	const image_id = 'notfoundimage00000000';
 	const nodes = {
+		...structuredClone(shared_documents.banner_document.nodes),
 		...structuredClone(shared_documents.nav_document.nodes),
 		...structuredClone(shared_documents.footer_document.nodes),
 		[image_id]: { id: image_id, type: 'image' },
@@ -27,6 +29,7 @@ function create_not_found_document(shared_documents): Document {
 			type: 'page',
 			title: { content: 'Page not found', marks: [], annotations: [] },
 			image: image_id,
+			banner: shared_documents.banner_document.document_id,
 			nav: shared_documents.nav_document.document_id,
 			footer: shared_documents.footer_document.document_id
 		}
@@ -42,6 +45,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 
 	let site_metadata;
 	let not_found_document: Document = create_not_found_document({
+		banner_document: default_banner_document,
 		nav_document: default_nav_document,
 		footer_document: default_footer_document
 	});
@@ -53,6 +57,10 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		]);
 		if (language) {
 			const { translate_shared_document } = await import('#app/server_translations.js');
+			shared_documents.banner_document = translate_shared_document(
+				shared_documents.banner_document,
+				language
+			);
 			shared_documents.nav_document = translate_shared_document(
 				shared_documents.nav_document,
 				language

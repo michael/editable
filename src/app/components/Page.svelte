@@ -7,6 +7,7 @@
 	import type { Nodes } from '#app/document_schema.js';
 	import { TextProperty, Node, NodeArrayProperty } from 'svedit';
 	import Nav from './Nav.svelte';
+	import Banner from './Banner.svelte';
 	import Footer from './Footer.svelte';
 	import MediaProperty from './MediaProperty.svelte';
 	import { extract_page_metadata, get_social_image } from '#app/page_metadata.js';
@@ -146,6 +147,8 @@
 
 <Node {path}>
 	<div class="page flex min-h-screen flex-col [--row:0]">
+		<!-- The banner sits outside the sticky nav wrapper so it scrolls away in view mode. -->
+		<Banner path={[...path, 'banner']} />
 		<!-- Sticky only in view mode: Svedit's selection overlays can't sit both above
 		and below a sticky nav, so while editing it scrolls with the page. -->
 		<div
