@@ -983,24 +983,13 @@ export const save_document = command(save_document_input_schema, async (combined
 		}
 	}
 
-	const banner_root_id = page_node.banner;
-	const nav_root_id = page_node.nav;
-	const footer_root_id = page_node.footer;
+	// validate_document guarantees these required references resolve to existing nodes.
+	const shared_documents = (['banner', 'nav', 'footer'] as const).map((type) => {
+		const document_id: string = page_node[type];
+		return { document_id, type, node_ids: collect_node_ids(document_id, all_nodes) };
+	});
 
-	const banner_node_ids = banner_root_id
-		? new Set(collect_node_ids_in_order(banner_root_id, all_nodes, document_schema))
-		: new Set<string>();
-	const nav_node_ids = nav_root_id
-		? new Set(collect_node_ids_in_order(nav_root_id, all_nodes, document_schema))
-		: new Set<string>();
-	const footer_node_ids = footer_root_id
-		? new Set(collect_node_ids_in_order(footer_root_id, all_nodes, document_schema))
-		: new Set<string>();
-
-	const exclude_roots = new Set<string>();
-	if (banner_root_id) exclude_roots.add(banner_root_id);
-	if (nav_root_id) exclude_roots.add(nav_root_id);
-	if (footer_root_id) exclude_roots.add(footer_root_id);
+	const exclude_roots = new Set(shared_documents.map(({ document_id }) => document_id));
 
 	const page_node_ids = collect_node_ids(combined_doc.document_id, all_nodes, exclude_roots);
 	const page_doc = extract_document(combined_doc.document_id, page_node_ids, all_nodes);
@@ -1024,13 +1013,10 @@ export const save_document = command(save_document_input_schema, async (combined
 	const refs_before = get_referenced_asset_ids();
 
 	with_transaction(() => {
-		const existing_page_row = db
-			.prepare('SELECT created_at FROM documents WHERE document_id = ?')
-			.get(combined_doc.document_id) as unknown as DocumentRow | undefined;
+		// created_at is only written on insert; the upsert keeps the existing value on conflict.
 		const now_iso = new Date().toISOString();
-		const created_at = existing_page_row?.created_at ?? now_iso;
 
-		upsert.run(combined_doc.document_id, 'page', JSON.stringify(page_doc), created_at, now_iso);
+		upsert.run(combined_doc.document_id, 'page', JSON.stringify(page_doc), now_iso, now_iso);
 		update_document_refs(
 			combined_doc.document_id,
 			collect_document_refs(all_nodes, page_node_ids, combined_doc.document_id),
@@ -1038,56 +1024,23 @@ export const save_document = command(save_document_input_schema, async (combined
 			insert_document_ref
 		);
 
-		if (banner_root_id && banner_node_ids.size > 0) {
-			const banner_doc = extract_document(banner_root_id, banner_node_ids, all_nodes);
-			const existing_banner_row = db
-				.prepare('SELECT created_at FROM documents WHERE document_id = ?')
-				.get(banner_root_id) as unknown as DocumentRow | undefined;
-			const banner_created_at = existing_banner_row?.created_at ?? now_iso;
-			upsert.run(banner_root_id, 'banner', JSON.stringify(banner_doc), banner_created_at, now_iso);
+		for (const { document_id, type, node_ids } of shared_documents) {
+			const doc = extract_document(document_id, node_ids, all_nodes);
+			upsert.run(document_id, type, JSON.stringify(doc), now_iso, now_iso);
 			update_document_refs(
-				banner_root_id,
-				collect_document_refs(all_nodes, banner_node_ids, banner_root_id),
+				document_id,
+				collect_document_refs(all_nodes, node_ids, document_id),
 				delete_document_refs,
 				insert_document_ref
 			);
 		}
 
-		if (nav_root_id && nav_node_ids.size > 0) {
-			const nav_doc = extract_document(nav_root_id, nav_node_ids, all_nodes);
-			const existing_nav_row = db
-				.prepare('SELECT created_at FROM documents WHERE document_id = ?')
-				.get(nav_root_id) as unknown as DocumentRow | undefined;
-			const nav_created_at = existing_nav_row?.created_at ?? now_iso;
-			upsert.run(nav_root_id, 'nav', JSON.stringify(nav_doc), nav_created_at, now_iso);
-			update_document_refs(
-				nav_root_id,
-				collect_document_refs(all_nodes, nav_node_ids, nav_root_id),
-				delete_document_refs,
-				insert_document_ref
-			);
-		}
-
-		if (footer_root_id && footer_node_ids.size > 0) {
-			const footer_doc = extract_document(footer_root_id, footer_node_ids, all_nodes);
-			const existing_footer_row = db
-				.prepare('SELECT created_at FROM documents WHERE document_id = ?')
-				.get(footer_root_id) as unknown as DocumentRow | undefined;
-			const footer_created_at = existing_footer_row?.created_at ?? now_iso;
-			upsert.run(footer_root_id, 'footer', JSON.stringify(footer_doc), footer_created_at, now_iso);
-			update_document_refs(
-				footer_root_id,
-				collect_document_refs(all_nodes, footer_node_ids, footer_root_id),
-				delete_document_refs,
-				insert_document_ref
-			);
-		}
-
-		for (const id of [combined_doc.document_id, banner_root_id, nav_root_id, footer_root_id]) {
-			if (id) {
-				cleanup_translations(id);
-				rebuild_asset_refs(id);
-			}
+		for (const document_id of [
+			combined_doc.document_id,
+			...shared_documents.map(({ document_id }) => document_id)
+		]) {
+			cleanup_translations(document_id);
+			rebuild_asset_refs(document_id);
 		}
 
 		let active_slug = get_active_slug_for_document_id(combined_doc.document_id);
