@@ -81,19 +81,25 @@ export const load_page = async ({
 };
 
 /**
- * Shared nav/footer documents for composing markdown pages: the live database
- * documents when a backend exists, the default site documents on static builds.
+ * Shared banner/nav/footer documents for composing markdown pages: the live
+ * database documents when a backend exists, the default site documents on static builds.
  */
 async function get_shared_site_documents(language: string) {
 	if (VERCEL) {
-		const { default_nav_document, default_footer_document } = await import('#app/default_site.js');
-		return { nav_document: default_nav_document, footer_document: default_footer_document };
+		const { default_banner_document, default_nav_document, default_footer_document } =
+			await import('#app/default_site.js');
+		return {
+			banner_document: default_banner_document,
+			nav_document: default_nav_document,
+			footer_document: default_footer_document
+		};
 	}
 	const { get_shared_documents } = await import('#app/api.remote.js');
 	const shared = await get_shared_documents();
 	if (!language) return shared;
 	const { translate_shared_document } = await import('#app/server_translations.js');
 	return {
+		banner_document: translate_shared_document(shared.banner_document, language),
 		nav_document: translate_shared_document(shared.nav_document, language),
 		footer_document: translate_shared_document(shared.footer_document, language)
 	};

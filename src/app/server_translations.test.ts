@@ -35,6 +35,7 @@ import { db, asset_exists } from './services.js';
 import migration from './migrations/20260923T180000000Z_editable_translations.js';
 import {
 	default_page_document,
+	default_banner_document,
 	default_nav_document,
 	default_footer_document
 } from './default_site.js';
@@ -60,7 +61,12 @@ beforeEach(() => {
 		'CREATE TABLE documents (document_id TEXT PRIMARY KEY, data TEXT); CREATE TABLE asset_refs (asset_id TEXT, document_id TEXT, PRIMARY KEY (asset_id, document_id))'
 	);
 	migration.up({ db });
-	for (const doc of [default_page_document, default_nav_document, default_footer_document]) {
+	for (const doc of [
+		default_page_document,
+		default_banner_document,
+		default_nav_document,
+		default_footer_document
+	]) {
 		db.prepare('INSERT INTO documents VALUES (?, ?)').run(doc.document_id, JSON.stringify(doc));
 	}
 });

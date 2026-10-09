@@ -81,6 +81,11 @@ export const document_schema = define_document_schema({
 				mark_types: ['section'],
 				default_node_type: 'prose'
 			},
+			banner: {
+				type: 'node',
+				node_types: ['banner'],
+				default_node_type: 'banner'
+			},
 			nav: {
 				type: 'node',
 				node_types: ['nav'],
@@ -90,6 +95,17 @@ export const document_schema = define_document_schema({
 				type: 'node',
 				node_types: ['footer'],
 				default_node_type: 'footer'
+			}
+		}
+	},
+	// Site-wide announcement above the nav, hidden in view mode while its text is empty.
+	banner: {
+		kind: 'block',
+		properties: {
+			content: {
+				type: 'text',
+				mark_types: ALL_MARKS,
+				allow_newlines: false
 			}
 		}
 	},

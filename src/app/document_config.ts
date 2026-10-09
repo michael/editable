@@ -43,6 +43,7 @@ import {
 
 import Overlays from './components/Overlays.svelte';
 import Page from './components/Page.svelte';
+import Banner from './components/Banner.svelte';
 import Nav from './components/Nav.svelte';
 import NavLink from './components/NavLink.svelte';
 import NavButton from './components/NavButton.svelte';
@@ -235,6 +236,7 @@ export const document_config = {
 	// Registry of components for each node type
 	node_components: {
 		page: Page,
+		banner: Banner,
 		nav: Nav,
 		nav_link: NavLink,
 		nav_button: NavButton,

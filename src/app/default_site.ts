@@ -328,6 +328,15 @@ const FULL_DOC = {
 				annotations: []
 			}
 		},
+		banner_1: {
+			id: 'banner_1',
+			type: 'banner',
+			content: {
+				content: '',
+				marks: [],
+				annotations: []
+			}
+		},
 		footer_1: {
 			id: 'footer_1',
 			type: 'footer',
@@ -414,6 +423,7 @@ const FULL_DOC = {
 				annotations: []
 			},
 			image: 'uqHVWPtxuErWwxjaCgJMwZs',
+			banner: 'banner_1',
 			nav: 'nav_1',
 			footer: 'footer_1',
 			body: {
@@ -454,16 +464,19 @@ function extract_document(nodes, root_id) {
 
 const FILLED_DOC = fill_document_defaults(FULL_DOC, document_schema);
 const page_node = FILLED_DOC.nodes[home_page_id];
+const banner_root_id = page_node.banner; // "banner_1"
 const nav_root_id = page_node.nav; // "nav_1"
 const footer_root_id = page_node.footer; // "footer_1"
 
+export const default_banner_document = extract_document(FILLED_DOC.nodes, banner_root_id);
 export const default_nav_document = extract_document(FILLED_DOC.nodes, nav_root_id);
 export const default_footer_document = extract_document(FILLED_DOC.nodes, footer_root_id);
 
-// The default page document gets everything reachable from the home page, minus nav/footer subtrees
+// The default page document gets everything reachable from the home page, minus banner/nav/footer subtrees
+const banner_ids = new Set(Object.keys(default_banner_document.nodes));
 const nav_ids = new Set(Object.keys(default_nav_document.nodes));
 const footer_ids = new Set(Object.keys(default_footer_document.nodes));
-const exclude = new Set([...nav_ids, ...footer_ids]);
+const exclude = new Set([...banner_ids, ...nav_ids, ...footer_ids]);
 const page_nodes_list = traverse(home_page_id, document_schema, FILLED_DOC.nodes);
 const page_nodes = {};
 for (const node of page_nodes_list) {
@@ -478,6 +491,7 @@ export const default_site_document = {
 	document_id: default_page_document.document_id,
 	nodes: {
 		...default_page_document.nodes,
+		...default_banner_document.nodes,
 		...default_nav_document.nodes,
 		...default_footer_document.nodes
 	}

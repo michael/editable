@@ -340,7 +340,7 @@ Editable's content model defines the nodes and properties available to pages and
 
 Documents are graphs of nodes stored by id. Each node has an `id`, a `type`, and type-specific properties. A few naming conventions hold throughout: `content` is the string payload of text properties, `body` holds authored nested content, `items` holds repeated structured children, and `label`/`title`/`description`/`meta` are text properties with semantic meaning.
 
-Nodes have a single owner within their document: one node field, one entry in a node array, or one mark or annotation range. Reusing content means copying it with a fresh id, not referencing the same node twice. Navigation and footer are shared as whole documents, while their children retain this ownership rule. Image and video nodes can use the same asset file without sharing node identity. Ordinary media edits and same-type file replacement keep the node id; switching between image and video or pasting a copied node creates a new id. Splitting or duplicating formatted text must give each new mark or annotation occurrence an independent attachment node, so editing one link does not change another.
+Nodes have a single owner within their document: one node field, one entry in a node array, or one mark or annotation range. Reusing content means copying it with a fresh id, not referencing the same node twice. Navigation, footer, and the site banner are shared as whole documents, while their children retain this ownership rule. Image and video nodes can use the same asset file without sharing node identity. Ordinary media edits and same-type file replacement keep the node id; switching between image and video or pasting a copied node creates a new id. Splitting or duplicating formatted text must give each new mark or annotation occurrence an independent attachment node, so editing one link does not change another.
 
 A **text property** value looks like this in a document. Marks and annotations reference separate nodes by id:
 
@@ -366,7 +366,7 @@ A **node array** value holds ordered child node ids. Marks and annotations can c
 
 Notation: `text` is an editable text value (allowed marks in the comment), `[a | b]` is a node array of those types, and a bare type name is a single node reference. Layout values are app-defined string ids. `href` is a string where empty means unlinked; `target` defaults to `'_self'`.
 
-**Page and site chrome** — the document root plus the shared navigation and footer:
+**Page and site chrome** — the document root plus the shared banner, navigation, and footer:
 
 ```ts
 page {
@@ -377,9 +377,12 @@ page {
 	       titled_gallery | descriptive_gallery | listing | descriptive_listing |
 	       accordion | code_block]
 	                     // supports section marks for visual grouping
+	banner: banner
 	nav: nav
 	footer: footer
 }
+
+banner { content: text }   // single line, all marks; hidden for visitors while empty
 
 nav {
 	start_items: [nav_media | nav_link | nav_button]    // usually logo first
@@ -1089,7 +1092,7 @@ Adding a custom content type usually needs no migration because documents are st
 
 ### Content helpers
 
-Content lives as JSON inside the `documents` table, so changing a node type's shape means rewriting that JSON rather than altering a column. The helpers on the `up` context do that for you — each one scans every document (pages, nav, and footer), applies the change to nodes of the given type, and returns how many nodes it changed. Every helper takes the node type first, and where a before and after are involved, the old value comes before the new one:
+Content lives as JSON inside the `documents` table, so changing a node type's shape means rewriting that JSON rather than altering a column. The helpers on the `up` context do that for you — each one scans every document (pages, banner, nav, and footer), applies the change to nodes of the given type, and returns how many nodes it changed. Every helper takes the node type first, and where a before and after are involved, the old value comes before the new one:
 
 ```js
 export default {

@@ -383,12 +383,14 @@ function update_document_refs(
 }
 
 function get_shared_root_ids(page_doc: DocumentData): {
+	banner_root_id: string | null;
 	nav_root_id: string | null;
 	footer_root_id: string | null;
 } {
 	const page_node = page_doc.nodes[page_doc.document_id];
 
 	return {
+		banner_root_id: typeof page_node?.banner === 'string' ? page_node.banner : null,
 		nav_root_id: typeof page_node?.nav === 'string' ? page_node.nav : null,
 		footer_root_id: typeof page_node?.footer === 'string' ? page_node.footer : null
 	};
@@ -398,6 +400,11 @@ function get_combined_document(document_id: string): DocumentData {
 	const page_doc = get_doc_from_db(document_id);
 	const page_node = page_doc.nodes[page_doc.document_id];
 	const merged_nodes = { ...page_doc.nodes };
+
+	if (page_node?.banner) {
+		const banner_doc = get_doc_from_db(page_node.banner);
+		Object.assign(merged_nodes, banner_doc.nodes);
+	}
 
 	if (page_node?.nav) {
 		const nav_doc = get_doc_from_db(page_node.nav);
@@ -465,9 +472,9 @@ function build_page_browser_data(
 	const summaries_by_id = new Map(summaries.map((summary) => [summary.document_id, summary]));
 
 	const home_page_doc = home_page_id ? (page_docs_by_id.get(home_page_id) ?? null) : null;
-	const { nav_root_id, footer_root_id } = home_page_doc
+	const { banner_root_id, nav_root_id, footer_root_id } = home_page_doc
 		? get_shared_root_ids(home_page_doc)
-		: { nav_root_id: null, footer_root_id: null };
+		: { banner_root_id: null, nav_root_id: null, footer_root_id: null };
 
 	const tree_refs_by_page_id = new Map<string, string[]>();
 	for (const page_doc of page_docs) {
@@ -479,11 +486,17 @@ function build_page_browser_data(
 	}
 
 	if (home_page_id && summaries_by_id.has(home_page_id)) {
+		const banner_refs = banner_root_id ? get_outgoing_refs(banner_root_id) : [];
 		const nav_refs = nav_root_id ? get_outgoing_refs(nav_root_id) : [];
 		const footer_refs = footer_root_id ? get_outgoing_refs(footer_root_id) : [];
 		const home_body_refs = tree_refs_by_page_id.get(home_page_id) ?? [];
 
-		tree_refs_by_page_id.set(home_page_id, [...nav_refs, ...home_body_refs, ...footer_refs]);
+		tree_refs_by_page_id.set(home_page_id, [
+			...banner_refs,
+			...nav_refs,
+			...home_body_refs,
+			...footer_refs
+		]);
 	}
 
 	const referenced_page_ids = new Set([...tree_refs_by_page_id.values()].flat());
@@ -518,7 +531,7 @@ function build_page_browser_data(
 }
 
 /**
- * Get a document from the database, stitching in shared documents (nav, footer).
+ * Get a document from the database, stitching in shared documents (banner, nav, footer).
  */
 export const get_document = query(v.string(), async (slug) => {
 	const resolved = resolve_slug(slug);
@@ -597,7 +610,11 @@ export const get_shared_documents = query(v.void(), async () => {
 	}
 
 	const home_page_doc = get_doc_from_db(home_page_id);
-	const { nav_root_id, footer_root_id } = get_shared_root_ids(home_page_doc);
+	const { banner_root_id, nav_root_id, footer_root_id } = get_shared_root_ids(home_page_doc);
+
+	if (!banner_root_id) {
+		throw new Error('Home page banner document is not configured');
+	}
 
 	if (!nav_root_id) {
 		throw new Error('Home page nav document is not configured');
@@ -608,6 +625,7 @@ export const get_shared_documents = query(v.void(), async () => {
 	}
 
 	return {
+		banner_document: get_doc_from_db(banner_root_id),
 		nav_document: get_doc_from_db(nav_root_id),
 		footer_document: get_doc_from_db(footer_root_id)
 	};
@@ -686,13 +704,15 @@ export const get_sitemap_entries = query(async () => {
 	const records = db
 		.prepare(
 			`SELECT document_id, COALESCE(updated_at, created_at) AS modified,
+		 json_extract(data, '$.nodes."' || document_id || '".banner') AS banner,
 		 json_extract(data, '$.nodes."' || document_id || '".nav') AS nav,
 		 json_extract(data, '$.nodes."' || document_id || '".footer') AS footer
-		 FROM documents WHERE type IN ('page', 'nav', 'footer')`
+		 FROM documents WHERE type IN ('page', 'banner', 'nav', 'footer')`
 		)
 		.all() as {
 		document_id: string;
 		modified: string | null;
+		banner: string | null;
 		nav: string | null;
 		footer: string | null;
 	}[];
@@ -709,7 +729,9 @@ export const get_sitemap_entries = query(async () => {
 		queue.push(...page.children);
 		if (page.shadowed_by_markdown || page.shadowed_by_language) continue;
 		const record = records_by_id.get(page.document_id);
-		const ids = [page.document_id, record?.nav, record?.footer].filter((id): id is string => !!id);
+		const ids = [page.document_id, record?.banner, record?.nav, record?.footer].filter(
+			(id): id is string => !!id
+		);
 		const original_dates = ids.map((id) => records_by_id.get(id)?.modified);
 		const alternates = language_alternates(page.page_href, languages);
 		for (const language of languages.length ? languages : ['']) {
@@ -961,9 +983,13 @@ export const save_document = command(save_document_input_schema, async (combined
 		}
 	}
 
+	const banner_root_id = page_node.banner;
 	const nav_root_id = page_node.nav;
 	const footer_root_id = page_node.footer;
 
+	const banner_node_ids = banner_root_id
+		? new Set(collect_node_ids_in_order(banner_root_id, all_nodes, document_schema))
+		: new Set<string>();
 	const nav_node_ids = nav_root_id
 		? new Set(collect_node_ids_in_order(nav_root_id, all_nodes, document_schema))
 		: new Set<string>();
@@ -972,6 +998,7 @@ export const save_document = command(save_document_input_schema, async (combined
 		: new Set<string>();
 
 	const exclude_roots = new Set<string>();
+	if (banner_root_id) exclude_roots.add(banner_root_id);
 	if (nav_root_id) exclude_roots.add(nav_root_id);
 	if (footer_root_id) exclude_roots.add(footer_root_id);
 
@@ -1011,6 +1038,21 @@ export const save_document = command(save_document_input_schema, async (combined
 			insert_document_ref
 		);
 
+		if (banner_root_id && banner_node_ids.size > 0) {
+			const banner_doc = extract_document(banner_root_id, banner_node_ids, all_nodes);
+			const existing_banner_row = db
+				.prepare('SELECT created_at FROM documents WHERE document_id = ?')
+				.get(banner_root_id) as unknown as DocumentRow | undefined;
+			const banner_created_at = existing_banner_row?.created_at ?? now_iso;
+			upsert.run(banner_root_id, 'banner', JSON.stringify(banner_doc), banner_created_at, now_iso);
+			update_document_refs(
+				banner_root_id,
+				collect_document_refs(all_nodes, banner_node_ids, banner_root_id),
+				delete_document_refs,
+				insert_document_ref
+			);
+		}
+
 		if (nav_root_id && nav_node_ids.size > 0) {
 			const nav_doc = extract_document(nav_root_id, nav_node_ids, all_nodes);
 			const existing_nav_row = db
@@ -1041,7 +1083,7 @@ export const save_document = command(save_document_input_schema, async (combined
 			);
 		}
 
-		for (const id of [combined_doc.document_id, nav_root_id, footer_root_id]) {
+		for (const id of [combined_doc.document_id, banner_root_id, nav_root_id, footer_root_id]) {
 			if (id) {
 				cleanup_translations(id);
 				rebuild_asset_refs(id);
@@ -1189,8 +1231,8 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		}
 
 		const page_rows = db
-			.prepare('SELECT * FROM documents WHERE type IN (?, ?, ?) ORDER BY document_id')
-			.all('page', 'nav', 'footer') as unknown as DocumentRow[];
+			.prepare('SELECT * FROM documents WHERE type IN (?, ?, ?, ?) ORDER BY document_id')
+			.all('page', 'banner', 'nav', 'footer') as unknown as DocumentRow[];
 
 		const upsert = db.prepare(
 			'INSERT INTO documents (document_id, type, data, created_at, updated_at) VALUES(?, ?, ?, ?, ?) ON CONFLICT(document_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at'

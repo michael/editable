@@ -38,7 +38,9 @@ function load_records(document_id: string) {
 	const root = page.nodes[document_id];
 	return [
 		page,
-		...[root.nav, root.footer].filter((id): id is string => typeof id === 'string').map(read)
+		...[root.banner, root.nav, root.footer]
+			.filter((id): id is string => typeof id === 'string')
+			.map(read)
 	];
 }
 
@@ -298,7 +300,7 @@ export function cleanup_translations(document_id: string) {
 							Object.create(doc.nodes),
 							replacement.nodes
 						);
-						// Shared nav/footer references live in their own document records.
+						// Shared banner/nav/footer references live in their own document records.
 						for (const node of Object.values(replacement.nodes))
 							validate_node(node, document_schema, candidate_nodes, { require_references: false });
 						remove =

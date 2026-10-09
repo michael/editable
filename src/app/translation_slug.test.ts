@@ -4,6 +4,7 @@ import { document_schema } from './document_schema.js';
 import {
 	default_page_document,
 	default_site_document,
+	default_banner_document,
 	default_nav_document,
 	default_footer_document
 } from './default_site.js';
@@ -63,7 +64,12 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 	const insert_doc = db.prepare(
 		'INSERT INTO documents (document_id, type, data, updated_at) VALUES (?, ?, ?, ?)'
 	);
-	for (const doc of [default_page_document, default_nav_document, default_footer_document])
+	for (const doc of [
+		default_page_document,
+		default_banner_document,
+		default_nav_document,
+		default_footer_document
+	])
 		insert_doc.run(
 			doc.document_id,
 			doc.nodes[doc.document_id].type,
