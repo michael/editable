@@ -1,101 +1,107 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { MCP_API_KEY } from '$app/env/private';
+import { error } from '@sveltejs/kit';
+import * as v from 'valibot';
+import { toJsonSchema } from '@valibot/to-json-schema';
+import { MCP_API_KEY, VERCEL } from '$app/env/private';
 import type { RequestHandler } from './$types';
 
 const protocol_version = '2026-07-28';
 const legacy_protocol_version = '2025-11-25';
-const server_info = { name: 'editable-hello', version: '1.0.0' };
-const mcp_tools = [
-	{
-		name: 'hello_world',
-		description: 'Return a friendly greeting to verify the Editable MCP connection.',
-		inputSchema: {
-			type: 'object',
-			properties: { name: { type: 'string', description: 'Who to greet.' } },
-			additionalProperties: false
-		}
-	},
-	{
-		name: 'list_pages',
-		description:
-			'List site pages in the same hierarchy as Editable’s page browser. Includes linked pages nested under their first parent and unlinked pages as top-level entries. This tool is read-only.',
-		inputSchema: { type: 'object', properties: {}, additionalProperties: false }
-	},
-	{
-		name: 'read_page',
-		description:
-			'Read an existing page by page_href (use / for the home page). Returns the complete editable document JSON, including shared banner, navigation, and footer nodes, plus an updated_at token required by save_page.',
-		inputSchema: {
-			type: 'object',
-			properties: { page_href: { type: 'string', description: 'Page path, such as / or /about.' } },
-			required: ['page_href'],
-			additionalProperties: false
-		}
-	},
-	{
-		name: 'save_page',
-		description:
-			'Apply a partial document update using the same document JSON shape returned by read_page. Send document_id and nodes containing only node ids to create or change; every submitted node replaces the stored node with the same id. Omitted nodes are kept if still reachable. To delete, unlink a node from its parent and omit it; the server drops nodes no longer reachable from the page or shared-document roots. New or changed nodes must be linked from a parent (include the changed parent too), otherwise the save is rejected. Include expected_updated_at from read_page. The server merges against the latest stored document, validates the complete merged graph and ownership, and rejects stale versions or invalid changes before writing.',
-		inputSchema: {
-			type: 'object',
-			properties: {
-				document: {
-					type: 'object',
-					properties: {
-						document_id: { type: 'string' },
-						nodes: { type: 'object', additionalProperties: true }
-					},
-					required: ['document_id', 'nodes'],
-					additionalProperties: false
-				},
-				expected_updated_at: {
-					type: 'object',
-					description: 'The expected_updated_at map returned by read_page.',
-					additionalProperties: { type: ['string', 'null'] }
-				}
-			},
-			required: ['document', 'expected_updated_at'],
-			additionalProperties: false
-		}
-	}
-];
+const server_info = { name: 'editable', version: '1.0.0' };
 
-async function get_page_browser_tree() {
-	// Keep backend-only modules lazy so the static deployment does not evaluate database code.
-	const { build_page_browser_data } = await import('#app/page_browser_data.js');
-	return build_page_browser_data('/');
+type Protocol = 'modern' | 'legacy';
+
+type Tool<TInput extends v.GenericSchema = v.GenericSchema> = {
+	name: string;
+	description: string;
+	input: TInput;
+	annotations: { readOnlyHint: boolean; destructiveHint?: boolean };
+	handler: (args: v.InferOutput<TInput>) => Promise<Record<string, unknown>>;
+};
+
+function define_tool<TInput extends v.GenericSchema>(tool: Tool<TInput>): Tool {
+	return tool as unknown as Tool;
 }
 
-async function call_page_tool(name: string, args: any) {
-	const pages = await import('#app/server_mcp_pages.js');
-	if (name === 'read_page') {
-		if (typeof args?.page_href !== 'string') throw new Error('page_href must be a string.');
-		return pages.read_mcp_page(args.page_href);
+// Backend-only modules are imported lazily so the static deployment does not evaluate database code.
+const tools = [
+	define_tool({
+		name: 'list_pages',
+		description:
+			'List site pages in the same hierarchy as Editable’s page browser. Linked pages are nested under their first parent; unlinked pages are top-level entries.',
+		input: v.strictObject({}),
+		annotations: { readOnlyHint: true },
+		handler: async () => {
+			const { build_page_browser_data } = await import('#app/page_browser_data.js');
+			return build_page_browser_data('/');
+		}
+	}),
+	define_tool({
+		name: 'read_page',
+		description:
+			'Read an existing page by page_href (use / for the home page). Returns the complete editable document JSON, including shared banner, navigation, and footer nodes, plus the expected_updated_at map required by save_page.',
+		input: v.strictObject({
+			page_href: v.pipe(v.string(), v.description('Page path, such as / or /about.'))
+		}),
+		annotations: { readOnlyHint: true },
+		handler: async ({ page_href }) => {
+			const { read_mcp_page } = await import('#app/server_mcp_pages.js');
+			return read_mcp_page(page_href);
+		}
+	}),
+	define_tool({
+		name: 'save_page',
+		description:
+			'Apply a partial document update using the same document JSON shape returned by read_page. Send document_id and nodes containing only node ids to create or change; every submitted node replaces the stored node with the same id. Omitted nodes are kept if still reachable. To delete, unlink a node from its parent and omit it; the server drops nodes no longer reachable from the page or shared-document roots. New or changed nodes must be linked from a parent (include the changed parent too), otherwise the save is rejected. Changes to banner, navigation, or footer nodes affect every page. Include expected_updated_at from read_page. The server merges against the latest stored document, validates the complete merged graph and ownership, and rejects stale versions or invalid changes before writing.',
+		input: v.strictObject({
+			document: v.strictObject({
+				document_id: v.string(),
+				nodes: v.record(v.string(), v.record(v.string(), v.unknown()))
+			}),
+			expected_updated_at: v.pipe(
+				v.record(v.string(), v.nullable(v.string())),
+				v.description('The expected_updated_at map returned by read_page.')
+			)
+		}),
+		annotations: { readOnlyHint: false, destructiveHint: true },
+		handler: async ({ document, expected_updated_at }) => {
+			const { save_mcp_page } = await import('#app/server_mcp_pages.js');
+			return save_mcp_page({ ...document, expected_updated_at });
+		}
+	})
+];
+
+const tools_by_name = new Map(tools.map((tool) => [tool.name, tool]));
+
+const tool_list = tools.map(({ name, description, input, annotations }) => ({
+	name,
+	description,
+	inputSchema: toJsonSchema(input, { target: 'draft-2020-12' }),
+	annotations
+}));
+
+async function call_tool(tool: Tool, args: unknown) {
+	const parsed = v.safeParse(tool.input, args ?? {});
+	if (!parsed.success) {
+		const issues = parsed.issues.map(
+			(issue) => `${v.getDotPath(issue) ?? 'arguments'}: ${issue.message}`
+		);
+		return tool_error(`Invalid arguments. ${issues.join('; ')}`);
 	}
-	if (name === 'save_page') {
-		if (
-			!args?.document ||
-			typeof args.document.document_id !== 'string' ||
-			!args.document.nodes ||
-			typeof args.document.nodes !== 'object' ||
-			Array.isArray(args.document.nodes) ||
-			!args.expected_updated_at ||
-			typeof args.expected_updated_at !== 'object' ||
-			Array.isArray(args.expected_updated_at)
-		)
-			throw new Error(
-				'Provide document { document_id, nodes } and the expected_updated_at map from read_page.'
-			);
-		return pages.save_mcp_page({ ...args.document, expected_updated_at: args.expected_updated_at });
+	try {
+		const value = await tool.handler(parsed.output);
+		return { content: [{ type: 'text', text: JSON.stringify(value) }], structuredContent: value };
+	} catch (err) {
+		return tool_error(err instanceof Error ? err.message : String(err));
 	}
-	throw new Error(`Unknown page tool: ${name}`);
+}
+
+function tool_error(message: string) {
+	return { content: [{ type: 'text', text: message }], isError: true };
 }
 
 function json_response(body: unknown, status = 200): Response {
-	return Response.json(body, {
-		status,
-		headers: { 'Cache-Control': 'no-store' }
-	});
+	return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
 function rpc_error(id: unknown, code: number, message: string, status = 400): Response {
@@ -103,16 +109,78 @@ function rpc_error(id: unknown, code: number, message: string, status = 400): Re
 }
 
 function has_valid_bearer_token(request: Request): boolean {
-	if (!MCP_API_KEY) return false;
-	const authorization = request.headers.get('authorization') ?? '';
-	const match = /^Bearer ([^\s]+)$/i.exec(authorization);
+	const match = /^Bearer ([^\s]+)$/i.exec(request.headers.get('authorization') ?? '');
 	if (!match) return false;
 	const expected_hash = createHash('sha256').update(MCP_API_KEY).digest();
 	const actual_hash = createHash('sha256').update(match[1]).digest();
 	return timingSafeEqual(expected_hash, actual_hash);
 }
 
+/**
+ * Modern requests declare the protocol version in params._meta and mirror the
+ * method (and tool name) in headers. Legacy requests carry the version header,
+ * except initialize, which negotiates it.
+ */
+function resolve_protocol(request: Request, message: any): Protocol | Response {
+	const header_version = request.headers.get('mcp-protocol-version');
+	const meta_version = message.params?._meta?.['io.modelcontextprotocol/protocolVersion'];
+
+	if (meta_version === protocol_version) {
+		if (header_version !== protocol_version)
+			return rpc_error(message.id, -32020, 'MCP-Protocol-Version header does not match.');
+		if (request.headers.get('mcp-method') !== message.method)
+			return rpc_error(message.id, -32020, 'Mcp-Method header does not match the method.');
+		if (message.method === 'tools/call' && request.headers.get('mcp-name') !== message.params?.name)
+			return rpc_error(message.id, -32020, 'Mcp-Name header does not match the tool name.');
+		return 'modern';
+	}
+	if (message.method === 'initialize' || header_version === legacy_protocol_version)
+		return 'legacy';
+	if (!header_version)
+		return rpc_error(message.id, -32600, 'MCP-Protocol-Version header is missing.');
+	return rpc_error(
+		message.id,
+		-32010,
+		`Unsupported protocol version. Supported versions: ${protocol_version}, ${legacy_protocol_version}.`
+	);
+}
+
+async function handle_method(message: any, protocol: Protocol) {
+	const modern_meta =
+		protocol === 'modern'
+			? { resultType: 'complete', _meta: { 'io.modelcontextprotocol/serverInfo': server_info } }
+			: {};
+
+	switch (message.method) {
+		case 'initialize':
+			return {
+				protocolVersion: legacy_protocol_version,
+				capabilities: { tools: {} },
+				serverInfo: server_info
+			};
+		case 'server/discover':
+			return {
+				resultType: 'complete',
+				_meta: { 'io.modelcontextprotocol/serverInfo': server_info },
+				supportedVersions: [protocol_version, legacy_protocol_version],
+				capabilities: { tools: {} }
+			};
+		case 'ping':
+			return {};
+		case 'tools/list':
+			return { tools: tool_list, ...modern_meta };
+		case 'tools/call': {
+			const tool = tools_by_name.get(message.params?.name);
+			if (!tool) return rpc_error(message.id, -32602, `Unknown tool: ${message.params?.name}`);
+			return { ...(await call_tool(tool, message.params.arguments)), ...modern_meta };
+		}
+		default:
+			return rpc_error(message.id, -32601, `Method not found: ${message.method}`, 200);
+	}
+}
+
 export const POST: RequestHandler = async ({ request }) => {
+	if (VERCEL) error(404, 'Not found');
 	if (!MCP_API_KEY) {
 		return json_response(
 			{ error: 'The MCP endpoint is not configured. Set MCP_API_KEY on the server.' },
@@ -138,143 +206,15 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (!message || message.jsonrpc !== '2.0' || typeof message.method !== 'string') {
 		return rpc_error(message?.id, -32600, 'Invalid JSON-RPC request.');
 	}
-
-	const meta = message.params?._meta;
-	const request_version = meta?.['io.modelcontextprotocol/protocolVersion'];
-	const is_modern = request_version === protocol_version;
-	const is_legacy_init = message.method === 'initialize';
-	const is_legacy =
-		is_legacy_init ||
-		request_version === legacy_protocol_version ||
-		request.headers.get('mcp-protocol-version') === legacy_protocol_version ||
-		message.method === 'notifications/initialized';
-	if (!is_modern && !is_legacy && message.method !== 'notifications/initialized') {
-		return rpc_error(
-			message.id,
-			-32010,
-			`Unsupported protocol version. Supported versions: ${protocol_version}, ${legacy_protocol_version}.`
-		);
-	}
-	if (is_modern) {
-		if (request.headers.get('mcp-protocol-version') !== protocol_version) {
-			return rpc_error(
-				message.id,
-				-32020,
-				'MCP-Protocol-Version header does not match the supported protocol version.'
-			);
-		}
-		if (request.headers.get('mcp-method') !== message.method) {
-			return rpc_error(message.id, -32020, 'Mcp-Method header does not match the JSON-RPC method.');
-		}
-		const expected_name = message.method === 'tools/call' ? message.params?.name : undefined;
-		if (expected_name && request.headers.get('mcp-name') !== expected_name) {
-			return rpc_error(message.id, -32020, 'Mcp-Name header does not match the tool name.');
-		}
-	} else if (
-		!is_legacy_init &&
-		message.method !== 'notifications/initialized' &&
-		request.headers.get('mcp-protocol-version') !== legacy_protocol_version
-	) {
-		return rpc_error(message.id, -32600, 'MCP-Protocol-Version header is missing or invalid.');
-	}
-	if (message.id === undefined)
+	// Notifications need no response and carry no state for a stateless server.
+	if (message.id === undefined) {
 		return new Response(null, { status: 202, headers: { 'Cache-Control': 'no-store' } });
-
-	let result: Record<string, unknown>;
-	switch (message.method) {
-		case 'initialize':
-			result = {
-				protocolVersion: legacy_protocol_version,
-				capabilities: { tools: {} },
-				serverInfo: server_info
-			};
-			break;
-		case 'notifications/initialized':
-		case 'ping':
-			result = {};
-			break;
-		case 'server/discover':
-			result = {
-				resultType: 'complete',
-				supportedVersions: [protocol_version, legacy_protocol_version],
-				capabilities: { tools: {} },
-				_meta: { 'io.modelcontextprotocol/serverInfo': server_info }
-			};
-			break;
-		case 'tools/list':
-			result = {
-				tools: mcp_tools,
-				...(is_modern
-					? {
-							resultType: 'complete',
-							_meta: { 'io.modelcontextprotocol/serverInfo': server_info }
-						}
-					: {})
-			};
-			break;
-		case 'tools/call': {
-			if (message.params?.name === 'read_page' || message.params?.name === 'save_page') {
-				try {
-					const value = await call_page_tool(message.params.name, message.params.arguments ?? {});
-					result = {
-						content: [{ type: 'text', text: JSON.stringify(value, null, 2) }],
-						...(is_modern
-							? {
-									resultType: 'complete',
-									_meta: { 'io.modelcontextprotocol/serverInfo': server_info }
-								}
-							: {})
-					};
-				} catch (error) {
-					result = {
-						content: [
-							{ type: 'text', text: error instanceof Error ? error.message : String(error) }
-						],
-						isError: true,
-						...(is_modern
-							? {
-									resultType: 'complete',
-									_meta: { 'io.modelcontextprotocol/serverInfo': server_info }
-								}
-							: {})
-					};
-				}
-				break;
-			}
-			if (message.params?.name === 'list_pages') {
-				const page_tree = await get_page_browser_tree();
-				result = {
-					content: [{ type: 'text', text: JSON.stringify(page_tree, null, 2) }],
-					...(is_modern
-						? {
-								resultType: 'complete',
-								_meta: { 'io.modelcontextprotocol/serverInfo': server_info }
-							}
-						: {})
-				};
-				break;
-			}
-			if (message.params?.name !== 'hello_world') {
-				return rpc_error(message.id, -32602, `Unknown tool: ${message.params?.name ?? ''}`);
-			}
-			const name =
-				typeof message.params?.arguments?.name === 'string'
-					? message.params.arguments.name.trim() || 'world'
-					: 'world';
-			result = {
-				content: [{ type: 'text', text: `Hello, ${name}! The Editable MCP connection works.` }],
-				...(is_modern
-					? {
-							resultType: 'complete',
-							_meta: { 'io.modelcontextprotocol/serverInfo': server_info }
-						}
-					: {})
-			};
-			break;
-		}
-		default:
-			return rpc_error(message.id, -32601, `Method not found: ${message.method}`, 200);
 	}
 
+	const protocol = resolve_protocol(request, message);
+	if (protocol instanceof Response) return protocol;
+
+	const result = await handle_method(message, protocol);
+	if (result instanceof Response) return result;
 	return json_response({ jsonrpc: '2.0', id: message.id, result });
 };

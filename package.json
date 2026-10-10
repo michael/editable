@@ -103,6 +103,7 @@
 		"@twinkleplop/tsx": "^0.1.5",
 		"@twinkleplop/typescript": "^0.1.5",
 		"@twinkleplop/yaml": "^0.1.5",
+		"@valibot/to-json-schema": "^1.8.0",
 		"aws4fetch": "^1.0.20",
 		"mdast-util-from-markdown": "^2.0.3",
 		"mediabunny": "^1.61.0",
