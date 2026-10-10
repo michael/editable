@@ -68,7 +68,7 @@ url = "https://your-site.example.com/mcp"
 bearer_token_env_var = "EDITABLE_MCP_TOKEN"
 ```
 
-Reload the client and call `list_pages` to confirm the connection. The `save_page` tool edits live content, including the shared banner, navigation, and footer. Keep the key private and rotate it by replacing the server secret and the client token.
+Reload the client and call `list_pages` to confirm the connection. After updating Editable, start a new session in your MCP client so it picks up the current tool descriptions. The `save_page` tool edits live content, including the shared banner, navigation, and footer. Keep the key private and rotate it by replacing the server secret and the client token.
 
 ## Make it yours
 

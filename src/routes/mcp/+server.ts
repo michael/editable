@@ -11,7 +11,9 @@ const server_info = { name: 'editable', version: '1.0.0' };
 
 type Protocol = 'modern' | 'legacy';
 
-type Tool<TInput extends v.GenericSchema = v.GenericSchema> = {
+type ToolInput = v.StrictObjectSchema<v.ObjectEntries, undefined>;
+
+type Tool<TInput extends ToolInput = ToolInput> = {
 	name: string;
 	description: string;
 	input: TInput;
@@ -19,7 +21,7 @@ type Tool<TInput extends v.GenericSchema = v.GenericSchema> = {
 	handler: (args: v.InferOutput<TInput>) => Promise<Record<string, unknown>>;
 };
 
-function define_tool<TInput extends v.GenericSchema>(tool: Tool<TInput>): Tool {
+function define_tool<TInput extends ToolInput>(tool: Tool<TInput>): Tool {
 	return tool as unknown as Tool;
 }
 
@@ -138,7 +140,12 @@ async function call_tool(tool: Tool, args: unknown) {
 		const issues = parsed.issues.map(
 			(issue) => `${v.getDotPath(issue) ?? 'arguments'}: ${issue.message}`
 		);
-		return tool_error(`Invalid arguments. ${issues.join('; ')}`);
+		// Clients may keep an outdated tool description, so name the current arguments.
+		const names = Object.entries(tool.input.entries).map(([name, schema]) =>
+			schema.type === 'optional' ? `${name} (optional)` : name
+		);
+		const expected = names.length ? `takes ${names.join(', ')}` : 'takes no arguments';
+		return tool_error(`Invalid arguments. ${issues.join('; ')}. ${tool.name} ${expected}.`);
 	}
 	try {
 		const value = await tool.handler(parsed.output);
