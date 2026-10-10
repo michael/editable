@@ -9,17 +9,27 @@ vi.mock('$app/env/private', () => ({
 vi.mock('#lib/server/db_snapshot.js', () => ({ snapshot_if_stale: vi.fn() }));
 vi.mock('./services.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
+	const { mkdtempSync } = await import('node:fs');
+	const { tmpdir } = await import('node:os');
+	const { join } = await import('node:path');
 	const db = new DatabaseSync(':memory:');
+	const asset_dir = mkdtempSync(join(tmpdir(), 'editable-assets-'));
 	return {
 		db,
 		asset_exists: () => true,
+		asset_path: (asset_id: string) => join(asset_dir, asset_id),
+		variant_path: (asset_id: string, width: number) =>
+			join(asset_dir, asset_id.replace(/\.[^.]+$/, ''), `w${width}.webp`),
 		touch_asset: vi.fn(),
 		delete_orphaned_assets: vi.fn(),
 		with_transaction: <T>(callback: () => T) => callback()
 	};
 });
 
-import { db } from './services.js';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { asset_path, db, variant_path } from './services.js';
+import { webp_bytes } from './test_helpers/webp.js';
 import initial_schema from './migrations/20260803T131059242Z_editable_initial_schema.js';
 import translations_schema from './migrations/20260923T180000000Z_editable_translations.js';
 import {
@@ -213,4 +223,32 @@ it('reads and saves translations without structural changes', async () => {
 	// Text equal to the main language removes the translation.
 	await translate(title('About us'), saved.version);
 	expect(db.prepare('SELECT value FROM translations').all()).toEqual([]);
+});
+
+it('requires new images to match their file and have every variant', async () => {
+	const asset_id = `${'a'.repeat(64)}.webp`;
+	writeFileSync(asset_path(asset_id), webp_bytes(1000, 500));
+	const page = page_node();
+	page.body.nodes.push('figure');
+	const nodes = (width: number) => ({
+		[page_id]: page,
+		figure: { id: 'figure', type: 'figure', media: 'figure_image' },
+		figure_image: {
+			id: 'figure_image',
+			type: 'image',
+			src: asset_id,
+			mime_type: 'image/webp',
+			width,
+			height: 500
+		}
+	});
+
+	await expect(save(nodes(1000))).rejects.toThrow('is missing variants 320, 640');
+	for (const width of [320, 640]) {
+		mkdirSync(dirname(variant_path(asset_id, width)), { recursive: true });
+		writeFileSync(variant_path(asset_id, width), webp_bytes(width, width / 2));
+	}
+	await expect(save(nodes(1200))).rejects.toThrow('do not match');
+	await save(nodes(1000));
+	expect(read_mcp_page('/').document.nodes.figure_image.src).toBe(asset_id);
 });

@@ -99,6 +99,6 @@ export function create_asset_storage(config: AssetStorageConfig) {
 	return {
 		write_asset, write_variant, write_poster, asset_exists, delete_asset,
 		create_asset_read_stream, create_variant_read_stream, create_poster_read_stream,
-		asset_size, touch_asset, delete_orphaned_assets, variant_path, poster_path
+		asset_size, touch_asset, delete_orphaned_assets, asset_path, variant_path, poster_path
 	};
 }

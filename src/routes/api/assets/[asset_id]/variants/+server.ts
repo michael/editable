@@ -1,12 +1,14 @@
 import { unlink } from 'node:fs/promises';
 import { error } from '@sveltejs/kit';
+import { MCP_API_KEY } from '$app/env/private';
 import { ASSET_ID_REGEX, VARIANT_WIDTHS_SET } from '#app/config.js';
 import { asset_exists, write_variant, variant_path } from '#app/services.js';
-import { require_admin_session } from '#lib/server/auth.js';
+import { authorize_asset_upload } from '#lib/server/upload_token.js';
+import { read_webp_dimensions } from '#lib/server/webp.js';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
-	require_admin_session(locals);
+	const authorized_by = authorize_asset_upload(request, locals, MCP_API_KEY);
 
 	const { asset_id } = params;
 
@@ -60,6 +62,19 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	if (write_result.bytes_written === 0) {
 		await unlink(variant_path(asset_id, width)).catch(() => {});
 		error(400, 'Empty variant data');
+	}
+
+	if (authorized_by === 'upload_token') {
+		const actual = read_webp_dimensions(variant_path(asset_id, width));
+		if (actual?.width !== width) {
+			await unlink(variant_path(asset_id, width)).catch(() => {});
+			error(
+				400,
+				actual
+					? `X-Variant-Width (${width}) does not match the image width (${actual.width}).`
+					: 'The variant is not a valid WebP image.'
+			);
+		}
 	}
 
 	const variant = `w${width}.webp`;

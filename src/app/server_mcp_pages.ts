@@ -8,6 +8,7 @@ import { parse_internal_page_href } from './document_links.js';
 import { MEDIA_DEFAULTS, document_schema } from './document_schema.js';
 import nanoid from './nanoid.js';
 import { extract_page_metadata } from './page_metadata.js';
+import { assert_uploaded_images } from './server_mcp_images.js';
 import {
 	type DocumentData,
 	collect_node_ids,
@@ -122,14 +123,18 @@ function fill_submitted_nodes(nodes: Record<string, unknown>): Record<string, Do
 	);
 }
 
-/** Submitted nodes that end up unreachable were almost certainly meant to be linked. */
-function assert_linked(document_id: string, nodes: Record<string, DocumentNode>, ids: string[]) {
+/**
+ * Check new or changed nodes: unreachable ones were almost certainly meant to
+ * be linked, and media must already be uploaded.
+ */
+function assert_changes(document_id: string, nodes: Record<string, DocumentNode>, ids: string[]) {
 	const reachable_ids = collect_node_ids(document_id, nodes);
 	const unlinked_ids = ids.filter((id) => !reachable_ids.has(id));
 	if (unlinked_ids.length)
 		throw new Error(
 			`New or changed nodes are not linked from the page: ${unlinked_ids.join(', ')}. Add each id to its parent's node, node_array, or mark/annotation range and include the changed parent.`
 		);
+	assert_uploaded_images(ids.map((id) => nodes[id]));
 }
 
 function page_result(document_id: string, page_doc: DocumentData, version: string) {
@@ -168,7 +173,7 @@ export async function save_mcp_page(input: {
 			throw new Error(`The shared ${type} reference cannot be changed through save_page.`);
 	}
 	// Unchanged unreachable nodes are deletions from a resent document.
-	assert_linked(
+	assert_changes(
 		input.document_id,
 		nodes,
 		Object.keys(submitted_nodes).filter(
@@ -202,7 +207,7 @@ async function save_mcp_translation(input: {
 
 	const submitted_nodes = fill_submitted_nodes(input.nodes);
 	const nodes = { ...current.document.nodes, ...submitted_nodes };
-	assert_linked(
+	assert_changes(
 		document_id,
 		nodes,
 		Object.keys(submitted_nodes).filter(
@@ -270,7 +275,7 @@ export async function create_mcp_page(input: {
 	}
 
 	const nodes = { ...shared_nodes, ...submitted_nodes };
-	assert_linked(document_id, nodes, Object.keys(submitted_nodes));
+	assert_changes(document_id, nodes, Object.keys(submitted_nodes));
 
 	const { page_doc, version } = await persist_combined_page(document_id, nodes, {
 		on_write: (page_doc) =>

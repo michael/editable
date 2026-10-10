@@ -2,7 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { toJsonSchema } from '@valibot/to-json-schema';
-import { MCP_API_KEY, VERCEL } from '$app/env/private';
+import { MCP_API_KEY, ORIGIN, VERCEL } from '$app/env/private';
 import type { RequestHandler } from './$types';
 
 const protocol_version = '2026-07-28';
@@ -41,7 +41,7 @@ const value_formats = {
 	ownership:
 		'Every node has exactly one owner: one node property, node_array entry, or range. To reuse content, copy the node with a new id.',
 	media:
-		'Image and video src values must reference uploaded assets. Reuse src, width, height, and mime_type from existing media nodes; new files cannot be uploaded through MCP yet.'
+		'Image and video src values must reference uploaded assets. Reuse src, width, height, and mime_type from existing media nodes, or add a new image with prepare_image_upload. Videos cannot be uploaded through MCP.'
 };
 
 // Backend-only modules are imported lazily so the static deployment does not evaluate database code.
@@ -110,6 +110,17 @@ const tools = [
 		handler: async ({ document, slug }) => {
 			const { create_mcp_page } = await import('#app/server_mcp_pages.js');
 			return create_mcp_page({ ...document, slug });
+		}
+	}),
+	define_tool({
+		name: 'prepare_image_upload',
+		description:
+			'Get instructions and a 30-minute upload token for adding new images. Image files are uploaded over HTTP, not through MCP: encode a WebP original and resized variants as described, upload them (e.g. with curl), then reference the asset in create_page or save_page. Requires a shell and network access to the site. Videos are not supported.',
+		input: v.strictObject({}),
+		annotations: { readOnlyHint: true },
+		handler: async () => {
+			const { prepare_image_upload } = await import('#app/server_mcp_images.js');
+			return prepare_image_upload(ORIGIN, MCP_API_KEY);
 		}
 	}),
 	define_tool({
