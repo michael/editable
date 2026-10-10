@@ -8,6 +8,7 @@
 	import { Svedit, KeyMapper, Command, define_keymap, get_char_length } from 'svedit';
 	import Toolbar from './Toolbar.svelte';
 	import SaveProgressModal from './SaveProgressModal.svelte';
+	import SaveConflictDialog from './SaveConflictDialog.svelte';
 
 	import { paste_media, is_media_selection } from '#app/media.js';
 	import { language_href, language_path } from '#app/languages.js';
@@ -39,6 +40,7 @@
 		languages = [],
 		language = '',
 		translation_revision = '',
+		version = '',
 		canonical_path = null,
 		children
 	}: {
@@ -53,6 +55,7 @@
 		languages?: string[];
 		language?: string;
 		translation_revision?: string;
+		version?: string;
 		canonical_path?: string | null;
 		children?: Snippet;
 	} = $props();
@@ -482,7 +485,8 @@
 			return can_edit && editable && !save_progress_visible;
 		}
 
-		async execute() {
+		/** force overwrites the server version after a version conflict. */
+		async execute(force = false) {
 			if (save_progress_visible) return;
 			// Keep this log so the saved document can be copied into default_site.js.
 			const doc_json = session.to_json();
@@ -555,14 +559,21 @@
 					replace_blob_urls(doc_json.nodes, mapping);
 				}
 
-				const result: { ok: boolean; document_id?: string; slug?: string; created?: boolean } =
-					translation_mode
-						? await api_module.save_translations({ ...doc_json, language, translation_revision })
-						: await save_document({
-								...doc_json,
-								create: is_new,
-								language: languages.length ? languages[0] : undefined
-							});
+				const result: {
+					ok: boolean;
+					code?: string;
+					document_id?: string;
+					slug?: string;
+					created?: boolean;
+				} = translation_mode
+					? await api_module.save_translations({ ...doc_json, language, translation_revision })
+					: await save_document({
+							...doc_json,
+							create: is_new,
+							language: languages.length ? languages[0] : undefined,
+							expected_version: version || undefined,
+							force
+						});
 
 				if (mapping) {
 					const tr = session.tr;
@@ -581,6 +592,13 @@
 					}
 					session.apply(tr);
 					cleanup_pending(mapping);
+				}
+
+				// Media uploads are applied above, so an overwrite only resends the document.
+				if (result?.code === 'version_conflict') {
+					save_progress_visible = false;
+					save_conflict_open = true;
+					return;
 				}
 
 				session.selection = null;
@@ -614,6 +632,22 @@
 				alert(`${message} Your changes have not been lost — please try again.`);
 			}
 		}
+	}
+
+	let save_conflict_open = $state(false);
+
+	async function reload_after_conflict() {
+		save_conflict_open = false;
+		session.selection = null;
+		editable = false;
+		await refreshAll();
+		// Reset explicitly in case the reloaded document serializes identically.
+		session = create_session(JSON.parse(initial_doc_json), app);
+	}
+
+	function overwrite_after_conflict() {
+		save_conflict_open = false;
+		void app_commands.save_document.execute(true);
 	}
 
 	class LogoutCommand extends Command {
@@ -806,6 +840,12 @@
 			message={save_progress_message}
 			done={save_progress_done}
 			progress={save_progress_percent}
+		/>
+		<SaveConflictDialog
+			open={save_conflict_open}
+			onreload={reload_after_conflict}
+			onoverwrite={overwrite_after_conflict}
+			onclose={() => (save_conflict_open = false)}
 		/>
 	{/if}
 </div>
