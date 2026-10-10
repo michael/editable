@@ -71,17 +71,23 @@ const tools = [
 	define_tool({
 		name: 'read_page',
 		description:
-			'Read an existing page. page_href can be a path (/about, or / for the home page), a full URL, a language-prefixed or old path, or a document_id from list_pages; the result contains the current page_href. Returns the complete editable document JSON, including shared banner, navigation, and footer nodes, plus the page version required by save_page.',
+			'Read an existing page. page_href can be a path (/about, or / for the home page), a full URL, a language-prefixed or old path, or a document_id from list_pages; the result contains the current page_href. Returns the complete editable document JSON, including shared banner, navigation, and footer nodes, plus the page version required by save_page. A language prefix (/de/about) or the language argument reads the translation: text and media that are not translated yet show the main language. The result lists the enabled languages; the first is the main language.',
 		input: v.strictObject({
 			page_href: v.pipe(
 				v.string(),
 				v.description('A path such as /about, a full URL, or a document_id.')
+			),
+			language: v.optional(
+				v.pipe(
+					v.string(),
+					v.description('Language code such as de. Overrides the language prefix of the path.')
+				)
 			)
 		}),
 		annotations: { readOnlyHint: true },
-		handler: async ({ page_href }) => {
+		handler: async ({ page_href, language }) => {
 			const { read_mcp_page } = await import('#app/server_mcp_pages.js');
-			return read_mcp_page(page_href);
+			return read_mcp_page(page_href, language);
 		}
 	}),
 	define_tool({
@@ -109,7 +115,7 @@ const tools = [
 	define_tool({
 		name: 'save_page',
 		description:
-			'Apply a partial document update using the same document JSON shape returned by read_page. Send document_id and nodes containing only node ids to create or change; every submitted node replaces the stored node with the same id. Omitted nodes are kept if still reachable. To delete, unlink a node from its parent and omit it; the server drops nodes no longer reachable from the page or shared-document roots. New or changed nodes must be linked from a parent (include the changed parent too), otherwise the save is rejected. Changes to banner, navigation, or footer nodes affect every page. Include expected_version: the version from read_page, or from your previous save_page result to keep editing without reading again. The server merges against the latest stored document, validates the complete merged graph and ownership, and rejects stale versions or invalid changes before writing.',
+			'Apply a partial document update using the same document JSON shape returned by read_page. Send document_id and nodes containing only node ids to create or change; every submitted node replaces the stored node with the same id. Omitted nodes are kept if still reachable. To delete, unlink a node from its parent and omit it; the server drops nodes no longer reachable from the page or shared-document roots. New or changed nodes must be linked from a parent (include the changed parent too), otherwise the save is rejected. Changes to banner, navigation, or footer nodes affect every page. Include expected_version: the version from read_page, or from your previous save_page result to keep editing without reading again. The server merges against the latest stored document, validates the complete merged graph and ownership, and rejects stale versions or invalid changes before writing. To save a translation, pass language and the version from reading the page in that language; only text, inline formatting, and media may differ from the main language, and text equal to the main language removes its translation. Structural and layout changes belong in the main language.',
 		input: v.strictObject({
 			document: v.strictObject({
 				document_id: v.string(),
@@ -118,12 +124,15 @@ const tools = [
 			expected_version: v.pipe(
 				v.string(),
 				v.description('The version returned by read_page or the previous save_page.')
+			),
+			language: v.optional(
+				v.pipe(v.string(), v.description('Language code such as de to save a translation.'))
 			)
 		}),
 		annotations: { readOnlyHint: false, destructiveHint: true },
-		handler: async ({ document, expected_version }) => {
+		handler: async ({ document, expected_version, language }) => {
 			const { save_mcp_page } = await import('#app/server_mcp_pages.js');
-			return save_mcp_page({ ...document, expected_version });
+			return save_mcp_page({ ...document, expected_version, language });
 		}
 	})
 ];

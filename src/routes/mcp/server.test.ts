@@ -41,7 +41,9 @@ it('returns structured tool results and names current arguments on invalid input
 
 	const invalid = await (await call_tool('read_page', { path: '/about' })).json();
 	expect(invalid.result.isError).toBe(true);
-	expect(invalid.result.content[0].text).toMatch(/read_page takes page_href\.$/);
+	expect(invalid.result.content[0].text).toMatch(
+		/read_page takes page_href, language \(optional\)\.$/
+	);
 });
 
 it('checks protocol versions and modern request headers', async () => {

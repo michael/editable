@@ -180,10 +180,37 @@ it('resolves pages by path, URL, language prefix, old slug, and document id', as
 		'/about-us',
 		'about',
 		'https://www.example.com/about-us?ref=1#top',
-		'/de/about-us',
 		'/old-about/'
 	])
 		expect(read_mcp_page(page).page_href).toBe('/about-us');
-	expect(read_mcp_page('https://example.com/de').page_href).toBe('/');
+	// A language prefix reads that language's version.
+	expect(read_mcp_page('/de/old-about').page_href).toBe('/de/about-us');
+	expect(read_mcp_page('https://example.com/de').page_href).toBe('/de');
 	expect(() => read_mcp_page('/missing')).toThrow('Page not found: /missing');
+});
+
+it('reads and saves translations without structural changes', async () => {
+	await create('about');
+	const de = read_mcp_page('/de/about-us');
+	expect(de).toMatchObject({ page_href: '/de/about-us', language: 'de', languages: ['en', 'de'] });
+	const title = (content: string) => ({
+		about: { ...de.document.nodes.about, title: { content, marks: [], annotations: [] } }
+	});
+	const translate = (nodes: Record<string, unknown>, expected_version: string) =>
+		save_mcp_page({ document_id: 'about', nodes, expected_version, language: 'de' });
+
+	const saved = await translate(title('Über uns'), de.version!);
+	expect(saved).toMatchObject({ page_href: '/de/about-us', title: 'Über uns' });
+	expect(read_mcp_page('about', 'de')).toMatchObject({ version: saved.version });
+	expect(read_mcp_page('/about-us').document.nodes.about.title.content).toBe('About us');
+
+	const restructured = { about: { ...title('Über uns').about, body: { nodes: [] } } };
+	await expect(translate(restructured, saved.version)).rejects.toThrow(
+		'Translations can save text, inline formatting, and media only'
+	);
+	expect(() => read_mcp_page('/about-us', 'fr')).toThrow('Language fr is not enabled');
+
+	// Text equal to the main language removes the translation.
+	await translate(title('About us'), saved.version);
+	expect(db.prepare('SELECT value FROM translations').all()).toEqual([]);
 });

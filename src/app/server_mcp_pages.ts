@@ -1,6 +1,9 @@
+import { isHttpError } from '@sveltejs/kit';
 import { fill_node_defaults, type DocumentNode, type PropertyDefinition } from 'svedit';
+import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
 import { languages } from './server_languages.js';
-import { language_path } from './languages.js';
+import { language_href, language_path } from './languages.js';
+import { save_translated_document, translated_document } from './server_translations.js';
 import { parse_internal_page_href } from './document_links.js';
 import { MEDIA_DEFAULTS, document_schema } from './document_schema.js';
 import nanoid from './nanoid.js';
@@ -17,27 +20,50 @@ import {
 	get_page_version,
 	persist_combined_page,
 	resolve_slug,
-	shared_document_types
+	shared_document_types,
+	with_asset_cleanup
 } from './server_documents.js';
 
 /**
  * Resolve the ways agents refer to pages: a document id, a path, or a full URL
- * (whose host is ignored), including language prefixes and old slugs.
+ * (whose host is ignored), including language prefixes and old slugs. The
+ * language comes from the path prefix and defaults to the main language.
  */
-function resolve_page_id(page: string): string | null {
-	if (get_optional_doc_from_db(page)?.nodes[page]?.type === 'page') return page;
+function resolve_page(page: string): { document_id: string | null; language: string } {
+	if (get_optional_doc_from_db(page)?.nodes[page]?.type === 'page')
+		return { document_id: page, language: languages[0] ?? '' };
 
 	let href = page.trim();
-	if (/^https?:\/\//i.test(href)) {
-		const url = URL.parse(href);
-		if (!url) return null;
-		href = url.pathname;
-	}
+	if (/^https?:\/\//i.test(href)) href = URL.parse(href)?.pathname ?? '';
 	const pathname = href.split(/[?#]/, 1)[0].replace(/\/+$/, '') || '/';
-	if (language_path(pathname, languages).pathname === '/') return get_home_page_id_from_db();
+	const { language, pathname: unprefixed } = language_path(pathname, languages);
+	if (unprefixed === '/') return { document_id: get_home_page_id_from_db(), language };
 
 	const parsed = parse_internal_page_href(pathname, languages);
-	return parsed ? (resolve_slug(parsed.slug)?.document_id ?? null) : null;
+	return {
+		document_id: parsed ? (resolve_slug(parsed.slug)?.document_id ?? null) : null,
+		language
+	};
+}
+
+/** The translation language to read or save, or null for the main language. */
+function translation_language(language: string | undefined): string | null {
+	if (!language || language === languages[0]) return null;
+	if (languages.slice(1).includes(language)) return language;
+	throw new Error(
+		languages.length > 1
+			? `Language ${language} is not enabled. Enabled languages: ${languages.join(', ')}.`
+			: 'Translations are not enabled on this site.'
+	);
+}
+
+/** The translation module reports problems as SvelteKit HTTP errors; agents need the message. */
+function unwrap_http_error<T>(fn: () => T): T {
+	try {
+		return fn();
+	} catch (err) {
+		throw isHttpError(err) ? new Error(err.body.message, { cause: err }) : err;
+	}
 }
 
 function page_href_for(document_id: string): string {
@@ -58,17 +84,31 @@ function fill_defaults(node: DocumentNode): DocumentNode {
 	return filled;
 }
 
-export function read_mcp_page(page: string) {
-	const document_id = resolve_page_id(page);
+export function read_mcp_page(page: string, requested_language?: string) {
+	const { document_id, language: path_language } = resolve_page(page);
 	const page_doc = document_id && get_optional_doc_from_db(document_id);
 	if (!document_id || !page_doc)
 		throw new Error(
 			`Page not found: ${page}. Use a path such as /about, a full URL, or a document_id from list_pages.`
 		);
+
+	const language = translation_language(requested_language ?? path_language);
+	if (!language) {
+		return {
+			page_href: page_href_for(document_id),
+			language: languages[0] ?? null,
+			languages,
+			version: get_page_version(document_id),
+			document: combine_page_document(page_doc)
+		};
+	}
+	const translated = unwrap_http_error(() => translated_document(document_id, language));
 	return {
-		document: combine_page_document(page_doc),
-		page_href: page_href_for(document_id),
-		version: get_page_version(document_id)
+		page_href: language_href(page_href_for(document_id), language, languages),
+		language,
+		languages,
+		version: translated.translation_revision,
+		document: translated.document
 	};
 }
 
@@ -106,10 +146,13 @@ export async function save_mcp_page(input: {
 	document_id: string;
 	nodes: Record<string, unknown>;
 	expected_version: string;
+	language?: string;
 }) {
 	const current = get_optional_doc_from_db(input.document_id);
 	if (current?.nodes[input.document_id]?.type !== 'page')
 		throw new Error(`Existing page not found: ${input.document_id}`);
+	const language = translation_language(input.language);
+	if (language) return save_mcp_translation({ ...input, language });
 	// Check up front so a stale patch is not reported as unlinked or invalid.
 	if (get_page_version(input.document_id) !== input.expected_version)
 		throw new Error('Page changed since it was read. Read it again before saving.');
@@ -137,6 +180,57 @@ export async function save_mcp_page(input: {
 		expected_version: input.expected_version
 	});
 	return page_result(input.document_id, page_doc, version);
+}
+
+/**
+ * Translations are patches on the translated page. The translation module
+ * keeps only text and media that differ from the main language and rejects
+ * structural changes.
+ */
+async function save_mcp_translation(input: {
+	document_id: string;
+	nodes: Record<string, unknown>;
+	expected_version: string;
+	language: string;
+}) {
+	const { document_id, language } = input;
+	const current = unwrap_http_error(() => translated_document(document_id, language));
+	if (current.translation_revision !== input.expected_version)
+		throw new Error(
+			'The page or its translation changed since it was read. Read it again before saving.'
+		);
+
+	const submitted_nodes = fill_submitted_nodes(input.nodes);
+	const nodes = { ...current.document.nodes, ...submitted_nodes };
+	assert_linked(
+		document_id,
+		nodes,
+		Object.keys(submitted_nodes).filter(
+			(id) => JSON.stringify(submitted_nodes[id]) !== JSON.stringify(current.document.nodes[id])
+		)
+	);
+
+	await with_asset_cleanup(() =>
+		unwrap_http_error(() =>
+			save_translated_document({
+				document_id,
+				nodes,
+				language,
+				translation_revision: input.expected_version
+			})
+		)
+	);
+	void snapshot_if_stale();
+
+	const saved = translated_document(document_id, language);
+	return {
+		ok: true,
+		document_id,
+		page_href: language_href(page_href_for(document_id), language, languages),
+		title: extract_page_metadata(saved.document).title,
+		language,
+		version: saved.translation_revision
+	};
 }
 
 export async function create_mcp_page(input: {
