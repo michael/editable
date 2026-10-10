@@ -3,6 +3,7 @@ import { db } from './services.js';
 import { extract_page_metadata } from './page_metadata.js';
 import {
 	type DocumentData,
+	collect_node_ids,
 	combine_page_document,
 	get_active_slug_for_document_id,
 	get_home_page_id_from_db,
@@ -72,16 +73,26 @@ export async function save_mcp_page(input: {
 	}
 
 	// MCP writes are patches: overlay submitted node ids onto the latest full
-	// document. Omitting a node leaves it untouched; unreachable nodes are
-	// discarded when the page is split back into its documents.
-	const nodes = {
-		...combine_page_document(current).nodes,
-		...(input.nodes as Record<string, DocumentNode>)
-	};
+	// document. Omitting a node leaves it untouched; unreachable stored nodes
+	// are discarded when the page is split back into its documents.
+	const stored_nodes = combine_page_document(current).nodes;
+	const nodes = { ...stored_nodes, ...(input.nodes as Record<string, DocumentNode>) };
 	for (const type of shared_document_types) {
 		if (nodes[input.document_id]?.[type] !== current.nodes[input.document_id][type])
 			throw new Error(`The shared ${type} reference cannot be changed through save_page.`);
 	}
+
+	// New or changed nodes that end up unreachable were almost certainly meant
+	// to be linked; unchanged ones are deletions from a resent document.
+	const reachable_ids = collect_node_ids(input.document_id, nodes);
+	const unlinked_ids = Object.keys(input.nodes).filter(
+		(id) =>
+			!reachable_ids.has(id) && JSON.stringify(input.nodes[id]) !== JSON.stringify(stored_nodes[id])
+	);
+	if (unlinked_ids.length)
+		throw new Error(
+			`New or changed nodes are not linked from the page: ${unlinked_ids.join(', ')}. Add each id to its parent's node, node_array, or mark/annotation range and include the changed parent.`
+		);
 
 	const { page_doc } = await persist_combined_page(input.document_id, nodes);
 	const slug = get_active_slug_for_document_id(input.document_id);

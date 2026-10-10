@@ -80,11 +80,15 @@ it('writes only changed documents', async () => {
 		expect(expected_updated_at[shared.document_id]).toBe('v0');
 });
 
-it('drops nodes unlinked from their parent', async () => {
-	const page = page_node();
-	const removed_id = page.body.nodes.pop();
-	await save({ [page_id]: page });
+it('drops unlinked stored nodes but rejects unlinked new or changed nodes', async () => {
+	const { nodes } = structuredClone(read_mcp_page('/').document);
+	const removed_id = nodes[page_id].body.nodes.pop();
+	const orphan = { ...nodes[removed_id], id: 'orphan' };
+	await expect(save({ [page_id]: nodes[page_id], orphan })).rejects.toThrow(
+		'not linked from the page: orphan'
+	);
 
+	await save(nodes);
 	expect(read_mcp_page('/').document.nodes[removed_id]).toBeUndefined();
 });
 

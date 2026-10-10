@@ -35,7 +35,7 @@ const mcp_tools = [
 	{
 		name: 'save_page',
 		description:
-			'Apply a partial document update using the same document JSON shape returned by read_page. Send document_id and nodes containing only node ids to create or change; every submitted node replaces the stored node with the same id. Omitted nodes are kept if still reachable. To delete, unlink a node from its parent and omit it; the server drops nodes no longer reachable from the page or shared-document roots. Include expected_updated_at from read_page. The server merges against the latest stored document, validates the complete merged graph and ownership, and rejects stale versions or invalid changes before writing.',
+			'Apply a partial document update using the same document JSON shape returned by read_page. Send document_id and nodes containing only node ids to create or change; every submitted node replaces the stored node with the same id. Omitted nodes are kept if still reachable. To delete, unlink a node from its parent and omit it; the server drops nodes no longer reachable from the page or shared-document roots. New or changed nodes must be linked from a parent (include the changed parent too), otherwise the save is rejected. Include expected_updated_at from read_page. The server merges against the latest stored document, validates the complete merged graph and ownership, and rejects stale versions or invalid changes before writing.',
 		inputSchema: {
 			type: 'object',
 			properties: {
