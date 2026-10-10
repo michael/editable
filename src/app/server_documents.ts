@@ -364,7 +364,7 @@ export function get_page_version(document_id: string): string | null {
 		const row = typeof shared_id === 'string' ? select_data.get(shared_id) : undefined;
 		hash.update('\0').update((row as { data: string } | undefined)?.data ?? '');
 	}
-	return hash.digest('base64url').slice(0, 22);
+	return hash.digest('hex');
 }
 
 /**
