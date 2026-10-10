@@ -72,7 +72,7 @@ export const actions: Actions = {
 		target.searchParams.set('code', code);
 		if (request.state) target.searchParams.set('state', request.state);
 		target.searchParams.set('iss', issuer());
-		redirect(303, target.href);
+		redirect(303, target.href, { external: [target.origin] });
 	},
 
 	deny: async ({ url, locals }) => {
@@ -83,6 +83,6 @@ export const actions: Actions = {
 		const target = new URL(request.redirect_uri);
 		target.searchParams.set('error', 'access_denied');
 		if (request.state) target.searchParams.set('state', request.state);
-		redirect(303, target.href);
+		redirect(303, target.href, { external: [target.origin] });
 	}
 };
