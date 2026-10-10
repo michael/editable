@@ -3,6 +3,7 @@ import { translation_payloads } from '../lib/asset_references.js';
 import { languages, request_language } from './server_languages.js';
 import { translated_href, parse_internal_page_href } from './document_links.js';
 import { language_path, language_href, is_reserved_language_slug } from './languages.js';
+import { is_reserved_route_slug } from './route_slugs.js';
 import { getRequestEvent, query, command } from '$app/server';
 import {
 	cleanup_translations,
@@ -552,6 +553,13 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 
 	if (!normalized_slug) {
 		return create_page_url_error_result('page_url_empty', 'Page URL cannot be empty');
+	}
+
+	if (is_reserved_route_slug(normalized_slug)) {
+		return create_page_url_error_result(
+			'page_url_reserved',
+			'That Page URL is reserved by Editable and cannot be used.'
+		);
 	}
 
 	if (is_reserved_language_slug(normalized_slug, languages)) {

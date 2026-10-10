@@ -83,8 +83,8 @@ function page_node() {
 	return structuredClone(read_mcp_page('/').document.nodes[page_id]);
 }
 
-function create(document_id: string, nodes: Record<string, unknown> = {}) {
-	return create_mcp_page({
+function create_input(document_id: string, nodes: Record<string, unknown> = {}) {
+	return {
 		document_id,
 		nodes: {
 			[document_id]: {
@@ -100,7 +100,11 @@ function create(document_id: string, nodes: Record<string, unknown> = {}) {
 			},
 			...nodes
 		}
-	});
+	};
+}
+
+function create(document_id: string, nodes: Record<string, unknown> = {}) {
+	return create_mcp_page(create_input(document_id, nodes));
 }
 
 it('writes only changed documents and versions the result', async () => {
@@ -146,7 +150,14 @@ it('drops unlinked stored nodes but rejects unlinked new or changed nodes', asyn
 		'not linked from the page: orphan'
 	);
 
-	await save(nodes);
+	// Resent nodes count as unchanged whatever their key order.
+	const reordered = Object.fromEntries(
+		Object.entries(nodes).map(([id, node]) => [
+			id,
+			Object.fromEntries(Object.entries(node).reverse())
+		])
+	);
+	await save(reordered);
 	expect(read_mcp_page('/').document.nodes[removed_id]).toBeUndefined();
 });
 
@@ -171,6 +182,10 @@ it('creates pages linked to the shared documents with a slug from the title', as
 	expect(document.nodes.about.nav).toBe(default_nav_document.document_id);
 	expect(document.nodes[document.nodes.about.image].type).toBe('image');
 	expect((await create('about_again')).page_href).toBe('/about-us-2');
+	// Editable's own routes keep their paths.
+	expect((await create_mcp_page({ ...create_input('routed'), slug: 'mcp' })).page_href).toBe(
+		'/mcp-2'
+	);
 
 	await expect(create('about')).rejects.toThrow('already exists');
 	const nav_root = default_nav_document.nodes[default_nav_document.document_id];

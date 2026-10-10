@@ -195,7 +195,8 @@ function rpc_error(id: unknown, code: number, message: string, status = 400): Re
 /**
  * Modern requests declare the protocol version in params._meta and mirror the
  * method (and tool name) in headers. Legacy requests carry the version header,
- * except initialize, which negotiates it.
+ * except initialize, which negotiates it; without the header, the spec says to
+ * assume an older version, which this stateless endpoint serves the same way.
  */
 function resolve_protocol(request: Request, message: any): Protocol | Response {
 	const header_version = request.headers.get('mcp-protocol-version');
@@ -210,10 +211,12 @@ function resolve_protocol(request: Request, message: any): Protocol | Response {
 			return rpc_error(message.id, -32020, 'Mcp-Name header does not match the tool name.');
 		return 'modern';
 	}
-	if (message.method === 'initialize' || header_version === legacy_protocol_version)
+	if (
+		message.method === 'initialize' ||
+		!header_version ||
+		header_version === legacy_protocol_version
+	)
 		return 'legacy';
-	if (!header_version)
-		return rpc_error(message.id, -32600, 'MCP-Protocol-Version header is missing.');
 	return rpc_error(
 		message.id,
 		-32010,

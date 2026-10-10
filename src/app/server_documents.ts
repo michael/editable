@@ -12,6 +12,7 @@ import { cleanup_translations } from './server_translations.js';
 import { parse_internal_page_href } from './document_links.js';
 import { languages } from './server_languages.js';
 import { is_reserved_language_slug } from './languages.js';
+import { is_reserved_route_slug } from './route_slugs.js';
 import { is_reserved_markdown_slug } from '#app/markdown/registry.js';
 
 export type DocumentData = {
@@ -140,6 +141,7 @@ export function create_page_slug(document_id: string, base: string): string {
 	let suffix = 2;
 	while (
 		slug_exists_stmt.get(slug) ||
+		is_reserved_route_slug(slug) ||
 		is_reserved_markdown_slug(slug) ||
 		is_reserved_language_slug(slug, languages)
 	) {
