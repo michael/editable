@@ -654,9 +654,9 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 			.prepare('SELECT * FROM documents WHERE type IN (?, ?, ?, ?) ORDER BY document_id')
 			.all('page', 'banner', 'nav', 'footer') as unknown as DocumentRow[];
 
-		const upsert = db.prepare(
-			'INSERT INTO documents (document_id, type, data, created_at, updated_at) VALUES(?, ?, ?, ?, ?) ON CONFLICT(document_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at'
-		);
+		// Rewritten links still point at the same page, so this is not a content
+		// change and leaves updated_at alone.
+		const update_data = db.prepare('UPDATE documents SET data = ? WHERE document_id = ?');
 		const delete_document_refs = db.prepare(
 			'DELETE FROM document_refs WHERE source_document_id = ?'
 		);
@@ -671,18 +671,12 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		}[];
 		const link_languages = [...new Set([...languages, ...translations.map((row) => row.language)])];
 
-		const now_iso = new Date().toISOString();
-
 		for (const row of page_rows) {
 			const doc = JSON.parse(row.data);
 			rewrite_internal_page_hrefs(doc.nodes, input.document_id, active_slug, link_languages);
-			upsert.run(
-				row.document_id,
-				row.type,
-				JSON.stringify(doc),
-				row.created_at ?? now_iso,
-				now_iso
-			);
+			const data = JSON.stringify(doc);
+			if (data === row.data) continue;
+			update_data.run(data, row.document_id);
 
 			const root_id = row.document_id;
 			const node_ids = collect_node_ids(root_id, doc.nodes);
@@ -705,11 +699,7 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 				);
 			const value = JSON.stringify(map);
 			if (value !== row.value)
-				db.prepare('UPDATE translations SET value = ?, updated_at = ? WHERE rowid = ?').run(
-					value,
-					now_iso,
-					row.rowid
-				);
+				db.prepare('UPDATE translations SET value = ? WHERE rowid = ?').run(value, row.rowid);
 		}
 		return active_slug;
 	});
