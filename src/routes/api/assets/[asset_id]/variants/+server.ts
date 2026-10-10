@@ -1,14 +1,13 @@
 import { unlink } from 'node:fs/promises';
 import { error } from '@sveltejs/kit';
-import { MCP_API_KEY } from '$app/env/private';
 import { ASSET_ID_REGEX, VARIANT_WIDTHS_SET } from '#app/config.js';
 import { asset_exists, write_variant, variant_path } from '#app/services.js';
-import { authorize_asset_upload } from '#lib/server/upload_token.js';
+import { authorize_asset_upload } from '#app/server_oauth.js';
 import { read_webp_dimensions } from '#lib/server/webp.js';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
-	const authorized_by = authorize_asset_upload(request, locals, MCP_API_KEY);
+	const authorized_by = authorize_asset_upload(request, locals);
 
 	const { asset_id } = params;
 

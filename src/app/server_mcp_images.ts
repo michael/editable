@@ -1,24 +1,21 @@
 import { existsSync } from 'node:fs';
 import type { DocumentNode } from 'svedit';
-import { create_upload_token } from '#lib/server/upload_token.js';
 import { read_webp_dimensions } from '#lib/server/webp.js';
 import { ASSET_ID_REGEX, MAX_IMAGE_WIDTH, VARIANT_WIDTHS } from './config.js';
 import { asset_exists, asset_path, variant_path } from './services.js';
-
-const UPLOAD_TOKEN_TTL_MS = 30 * 60 * 1000;
+import { create_upload_token } from './server_oauth.js';
 
 /**
  * Instructions and a short-lived token for uploading an image over HTTP.
  * Image bytes cannot travel through tool calls, so agents prepare the same
  * files the editor produces in the browser and upload them directly.
  */
-export function prepare_image_upload(origin: string, secret: string) {
-	const expires_at = Date.now() + UPLOAD_TOKEN_TTL_MS;
-	const upload_token = create_upload_token(secret, expires_at);
+export function prepare_image_upload(origin: string, grant_id: string) {
+	const { upload_token, expires_at } = create_upload_token(grant_id);
 	const authorization = `Bearer ${upload_token}`;
 	return {
 		upload_token,
-		expires_at: new Date(expires_at).toISOString(),
+		expires_at: new Date(expires_at * 1000).toISOString(),
 		spec: {
 			format: 'image/webp',
 			// Matches the editor's in-browser encoder.
