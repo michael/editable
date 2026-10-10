@@ -5,15 +5,29 @@ import type { RequestHandler } from './$types';
 const protocol_version = '2026-07-28';
 const legacy_protocol_version = '2025-11-25';
 const server_info = { name: 'editable-hello', version: '1.0.0' };
-const greeting_tool = {
-	name: 'hello_world',
-	description: 'Return a friendly greeting to verify the Editable MCP connection.',
-	inputSchema: {
-		type: 'object',
-		properties: { name: { type: 'string', description: 'Who to greet.' } },
-		additionalProperties: false
+const mcp_tools = [
+	{
+		name: 'hello_world',
+		description: 'Return a friendly greeting to verify the Editable MCP connection.',
+		inputSchema: {
+			type: 'object',
+			properties: { name: { type: 'string', description: 'Who to greet.' } },
+			additionalProperties: false
+		}
+	},
+	{
+		name: 'list_pages',
+		description:
+			'List site pages in the same hierarchy as Editable’s page browser. Includes linked pages nested under their first parent and unlinked pages as top-level entries. This tool is read-only.',
+		inputSchema: { type: 'object', properties: {}, additionalProperties: false }
 	}
-};
+];
+
+async function get_page_browser_tree() {
+	// Keep backend-only modules lazy so the static deployment does not evaluate database code.
+	const { build_page_browser_data } = await import('#app/page_browser_data.js');
+	return build_page_browser_data('/');
+}
 
 function json_response(body: unknown, status = 200): Response {
 	return Response.json(body, {
@@ -127,7 +141,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			break;
 		case 'tools/list':
 			result = {
-				tools: [greeting_tool],
+				tools: mcp_tools,
 				...(is_modern
 					? {
 							resultType: 'complete',
@@ -137,7 +151,20 @@ export const POST: RequestHandler = async ({ request }) => {
 			};
 			break;
 		case 'tools/call': {
-			if (message.params?.name !== greeting_tool.name) {
+			if (message.params?.name === 'list_pages') {
+				const page_tree = await get_page_browser_tree();
+				result = {
+					content: [{ type: 'text', text: JSON.stringify(page_tree, null, 2) }],
+					...(is_modern
+						? {
+								resultType: 'complete',
+								_meta: { 'io.modelcontextprotocol/serverInfo': server_info }
+							}
+						: {})
+				};
+				break;
+			}
+			if (message.params?.name !== 'hello_world') {
 				return rpc_error(message.id, -32602, `Unknown tool: ${message.params?.name ?? ''}`);
 			}
 			const name =
