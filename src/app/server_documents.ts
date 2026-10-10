@@ -9,7 +9,7 @@ import { collect_node_ids_in_order } from '#lib/document_graph.js';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { cleanup_translations } from './server_translations.js';
-import { parse_internal_page_href } from './document_links.js';
+import { assert_safe_hrefs, parse_internal_page_href } from './document_links.js';
 import { languages } from './server_languages.js';
 import { is_reserved_language_slug } from './languages.js';
 import { is_reserved_route_slug } from './route_slugs.js';
@@ -394,6 +394,7 @@ export async function persist_combined_page(
 	try {
 		validate_document({ document_id, nodes }, document_schema);
 		validate_single_ownership(document_id, nodes);
+		assert_safe_hrefs(nodes);
 	} catch (err) {
 		throw new InvalidDocumentError(
 			`Invalid document: ${err instanceof Error ? err.message : String(err)}`,
