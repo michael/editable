@@ -2,7 +2,11 @@ import { languages } from '#app/server_languages.js';
 import { is_media_property } from './media.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { ASSET_ID_REGEX } from './config.js';
-import { restore_document_links, translate_document_links } from './document_links.js';
+import {
+	assert_safe_hrefs,
+	restore_document_links,
+	translate_document_links
+} from './document_links.js';
 import { createHash } from 'node:crypto';
 import { ORIGIN } from '$app/env/private';
 import { error } from '@sveltejs/kit';
@@ -222,6 +226,7 @@ export function save_translated_document(input: {
 		);
 		try {
 			validate_document(edited, document_schema);
+			assert_safe_hrefs(edited.nodes);
 			if (document_structure(original) !== document_structure(edited)) {
 				error(
 					400,
@@ -230,7 +235,7 @@ export function save_translated_document(input: {
 			}
 		} catch (err) {
 			if (err && typeof err === 'object' && 'status' in err) throw err;
-			error(400, 'Invalid translated document');
+			error(400, `Invalid translated document: ${err instanceof Error ? err.message : err}`);
 		}
 		const maps = new Map(records.map((record) => [record.document_id, {} as TranslationMap]));
 		const owners = new Map(

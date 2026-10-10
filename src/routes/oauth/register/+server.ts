@@ -7,6 +7,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (VERCEL) error(404, 'Not found');
 	const oauth = await import('#app/server_oauth.js');
 	try {
+		oauth.assert_small_body(request);
 		const client = oauth.register_client(await request.json().catch(() => ({})));
 		return oauth.oauth_json(
 			{

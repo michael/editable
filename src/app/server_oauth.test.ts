@@ -15,6 +15,7 @@ import { db } from './services.js';
 import migration from './migrations/20261010T180000000Z_editable_mcp_oauth.js';
 import {
 	approve_client,
+	assert_small_body,
 	authorize_asset_upload,
 	create_upload_token,
 	exchange_token,
@@ -116,6 +117,16 @@ it('ends access after 48 hours or when the admin logs out', () => {
 	expect(verify_access_token(fresh.access_token)).toBeNull();
 	expect(() => upload(upload_token)).toThrow();
 	expect(() => create_upload_token(grant_id)).toThrow('has ended');
+});
+
+it('refuses oversized bodies before reading them', () => {
+	const request = (length: number) =>
+		new Request('https://example.com/oauth/register', {
+			method: 'POST',
+			headers: { 'content-length': String(length) }
+		});
+	expect(() => assert_small_body(request(1024))).not.toThrow();
+	expect(() => assert_small_body(request(1024 * 1024))).toThrow('too large');
 });
 
 it('only accepts redirects to this computer or HTTPS', () => {

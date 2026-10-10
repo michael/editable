@@ -161,17 +161,28 @@ it('drops unlinked stored nodes but rejects unlinked new or changed nodes', asyn
 	expect(read_mcp_page('/').document.nodes[removed_id]).toBeUndefined();
 });
 
-it('rejects multiple owners and shared reference changes', async () => {
+it('rejects multiple owners, unsafe links, and shared reference changes', async () => {
 	const { version } = read_mcp_page('/');
 
 	const shared_owner = page_node();
 	shared_owner.body.nodes.push(shared_owner.body.nodes[0]);
 	await expect(save({ [page_id]: shared_owner })).rejects.toThrow('multiple owners');
 
+	const scripted = page_node();
+	scripted.title = {
+		content: 'Hi',
+		marks: [{ start_offset: 0, end_offset: 2, node_id: 'bad_link' }],
+		annotations: []
+	};
+	const bad_link = { id: 'bad_link', type: 'link', href: ' java\tscript:alert(1)' };
+	await expect(save({ [page_id]: scripted, bad_link })).rejects.toThrow('Unsafe href on: bad_link');
+	await save({ [page_id]: scripted, bad_link: { ...bad_link, href: 'mailto:hi@example.com' } });
+
 	const moved_nav = { ...page_node(), nav: default_footer_document.document_id };
 	await expect(save({ [page_id]: moved_nav })).rejects.toThrow('shared nav reference');
 
-	expect(read_mcp_page('/').version).toBe(version);
+	expect(read_mcp_page('/').version).not.toBe(version);
+	expect(read_mcp_page('/').document.nodes.bad_link.href).toBe('mailto:hi@example.com');
 });
 
 it('creates pages linked to the shared documents with a slug from the title', async () => {

@@ -319,6 +319,14 @@ export function authorize_asset_upload(
 	return 'upload_token';
 }
 
+const MAX_OAUTH_BODY_BYTES = 16 * 1024;
+
+/** The public OAuth endpoints read small bodies; refuse large ones before buffering them. */
+export function assert_small_body(request: Request) {
+	if (Number(request.headers.get('content-length')) > MAX_OAUTH_BODY_BYTES)
+		throw new OAuthError('invalid_request', 'The request body is too large.', 413);
+}
+
 const CORS_HEADERS = {
 	'Access-Control-Allow-Origin': '*',
 	'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
