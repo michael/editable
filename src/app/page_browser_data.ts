@@ -1,26 +1,20 @@
-import type { Attachment, DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
+import type { DocumentNode } from 'svedit';
 import { db } from '#app/services.js';
-import { document_schema } from '#app/document_schema.js';
+import {
+	type DocumentData,
+	type DocumentRow,
+	collect_document_refs,
+	get_active_slug_for_document_id,
+	get_home_page_id_from_db,
+	get_shared_root_ids,
+	resolve_slug
+} from '#app/server_documents.js';
 import { is_reserved_language_slug } from '#app/languages.js';
 import { languages } from '#app/server_languages.js';
 import { is_reserved_markdown_slug } from '#app/markdown/registry.js';
 import { extract_page_metadata, collect_page_body_node_ids } from '#app/page_metadata.js';
 import type { PreviewMediaNode } from '#app/page_metadata.js';
 import { build_page_forest } from '#app/page_tree.js';
-import { parse_internal_page_href } from './document_links.js';
-
-type DocumentRow = {
-	document_id: string;
-	type: string;
-	data: string;
-	created_at: string | null;
-	updated_at: string | null;
-};
-
-type DocumentData = {
-	document_id: string;
-	nodes: Record<string, DocumentNode>;
-};
 
 type PageDocumentRecord = {
 	document_id: string;
@@ -57,25 +51,6 @@ export type PageTreeNode = {
 	children: PageTreeNode[];
 };
 
-function get_home_page_id_from_db(): string | null {
-	const row = db.prepare('SELECT value FROM site_settings WHERE key = ?').get('home_page_id') as
-		{ value: string } | undefined;
-	return row?.value ?? null;
-}
-
-function get_active_slug_for_document_id(document_id: string): string | null {
-	const row = db
-		.prepare('SELECT slug FROM document_slugs WHERE document_id = ? AND is_active = 1')
-		.get(document_id) as { slug: string } | undefined;
-	return row?.slug ?? null;
-}
-
-function resolve_slug(slug: string): { document_id: string } | null {
-	const row = db.prepare('SELECT document_id FROM document_slugs WHERE slug = ?').get(slug) as
-		{ document_id: string } | undefined;
-	return row ?? null;
-}
-
 function list_page_documents(): PageDocumentRecord[] {
 	const rows = db
 		.prepare('SELECT * FROM documents WHERE type = ? ORDER BY document_id')
@@ -89,69 +64,6 @@ function list_page_documents(): PageDocumentRecord[] {
 			updated_at: row.updated_at ?? null
 		};
 	});
-}
-
-function normalize_internal_page_href(href: string, source_document_id: string): string | null {
-	const parsed = parse_internal_page_href(href, languages);
-	if (!parsed) return null;
-	const resolved = resolve_slug(parsed.slug);
-	if (!resolved || resolved.document_id === source_document_id) return null;
-	return resolved.document_id;
-}
-
-function get_attached_ranges(value: { marks?: Attachment[]; annotations?: Attachment[] } | null) {
-	return [...(value?.marks ?? []), ...(value?.annotations ?? [])];
-}
-
-function collect_document_refs(
-	nodes: Record<string, DocumentNode>,
-	node_ids: Iterable<string>,
-	source_document_id: string
-): string[] {
-	const refs: string[] = [];
-	const seen_refs = new Set<string>();
-	for (const node_id of node_ids) {
-		const node = nodes[node_id];
-		if (!node) continue;
-		if (typeof node.href === 'string') {
-			const target_document_id = normalize_internal_page_href(node.href, source_document_id);
-			if (target_document_id && !seen_refs.has(target_document_id)) {
-				seen_refs.add(target_document_id);
-				refs.push(target_document_id);
-			}
-		}
-		const type_schema: NodeSchema | undefined = document_schema[node.type];
-		if (!type_schema) continue;
-		for (const [prop_name, prop_def] of Object.entries<PropertyDefinition>(
-			type_schema.properties
-		)) {
-			if (prop_def.type !== 'text') continue;
-			const value = node[prop_name];
-			for (const range of get_attached_ranges(value)) {
-				const range_node = range?.node_id ? nodes[range.node_id] : null;
-				if (!range_node || range_node.type !== 'link' || typeof range_node.href !== 'string')
-					continue;
-				const target_document_id = normalize_internal_page_href(
-					range_node.href,
-					source_document_id
-				);
-				if (target_document_id && !seen_refs.has(target_document_id)) {
-					seen_refs.add(target_document_id);
-					refs.push(target_document_id);
-				}
-			}
-		}
-	}
-	return refs;
-}
-
-function get_shared_root_ids(page_doc: DocumentData) {
-	const page_node = page_doc.nodes[page_doc.document_id];
-	return {
-		banner_root_id: typeof page_node?.banner === 'string' ? page_node.banner : null,
-		nav_root_id: typeof page_node?.nav === 'string' ? page_node.nav : null,
-		footer_root_id: typeof page_node?.footer === 'string' ? page_node.footer : null
-	};
 }
 
 function summarize_page_document(page_doc: PageDocumentRecord): PageSummary {
