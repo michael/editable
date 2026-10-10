@@ -304,6 +304,15 @@ export function validate_single_ownership(
 	}
 }
 
+/** Compare node contents, ignoring the order nodes are stored in. */
+function has_same_nodes(a: DocumentData, b: DocumentData): boolean {
+	const ids = Object.keys(a.nodes);
+	return (
+		ids.length === Object.keys(b.nodes).length &&
+		ids.every((id) => JSON.stringify(a.nodes[id]) === JSON.stringify(b.nodes[id]))
+	);
+}
+
 /**
  * Validate a combined page graph and split it back into its page and shared
  * (banner, nav, footer) documents. Only new or changed documents are written,
@@ -349,12 +358,12 @@ export async function persist_combined_page(
 	});
 
 	const select_row = db.prepare('SELECT type, data FROM documents WHERE document_id = ?');
-	const changed_documents = documents.filter(({ document_id, type, data }) => {
+	const changed_documents = documents.filter(({ document_id, type, doc }) => {
 		const row = select_row.get(document_id) as { type: string; data: string } | undefined;
 		if (row && row.type !== type) {
 			throw new InvalidDocumentError(`Document ${document_id} is a ${row.type}, not a ${type}.`);
 		}
-		return row?.data !== data;
+		return !row || !has_same_nodes(JSON.parse(row.data), doc);
 	});
 
 	const upsert = db.prepare(
