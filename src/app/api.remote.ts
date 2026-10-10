@@ -12,7 +12,6 @@ import {
 import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import slugify from 'slugify';
-import crypto from 'node:crypto';
 import { db, with_transaction } from '#app/services.js';
 import {
 	type DocumentData,
@@ -52,17 +51,12 @@ import type { DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
 import type { StatementSync } from 'node:sqlite';
 import {
 	admin_session_cookie_name,
-	get_required_admin_password,
-	get_session_expires_at,
 	delete_session,
 	clear_admin_session_cookie,
-	set_admin_session_cookie,
 	require_admin_session,
-	passwords_match,
-	get_login_lockout_seconds,
-	register_failed_login,
-	reset_login_throttle
+	log_in_admin
 } from '#lib/server/auth.js';
+import { revoke_all_grants } from '#app/server_oauth.js';
 
 const admin_login_input_schema = v.object({
 	password: v.string()
@@ -74,20 +68,6 @@ function create_page_url_error_result(code: string, message: string) {
 		code,
 		message
 	};
-}
-
-function create_auth_error_result(code: string, message: string) {
-	return {
-		ok: false,
-		code,
-		message
-	};
-}
-
-function format_lockout_duration(seconds: number): string {
-	if (seconds < 60) return `${seconds} seconds`;
-	const minutes = Math.ceil(seconds / 60);
-	return minutes === 1 ? '1 minute' : `${minutes} minutes`;
 }
 
 export type InternalLinkPreview = {
@@ -220,34 +200,7 @@ export const get_shared_documents = query(v.void(), async () => {
 });
 
 export const login_admin = command(admin_login_input_schema, async ({ password }) => {
-	const { cookies } = getRequestEvent();
-	const admin_password = get_required_admin_password();
-
-	const lockout_seconds = get_login_lockout_seconds(db);
-	if (lockout_seconds > 0) {
-		return create_auth_error_result(
-			'too_many_attempts',
-			`Too many attempts. Try again in ${format_lockout_duration(lockout_seconds)}.`
-		);
-	}
-
-	if (!passwords_match(password, admin_password)) {
-		register_failed_login(db);
-		return create_auth_error_result('invalid_password', 'Incorrect admin password.');
-	}
-
-	reset_login_throttle(db);
-
-	const session_id = crypto.randomUUID();
-	db.prepare('INSERT INTO sessions (session_id, expires) VALUES (?, ?)').run(
-		session_id,
-		get_session_expires_at()
-	);
-	set_admin_session_cookie(cookies, session_id);
-
-	return {
-		ok: true
-	};
+	return log_in_admin(db, getRequestEvent().cookies, password);
 });
 
 export const logout_admin = command(v.void(), async () => {
@@ -259,6 +212,8 @@ export const logout_admin = command(v.void(), async () => {
 	}
 
 	clear_admin_session_cookie(cookies);
+	// Logging out also ends every MCP connection the admin approved.
+	revoke_all_grants();
 
 	return {
 		ok: true

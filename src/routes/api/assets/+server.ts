@@ -1,13 +1,12 @@
 import { error } from '@sveltejs/kit';
-import { MCP_API_KEY } from '$app/env/private';
 import { MAX_IMAGE_WIDTH, UPLOAD_MIME_TO_EXT } from '#app/config.js';
 import { asset_exists, asset_path, write_asset, delete_asset } from '#app/services.js';
-import { authorize_asset_upload } from '#lib/server/upload_token.js';
+import { authorize_asset_upload } from '#app/server_oauth.js';
 import { read_webp_dimensions } from '#lib/server/webp.js';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-	const authorized_by = authorize_asset_upload(request, locals, MCP_API_KEY);
+	const authorized_by = authorize_asset_upload(request, locals);
 
 	const content_type_raw = request.headers.get('content-type') ?? '';
 	const content_type = content_type_raw.split(';')[0].trim().toLowerCase();

@@ -1,9 +1,18 @@
 import { createHash } from 'node:crypto';
 import { expect, it, vi } from 'vitest';
 import { webp_bytes } from '#app/test_helpers/webp.js';
-import { create_upload_token } from '#lib/server/upload_token.js';
 
-vi.mock('$app/env/private', () => ({ MCP_API_KEY: 'secret' }));
+// Token verification itself is covered by server_oauth.test.ts.
+vi.mock('#app/server_oauth.js', async () => {
+	const { error } = await import('@sveltejs/kit');
+	return {
+		authorize_asset_upload: (request: Request) => {
+			const header = request.headers.get('authorization');
+			if (header === `Bearer ${token}`) return 'upload_token';
+			error(401, header ? 'The upload token is invalid or expired.' : 'Unauthorized');
+		}
+	};
+});
 vi.mock('#app/services.js', async () => {
 	const { mkdtempSync } = await import('node:fs');
 	const { tmpdir } = await import('node:os');
@@ -19,7 +28,7 @@ vi.mock('#app/services.js', async () => {
 import { POST as upload_original } from './+server.js';
 import { POST as upload_variant } from './[asset_id]/variants/+server.js';
 
-const token = create_upload_token('secret', Date.now() + 60_000);
+const token = 'valid-upload-token';
 
 function request(body: Uint8Array<ArrayBuffer>, headers: Record<string, string>) {
 	return new Request('http://localhost/api/assets', {

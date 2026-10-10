@@ -1,8 +1,7 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
 import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { toJsonSchema } from '@valibot/to-json-schema';
-import { MCP_API_KEY, ORIGIN, VERCEL } from '$app/env/private';
+import { ORIGIN, VERCEL } from '$app/env/private';
 import type { RequestHandler } from './$types';
 
 const protocol_version = '2026-07-28';
@@ -11,6 +10,9 @@ const server_info = { name: 'editable', version: '1.0.0' };
 
 type Protocol = 'modern' | 'legacy';
 
+/** The approved OAuth grant the request was authorized with. */
+type ToolContext = { grant_id: string };
+
 type ToolInput = v.StrictObjectSchema<v.ObjectEntries, undefined>;
 
 type Tool<TInput extends ToolInput = ToolInput> = {
@@ -18,7 +20,7 @@ type Tool<TInput extends ToolInput = ToolInput> = {
 	description: string;
 	input: TInput;
 	annotations: { readOnlyHint: boolean; destructiveHint?: boolean };
-	handler: (args: v.InferOutput<TInput>) => Promise<Record<string, unknown>>;
+	handler: (args: v.InferOutput<TInput>, context: ToolContext) => Promise<Record<string, unknown>>;
 };
 
 function define_tool<TInput extends ToolInput>(tool: Tool<TInput>): Tool {
@@ -118,9 +120,9 @@ const tools = [
 			'Get instructions and a 30-minute upload token for adding new images. Image files are uploaded over HTTP, not through MCP: encode a WebP original and resized variants as described, upload them (e.g. with curl), then reference the asset in create_page or save_page. Requires a shell and network access to the site. Videos are not supported.',
 		input: v.strictObject({}),
 		annotations: { readOnlyHint: true },
-		handler: async () => {
+		handler: async (_args, { grant_id }) => {
 			const { prepare_image_upload } = await import('#app/server_mcp_images.js');
-			return prepare_image_upload(ORIGIN, MCP_API_KEY);
+			return prepare_image_upload(new URL(ORIGIN).origin, grant_id);
 		}
 	}),
 	define_tool({
@@ -157,7 +159,7 @@ const tool_list = tools.map(({ name, description, input, annotations }) => ({
 	annotations
 }));
 
-async function call_tool(tool: Tool, args: unknown) {
+async function call_tool(tool: Tool, args: unknown, context: ToolContext) {
 	const parsed = v.safeParse(tool.input, args ?? {});
 	if (!parsed.success) {
 		const issues = parsed.issues.map(
@@ -171,7 +173,7 @@ async function call_tool(tool: Tool, args: unknown) {
 		return tool_error(`Invalid arguments. ${issues.join('; ')}. ${tool.name} ${expected}.`);
 	}
 	try {
-		const value = await tool.handler(parsed.output);
+		const value = await tool.handler(parsed.output, context);
 		return { content: [{ type: 'text', text: JSON.stringify(value) }], structuredContent: value };
 	} catch (err) {
 		return tool_error(err instanceof Error ? err.message : String(err));
@@ -188,14 +190,6 @@ function json_response(body: unknown, status = 200): Response {
 
 function rpc_error(id: unknown, code: number, message: string, status = 400): Response {
 	return json_response({ jsonrpc: '2.0', id: id ?? null, error: { code, message } }, status);
-}
-
-function has_valid_bearer_token(request: Request): boolean {
-	const match = /^Bearer ([^\s]+)$/i.exec(request.headers.get('authorization') ?? '');
-	if (!match) return false;
-	const expected_hash = createHash('sha256').update(MCP_API_KEY).digest();
-	const actual_hash = createHash('sha256').update(match[1]).digest();
-	return timingSafeEqual(expected_hash, actual_hash);
 }
 
 /**
@@ -227,7 +221,7 @@ function resolve_protocol(request: Request, message: any): Protocol | Response {
 	);
 }
 
-async function handle_method(message: any, protocol: Protocol) {
+async function handle_method(message: any, protocol: Protocol, context: ToolContext) {
 	const modern_meta =
 		protocol === 'modern'
 			? { resultType: 'complete', _meta: { 'io.modelcontextprotocol/serverInfo': server_info } }
@@ -254,7 +248,7 @@ async function handle_method(message: any, protocol: Protocol) {
 		case 'tools/call': {
 			const tool = tools_by_name.get(message.params?.name);
 			if (!tool) return rpc_error(message.id, -32602, `Unknown tool: ${message.params?.name}`);
-			return { ...(await call_tool(tool, message.params.arguments)), ...modern_meta };
+			return { ...(await call_tool(tool, message.params.arguments, context)), ...modern_meta };
 		}
 		default:
 			return rpc_error(message.id, -32601, `Method not found: ${message.method}`, 200);
@@ -263,16 +257,18 @@ async function handle_method(message: any, protocol: Protocol) {
 
 export const POST: RequestHandler = async ({ request }) => {
 	if (VERCEL) error(404, 'Not found');
-	if (!MCP_API_KEY) {
-		return json_response(
-			{ error: 'The MCP endpoint is not configured. Set MCP_API_KEY on the server.' },
-			503
-		);
-	}
-	if (!has_valid_bearer_token(request)) {
+	// Access tokens come from the OAuth flow; the 401 challenge points clients to its metadata.
+	const { resource_metadata_url, verify_access_token } = await import('#app/server_oauth.js');
+	const token = /^Bearer (\S+)$/i.exec(request.headers.get('authorization') ?? '')?.[1];
+	const grant = token ? verify_access_token(token) : null;
+	if (!grant) {
+		const invalid = token ? ', error="invalid_token"' : '';
 		return new Response('Unauthorized', {
 			status: 401,
-			headers: { 'WWW-Authenticate': 'Bearer', 'Cache-Control': 'no-store' }
+			headers: {
+				'WWW-Authenticate': `Bearer resource_metadata="${resource_metadata_url()}"${invalid}`,
+				'Cache-Control': 'no-store'
+			}
 		});
 	}
 	if (!request.headers.get('content-type')?.toLowerCase().includes('application/json')) {
@@ -296,7 +292,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const protocol = resolve_protocol(request, message);
 	if (protocol instanceof Response) return protocol;
 
-	const result = await handle_method(message, protocol);
+	const result = await handle_method(message, protocol, { grant_id: grant.grant_id });
 	if (result instanceof Response) return result;
 	return json_response({ jsonrpc: '2.0', id: message.id, result });
 };

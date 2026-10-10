@@ -51,24 +51,17 @@ You can also use `Ctrl` + `Shift` + `E` to edit. In read mode, admins can create
 
 ### Connect an MCP client
 
-Editable exposes a remote MCP endpoint at `https://your-site.example.com/mcp` that lets agents list, read, create, and edit pages. Set a private `MCP_API_KEY` secret on the deployed server (`fly secrets set MCP_API_KEY='your-token'` on Fly.io, or `pnpm vps:env set MCP_API_KEY` on a VPS to enter it at the prompt).
+Editable exposes a remote MCP endpoint at `https://your-site.example.com/mcp` that lets agents list, read, create, and edit pages. Clients connect with OAuth: when you add the server, the client opens a browser window where you log in as admin and approve the connection. An approval lasts 48 hours, after which the client asks you to connect again. Logging out of Editable ends all MCP connections immediately.
 
-For Claude Code, connect over HTTP and provide the key as a bearer header:
+For Claude Code, add the server and authenticate from `/mcp` inside Claude Code:
 
 ```sh
-claude mcp add --transport http editable https://your-site.example.com/mcp \
-	--header "Authorization: Bearer <MCP_API_KEY>"
+claude mcp add --transport http editable https://your-site.example.com/mcp
 ```
 
-For Codex, set `EDITABLE_MCP_TOKEN` in the environment that launches Codex, then add this to `~/.codex/config.toml`:
+Other clients that support MCP authorization, such as Codex, connect the same way: add the URL and follow the login prompt.
 
-```toml
-[mcp_servers.editable]
-url = "https://your-site.example.com/mcp"
-bearer_token_env_var = "EDITABLE_MCP_TOKEN"
-```
-
-Reload the client and call `list_pages` to confirm the connection. After updating Editable, start a new session in your MCP client so it picks up the current tool descriptions. The `save_page` tool edits live content, including the shared banner, navigation, and footer. Keep the key private and rotate it by replacing the server secret and the client token.
+Call `list_pages` to confirm the connection. After updating Editable, start a new session in your MCP client so it picks up the current tool descriptions. The `save_page` tool edits live content, including the shared banner, navigation, and footer.
 
 ## Make it yours
 

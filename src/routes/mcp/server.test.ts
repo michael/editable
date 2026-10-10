@@ -1,6 +1,11 @@
 import { expect, it, vi } from 'vitest';
 
-vi.mock('$app/env/private', () => ({ MCP_API_KEY: 'secret', VERCEL: undefined }));
+const metadata_url = 'https://example.com/.well-known/oauth-protected-resource/mcp';
+vi.mock('$app/env/private', () => ({ ORIGIN: 'https://example.com', VERCEL: undefined }));
+vi.mock('#app/server_oauth.js', () => ({
+	verify_access_token: (token: string) => (token === 'secret' ? { grant_id: 'grant' } : null),
+	resource_metadata_url: () => metadata_url
+}));
 vi.mock('#app/server_mcp_pages.js', () => ({
 	read_mcp_page: (page_href: string) => ({ page_href })
 }));
@@ -28,10 +33,17 @@ function call_tool(name: string, args: unknown) {
 	return post({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } });
 }
 
-it('requires the bearer token', async () => {
+it('requires an access token and points clients to the OAuth metadata', async () => {
 	const ping = { jsonrpc: '2.0', id: 1, method: 'ping' };
-	expect((await post(ping, { authorization: 'Bearer wrong' })).status).toBe(401);
-	expect((await post(ping, { authorization: '' })).status).toBe(401);
+	const challenge = async (authorization: string) => {
+		const response = await post(ping, { authorization });
+		return [response.status, response.headers.get('www-authenticate')];
+	};
+	expect(await challenge('')).toEqual([401, `Bearer resource_metadata="${metadata_url}"`]);
+	expect(await challenge('Bearer wrong')).toEqual([
+		401,
+		`Bearer resource_metadata="${metadata_url}", error="invalid_token"`
+	]);
 	expect(await (await post(ping)).json()).toMatchObject({ result: {} });
 });
 

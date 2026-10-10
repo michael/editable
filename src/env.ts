@@ -56,11 +56,6 @@ export const variables = defineEnvVars({
 			'Password for the admin login. Required whenever the backend is enabled — the app refuses to start without it. Unused in VERCEL=1 mode.',
 		schema: required_with_backend(where)
 	},
-	MCP_API_KEY: {
-		description:
-			'Bearer token for the remote MCP endpoint. When set, clients can call https://your-site.example.com/mcp. Keep this secret and send it only from trusted MCP clients.',
-		schema: optional((value) => value ?? '')
-	},
 	ORIGIN: {
 		description:
 			'Public origin of the deployment, e.g. https://my-site.example.com. Used for canonical and social metadata. Required whenever the backend is enabled.',
