@@ -49,6 +49,27 @@ Open [http://localhost:5173](http://localhost:5173), press `⌘` or `Ctrl` + `E`
 
 You can also use `Ctrl` + `Shift` + `E` to edit. In read mode, admins can create a new page with `Ctrl` + `Shift` + `N`.
 
+### Connect an MCP client
+
+Editable exposes a remote MCP endpoint at `https://your-site.example.com/mcp` for testing client connectivity. Set a private `MCP_API_KEY` secret on the deployed server (`fly secrets set MCP_API_KEY='your-token'` on Fly.io, or `pnpm vps:env set MCP_API_KEY` on a VPS to enter it at the prompt).
+
+For Claude Code, connect over HTTP and provide the key as a bearer header:
+
+```sh
+claude mcp add --transport http editable https://your-site.example.com/mcp \
+	--header "Authorization: Bearer <MCP_API_KEY>"
+```
+
+For Codex, set `EDITABLE_MCP_TOKEN` in the environment that launches Codex, then add this to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.editable]
+url = "https://your-site.example.com/mcp"
+bearer_token_env_var = "EDITABLE_MCP_TOKEN"
+```
+
+Reload the client and call `hello_world`. The tool confirms the connection; it does not edit site content yet. Keep the key private and rotate it by replacing the server secret and the client token.
+
 ## Make it yours
 
 Your repository, your styles, your components.
