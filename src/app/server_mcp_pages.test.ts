@@ -2,7 +2,7 @@ import { afterAll, beforeEach, expect, it, vi } from 'vitest';
 import type { DatabaseSync } from 'node:sqlite';
 
 vi.mock('$app/env/private', () => ({
-	LANGUAGES: 'en',
+	LANGUAGES: 'en,de',
 	ORIGIN: 'https://example.com',
 	VERCEL: undefined
 }));
@@ -73,6 +73,26 @@ function page_node() {
 	return structuredClone(read_mcp_page('/').document.nodes[page_id]);
 }
 
+function create(document_id: string, nodes: Record<string, unknown> = {}) {
+	return create_mcp_page({
+		document_id,
+		nodes: {
+			[document_id]: {
+				id: document_id,
+				type: 'page',
+				title: { content: 'About us' },
+				body: { nodes: [`${document_id}_text`] }
+			},
+			[`${document_id}_text`]: {
+				id: `${document_id}_text`,
+				type: 'code_block',
+				content: { content: 'Hello' }
+			},
+			...nodes
+		}
+	});
+}
+
 it('writes only changed documents and versions the result', async () => {
 	const { version } = read_mcp_page('/');
 	const page = page_node();
@@ -134,25 +154,6 @@ it('rejects multiple owners and shared reference changes', async () => {
 });
 
 it('creates pages linked to the shared documents with a slug from the title', async () => {
-	const create = (document_id: string, nodes: Record<string, unknown> = {}) =>
-		create_mcp_page({
-			document_id,
-			nodes: {
-				[document_id]: {
-					id: document_id,
-					type: 'page',
-					title: { content: 'About us' },
-					body: { nodes: [`${document_id}_text`] }
-				},
-				[`${document_id}_text`]: {
-					id: `${document_id}_text`,
-					type: 'code_block',
-					content: { content: 'Hello' }
-				},
-				...nodes
-			}
-		});
-
 	const result = await create('about');
 	expect(result.page_href).toBe('/about-us');
 	const { document, version } = read_mcp_page('/about-us');
@@ -169,4 +170,20 @@ it('creates pages linked to the shared documents with a slug from the title', as
 	await expect(create('orphaned', { stray: { id: 'stray', type: 'paragraph' } })).rejects.toThrow(
 		'not linked from the page: stray'
 	);
+});
+
+it('resolves pages by path, URL, language prefix, old slug, and document id', async () => {
+	await create('about');
+	db.prepare("INSERT INTO document_slugs VALUES ('old-about', 'about', 0, 'v0')").run();
+
+	for (const page of [
+		'/about-us',
+		'about',
+		'https://www.example.com/about-us?ref=1#top',
+		'/de/about-us',
+		'/old-about/'
+	])
+		expect(read_mcp_page(page).page_href).toBe('/about-us');
+	expect(read_mcp_page('https://example.com/de').page_href).toBe('/');
+	expect(() => read_mcp_page('/missing')).toThrow('Page not found: /missing');
 });

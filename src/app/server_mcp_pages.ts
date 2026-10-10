@@ -1,5 +1,7 @@
 import { fill_node_defaults, type DocumentNode, type PropertyDefinition } from 'svedit';
-import { db } from './services.js';
+import { languages } from './server_languages.js';
+import { language_path } from './languages.js';
+import { parse_internal_page_href } from './document_links.js';
 import { MEDIA_DEFAULTS, document_schema } from './document_schema.js';
 import nanoid from './nanoid.js';
 import { extract_page_metadata } from './page_metadata.js';
@@ -14,19 +16,33 @@ import {
 	get_optional_doc_from_db,
 	get_page_version,
 	persist_combined_page,
+	resolve_slug,
 	shared_document_types
 } from './server_documents.js';
 
-function page_for_href(page_href: string): { document_id: string; slug: string } | null {
-	if (page_href === '/') {
-		const home_page_id = get_home_page_id_from_db();
-		return home_page_id ? { document_id: home_page_id, slug: '/' } : null;
+/**
+ * Resolve the ways agents refer to pages: a document id, a path, or a full URL
+ * (whose host is ignored), including language prefixes and old slugs.
+ */
+function resolve_page_id(page: string): string | null {
+	if (get_optional_doc_from_db(page)?.nodes[page]?.type === 'page') return page;
+
+	let href = page.trim();
+	if (/^https?:\/\//i.test(href)) {
+		const url = URL.parse(href);
+		if (!url) return null;
+		href = url.pathname;
 	}
-	const slug = page_href.replace(/^\/+/, '').replace(/\/+$/, '');
-	const row = db
-		.prepare('SELECT document_id FROM document_slugs WHERE slug = ? AND is_active = 1')
-		.get(slug) as { document_id: string } | undefined;
-	return row ? { document_id: row.document_id, slug: `/${slug}` } : null;
+	const pathname = href.split(/[?#]/, 1)[0].replace(/\/+$/, '') || '/';
+	if (language_path(pathname, languages).pathname === '/') return get_home_page_id_from_db();
+
+	const parsed = parse_internal_page_href(pathname, languages);
+	return parsed ? (resolve_slug(parsed.slug)?.document_id ?? null) : null;
+}
+
+function page_href_for(document_id: string): string {
+	const slug = get_active_slug_for_document_id(document_id);
+	return slug ? `/${slug}` : '/';
 }
 
 /** Fill omitted properties, and omitted marks/annotations of text and node_array values. */
@@ -42,14 +58,17 @@ function fill_defaults(node: DocumentNode): DocumentNode {
 	return filled;
 }
 
-export function read_mcp_page(page_href: string) {
-	const page = page_for_href(page_href);
-	const page_doc = page && get_optional_doc_from_db(page.document_id);
-	if (!page || !page_doc) throw new Error(`Page not found: ${page_href}`);
+export function read_mcp_page(page: string) {
+	const document_id = resolve_page_id(page);
+	const page_doc = document_id && get_optional_doc_from_db(document_id);
+	if (!document_id || !page_doc)
+		throw new Error(
+			`Page not found: ${page}. Use a path such as /about, a full URL, or a document_id from list_pages.`
+		);
 	return {
 		document: combine_page_document(page_doc),
-		page_href: page.slug,
-		version: get_page_version(page.document_id)
+		page_href: page_href_for(document_id),
+		version: get_page_version(document_id)
 	};
 }
 
@@ -74,11 +93,10 @@ function assert_linked(document_id: string, nodes: Record<string, DocumentNode>,
 }
 
 function page_result(document_id: string, page_doc: DocumentData, version: string) {
-	const slug = get_active_slug_for_document_id(document_id);
 	return {
 		ok: true,
 		document_id,
-		page_href: slug ? `/${slug}` : '/',
+		page_href: page_href_for(document_id),
 		title: extract_page_metadata(page_doc).title,
 		version
 	};

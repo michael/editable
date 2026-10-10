@@ -71,9 +71,12 @@ const tools = [
 	define_tool({
 		name: 'read_page',
 		description:
-			'Read an existing page by page_href (use / for the home page). Returns the complete editable document JSON, including shared banner, navigation, and footer nodes, plus the page version required by save_page.',
+			'Read an existing page. page_href can be a path (/about, or / for the home page), a full URL, a language-prefixed or old path, or a document_id from list_pages; the result contains the current page_href. Returns the complete editable document JSON, including shared banner, navigation, and footer nodes, plus the page version required by save_page.',
 		input: v.strictObject({
-			page_href: v.pipe(v.string(), v.description('Page path, such as / or /about.'))
+			page_href: v.pipe(
+				v.string(),
+				v.description('A path such as /about, a full URL, or a document_id.')
+			)
 		}),
 		annotations: { readOnlyHint: true },
 		handler: async ({ page_href }) => {
