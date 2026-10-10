@@ -80,6 +80,28 @@ const tools = [
 		}
 	}),
 	define_tool({
+		name: 'create_page',
+		description:
+			'Create a new page. Send document_id (a new unique id that is also the page node id) and nodes: the page node (type "page") and all of its content nodes, in the format described by get_schema. Leave out the shared banner, navigation, and footer; the page is linked to them automatically. Omitted properties are filled with defaults, and an empty preview image is added if the page has none. The URL is derived from slug if given, otherwise from the page title, with a numeric suffix when taken. The page is public at its URL right away but not linked from anywhere; to add it to the navigation, edit the nav nodes with save_page. Returns page_href and the version for save_page.',
+		input: v.strictObject({
+			document: v.strictObject({
+				document_id: v.string(),
+				nodes: v.record(v.string(), v.record(v.string(), v.unknown()))
+			}),
+			slug: v.optional(
+				v.pipe(
+					v.string(),
+					v.description('Optional URL slug, such as about-us. Defaults to the title.')
+				)
+			)
+		}),
+		annotations: { readOnlyHint: false, destructiveHint: false },
+		handler: async ({ document, slug }) => {
+			const { create_mcp_page } = await import('#app/server_mcp_pages.js');
+			return create_mcp_page({ ...document, slug });
+		}
+	}),
+	define_tool({
 		name: 'save_page',
 		description:
 			'Apply a partial document update using the same document JSON shape returned by read_page. Send document_id and nodes containing only node ids to create or change; every submitted node replaces the stored node with the same id. Omitted nodes are kept if still reachable. To delete, unlink a node from its parent and omit it; the server drops nodes no longer reachable from the page or shared-document roots. New or changed nodes must be linked from a parent (include the changed parent too), otherwise the save is rejected. Changes to banner, navigation, or footer nodes affect every page. Include expected_version: the version from read_page, or from your previous save_page result to keep editing without reading again. The server merges against the latest stored document, validates the complete merged graph and ownership, and rejects stale versions or invalid changes before writing.',

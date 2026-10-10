@@ -21,6 +21,7 @@ import {
 	VersionConflictError,
 	collect_document_refs,
 	collect_node_ids,
+	create_page_slug,
 	get_active_slug_for_document_id,
 	get_attached_ranges,
 	get_combined_document,
@@ -114,26 +115,6 @@ const update_page_slug_input_schema = v.object({
 const delete_page_input_schema = v.object({
 	document_id: v.string()
 });
-
-function create_slug_candidate(title: string, document_id: string): string {
-	const slug = slugify(title, { lower: true, strict: true, trim: true });
-	return slug || document_id;
-}
-
-function create_unique_slug(base_slug: string): string {
-	const slug_exists_stmt = db.prepare('SELECT document_id FROM document_slugs WHERE slug = ?');
-
-	let slug = base_slug;
-	let suffix = 2;
-
-	while (true) {
-		const row = slug_exists_stmt.get(slug) as unknown as { document_id: string } | undefined;
-		if (!row && !is_reserved_markdown_slug(slug) && !is_reserved_language_slug(slug, languages))
-			return slug;
-		slug = `${base_slug}-${suffix}`;
-		suffix += 1;
-	}
-}
 
 /**
  * Get a document from the database, stitching in shared documents (banner, nav, footer).
@@ -568,13 +549,6 @@ export const save_document = command(save_document_input_schema, async (combined
 		error(409, `Document already exists: ${combined_doc.document_id}`);
 	}
 
-	const deactivate_active_slug = db.prepare(
-		'UPDATE document_slugs SET is_active = 0 WHERE document_id = ? AND is_active = 1'
-	);
-	const insert_slug = db.prepare(
-		'INSERT INTO document_slugs (slug, document_id, is_active, created_at) VALUES (?, ?, ?, ?)'
-	);
-
 	let version: string;
 	try {
 		({ version } = await persist_combined_page(
@@ -590,16 +564,9 @@ export const save_document = command(save_document_input_schema, async (combined
 						is_home_page_document_id(combined_doc.document_id)
 					)
 						return;
-					const metadata = extract_page_metadata(page_doc);
-					const base_slug = create_slug_candidate(
-						metadata.title || 'Untitled page',
-						combined_doc.document_id
-					);
-					insert_active_slug(
+					create_page_slug(
 						combined_doc.document_id,
-						create_unique_slug(base_slug),
-						insert_slug,
-						deactivate_active_slug
+						extract_page_metadata(page_doc).title || 'Untitled page'
 					);
 				}
 			}

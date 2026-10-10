@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import slugify from 'slugify';
 import { validate_document } from 'svedit';
 import type { Attachment, DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
 import type { StatementSync } from 'node:sqlite';
@@ -10,6 +11,8 @@ import { rebuild_asset_refs } from './server_asset_refs.js';
 import { cleanup_translations } from './server_translations.js';
 import { parse_internal_page_href } from './document_links.js';
 import { languages } from './server_languages.js';
+import { is_reserved_language_slug } from './languages.js';
+import { is_reserved_markdown_slug } from '#app/markdown/registry.js';
 
 export type DocumentData = {
 	document_id: string;
@@ -123,6 +126,31 @@ export function resolve_slug(
 		is_active: row.is_active === 1,
 		active_slug
 	};
+}
+
+/**
+ * Give a new page its first active slug, derived from base (a requested slug
+ * or the page title) and suffixed when it is taken or reserved.
+ */
+export function create_page_slug(document_id: string, base: string): string {
+	const base_slug = slugify(base, { lower: true, strict: true, trim: true }) || document_id;
+	const slug_exists_stmt = db.prepare('SELECT document_id FROM document_slugs WHERE slug = ?');
+
+	let slug = base_slug;
+	let suffix = 2;
+	while (
+		slug_exists_stmt.get(slug) ||
+		is_reserved_markdown_slug(slug) ||
+		is_reserved_language_slug(slug, languages)
+	) {
+		slug = `${base_slug}-${suffix}`;
+		suffix += 1;
+	}
+
+	db.prepare(
+		'INSERT INTO document_slugs (slug, document_id, is_active, created_at) VALUES (?, ?, 1, ?)'
+	).run(slug, document_id, new Date().toISOString());
+	return slug;
 }
 
 export function normalize_internal_page_href(

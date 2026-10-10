@@ -51,7 +51,7 @@ You can also use `Ctrl` + `Shift` + `E` to edit. In read mode, admins can create
 
 ### Connect an MCP client
 
-Editable exposes a remote MCP endpoint at `https://your-site.example.com/mcp` that lets agents list, read, and edit pages. Set a private `MCP_API_KEY` secret on the deployed server (`fly secrets set MCP_API_KEY='your-token'` on Fly.io, or `pnpm vps:env set MCP_API_KEY` on a VPS to enter it at the prompt).
+Editable exposes a remote MCP endpoint at `https://your-site.example.com/mcp` that lets agents list, read, create, and edit pages. Set a private `MCP_API_KEY` secret on the deployed server (`fly secrets set MCP_API_KEY='your-token'` on Fly.io, or `pnpm vps:env set MCP_API_KEY` on a VPS to enter it at the prompt).
 
 For Claude Code, connect over HTTP and provide the key as a bearer header:
 

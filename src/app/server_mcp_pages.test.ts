@@ -28,7 +28,7 @@ import {
 	default_nav_document,
 	default_footer_document
 } from './default_site.js';
-import { read_mcp_page, save_mcp_page } from './server_mcp_pages.js';
+import { create_mcp_page, read_mcp_page, save_mcp_page } from './server_mcp_pages.js';
 
 const page_id = default_page_document.document_id;
 
@@ -131,4 +131,42 @@ it('rejects multiple owners and shared reference changes', async () => {
 	await expect(save({ [page_id]: moved_nav })).rejects.toThrow('shared nav reference');
 
 	expect(read_mcp_page('/').version).toBe(version);
+});
+
+it('creates pages linked to the shared documents with a slug from the title', async () => {
+	const create = (document_id: string, nodes: Record<string, unknown> = {}) =>
+		create_mcp_page({
+			document_id,
+			nodes: {
+				[document_id]: {
+					id: document_id,
+					type: 'page',
+					title: { content: 'About us' },
+					body: { nodes: [`${document_id}_text`] }
+				},
+				[`${document_id}_text`]: {
+					id: `${document_id}_text`,
+					type: 'code_block',
+					content: { content: 'Hello' }
+				},
+				...nodes
+			}
+		});
+
+	const result = await create('about');
+	expect(result.page_href).toBe('/about-us');
+	const { document, version } = read_mcp_page('/about-us');
+	expect(version).toBe(result.version);
+	expect(document.nodes.about.nav).toBe(default_nav_document.document_id);
+	expect(document.nodes[document.nodes.about.image].type).toBe('image');
+	expect((await create('about_again')).page_href).toBe('/about-us-2');
+
+	await expect(create('about')).rejects.toThrow('already exists');
+	const nav_root = default_nav_document.nodes[default_nav_document.document_id];
+	await expect(create('clash', { [nav_root.id]: nav_root })).rejects.toThrow(
+		'belong to the shared banner, navigation, or footer'
+	);
+	await expect(create('orphaned', { stray: { id: 'stray', type: 'paragraph' } })).rejects.toThrow(
+		'not linked from the page: stray'
+	);
 });
