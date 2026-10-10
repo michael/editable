@@ -20,6 +20,43 @@ const mcp_tools = [
 		description:
 			'List site pages in the same hierarchy as Editable’s page browser. Includes linked pages nested under their first parent and unlinked pages as top-level entries. This tool is read-only.',
 		inputSchema: { type: 'object', properties: {}, additionalProperties: false }
+	},
+	{
+		name: 'read_page',
+		description:
+			'Read an existing page by page_href (use / for the home page). Returns the complete editable document JSON, including shared banner, navigation, and footer nodes, plus an updated_at token required by save_page.',
+		inputSchema: {
+			type: 'object',
+			properties: { page_href: { type: 'string', description: 'Page path, such as / or /about.' } },
+			required: ['page_href'],
+			additionalProperties: false
+		}
+	},
+	{
+		name: 'save_page',
+		description:
+			'Apply a partial document update using the same document JSON shape returned by read_page. Send document_id and nodes containing only node ids to create or change; every submitted node replaces the stored node with the same id. Omitted nodes are kept if still reachable. To delete, unlink a node from its parent and omit it; the server drops nodes no longer reachable from the page or shared-document roots. Include expected_updated_at from read_page. The server merges against the latest stored document, validates the complete merged graph and ownership, and rejects stale versions or invalid changes before writing.',
+		inputSchema: {
+			type: 'object',
+			properties: {
+				document: {
+					type: 'object',
+					properties: {
+						document_id: { type: 'string' },
+						nodes: { type: 'object', additionalProperties: true }
+					},
+					required: ['document_id', 'nodes'],
+					additionalProperties: false
+				},
+				expected_updated_at: {
+					type: 'object',
+					description: 'The expected_updated_at map returned by read_page.',
+					additionalProperties: { type: ['string', 'null'] }
+				}
+			},
+			required: ['document', 'expected_updated_at'],
+			additionalProperties: false
+		}
 	}
 ];
 
@@ -27,6 +64,31 @@ async function get_page_browser_tree() {
 	// Keep backend-only modules lazy so the static deployment does not evaluate database code.
 	const { build_page_browser_data } = await import('#app/page_browser_data.js');
 	return build_page_browser_data('/');
+}
+
+async function call_page_tool(name: string, args: any) {
+	const pages = await import('#app/server_mcp_pages.js');
+	if (name === 'read_page') {
+		if (typeof args?.page_href !== 'string') throw new Error('page_href must be a string.');
+		return pages.read_mcp_page(args.page_href);
+	}
+	if (name === 'save_page') {
+		if (
+			!args?.document ||
+			typeof args.document.document_id !== 'string' ||
+			!args.document.nodes ||
+			typeof args.document.nodes !== 'object' ||
+			Array.isArray(args.document.nodes) ||
+			!args.expected_updated_at ||
+			typeof args.expected_updated_at !== 'object' ||
+			Array.isArray(args.expected_updated_at)
+		)
+			throw new Error(
+				'Provide document { document_id, nodes } and the expected_updated_at map from read_page.'
+			);
+		return pages.save_mcp_page({ ...args.document, expected_updated_at: args.expected_updated_at });
+	}
+	throw new Error(`Unknown page tool: ${name}`);
 }
 
 function json_response(body: unknown, status = 200): Response {
@@ -151,6 +213,34 @@ export const POST: RequestHandler = async ({ request }) => {
 			};
 			break;
 		case 'tools/call': {
+			if (message.params?.name === 'read_page' || message.params?.name === 'save_page') {
+				try {
+					const value = await call_page_tool(message.params.name, message.params.arguments ?? {});
+					result = {
+						content: [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+						...(is_modern
+							? {
+									resultType: 'complete',
+									_meta: { 'io.modelcontextprotocol/serverInfo': server_info }
+								}
+							: {})
+					};
+				} catch (error) {
+					result = {
+						content: [
+							{ type: 'text', text: error instanceof Error ? error.message : String(error) }
+						],
+						isError: true,
+						...(is_modern
+							? {
+									resultType: 'complete',
+									_meta: { 'io.modelcontextprotocol/serverInfo': server_info }
+								}
+							: {})
+					};
+				}
+				break;
+			}
 			if (message.params?.name === 'list_pages') {
 				const page_tree = await get_page_browser_tree();
 				result = {
