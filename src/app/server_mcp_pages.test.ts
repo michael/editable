@@ -57,27 +57,55 @@ beforeEach(() => {
 	}
 });
 
-function save(
-	nodes: Record<string, unknown>,
-	expected_updated_at = read_mcp_page('/').expected_updated_at
-) {
-	return save_mcp_page({ document_id: page_id, nodes, expected_updated_at });
+function save(nodes: Record<string, unknown>, expected_version = read_mcp_page('/').version!) {
+	return save_mcp_page({ document_id: page_id, nodes, expected_version });
+}
+
+function updated_at(document_id: string) {
+	return (
+		db.prepare('SELECT updated_at FROM documents WHERE document_id = ?').get(document_id) as {
+			updated_at: string;
+		}
+	).updated_at;
 }
 
 function page_node() {
 	return structuredClone(read_mcp_page('/').document.nodes[page_id]);
 }
 
-it('writes only changed documents', async () => {
+it('writes only changed documents and versions the result', async () => {
+	const { version } = read_mcp_page('/');
 	const page = page_node();
 	page.title = { content: 'New title', marks: [], annotations: [] };
-	await save({ [page_id]: page });
+	const result = await save({ [page_id]: page }, version!);
 
-	const { document, expected_updated_at } = read_mcp_page('/');
-	expect(document.nodes[page_id].title.content).toBe('New title');
-	expect(expected_updated_at[page_id]).not.toBe('v0');
+	expect(read_mcp_page('/')).toMatchObject({ version: result.version });
+	expect(read_mcp_page('/').document.nodes[page_id].title.content).toBe('New title');
+	expect(updated_at(page_id)).not.toBe('v0');
 	for (const shared of [default_banner_document, default_nav_document, default_footer_document])
-		expect(expected_updated_at[shared.document_id]).toBe('v0');
+		expect(updated_at(shared.document_id)).toBe('v0');
+
+	// The returned version continues editing; the version it replaced is stale.
+	await save({}, result.version);
+	await expect(save({}, version!)).rejects.toThrow('Page changed since it was read');
+});
+
+it('fills omitted properties of submitted nodes with defaults', async () => {
+	const page = page_node();
+	page.body.nodes.push('new_prose');
+	await save({
+		[page_id]: page,
+		new_prose: { id: 'new_prose', type: 'prose', body: { nodes: ['new_paragraph'] } },
+		new_paragraph: {
+			id: 'new_paragraph',
+			type: 'paragraph',
+			content: { content: 'Hi', marks: [], annotations: [] }
+		}
+	});
+
+	const { nodes } = read_mcp_page('/').document;
+	expect(nodes.new_prose.layout).toBe('narrow-left');
+	expect(nodes.new_paragraph.layout).toBe('regular');
 });
 
 it('drops unlinked stored nodes but rejects unlinked new or changed nodes', async () => {
@@ -92,9 +120,8 @@ it('drops unlinked stored nodes but rejects unlinked new or changed nodes', asyn
 	expect(read_mcp_page('/').document.nodes[removed_id]).toBeUndefined();
 });
 
-it('rejects stale versions, multiple owners, and shared reference changes', async () => {
-	const stale = { ...read_mcp_page('/').expected_updated_at, [page_id]: 'stale' };
-	await expect(save({}, stale)).rejects.toThrow('Page changed since it was read');
+it('rejects multiple owners and shared reference changes', async () => {
+	const { version } = read_mcp_page('/');
 
 	const shared_owner = page_node();
 	shared_owner.body.nodes.push(shared_owner.body.nodes[0]);
@@ -103,5 +130,5 @@ it('rejects stale versions, multiple owners, and shared reference changes', asyn
 	const moved_nav = { ...page_node(), nav: default_footer_document.document_id };
 	await expect(save({ [page_id]: moved_nav })).rejects.toThrow('shared nav reference');
 
-	expect(read_mcp_page('/').expected_updated_at[page_id]).toBe('v0');
+	expect(read_mcp_page('/').version).toBe(version);
 });

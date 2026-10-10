@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { validate_document } from 'svedit';
 import type { Attachment, DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
 import type { StatementSync } from 'node:sqlite';
@@ -27,6 +28,12 @@ export type DocumentRow = {
 export const shared_document_types = ['banner', 'nav', 'footer'] as const;
 
 export class InvalidDocumentError extends Error {}
+
+export class VersionConflictError extends Error {
+	constructor() {
+		super('The page or its shared banner, navigation, or footer changed since it was loaded.');
+	}
+}
 
 export function get_attached_ranges(
 	value: { marks?: Attachment[]; annotations?: Attachment[] } | null | undefined
@@ -314,16 +321,39 @@ function has_same_nodes(a: DocumentData, b: DocumentData): boolean {
 }
 
 /**
+ * Content hash of a page and its shared (banner, nav, footer) documents as
+ * stored. It changes whenever any of them changes, however it was written.
+ */
+export function get_page_version(document_id: string): string | null {
+	const select_data = db.prepare('SELECT data FROM documents WHERE document_id = ?');
+	const page_row = select_data.get(document_id) as { data: string } | undefined;
+	if (!page_row) return null;
+
+	const page_node = (JSON.parse(page_row.data) as DocumentData).nodes[document_id];
+	const hash = createHash('sha256').update(page_row.data);
+	for (const type of shared_document_types) {
+		const shared_id = page_node?.[type];
+		const row = typeof shared_id === 'string' ? select_data.get(shared_id) : undefined;
+		hash.update('\0').update((row as { data: string } | undefined)?.data ?? '');
+	}
+	return hash.digest('base64url').slice(0, 22);
+}
+
+/**
  * Validate a combined page graph and split it back into its page and shared
  * (banner, nav, footer) documents. Only new or changed documents are written,
- * so saving one page does not bump the versions of unchanged shared documents.
+ * so saving one page does not touch unchanged shared documents. When
+ * expected_version is given, the save is rejected if the stored page moved on.
  * on_write runs inside the write transaction, after the documents are stored.
  */
 export async function persist_combined_page(
 	document_id: string,
 	nodes: Record<string, DocumentNode>,
-	on_write?: (page_doc: DocumentData) => void
-): Promise<{ page_doc: DocumentData; written_document_ids: string[] }> {
+	{
+		expected_version,
+		on_write
+	}: { expected_version?: string; on_write?: (page_doc: DocumentData) => void } = {}
+): Promise<{ page_doc: DocumentData; version: string }> {
 	const page_node = nodes[document_id];
 	if (page_node?.type !== 'page') {
 		throw new InvalidDocumentError(`Root node must be a page: ${document_id}`);
@@ -357,6 +387,11 @@ export async function persist_combined_page(
 		return { ...root, node_ids, doc, data: JSON.stringify(doc) };
 	});
 
+	// Everything up to the write runs synchronously, so no other save can interleave.
+	if (expected_version !== undefined && get_page_version(document_id) !== expected_version) {
+		throw new VersionConflictError();
+	}
+
 	const select_row = db.prepare('SELECT type, data FROM documents WHERE document_id = ?');
 	const changed_documents = documents.filter(({ document_id, type, doc }) => {
 		const row = select_row.get(document_id) as { type: string; data: string } | undefined;
@@ -376,7 +411,7 @@ export async function persist_combined_page(
 
 	const page_doc = documents[0].doc;
 
-	await with_asset_cleanup(() =>
+	const version = await with_asset_cleanup(() =>
 		with_transaction(() => {
 			// created_at is only written on insert; the upsert keeps the existing value on conflict.
 			const now_iso = new Date().toISOString();
@@ -394,6 +429,7 @@ export async function persist_combined_page(
 			}
 
 			on_write?.(page_doc);
+			return get_page_version(document_id)!;
 		})
 	);
 
@@ -401,8 +437,5 @@ export async function persist_combined_page(
 	// safety snapshot (never throws, never blocks the save).
 	void snapshot_if_stale();
 
-	return {
-		page_doc,
-		written_document_ids: changed_documents.map(({ document_id }) => document_id)
-	};
+	return { page_doc, version };
 }

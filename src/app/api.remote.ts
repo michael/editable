@@ -18,6 +18,7 @@ import {
 	type DocumentData,
 	type DocumentRow,
 	InvalidDocumentError,
+	VersionConflictError,
 	collect_document_refs,
 	collect_node_ids,
 	get_active_slug_for_document_id,
@@ -26,6 +27,7 @@ import {
 	get_doc_from_db,
 	get_home_page_id_from_db,
 	get_optional_doc_from_db,
+	get_page_version,
 	get_shared_root_ids,
 	is_home_page_document_id,
 	persist_combined_page,
@@ -98,7 +100,10 @@ const save_document_input_schema = v.object({
 	document_id: v.string(),
 	nodes: v.record(v.string(), v.any()),
 	create: v.optional(v.boolean()),
-	language: v.optional(v.string())
+	language: v.optional(v.string()),
+	// The page version the editor loaded; omit with force to overwrite newer changes.
+	expected_version: v.optional(v.string()),
+	force: v.optional(v.boolean())
 });
 
 const update_page_slug_input_schema = v.object({
@@ -142,6 +147,7 @@ export const get_document = query(v.string(), async (slug) => {
 
 	return {
 		document: get_combined_document(resolved.document_id),
+		version: get_page_version(resolved.document_id),
 		slug: resolved.active_slug,
 		redirect_to_slug: resolved.is_active ? null : resolved.active_slug
 	};
@@ -181,6 +187,7 @@ export const get_home_document = query(v.void(), async () => {
 
 	return {
 		document: get_combined_document(home_page_id),
+		version: get_page_version(home_page_id),
 		slug: get_active_slug_for_document_id(home_page_id),
 		redirect_to_slug: null
 	};
@@ -568,37 +575,46 @@ export const save_document = command(save_document_input_schema, async (combined
 		'INSERT INTO document_slugs (slug, document_id, is_active, created_at) VALUES (?, ?, ?, ?)'
 	);
 
+	let version: string;
 	try {
-		await persist_combined_page(
+		({ version } = await persist_combined_page(
 			combined_doc.document_id,
 			structuredClone(combined_doc.nodes),
-			(page_doc) => {
-				if (
-					!combined_doc.create ||
-					get_active_slug_for_document_id(combined_doc.document_id) ||
-					is_home_page_document_id(combined_doc.document_id)
-				)
-					return;
-				const metadata = extract_page_metadata(page_doc);
-				const base_slug = create_slug_candidate(
-					metadata.title || 'Untitled page',
-					combined_doc.document_id
-				);
-				insert_active_slug(
-					combined_doc.document_id,
-					create_unique_slug(base_slug),
-					insert_slug,
-					deactivate_active_slug
-				);
+			{
+				expected_version:
+					combined_doc.create || combined_doc.force ? undefined : combined_doc.expected_version,
+				on_write: (page_doc) => {
+					if (
+						!combined_doc.create ||
+						get_active_slug_for_document_id(combined_doc.document_id) ||
+						is_home_page_document_id(combined_doc.document_id)
+					)
+						return;
+					const metadata = extract_page_metadata(page_doc);
+					const base_slug = create_slug_candidate(
+						metadata.title || 'Untitled page',
+						combined_doc.document_id
+					);
+					insert_active_slug(
+						combined_doc.document_id,
+						create_unique_slug(base_slug),
+						insert_slug,
+						deactivate_active_slug
+					);
+				}
 			}
-		);
+		));
 	} catch (err) {
 		if (err instanceof InvalidDocumentError) error(400, err.message);
+		if (err instanceof VersionConflictError) {
+			return { ok: false as const, code: 'version_conflict' as const, message: err.message };
+		}
 		throw err;
 	}
 
 	return {
-		ok: true,
+		ok: true as const,
+		version,
 		document_id: combined_doc.document_id,
 		slug: is_home_page_document_id(combined_doc.document_id)
 			? null

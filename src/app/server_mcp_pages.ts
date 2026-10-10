@@ -1,36 +1,17 @@
-import type { DocumentNode } from 'svedit';
+import { fill_node_defaults, type DocumentNode, type PropertyDefinition } from 'svedit';
 import { db } from './services.js';
+import { document_schema } from './document_schema.js';
 import { extract_page_metadata } from './page_metadata.js';
 import {
-	type DocumentData,
 	collect_node_ids,
 	combine_page_document,
 	get_active_slug_for_document_id,
 	get_home_page_id_from_db,
+	get_optional_doc_from_db,
+	get_page_version,
 	persist_combined_page,
 	shared_document_types
 } from './server_documents.js';
-
-type VersionedDocument = DocumentData & { updated_at: string | null };
-
-function get_versioned_document(document_id: string): VersionedDocument | null {
-	const row = db
-		.prepare('SELECT data, updated_at FROM documents WHERE document_id = ?')
-		.get(document_id) as { data: string; updated_at: string | null } | undefined;
-	if (!row) return null;
-	return { ...(JSON.parse(row.data) as DocumentData), updated_at: row.updated_at ?? null };
-}
-
-/** Versions of the page and its shared documents, keyed by document id. */
-function get_document_versions(page: VersionedDocument): Record<string, string | null> {
-	const versions: Record<string, string | null> = { [page.document_id]: page.updated_at };
-	for (const type of shared_document_types) {
-		const shared_id = page.nodes[page.document_id]?.[type];
-		if (typeof shared_id === 'string')
-			versions[shared_id] = get_versioned_document(shared_id)?.updated_at ?? null;
-	}
-	return versions;
-}
 
 function page_for_href(page_href: string): { document_id: string; slug: string } | null {
 	if (page_href === '/') {
@@ -44,39 +25,54 @@ function page_for_href(page_href: string): { document_id: string; slug: string }
 	return row ? { document_id: row.document_id, slug: `/${slug}` } : null;
 }
 
+/** Fill omitted properties, and omitted marks/annotations of text and node_array values. */
+function fill_defaults(node: DocumentNode): DocumentNode {
+	const filled = fill_node_defaults(node, document_schema);
+	const properties = document_schema[filled.type]?.properties ?? {};
+	for (const [name, definition] of Object.entries<PropertyDefinition>(properties)) {
+		const value = filled[name];
+		if ((definition.type === 'text' || definition.type === 'node_array') && value) {
+			filled[name] = { ...value, marks: value.marks ?? [], annotations: value.annotations ?? [] };
+		}
+	}
+	return filled;
+}
+
 export function read_mcp_page(page_href: string) {
 	const page = page_for_href(page_href);
-	const page_doc = page && get_versioned_document(page.document_id);
+	const page_doc = page && get_optional_doc_from_db(page.document_id);
 	if (!page || !page_doc) throw new Error(`Page not found: ${page_href}`);
 	return {
 		document: combine_page_document(page_doc),
 		page_href: page.slug,
-		expected_updated_at: get_document_versions(page_doc)
+		version: get_page_version(page.document_id)
 	};
 }
 
 export async function save_mcp_page(input: {
 	document_id: string;
 	nodes: Record<string, unknown>;
-	expected_updated_at: Record<string, string | null>;
+	expected_version: string;
 }) {
-	const current = get_versioned_document(input.document_id);
+	const current = get_optional_doc_from_db(input.document_id);
 	if (current?.nodes[input.document_id]?.type !== 'page')
 		throw new Error(`Existing page not found: ${input.document_id}`);
-	for (const [document_id, updated_at] of Object.entries(get_document_versions(current))) {
-		if (updated_at !== input.expected_updated_at[document_id])
-			throw new Error(
-				document_id === input.document_id
-					? 'Page changed since it was read. Read it again before saving.'
-					: `Shared document ${document_id} changed since it was read. Read the page again before saving.`
-			);
-	}
+	// Check up front so a stale patch is not reported as unlinked or invalid.
+	if (get_page_version(input.document_id) !== input.expected_version)
+		throw new Error('Page changed since it was read. Read it again before saving.');
 
 	// MCP writes are patches: overlay submitted node ids onto the latest full
 	// document. Omitting a node leaves it untouched; unreachable stored nodes
-	// are discarded when the page is split back into its documents.
+	// are discarded when the page is split back into its documents. Omitted
+	// properties of submitted nodes fall back to their schema defaults.
+	const submitted_nodes = Object.fromEntries(
+		Object.entries(input.nodes as Record<string, DocumentNode>).map(([id, node]) => [
+			id,
+			fill_defaults(node)
+		])
+	);
 	const stored_nodes = combine_page_document(current).nodes;
-	const nodes = { ...stored_nodes, ...(input.nodes as Record<string, DocumentNode>) };
+	const nodes = { ...stored_nodes, ...submitted_nodes };
 	for (const type of shared_document_types) {
 		if (nodes[input.document_id]?.[type] !== current.nodes[input.document_id][type])
 			throw new Error(`The shared ${type} reference cannot be changed through save_page.`);
@@ -85,21 +81,25 @@ export async function save_mcp_page(input: {
 	// New or changed nodes that end up unreachable were almost certainly meant
 	// to be linked; unchanged ones are deletions from a resent document.
 	const reachable_ids = collect_node_ids(input.document_id, nodes);
-	const unlinked_ids = Object.keys(input.nodes).filter(
+	const unlinked_ids = Object.keys(submitted_nodes).filter(
 		(id) =>
-			!reachable_ids.has(id) && JSON.stringify(input.nodes[id]) !== JSON.stringify(stored_nodes[id])
+			!reachable_ids.has(id) &&
+			JSON.stringify(submitted_nodes[id]) !== JSON.stringify(stored_nodes[id])
 	);
 	if (unlinked_ids.length)
 		throw new Error(
 			`New or changed nodes are not linked from the page: ${unlinked_ids.join(', ')}. Add each id to its parent's node, node_array, or mark/annotation range and include the changed parent.`
 		);
 
-	const { page_doc } = await persist_combined_page(input.document_id, nodes);
+	const { page_doc, version } = await persist_combined_page(input.document_id, nodes, {
+		expected_version: input.expected_version
+	});
 	const slug = get_active_slug_for_document_id(input.document_id);
 	return {
 		ok: true,
 		document_id: input.document_id,
 		page_href: slug ? `/${slug}` : '/',
-		title: extract_page_metadata(page_doc).title
+		title: extract_page_metadata(page_doc).title,
+		version
 	};
 }
