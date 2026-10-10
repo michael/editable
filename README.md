@@ -51,7 +51,9 @@ You can also use `Ctrl` + `Shift` + `E` to edit. In read mode, admins can create
 
 ### Connect an MCP client
 
-Editable exposes a remote MCP endpoint at `https://your-site.example.com/mcp` that lets agents list, read, create, and edit pages. Clients connect with OAuth: when you add the server, the client opens a browser window where you log in as admin and approve the connection. An approval lasts 48 hours, after which the client asks you to connect again. Logging out of Editable ends all MCP connections immediately.
+Editable exposes a remote [MCP](https://modelcontextprotocol.io) endpoint at `https://your-site.example.com/mcp` that lets agents list, read, create, and edit pages. It is part of the backend, so it is not available on static deployments.
+
+Clients connect with OAuth: when you add the server, the client opens a browser window where you log in as admin and approve the connection. The consent page names the app and the address it receives access at, so only approve connections you started yourself. An approval lasts 48 hours, after which the client asks you to connect again. Logging out of Editable ends all MCP connections immediately.
 
 For Claude Code, add the server and authenticate from `/mcp` inside Claude Code:
 
@@ -59,9 +61,30 @@ For Claude Code, add the server and authenticate from `/mcp` inside Claude Code:
 claude mcp add --transport http editable https://your-site.example.com/mcp
 ```
 
-Other clients that support MCP authorization, such as Codex, connect the same way: add the URL and follow the login prompt.
+Other clients that support MCP authorization, such as Codex, connect the same way: add the URL and follow the login prompt. During development, `http://localhost:5173/mcp` works the same way.
 
-Call `list_pages` to confirm the connection. After updating Editable, start a new session in your MCP client so it picks up the current tool descriptions. The `save_page` tool edits live content, including the shared banner, navigation, and footer.
+Call `list_pages` to confirm the connection. After updating Editable, start a new session in your MCP client so it picks up the current tool descriptions.
+
+#### Tools
+
+- `get_schema` describes the document model: every node type with its properties, allowed child types, and defaults, plus the JSON formats for property values.
+- `list_pages` lists pages in the same hierarchy as the page browser.
+- `read_page` returns a page's complete document, including the shared banner, navigation, and footer, together with the `version` that `save_page` requires. It accepts a path such as `/about`, a full URL, a language-prefixed path, or a document id.
+- `create_page` creates a page from a page node and its content nodes. The shared documents are linked automatically, and the URL comes from `slug` or the page title.
+- `save_page` applies a partial update: it takes only the nodes to add or change and merges them into the latest stored document. Nodes that are no longer linked from the page are removed, and new or changed nodes must be linked from a parent.
+- `prepare_image_upload` returns a 30-minute upload token and the exact encoding and upload steps for adding images.
+
+Agents read a page, send changed nodes back with the version they read, and keep editing with the version each save returns. A save is rejected when the page changed in between, for example when you saved it in the editor. The reverse is handled too: saving a page in the editor that an agent changed since you opened it asks which version to keep. Every save is validated against the schema and the single-owner rule before anything is written, so an agent cannot persist a malformed document.
+
+`save_page` edits live content, including the shared banner, navigation, and footer, which affect every page.
+
+#### Images
+
+Image files do not travel through tool calls. `prepare_image_upload` tells the agent how to encode a WebP original and its resized variants, exactly as the editor does in the browser, and how to upload them over HTTP with the token. The agent needs a shell with network access to the site. Uploads with a token must be valid WebP files whose dimensions match the declared ones, and a page can only reference images whose variants are all uploaded. Videos cannot be uploaded through MCP.
+
+#### Translations
+
+With [translations](#translations-experimental) enabled, `read_page` with a language-prefixed path such as `/de/about`, or with the `language` argument, returns the translated page, and `save_page` with `language` saves it. Like the editor, translations can change text, inline formatting, and media only; structure and layout are edited in the main language.
 
 ## Make it yours
 

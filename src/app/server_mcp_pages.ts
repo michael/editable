@@ -8,6 +8,7 @@ import { parse_internal_page_href } from './document_links.js';
 import { MEDIA_DEFAULTS, document_schema } from './document_schema.js';
 import nanoid from './nanoid.js';
 import { extract_page_metadata } from './page_metadata.js';
+import { stable_json } from './translations.js';
 import { assert_uploaded_images } from './server_mcp_images.js';
 import {
 	type DocumentData,
@@ -124,6 +125,22 @@ function fill_submitted_nodes(nodes: Record<string, unknown>): Record<string, Do
 }
 
 /**
+ * Ids of submitted nodes that differ from the stored ones, ignoring key order
+ * and properties the stored node left at their defaults. Unchanged nodes a
+ * resent document no longer links are deletions, not mistakes.
+ */
+function changed_ids(
+	submitted_nodes: Record<string, DocumentNode>,
+	stored_nodes: Record<string, DocumentNode>
+) {
+	return Object.keys(submitted_nodes).filter(
+		(id) =>
+			!stored_nodes[id] ||
+			stable_json(submitted_nodes[id]) !== stable_json(fill_defaults(stored_nodes[id]))
+	);
+}
+
+/**
  * Check new or changed nodes: unreachable ones were almost certainly meant to
  * be linked, and media must already be uploaded.
  */
@@ -172,14 +189,7 @@ export async function save_mcp_page(input: {
 		if (nodes[input.document_id]?.[type] !== current.nodes[input.document_id][type])
 			throw new Error(`The shared ${type} reference cannot be changed through save_page.`);
 	}
-	// Unchanged unreachable nodes are deletions from a resent document.
-	assert_changes(
-		input.document_id,
-		nodes,
-		Object.keys(submitted_nodes).filter(
-			(id) => JSON.stringify(submitted_nodes[id]) !== JSON.stringify(stored_nodes[id])
-		)
-	);
+	assert_changes(input.document_id, nodes, changed_ids(submitted_nodes, stored_nodes));
 
 	const { page_doc, version } = await persist_combined_page(input.document_id, nodes, {
 		expected_version: input.expected_version
@@ -207,13 +217,7 @@ async function save_mcp_translation(input: {
 
 	const submitted_nodes = fill_submitted_nodes(input.nodes);
 	const nodes = { ...current.document.nodes, ...submitted_nodes };
-	assert_changes(
-		document_id,
-		nodes,
-		Object.keys(submitted_nodes).filter(
-			(id) => JSON.stringify(submitted_nodes[id]) !== JSON.stringify(current.document.nodes[id])
-		)
-	);
+	assert_changes(document_id, nodes, changed_ids(submitted_nodes, current.document.nodes));
 
 	await with_asset_cleanup(() =>
 		unwrap_http_error(() =>

@@ -75,5 +75,9 @@ it('checks protocol versions and modern request headers', async () => {
 	expect(await (await post(list, { 'mcp-protocol-version': '2024-01-01' })).json()).toMatchObject({
 		error: { code: -32010 }
 	});
+	// Without the header, clients are assumed to speak an older version.
+	expect(await (await post(list, { 'mcp-protocol-version': '' })).json()).toMatchObject({
+		result: { tools: expect.any(Array) }
+	});
 	expect((await post({ jsonrpc: '2.0', method: 'notifications/initialized' })).status).toBe(202);
 });

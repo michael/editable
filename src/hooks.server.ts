@@ -96,7 +96,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	const language = request_language(event.url) || 'en';
-	return resolve(event, {
+	const response = await resolve(event, {
 		transformPageChunk: ({ html }) => html.replace('%lang%', language)
 	});
+	// The OAuth consent page must not be embeddable, so a framed click cannot approve an app.
+	if (event.url.pathname === '/oauth/authorize') response.headers.set('X-Frame-Options', 'DENY');
+	return response;
 };

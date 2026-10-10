@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { TW_PRIMARY_BTN, TW_SECONDARY_BTN } from '#app/buttons.js';
+
 	let {
 		open = false,
 		onreload,
@@ -27,12 +29,6 @@
 	function handle_click(event: MouseEvent) {
 		if (event.target === dialog_ref) onclose();
 	}
-
-	// AuthDialog's button recipes in the site's accent colors.
-	const TW_BTN_BASE =
-		'inline-flex h-9 sm:h-[46px] shrink-0 items-center justify-center rounded-(--button-border-radius) px-5 text-sm leading-5 whitespace-nowrap transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer';
-	const TW_PRIMARY_BTN = `${TW_BTN_BASE} border border-transparent bg-(--accent) text-(--accent-foreground) enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)]`;
-	const TW_SECONDARY_BTN = `${TW_BTN_BASE} border border-(--stroke) bg-(--background) text-(--foreground) enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10`;
 </script>
 
 <dialog
