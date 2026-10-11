@@ -600,11 +600,20 @@ export function parse_edf(source: string, schema: Schema, options: ParseOptions 
 	}
 
 	const root = parse_xml(source);
-	if (!root.attributes.id)
-		throw new EdfError(`Line ${root.line}: the root <${root.name}> needs an id attribute.`);
 	parse_node(root);
 	assign_range_ids(pending, nodes, stored, schema, generate_id);
-	return { document_id: root.attributes.id, nodes };
+	return { document_id: root_id(root), nodes };
+}
+
+function root_id(root: XmlElement) {
+	if (!root.attributes.id)
+		throw new EdfError(`Line ${root.line}: the root <${root.name}> needs an id attribute.`);
+	return root.attributes.id;
+}
+
+/** The document id of an EDF document, without interpreting it against a schema. */
+export function edf_root_id(source: string) {
+	return root_id(parse_xml(source));
 }
 
 /**

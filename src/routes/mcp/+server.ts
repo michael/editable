@@ -27,36 +27,29 @@ function define_tool<TInput extends ToolInput>(tool: Tool<TInput>): Tool {
 	return tool as unknown as Tool;
 }
 
-const value_formats = {
-	node: '{ id, type, ...properties }. Ids match /^[A-Za-z_][A-Za-z0-9_-]*$/, must be unique, and must not contain "__".',
-	'property type "node"': 'The id of one child node, whose type is listed in node_types.',
-	'property type "node_array"':
-		'{ nodes: [child ids], marks: [], annotations: [] }. Child types must be listed in node_types.',
-	'property type "text"':
-		'{ content: string, marks: [range], annotations: [range] }. Mark node types must be listed in mark_types; newlines only when allow_newlines is true.',
-	range:
-		'{ start_offset, end_offset, node_id }. Offsets count grapheme clusters (user-perceived characters), not UTF-16 code units. node_id is a node of a mark type (kind "mark"), e.g. { id, type: "link", href } or { id, type: "strong" }. Marks in one property must not overlap.',
-	'property type "string"/"integer"/"number"':
-		'A plain value. When values is listed, use one of them.',
-	defaults:
-		'save_page fills omitted properties with their default, or with an empty string, 0, or empty text/node_array when none is listed, and fills omitted marks/annotations with []. Node properties have no default and must be set.',
-	ownership:
-		'Every node has exactly one owner: one node property, node_array entry, or range. To reuse content, copy the node with a new id.',
-	media:
-		'Image and video src values must reference uploaded assets. Reuse src, width, height, and mime_type from existing media nodes, or add a new image with prepare_image_upload. Videos cannot be uploaded through MCP.'
-};
+/** How documents are written in EDF, the XML form read_page returns and save_page and create_page take. */
+const edf_rules = [
+	'EDF is XML. Each node is an element named by its type with an id attribute; ids match /^[A-Za-z_][A-Za-z0-9_-]*$/ and are unique. Leave the id off new nodes to have one assigned.',
+	'Properties of type string, integer, number, and boolean are attributes; omit one to use its default. When values is listed, use one of them.',
+	'Properties of type node and node_array are child elements named after the property, containing node elements of the listed node_types (exactly one for a node property).',
+	'Properties of type text are child elements named after the property containing the text. Nodes of kind "text" hold their content directly: <paragraph id="p1">Hello</paragraph>. Newlines are literal and only allowed where allow_newlines is true.',
+	'Marks are inline elements named by the mark type, with the mark’s properties as attributes: <strong>bold</strong>, <link href="/about">about</link>. mark_types lists what each property allows. Marks carry no id and do not nest. In a node_array, a mark such as <section> wraps the consecutive child elements it spans.',
+	'Escape & < > as &amp; &lt; &gt; in text and attribute values.',
+	'Every node has exactly one parent; to reuse content, copy it under a new id. The page element keeps banner, nav, and footer as id attributes unless it was read with include_shared.',
+	'Image and video src values must be uploaded assets: reuse src, width, height, and mime_type from existing media, or add an image with prepare_image_upload. Videos cannot be uploaded through MCP.'
+];
 
 // Backend-only modules are imported lazily so the static deployment does not evaluate database code.
 const tools = [
 	define_tool({
 		name: 'get_schema',
 		description:
-			'Describe the document model used by read_page and save_page: every node type with its kind and properties (allowed child node_types, mark_types, string values, and defaults), plus the JSON formats for property values. Call this before creating node types you have not seen on the page.',
+			'Describe the document model and EDF, the XML form used by read_page, create_page, and save_page: the writing rules, then every node type with its kind and properties (allowed child node_types, mark_types, string values, and defaults). Call this before using node types you have not seen on a page.',
 		input: v.strictObject({}),
 		annotations: { readOnlyHint: true },
 		handler: async () => {
 			const { document_schema } = await import('#app/document_schema.js');
-			return { value_formats, node_types: document_schema };
+			return { edf: edf_rules, node_types: document_schema };
 		}
 	}),
 	define_tool({
@@ -73,7 +66,7 @@ const tools = [
 	define_tool({
 		name: 'read_page',
 		description:
-			'Read an existing page. page_href can be a path (/about, or / for the home page), a full URL, a language-prefixed or old path, or a document_id from list_pages; the result contains the current page_href. Returns the complete editable document JSON, including shared banner, navigation, and footer nodes, plus the page version required by save_page. A language prefix (/de/about) or the language argument reads the translation: text and media that are not translated yet show the main language. The result lists the enabled languages; the first is the main language.',
+			'Read an existing page as EDF (XML, see get_schema). page_href can be a path (/about, or / for the home page), a full URL, a language-prefixed or old path, or a document_id from list_pages; the result contains the current page_href. Returns edf, the complete page, plus the version required by save_page. The shared banner, navigation, and footer are referenced by id and left out unless include_shared is true. A language prefix (/de/about) or the language argument reads the translation: text and media that are not translated yet show the main language. The result lists the enabled languages; the first is the main language.',
 		input: v.strictObject({
 			page_href: v.pipe(
 				v.string(),
@@ -84,23 +77,28 @@ const tools = [
 					v.string(),
 					v.description('Language code such as de. Overrides the language prefix of the path.')
 				)
+			),
+			include_shared: v.optional(
+				v.pipe(
+					v.boolean(),
+					v.description(
+						'Include the shared banner, navigation, and footer, to edit them with save_page.'
+					)
+				)
 			)
 		}),
 		annotations: { readOnlyHint: true },
-		handler: async ({ page_href, language }) => {
+		handler: async ({ page_href, language, include_shared }) => {
 			const { read_mcp_page } = await import('#app/server_mcp_pages.js');
-			return read_mcp_page(page_href, language);
+			return read_mcp_page(page_href, language, include_shared);
 		}
 	}),
 	define_tool({
 		name: 'create_page',
 		description:
-			'Create a new page. Send document_id (a new unique id that is also the page node id) and nodes: the page node (type "page") and all of its content nodes, in the format described by get_schema. Leave out the shared banner, navigation, and footer; the page is linked to them automatically. Omitted properties are filled with defaults, and an empty preview image is added if the page has none. The URL is derived from slug if given, otherwise from the page title, with a numeric suffix when taken. The page is public at its URL right away but not linked from anywhere; to add it to the navigation, edit the nav nodes with save_page. Returns page_href and the version for save_page.',
+			'Create a new page from EDF: a <page> element with a new unique id and its content, written as described by get_schema. Leave out banner, nav, and footer; the page is linked to the shared ones automatically. Omitted properties use their defaults, and an empty preview image is added if the page has none. The URL comes from slug if given, otherwise from the page title, with a numeric suffix when taken. The page is public at its URL right away but not linked from anywhere; to add it to the navigation, read a page with include_shared and edit the nav with save_page. Returns page_href and the version for save_page.',
 		input: v.strictObject({
-			document: v.strictObject({
-				document_id: v.string(),
-				nodes: v.record(v.string(), v.record(v.string(), v.unknown()))
-			}),
+			edf: v.pipe(v.string(), v.description('The page as EDF, starting with <page id="...">.')),
 			slug: v.optional(
 				v.pipe(
 					v.string(),
@@ -109,9 +107,9 @@ const tools = [
 			)
 		}),
 		annotations: { readOnlyHint: false, destructiveHint: false },
-		handler: async ({ document, slug }) => {
+		handler: async ({ edf, slug }) => {
 			const { create_mcp_page } = await import('#app/server_mcp_pages.js');
-			return create_mcp_page({ ...document, slug });
+			return create_mcp_page({ edf, slug });
 		}
 	}),
 	define_tool({
@@ -128,12 +126,9 @@ const tools = [
 	define_tool({
 		name: 'save_page',
 		description:
-			'Apply a partial document update using the same document JSON shape returned by read_page. Send document_id and nodes containing only node ids to create or change; every submitted node replaces the stored node with the same id. Omitted nodes are kept if still reachable. To delete, unlink a node from its parent and omit it; the server drops nodes no longer reachable from the page or shared-document roots. New or changed nodes must be linked from a parent (include the changed parent too), otherwise the save is rejected. Changes to banner, navigation, or footer nodes affect every page. Include expected_version: the version from read_page, or from your previous save_page result to keep editing without reading again. The server merges against the latest stored document, validates the complete merged graph and ownership, and rejects stale versions or invalid changes before writing. To save a translation, pass language and the version from reading the page in that language; only text, inline formatting, and media may differ from the main language, and text equal to the main language removes its translation. Structural and layout changes belong in the main language.',
+			'Save a page: send the complete page as EDF, as returned by read_page, with your changes applied. Nodes left out of the document are deleted; new elements without an id get one. Include expected_version: the version from read_page, or from your previous save_page result to keep editing without reading again. The server validates the whole document and rejects stale versions or invalid changes before writing anything. The shared banner, navigation, and footer are only changed when the page was read with include_shared and is sent back with them; such changes affect every page. To save a translation, pass language and the version from reading the page in that language; only text, inline formatting, and media may differ from the main language, and text equal to the main language removes its translation. Structural and layout changes belong in the main language.',
 		input: v.strictObject({
-			document: v.strictObject({
-				document_id: v.string(),
-				nodes: v.record(v.string(), v.record(v.string(), v.unknown()))
-			}),
+			edf: v.pipe(v.string(), v.description('The complete page as EDF.')),
 			expected_version: v.pipe(
 				v.string(),
 				v.description('The version returned by read_page or the previous save_page.')
@@ -143,9 +138,9 @@ const tools = [
 			)
 		}),
 		annotations: { readOnlyHint: false, destructiveHint: true },
-		handler: async ({ document, expected_version, language }) => {
+		handler: async ({ edf, expected_version, language }) => {
 			const { save_mcp_page } = await import('#app/server_mcp_pages.js');
-			return save_mcp_page({ ...document, expected_version, language });
+			return save_mcp_page({ edf, expected_version, language });
 		}
 	})
 ];

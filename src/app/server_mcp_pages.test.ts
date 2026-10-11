@@ -38,9 +38,13 @@ import {
 	default_nav_document,
 	default_footer_document
 } from './default_site.js';
+import { combine_page_document, get_doc_from_db } from './server_documents.js';
 import { create_mcp_page, read_mcp_page, save_mcp_page } from './server_mcp_pages.js';
 
 const page_id = default_page_document.document_id;
+const banner_id = default_banner_document.document_id;
+const nav_id = default_nav_document.document_id;
+const footer_id = default_footer_document.document_id;
 
 afterAll(() => (db as DatabaseSync).close());
 
@@ -67,8 +71,11 @@ beforeEach(() => {
 	}
 });
 
-function save(nodes: Record<string, unknown>, expected_version = read_mcp_page('/').version!) {
-	return save_mcp_page({ document_id: page_id, nodes, expected_version });
+const read = (page = '/', language?: string, include_shared = false) =>
+	read_mcp_page(page, language, include_shared);
+
+function save(edf: string, expected_version = read().version!) {
+	return save_mcp_page({ edf, expected_version });
 }
 
 function updated_at(document_id: string) {
@@ -79,133 +86,149 @@ function updated_at(document_id: string) {
 	).updated_at;
 }
 
-function page_node() {
-	return structuredClone(read_mcp_page('/').document.nodes[page_id]);
+const page_json = () => combine_page_document(get_doc_from_db(page_id));
+
+/** Set the page title, which the default page leaves empty. */
+function set_title(edf: string, title: string) {
+	return /<title>/.test(edf)
+		? edf.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
+		: edf.replace(/^(<page[^>]*>\n)/, `$1\t<title>${title}</title>\n`);
 }
 
-function create_input(document_id: string, nodes: Record<string, unknown> = {}) {
-	return {
-		document_id,
-		nodes: {
-			[document_id]: {
-				id: document_id,
-				type: 'page',
-				title: { content: 'About us' },
-				body: { nodes: [`${document_id}_text`] }
-			},
-			[`${document_id}_text`]: {
-				id: `${document_id}_text`,
-				type: 'code_block',
-				content: { content: 'Hello' }
-			},
-			...nodes
-		}
-	};
+/** Add blocks at the end of the page body. */
+function append_blocks(edf: string, blocks: string) {
+	return edf.replace(/\n\t<\/body>\n<\/page>\n$/, `\n${blocks}\n\t</body>\n</page>\n`);
 }
 
-function create(document_id: string, nodes: Record<string, unknown> = {}) {
-	return create_mcp_page(create_input(document_id, nodes));
+function create(
+	document_id: string,
+	body = '<prose><body><paragraph>Hello</paragraph></body></prose>',
+	slug?: string
+) {
+	return create_mcp_page({
+		edf: `<page id="${document_id}"><title>About us</title><body>${body}</body></page>`,
+		slug
+	});
 }
 
-it('writes only changed documents and versions the result', async () => {
-	const { version } = read_mcp_page('/');
-	const page = page_node();
-	page.title = { content: 'New title', marks: [], annotations: [] };
-	const result = await save({ [page_id]: page }, version!);
+it('writes only changed documents, versions the result, and skips saves without edits', async () => {
+	const { edf, version } = read();
+	expect(edf).toMatch(
+		new RegExp(
+			`^<page id="${page_id}" banner="${banner_id}" nav="${nav_id}" footer="${footer_id}">`
+		)
+	);
+	expect(edf).not.toContain(`<nav id="${nav_id}"`);
+	expect((await save(edf, version!)).version).toBe(version);
+	expect(updated_at(page_id)).toBe('v0');
 
-	expect(read_mcp_page('/')).toMatchObject({ version: result.version });
-	expect(read_mcp_page('/').document.nodes[page_id].title.content).toBe('New title');
+	const result = await save(set_title(edf, 'New &amp; improved'), version!);
+	expect(result.version).not.toBe(version);
+	expect(read()).toMatchObject({ version: result.version });
+	expect(page_json().nodes[page_id].title.content).toBe('New & improved');
 	expect(updated_at(page_id)).not.toBe('v0');
-	for (const shared of [default_banner_document, default_nav_document, default_footer_document])
-		expect(updated_at(shared.document_id)).toBe('v0');
+	for (const id of [banner_id, nav_id, footer_id]) expect(updated_at(id)).toBe('v0');
 
 	// The returned version continues editing; the version it replaced is stale.
-	await save({}, result.version);
-	await expect(save({}, version!)).rejects.toThrow('Page changed since it was read');
+	await save(read().edf, result.version);
+	await expect(save(edf, version!)).rejects.toThrow('Page changed since it was read');
 });
 
-it('fills omitted properties of submitted nodes with defaults', async () => {
-	const page = page_node();
-	page.body.nodes.push('new_prose');
-	await save({
-		[page_id]: page,
-		new_prose: { id: 'new_prose', type: 'prose', body: { nodes: ['new_paragraph'] } },
-		new_paragraph: {
-			id: 'new_paragraph',
-			type: 'paragraph',
-			content: { content: 'Hi', marks: [], annotations: [] }
-		}
-	});
-
-	const { nodes } = read_mcp_page('/').document;
-	expect(nodes.new_prose.layout).toBe('narrow-left');
-	expect(nodes.new_paragraph.layout).toBe('regular');
+it('fills defaults and assigns ids to new nodes and marks', async () => {
+	await save(
+		append_blocks(
+			read().edf,
+			'\t\t<prose><body><paragraph>Hi <strong>there</strong></paragraph></body></prose>'
+		)
+	);
+	const { nodes } = page_json();
+	const paragraph = Object.values(nodes).find((node) => node.content?.content === 'Hi there')!;
+	expect(paragraph).toMatchObject({ type: 'paragraph', layout: 'regular' });
+	expect(paragraph.id).toMatch(/^[A-Za-z]{23}$/);
+	expect(paragraph.content.marks).toEqual([
+		{ start_offset: 3, end_offset: 8, node_id: expect.stringMatching(/^[A-Za-z]{23}$/) }
+	]);
+	expect(nodes[paragraph.content.marks[0].node_id].type).toBe('strong');
+	const prose = Object.values(nodes).find((node) => node.body?.nodes.includes(paragraph.id))!;
+	expect(prose).toMatchObject({ type: 'prose', layout: 'narrow-left' });
+	expect(nodes[page_id].body.nodes.at(-1)).toBe(prose.id);
 });
 
-it('drops unlinked stored nodes but rejects unlinked new or changed nodes', async () => {
-	const { nodes } = structuredClone(read_mcp_page('/').document);
-	const removed_id = nodes[page_id].body.nodes.pop();
-	const orphan = { ...nodes[removed_id], id: 'orphan' };
-	await expect(save({ [page_id]: nodes[page_id], orphan })).rejects.toThrow(
-		'not linked from the page: orphan'
+it('drops nodes left out of the document', async () => {
+	const { nodes } = page_json();
+	const removed_id = nodes[page_id].body.nodes.at(-1)!;
+	const type = nodes[removed_id].type;
+	const element = new RegExp(
+		`\\n\\t*<${type} id="${removed_id}"(?:[^>]*/>|[^>]*>[\\s\\S]*?\\n\\t*</${type}>)`
+	);
+	const { edf } = read();
+	expect(edf).toMatch(element);
+	await save(edf.replace(element, ''));
+	expect(page_json().nodes[removed_id]).toBeUndefined();
+	expect(page_json().nodes[page_id].body.nodes).not.toContain(removed_id);
+});
+
+it('rejects duplicate ids, unsafe links, misplaced marks, and shared reference changes', async () => {
+	const { edf, version } = read();
+	const first_block = page_json().nodes[page_id].body.nodes[0];
+	const duplicated = append_blocks(
+		edf,
+		`\t\t<prose id="${first_block}"><body><paragraph>x</paragraph></body></prose>`
+	);
+	await expect(save(duplicated, version!)).rejects.toThrow('duplicate node id');
+
+	const scripted = append_blocks(
+		edf,
+		'\t\t<prose><body><paragraph>see <link href=" java\tscript:alert(1)">x</link></paragraph></body></prose>'
+	);
+	await expect(save(scripted, version!)).rejects.toThrow('Unsafe href');
+
+	await expect(save(set_title(edf, '<strong>Bold</strong>'), version!)).rejects.toThrow(
+		'<strong> is not allowed in page.title'
 	);
 
-	// Resent nodes count as unchanged whatever their key order.
-	const reordered = Object.fromEntries(
-		Object.entries(nodes).map(([id, node]) => [
-			id,
-			Object.fromEntries(Object.entries(node).reverse())
-		])
-	);
-	await save(reordered);
-	expect(read_mcp_page('/').document.nodes[removed_id]).toBeUndefined();
+	const moved_nav = edf.replace(`nav="${nav_id}"`, `nav="${footer_id}"`);
+	await expect(save(moved_nav, version!)).rejects.toThrow('shared nav reference');
+	expect(read().version).toBe(version);
 });
 
-it('rejects multiple owners, unsafe links, and shared reference changes', async () => {
-	const { version } = read_mcp_page('/');
+it('includes the shared documents on request and saves them with the page', async () => {
+	const { edf, version } = read('/', undefined, true);
+	expect(edf).toContain(`\n\t<nav>\n\t\t<nav id="${nav_id}"`);
+	expect(edf).not.toContain(`nav="${nav_id}"`);
+	expect((await save(edf, version!)).version).toBe(version);
+	expect(updated_at(nav_id)).toBe('v0');
 
-	const shared_owner = page_node();
-	shared_owner.body.nodes.push(shared_owner.body.nodes[0]);
-	await expect(save({ [page_id]: shared_owner })).rejects.toThrow('multiple owners');
-
-	const scripted = page_node();
-	scripted.title = {
-		content: 'Hi',
-		marks: [{ start_offset: 0, end_offset: 2, node_id: 'bad_link' }],
-		annotations: []
-	};
-	const bad_link = { id: 'bad_link', type: 'link', href: ' java\tscript:alert(1)' };
-	await expect(save({ [page_id]: scripted, bad_link })).rejects.toThrow('Unsafe href on: bad_link');
-	await save({ [page_id]: scripted, bad_link: { ...bad_link, href: 'mailto:hi@example.com' } });
-
-	const moved_nav = { ...page_node(), nav: default_footer_document.document_id };
-	await expect(save({ [page_id]: moved_nav })).rejects.toThrow('shared nav reference');
-
-	expect(read_mcp_page('/').version).not.toBe(version);
-	expect(read_mcp_page('/').document.nodes.bad_link.href).toBe('mailto:hi@example.com');
+	// Filling in a nav link changes the nav document, not the page.
+	const edited = edf.replace(
+		/<nav_link id="(\w+)"\/>/,
+		'<nav_link id="$1" href="/about"><label>Renamed</label></nav_link>'
+	);
+	expect(edited).not.toBe(edf);
+	await save(edited, version!);
+	expect(updated_at(nav_id)).not.toBe('v0');
+	expect(updated_at(page_id)).toBe('v0');
+	expect(JSON.stringify(get_doc_from_db(nav_id))).toContain('Renamed');
 });
 
 it('creates pages linked to the shared documents with a slug from the title', async () => {
 	const result = await create('about');
-	expect(result.page_href).toBe('/about-us');
-	const { document, version } = read_mcp_page('/about-us');
+	expect(result).toMatchObject({ page_href: '/about-us', title: 'About us' });
+	const { edf, version } = read('/about-us');
 	expect(version).toBe(result.version);
-	expect(document.nodes.about.nav).toBe(default_nav_document.document_id);
-	expect(document.nodes[document.nodes.about.image].type).toBe('image');
+	expect(edf).toContain(`nav="${nav_id}"`);
+	expect(edf).toMatch(/<image>\n\t\t<image id="[A-Za-z]{23}"\/>\n\t<\/image>/);
 	expect((await create('about_again')).page_href).toBe('/about-us-2');
 	// Editable's own routes keep their paths.
-	expect((await create_mcp_page({ ...create_input('routed'), slug: 'mcp' })).page_href).toBe(
-		'/mcp-2'
-	);
+	expect((await create('routed', undefined, 'mcp')).page_href).toBe('/mcp-2');
 
 	await expect(create('about')).rejects.toThrow('already exists');
-	const nav_root = default_nav_document.nodes[default_nav_document.document_id];
-	await expect(create('clash', { [nav_root.id]: nav_root })).rejects.toThrow(
-		'belong to the shared banner, navigation, or footer'
+	await expect(create_mcp_page({ edf: '<page><title>No id</title></page>' })).rejects.toThrow(
+		'needs an id attribute'
 	);
-	await expect(create('orphaned', { stray: { id: 'stray', type: 'paragraph' } })).rejects.toThrow(
-		'not linked from the page: stray'
-	);
+	await expect(
+		create('clash', `<prose id="${nav_id}"><body><paragraph>x</paragraph></body></prose>`)
+	).rejects.toThrow('belong to the shared banner, navigation, or footer');
 });
 
 it('resolves pages by path, URL, language prefix, old slug, and document id', async () => {
@@ -227,54 +250,43 @@ it('resolves pages by path, URL, language prefix, old slug, and document id', as
 
 it('reads and saves translations without structural changes', async () => {
 	await create('about');
-	const de = read_mcp_page('/de/about-us');
+	const de = read('/de/about-us');
 	expect(de).toMatchObject({ page_href: '/de/about-us', language: 'de', languages: ['en', 'de'] });
-	const title = (content: string) => ({
-		about: { ...de.document.nodes.about, title: { content, marks: [], annotations: [] } }
-	});
-	const translate = (nodes: Record<string, unknown>, expected_version: string) =>
-		save_mcp_page({ document_id: 'about', nodes, expected_version, language: 'de' });
+	const translate = (edf: string, expected_version: string) =>
+		save_mcp_page({ edf, expected_version, language: 'de' });
 
-	const saved = await translate(title('Über uns'), de.version!);
+	const saved = await translate(set_title(de.edf, 'Über uns'), de.version!);
 	expect(saved).toMatchObject({ page_href: '/de/about-us', title: 'Über uns' });
-	expect(read_mcp_page('about', 'de')).toMatchObject({ version: saved.version });
-	expect(read_mcp_page('/about-us').document.nodes.about.title.content).toBe('About us');
+	expect(read('about', 'de')).toMatchObject({ version: saved.version });
+	expect(read('/about-us').edf).toContain('<title>About us</title>');
+	expect(read('/de/about-us').edf).toContain('<title>Über uns</title>');
 
-	const restructured = { about: { ...title('Über uns').about, body: { nodes: [] } } };
+	const restructured = read('/de/about-us').edf.replace(/<body>[\s\S]*<\/body>/, '<body></body>');
 	await expect(translate(restructured, saved.version)).rejects.toThrow(
 		'Translations can save text, inline formatting, and media only'
 	);
-	expect(() => read_mcp_page('/about-us', 'fr')).toThrow('Language fr is not enabled');
+	expect(() => read('/about-us', 'fr')).toThrow('Language fr is not enabled');
 
 	// Text equal to the main language removes the translation.
-	await translate(title('About us'), saved.version);
+	await translate(set_title(read('/de/about-us').edf, 'About us'), saved.version);
 	expect(db.prepare('SELECT value FROM translations').all()).toEqual([]);
 });
 
 it('requires new images to match their file and have every variant', async () => {
 	const asset_id = `${'a'.repeat(64)}.webp`;
 	writeFileSync(asset_path(asset_id), webp_bytes(1000, 500));
-	const page = page_node();
-	page.body.nodes.push('figure');
-	const nodes = (width: number) => ({
-		[page_id]: page,
-		figure: { id: 'figure', type: 'figure', media: 'figure_image' },
-		figure_image: {
-			id: 'figure_image',
-			type: 'image',
-			src: asset_id,
-			mime_type: 'image/webp',
-			width,
-			height: 500
-		}
-	});
+	const figure = (width: number) =>
+		`\t\t<figure id="figure"><media><image id="figure_image" src="${asset_id}" mime_type="image/webp" width="${width}" height="500"/></media></figure>`;
+	const { edf, version } = read();
 
-	await expect(save(nodes(1000))).rejects.toThrow('is missing variants 320, 640');
+	await expect(save(append_blocks(edf, figure(1000)), version!)).rejects.toThrow(
+		'is missing variants 320, 640'
+	);
 	for (const width of [320, 640]) {
 		mkdirSync(dirname(variant_path(asset_id, width)), { recursive: true });
 		writeFileSync(variant_path(asset_id, width), webp_bytes(width, width / 2));
 	}
-	await expect(save(nodes(1200))).rejects.toThrow('do not match');
-	await save(nodes(1000));
-	expect(read_mcp_page('/').document.nodes.figure_image.src).toBe(asset_id);
+	await expect(save(append_blocks(edf, figure(1200)), version!)).rejects.toThrow('do not match');
+	await save(append_blocks(edf, figure(1000)), version!);
+	expect(read().edf).toContain(`<image id="figure_image" src="${asset_id}"`);
 });
