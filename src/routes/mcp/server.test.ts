@@ -45,6 +45,11 @@ it('requires an access token and points clients to the OAuth metadata', async ()
 		`Bearer resource_metadata="${metadata_url}", error="invalid_token"`
 	]);
 	expect(await (await post(ping)).json()).toMatchObject({ result: {} });
+
+	// The server introduces itself as the site, not as Editable.
+	const init = await (await post({ jsonrpc: '2.0', id: 2, method: 'initialize' })).json();
+	expect(init.result.serverInfo).toMatchObject({ name: 'example.com', title: 'example.com' });
+	expect(init.result.serverInfo.version).toMatch(/^\d/);
 });
 
 it('returns structured tool results and names current arguments on invalid input', async () => {

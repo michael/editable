@@ -68,7 +68,7 @@ export function protected_resource_metadata() {
 		resource: mcp_resource(),
 		authorization_servers: [issuer()],
 		bearer_methods_supported: ['header'],
-		resource_name: 'Editable'
+		resource_name: new URL(ORIGIN).host
 	};
 }
 
