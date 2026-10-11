@@ -3,10 +3,16 @@ import * as v from 'valibot';
 import { toJsonSchema } from '@valibot/to-json-schema';
 import { ORIGIN, VERCEL } from '$app/env/private';
 import type { RequestHandler } from './$types';
+import { version } from '../../../package.json' with { type: 'json' };
 
 const protocol_version = '2026-07-28';
 const legacy_protocol_version = '2025-11-25';
-const server_info = { name: 'editable', version: '1.0.0' };
+
+// Every site is its own MCP server, so clients see the site's host, not "editable".
+const server_info = () => {
+	const { host } = new URL(ORIGIN);
+	return { name: host, title: host, version };
+};
 
 type Protocol = 'modern' | 'legacy';
 
@@ -222,7 +228,7 @@ function resolve_protocol(request: Request, message: any): Protocol | Response {
 async function handle_method(message: any, protocol: Protocol, context: ToolContext) {
 	const modern_meta =
 		protocol === 'modern'
-			? { resultType: 'complete', _meta: { 'io.modelcontextprotocol/serverInfo': server_info } }
+			? { resultType: 'complete', _meta: { 'io.modelcontextprotocol/serverInfo': server_info() } }
 			: {};
 
 	switch (message.method) {
@@ -230,12 +236,12 @@ async function handle_method(message: any, protocol: Protocol, context: ToolCont
 			return {
 				protocolVersion: legacy_protocol_version,
 				capabilities: { tools: {} },
-				serverInfo: server_info
+				serverInfo: server_info()
 			};
 		case 'server/discover':
 			return {
 				resultType: 'complete',
-				_meta: { 'io.modelcontextprotocol/serverInfo': server_info },
+				_meta: { 'io.modelcontextprotocol/serverInfo': server_info() },
 				supportedVersions: [protocol_version, legacy_protocol_version],
 				capabilities: { tools: {} }
 			};

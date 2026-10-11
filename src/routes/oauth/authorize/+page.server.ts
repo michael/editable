@@ -38,6 +38,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const { is_loopback_redirect } = await import('#app/server_oauth.js');
 	return {
 		step: 'consent' as const,
+		site_host: url.host,
 		client_name: request.client.client_name,
 		// A metadata document URL proves which domain published the app's details.
 		client_domain: URL.parse(request.client.client_id)?.host ?? null,
