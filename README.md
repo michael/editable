@@ -67,16 +67,36 @@ Call `list_pages` to confirm the connection. After updating Editable, start a ne
 
 #### Tools
 
-- `get_schema` describes the document model: every node type with its properties, allowed child types, and defaults, plus the JSON formats for property values.
+- `get_schema` describes the document model: the EDF writing rules, then every node type with its properties, allowed child types, and defaults.
 - `list_pages` lists pages in the same hierarchy as the page browser.
-- `read_page` returns a page's complete document, including the shared banner, navigation, and footer, together with the `version` that `save_page` requires. It accepts a path such as `/about`, a full URL, a language-prefixed path, or a document id.
-- `create_page` creates a page from a page node and its content nodes. The shared documents are linked automatically, and the URL comes from `slug` or the page title.
-- `save_page` applies a partial update: it takes only the nodes to add or change and merges them into the latest stored document. Nodes that are no longer linked from the page are removed, and new or changed nodes must be linked from a parent.
+- `read_page` returns a page as EDF together with the `version` that `save_page` requires. It accepts a path such as `/about`, a full URL, a language-prefixed path, or a document id. The shared banner, navigation, and footer are referenced by id and left out unless `include_shared` is set.
+- `create_page` creates a page from EDF. The shared documents are linked automatically, and the URL comes from `slug` or the page title.
+- `save_page` saves the complete page as EDF. Nodes left out of the document are deleted, new elements get ids, and the shared documents change only when they were included.
 - `prepare_image_upload` returns a 30-minute upload token and the exact encoding and upload steps for adding images.
 
-Agents read a page, send changed nodes back with the version they read, and keep editing with the version each save returns. A save is rejected when the page changed in between, for example when you saved it in the editor. The reverse is handled too: saving a page in the editor that an agent changed since you opened it asks which version to keep. Every save is validated against the schema and the single-owner rule before anything is written, so an agent cannot persist a malformed document.
+Agents read a page, send it back with their changes and the version they read, and keep editing with the version each save returns. A save is rejected when the page changed in between, for example when you saved it in the editor. The reverse is handled too: saving a page in the editor that an agent changed since you opened it asks which version to keep. Every save is validated against the schema and the single-owner rule before anything is written, so an agent cannot persist a malformed document. Editing the shared banner, navigation, or footer affects every page.
 
-`save_page` edits live content, including the shared banner, navigation, and footer, which affect every page.
+#### EDF
+
+Pages travel as EDF, an XML form of the stored document that is about a third of the size of the JSON and needs no character offsets. It is a transport encoding: the server parses it back into the same JSON the editor stores and runs the same validation. Each node is an element named by its type with an `id` and its primitive properties as attributes, structure is nested elements, text nodes hold their content directly, and marks are inline tags:
+
+```xml
+<page id="about" banner="banner_1" nav="nav_1" footer="footer_1">
+	<title>About us</title>
+	<body>
+		<section>
+			<prose id="intro" layout="wide">
+				<body>
+					<heading_1 id="h1">Who we are</heading_1>
+					<paragraph id="p1">A small team with a <link href="/story">long story</link>.</paragraph>
+				</body>
+			</prose>
+		</section>
+	</body>
+</page>
+```
+
+Defaults are omitted, so an element without a `layout` uses the schema default. Marks carry no ids; when a page is saved, each mark keeps the id of the stored mark it matches, so translations and links stay attached. The serializer and parser live in `src/lib/edf.ts` and work with any Svedit schema.
 
 #### Images
 

@@ -1,6 +1,12 @@
 import { isHttpError } from '@sveltejs/kit';
-import { fill_node_defaults, type DocumentNode, type PropertyDefinition } from 'svedit';
+import {
+	fill_node_defaults,
+	type Attachment,
+	type DocumentNode,
+	type PropertyDefinition
+} from 'svedit';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
+import { edf_root_id, parse_edf, serialize_edf } from '#lib/edf.js';
 import { languages } from './server_languages.js';
 import { language_href, language_path } from './languages.js';
 import { save_translated_document, translated_document } from './server_translations.js';
@@ -12,7 +18,6 @@ import { stable_json } from './translations.js';
 import { assert_uploaded_images } from './server_mcp_images.js';
 import {
 	type DocumentData,
-	collect_node_ids,
 	combine_page_document,
 	create_page_slug,
 	get_active_slug_for_document_id,
@@ -73,20 +78,34 @@ function page_href_for(document_id: string): string {
 	return slug ? `/${slug}` : '/';
 }
 
-/** Fill omitted properties, and omitted marks/annotations of text and node_array values. */
-function fill_defaults(node: DocumentNode): DocumentNode {
+const shared_ids_of = (page_node: DocumentNode) =>
+	shared_document_types
+		.map((type) => page_node[type])
+		.filter((id): id is string => typeof id === 'string');
+
+/**
+ * Fill omitted properties and omitted marks/annotations, and order ranges by
+ * position, so nodes compare equal however they were written.
+ */
+function normalize_node(node: DocumentNode): DocumentNode {
 	const filled = fill_node_defaults(node, document_schema);
 	const properties = document_schema[filled.type]?.properties ?? {};
+	const by_position = (a: Attachment, b: Attachment) =>
+		a.start_offset - b.start_offset || a.end_offset - b.end_offset;
 	for (const [name, definition] of Object.entries<PropertyDefinition>(properties)) {
 		const value = filled[name];
 		if ((definition.type === 'text' || definition.type === 'node_array') && value) {
-			filled[name] = { ...value, marks: value.marks ?? [], annotations: value.annotations ?? [] };
+			filled[name] = {
+				...value,
+				marks: [...(value.marks ?? [])].sort(by_position),
+				annotations: [...(value.annotations ?? [])].sort(by_position)
+			};
 		}
 	}
 	return filled;
 }
 
-export function read_mcp_page(page: string, requested_language?: string) {
+export function read_mcp_page(page: string, requested_language?: string, include_shared = false) {
 	const { document_id, language: path_language } = resolve_page(page);
 	const page_doc = document_id && get_optional_doc_from_db(document_id);
 	if (!document_id || !page_doc)
@@ -95,63 +114,48 @@ export function read_mcp_page(page: string, requested_language?: string) {
 		);
 
 	const language = translation_language(requested_language ?? path_language);
-	if (!language) {
-		return {
-			page_href: page_href_for(document_id),
-			language: languages[0] ?? null,
-			languages,
-			version: get_page_version(document_id),
-			document: combine_page_document(page_doc)
-		};
-	}
-	const translated = unwrap_http_error(() => translated_document(document_id, language));
+	const translated =
+		language && unwrap_http_error(() => translated_document(document_id, language));
+	const document = translated ? translated.document : combine_page_document(page_doc);
+	const edf = serialize_edf(document, document_schema, {
+		exclude: include_shared ? [] : shared_ids_of(document.nodes[document_id])
+	});
 	return {
-		page_href: language_href(page_href_for(document_id), language, languages),
-		language,
+		page_href: language
+			? language_href(page_href_for(document_id), language, languages)
+			: page_href_for(document_id),
+		language: language ?? languages[0] ?? null,
 		languages,
-		version: translated.translation_revision,
-		document: translated.document
+		version: translated ? translated.translation_revision : get_page_version(document_id),
+		edf
 	};
 }
 
-/** Fill omitted properties of every submitted node with schema defaults. */
-function fill_submitted_nodes(nodes: Record<string, unknown>): Record<string, DocumentNode> {
-	return Object.fromEntries(
-		Object.entries(nodes as Record<string, DocumentNode>).map(([id, node]) => [
-			id,
-			fill_defaults(node)
-		])
-	);
-}
-
 /**
- * Ids of submitted nodes that differ from the stored ones, ignoring key order
- * and properties the stored node left at their defaults. Unchanged nodes a
- * resent document no longer links are deletions, not mistakes.
+ * Parse a submitted page against the stored nodes. Unchanged nodes resolve to
+ * the stored objects, so a save without edits writes nothing; changed and new
+ * nodes are filled with defaults. The page keeps its shared references when
+ * the submitted root leaves them out.
  */
-function changed_ids(
-	submitted_nodes: Record<string, DocumentNode>,
-	stored_nodes: Record<string, DocumentNode>
-) {
-	return Object.keys(submitted_nodes).filter(
-		(id) =>
-			!stored_nodes[id] ||
-			stable_json(submitted_nodes[id]) !== stable_json(fill_defaults(stored_nodes[id]))
-	);
-}
-
-/**
- * Check new or changed nodes: unreachable ones were almost certainly meant to
- * be linked, and media must already be uploaded.
- */
-function assert_changes(document_id: string, nodes: Record<string, DocumentNode>, ids: string[]) {
-	const reachable_ids = collect_node_ids(document_id, nodes);
-	const unlinked_ids = ids.filter((id) => !reachable_ids.has(id));
-	if (unlinked_ids.length)
-		throw new Error(
-			`New or changed nodes are not linked from the page: ${unlinked_ids.join(', ')}. Add each id to its parent's node, node_array, or mark/annotation range and include the changed parent.`
-		);
-	assert_uploaded_images(ids.map((id) => nodes[id]));
+function parse_submitted(edf: string, stored_nodes: Record<string, DocumentNode>) {
+	const parsed = parse_edf(edf, document_schema, { stored: stored_nodes, generate_id: nanoid });
+	const nodes: Record<string, DocumentNode> = {};
+	const changed: string[] = [];
+	for (const [id, node] of Object.entries(parsed.nodes)) {
+		const normalized = normalize_node(node);
+		const stored = stored_nodes[id];
+		if (stored && stable_json(normalize_node(stored)) === stable_json(normalized)) {
+			nodes[id] = stored;
+		} else {
+			nodes[id] = normalized;
+			changed.push(id);
+		}
+	}
+	const page_node = nodes[parsed.document_id];
+	const stored_page = stored_nodes[parsed.document_id];
+	if (page_node !== stored_page && stored_page)
+		for (const type of shared_document_types) page_node[type] ??= stored_page[type];
+	return { document_id: parsed.document_id, nodes, changed };
 }
 
 function page_result(document_id: string, page_doc: DocumentData, version: string) {
@@ -165,59 +169,61 @@ function page_result(document_id: string, page_doc: DocumentData, version: strin
 }
 
 export async function save_mcp_page(input: {
-	document_id: string;
-	nodes: Record<string, unknown>;
+	edf: string;
 	expected_version: string;
 	language?: string;
 }) {
-	const current = get_optional_doc_from_db(input.document_id);
-	if (current?.nodes[input.document_id]?.type !== 'page')
-		throw new Error(`Existing page not found: ${input.document_id}`);
 	const language = translation_language(input.language);
 	if (language) return save_mcp_translation({ ...input, language });
-	// Check up front so a stale patch is not reported as unlinked or invalid.
-	if (get_page_version(input.document_id) !== input.expected_version)
+
+	const document_id = edf_root_id(input.edf);
+	const current = get_optional_doc_from_db(document_id);
+	if (current?.nodes[document_id]?.type !== 'page')
+		throw new Error(
+			`Existing page not found: ${document_id}. The root <page> id must be the document_id from read_page.`
+		);
+	// Check up front so a stale document is not reported as invalid.
+	if (get_page_version(document_id) !== input.expected_version)
 		throw new Error('Page changed since it was read. Read it again before saving.');
 
-	// MCP writes are patches: overlay submitted node ids onto the latest full
-	// document. Omitting a node leaves it untouched; unreachable stored nodes
-	// are discarded when the page is split back into its documents.
-	const submitted_nodes = fill_submitted_nodes(input.nodes);
+	// The submitted page replaces the stored one; shared documents that were
+	// left out stay as stored, and stored nodes no longer reachable are dropped.
 	const stored_nodes = combine_page_document(current).nodes;
-	const nodes = { ...stored_nodes, ...submitted_nodes };
+	const { nodes: submitted, changed } = parse_submitted(input.edf, stored_nodes);
+	const nodes = { ...stored_nodes, ...submitted };
 	for (const type of shared_document_types) {
-		if (nodes[input.document_id]?.[type] !== current.nodes[input.document_id][type])
+		if (nodes[document_id][type] !== current.nodes[document_id][type])
 			throw new Error(`The shared ${type} reference cannot be changed through save_page.`);
 	}
-	assert_changes(input.document_id, nodes, changed_ids(submitted_nodes, stored_nodes));
+	assert_uploaded_images(changed.map((id) => nodes[id]));
 
-	const { page_doc, version } = await persist_combined_page(input.document_id, nodes, {
+	const { page_doc, version } = await persist_combined_page(document_id, nodes, {
 		expected_version: input.expected_version
 	});
-	return page_result(input.document_id, page_doc, version);
+	return page_result(document_id, page_doc, version);
 }
 
 /**
- * Translations are patches on the translated page. The translation module
- * keeps only text and media that differ from the main language and rejects
+ * Translations are edits of the translated page. The translation module keeps
+ * only text and media that differ from the main language and rejects
  * structural changes.
  */
 async function save_mcp_translation(input: {
-	document_id: string;
-	nodes: Record<string, unknown>;
+	edf: string;
 	expected_version: string;
 	language: string;
 }) {
-	const { document_id, language } = input;
+	const { language } = input;
+	const document_id = edf_root_id(input.edf);
 	const current = unwrap_http_error(() => translated_document(document_id, language));
 	if (current.translation_revision !== input.expected_version)
 		throw new Error(
 			'The page or its translation changed since it was read. Read it again before saving.'
 		);
 
-	const submitted_nodes = fill_submitted_nodes(input.nodes);
-	const nodes = { ...current.document.nodes, ...submitted_nodes };
-	assert_changes(document_id, nodes, changed_ids(submitted_nodes, current.document.nodes));
+	const { nodes: submitted, changed } = parse_submitted(input.edf, current.document.nodes);
+	const nodes = { ...current.document.nodes, ...submitted };
+	assert_uploaded_images(changed.map((id) => nodes[id]));
 
 	await with_asset_cleanup(() =>
 		unwrap_http_error(() =>
@@ -242,19 +248,16 @@ async function save_mcp_translation(input: {
 	};
 }
 
-export async function create_mcp_page(input: {
-	document_id: string;
-	nodes: Record<string, unknown>;
-	slug?: string;
-}) {
-	const { document_id } = input;
+export async function create_mcp_page(input: { edf: string; slug?: string }) {
+	const parsed = parse_edf(input.edf, document_schema, { generate_id: nanoid });
+	const { document_id } = parsed;
 	if (get_optional_doc_from_db(document_id))
 		throw new Error(`A document with id ${document_id} already exists. Choose a new id.`);
-
-	const submitted_nodes = fill_submitted_nodes(input.nodes);
-	const page_node = submitted_nodes[document_id];
-	if (page_node?.type !== 'page')
-		throw new Error(`nodes must include the page node { id: "${document_id}", type: "page" }.`);
+	const submitted = Object.fromEntries(
+		Object.entries(parsed.nodes).map(([id, node]) => [id, normalize_node(node)])
+	);
+	const page_node = submitted[document_id];
+	if (page_node?.type !== 'page') throw new Error('The root element must be a <page>.');
 
 	// Like pages created in the editor, new pages use the current shared documents.
 	const home_page_id = get_home_page_id_from_db();
@@ -266,7 +269,7 @@ export async function create_mcp_page(input: {
 		page_node[type] = shared_id;
 		Object.assign(shared_nodes, get_doc_from_db(shared_id).nodes);
 	}
-	const shared_ids = Object.keys(submitted_nodes).filter((id) => id in shared_nodes);
+	const shared_ids = Object.keys(submitted).filter((id) => id in shared_nodes);
 	if (shared_ids.length)
 		throw new Error(
 			`Node ids belong to the shared banner, navigation, or footer: ${shared_ids.join(', ')}. Leave shared nodes out of create_page.`
@@ -275,18 +278,20 @@ export async function create_mcp_page(input: {
 	// Every page has a preview image node, empty until an image is chosen.
 	if (page_node.image === undefined) {
 		page_node.image = nanoid();
-		submitted_nodes[page_node.image] = { id: page_node.image, type: 'image', ...MEDIA_DEFAULTS };
+		submitted[page_node.image] = { id: page_node.image, type: 'image', ...MEDIA_DEFAULTS };
 	}
+	assert_uploaded_images(Object.values(submitted));
 
-	const nodes = { ...shared_nodes, ...submitted_nodes };
-	assert_changes(document_id, nodes, Object.keys(submitted_nodes));
-
-	const { page_doc, version } = await persist_combined_page(document_id, nodes, {
-		on_write: (page_doc) =>
-			create_page_slug(
-				document_id,
-				input.slug || extract_page_metadata(page_doc).title || 'Untitled page'
-			)
-	});
+	const { page_doc, version } = await persist_combined_page(
+		document_id,
+		{ ...shared_nodes, ...submitted },
+		{
+			on_write: (page_doc) =>
+				create_page_slug(
+					document_id,
+					input.slug || extract_page_metadata(page_doc).title || 'Untitled page'
+				)
+		}
+	);
 	return page_result(document_id, page_doc, version);
 }
