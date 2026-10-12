@@ -39,7 +39,7 @@ import {
 	default_footer_document
 } from './default_site.js';
 import { combine_page_document, get_doc_from_db } from './server_documents.js';
-import { create_mcp_page, read_mcp_page, save_mcp_page } from './server_mcp_pages.js';
+import { create_mcp_page, read_mcp_document, write_mcp_document } from './server_mcp_documents.js';
 
 const page_id = default_page_document.document_id;
 const banner_id = default_banner_document.document_id;
@@ -71,11 +71,10 @@ beforeEach(() => {
 	}
 });
 
-const read = (page = '/', language?: string, include_shared = false) =>
-	read_mcp_page(page, language, include_shared);
+const read = (document = '/', language?: string) => read_mcp_document(document, language);
 
 function save(edf: string, expected_version = read().version!) {
-	return save_mcp_page({ edf, expected_version });
+	return write_mcp_document({ edf, expected_version });
 }
 
 function updated_at(document_id: string) {
@@ -131,7 +130,7 @@ it('writes only changed documents, versions the result, and skips saves without 
 
 	// The returned version continues editing; the version it replaced is stale.
 	await save(read().edf, result.version);
-	await expect(save(edf, version!)).rejects.toThrow('Page changed since it was read');
+	await expect(save(edf, version!)).rejects.toThrow('The document changed since it was read');
 });
 
 it('fills defaults and assigns ids to new nodes and marks', async () => {
@@ -188,27 +187,64 @@ it('rejects duplicate ids, unsafe links, misplaced marks, and shared reference c
 	);
 
 	const moved_nav = edf.replace(`nav="${nav_id}"`, `nav="${footer_id}"`);
-	await expect(save(moved_nav, version!)).rejects.toThrow('shared nav reference');
+	await expect(save(moved_nav, version!)).rejects.toThrow(`Keep nav="${nav_id}" on the page`);
+	const dropped_nav = edf.replace(` nav="${nav_id}"`, '');
+	await expect(save(dropped_nav, version!)).rejects.toThrow(`Keep nav="${nav_id}" on the page`);
+
+	// A node property as an attribute refers to another document, never to a left-out node.
+	const image_id = page_json().nodes[page_id].image;
+	const referenced_image = edf
+		.replace(/\t<image>\n[^\n]*\n\t<\/image>\n/, '')
+		.replace(`<page id="${page_id}"`, `<page id="${page_id}" image="${image_id}"`);
+	expect(referenced_image).not.toContain('<image>');
+	await expect(save(referenced_image, version!)).rejects.toThrow(
+		`${page_id}.image refers to ${image_id}, which is not in this document`
+	);
 	expect(read().version).toBe(version);
 });
 
-it('includes the shared documents on request and saves them with the page', async () => {
-	const { edf, version } = read('/', undefined, true);
-	expect(edf).toContain(`\n\t<nav>\n\t\t<nav id="${nav_id}"`);
-	expect(edf).not.toContain(`nav="${nav_id}"`);
-	expect((await save(edf, version!)).version).toBe(version);
+it('reads and writes shared documents on their own, never inside a page', async () => {
+	const nav = read(nav_id);
+	expect(nav).toMatchObject({ document_id: nav_id, page_href: null });
+	expect(nav.edf).toMatch(new RegExp(`^<nav id="${nav_id}">`));
+	expect((await save(nav.edf, nav.version!)).version).toBe(nav.version);
 	expect(updated_at(nav_id)).toBe('v0');
 
 	// Filling in a nav link changes the nav document, not the page.
-	const edited = edf.replace(
+	const page_version = read().version;
+	const edited = nav.edf.replace(
 		/<nav_link id="(\w+)" href="" target="_self">(\s*)<label><\/label>/,
 		'<nav_link id="$1" href="/about" target="_self">$2<label>Renamed</label>'
 	);
-	expect(edited).not.toBe(edf);
-	await save(edited, version!);
+	expect(edited).not.toBe(nav.edf);
+	const written = await save(edited, nav.version!);
+	expect(written).toEqual({ ok: true, document_id: nav_id, version: read(nav_id).version });
 	expect(updated_at(nav_id)).not.toBe('v0');
 	expect(updated_at(page_id)).toBe('v0');
 	expect(JSON.stringify(get_doc_from_db(nav_id))).toContain('Renamed');
+	// A page's version covers its shared documents, so pages read before the edit are stale.
+	expect(read().version).not.toBe(page_version);
+
+	// The nav cannot be written as part of a page or as another type.
+	const { edf, version } = read();
+	const nav_inside = edf
+		.replace(` nav="${nav_id}"`, '')
+		.replace('\t<body>', `\t<nav>\n${read(nav_id).edf}\t</nav>\n\t<body>`);
+	await expect(save(nav_inside, version!)).rejects.toThrow(`read_document ${nav_id}`);
+	await expect(
+		save(`<footer id="${nav_id}"><body></body></footer>`, read(nav_id).version!)
+	).rejects.toThrow(`${nav_id} is a nav`);
+
+	// Shared documents are translated on their own too.
+	const de = read(nav_id, 'de');
+	const translated = await write_mcp_document({
+		edf: de.edf.replace('<label>Renamed</label>', '<label>Umbenannt</label>'),
+		expected_version: de.version!,
+		language: 'de'
+	});
+	expect(translated).toMatchObject({ ok: true, document_id: nav_id, language: 'de' });
+	expect(read(nav_id, 'de').edf).toContain('<label>Umbenannt</label>');
+	expect(read(nav_id).edf).toContain('<label>Renamed</label>');
 });
 
 it('creates pages linked to the shared documents with a slug from the title', async () => {
@@ -234,7 +270,7 @@ it('creates pages linked to the shared documents with a slug from the title', as
 	).rejects.toThrow('belong to the shared banner, navigation, or footer');
 });
 
-it('resolves pages by path, URL, language prefix, old slug, and document id', async () => {
+it('resolves documents by path, URL, language prefix, old slug, and id', async () => {
 	await create('about');
 	db.prepare("INSERT INTO document_slugs VALUES ('old-about', 'about', 0, 'v0')").run();
 
@@ -244,11 +280,11 @@ it('resolves pages by path, URL, language prefix, old slug, and document id', as
 		'https://www.example.com/about-us?ref=1#top',
 		'/old-about/'
 	])
-		expect(read_mcp_page(page).page_href).toBe('/about-us');
+		expect(read_mcp_document(page).page_href).toBe('/about-us');
 	// A language prefix reads that language's version.
-	expect(read_mcp_page('/de/old-about').page_href).toBe('/de/about-us');
-	expect(read_mcp_page('https://example.com/de').page_href).toBe('/de');
-	expect(() => read_mcp_page('/missing')).toThrow('Page not found: /missing');
+	expect(read_mcp_document('/de/old-about').page_href).toBe('/de/about-us');
+	expect(read_mcp_document('https://example.com/de').page_href).toBe('/de');
+	expect(() => read_mcp_document('/missing')).toThrow('Document not found: /missing');
 });
 
 it('reads and saves translations without structural changes', async () => {
@@ -256,7 +292,7 @@ it('reads and saves translations without structural changes', async () => {
 	const de = read('/de/about-us');
 	expect(de).toMatchObject({ page_href: '/de/about-us', language: 'de', languages: ['en', 'de'] });
 	const translate = (edf: string, expected_version: string) =>
-		save_mcp_page({ edf, expected_version, language: 'de' });
+		write_mcp_document({ edf, expected_version, language: 'de' });
 
 	const saved = await translate(set_title(de.edf, 'Über uns'), de.version!);
 	expect(saved).toMatchObject({ page_href: '/de/about-us', title: 'Über uns' });
