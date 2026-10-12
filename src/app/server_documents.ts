@@ -297,7 +297,9 @@ export function validate_single_ownership(
 	nodes: Record<string, DocumentNode>
 ) {
 	const page_node = nodes[document_id];
-	const roots = [document_id, ...shared_document_types.map((type) => page_node[type] as string)];
+	const roots = [document_id, ...shared_document_types.map((type) => page_node[type])].filter(
+		(id): id is string => typeof id === 'string'
+	);
 	const owners = new Map<string, string>(roots.map((id) => [id, `document root ${id}`]));
 	const visited = new Set<string>();
 	const stack = [...roots];
@@ -351,10 +353,11 @@ function has_same_nodes(a: DocumentData, b: DocumentData): boolean {
 }
 
 /**
- * Content hash of a page and its shared (banner, nav, footer) documents as
- * stored. It changes whenever any of them changes, however it was written.
+ * Content hash of a document as stored, and for a page also of its shared
+ * (banner, nav, footer) documents. It changes whenever any of them changes,
+ * however it was written.
  */
-export function get_page_version(document_id: string): string | null {
+export function get_document_version(document_id: string): string | null {
 	const select_data = db.prepare('SELECT data FROM documents WHERE document_id = ?');
 	const page_row = select_data.get(document_id) as { data: string } | undefined;
 	if (!page_row) return null;
@@ -370,23 +373,28 @@ export function get_page_version(document_id: string): string | null {
 }
 
 /**
- * Validate a combined page graph and split it back into its page and shared
- * (banner, nav, footer) documents. Only new or changed documents are written,
- * so saving one page does not touch unchanged shared documents. When
- * expected_version is given, the save is rejected if the stored page moved on.
- * on_write runs inside the write transaction, after the documents are stored.
+ * Validate a document graph and store it: a page, which the editor sends
+ * combined with its shared (banner, nav, footer) documents and which is split
+ * back into them, or a shared document on its own. Only new or changed
+ * documents are written, so saving one page does not touch unchanged shared
+ * documents. When expected_version is given, the save is rejected if the
+ * stored document moved on. on_write runs inside the write transaction, after
+ * the documents are stored.
  */
-export async function persist_combined_page(
+export async function persist_document(
 	document_id: string,
 	nodes: Record<string, DocumentNode>,
 	{
 		expected_version,
 		on_write
-	}: { expected_version?: string; on_write?: (page_doc: DocumentData) => void } = {}
-): Promise<{ page_doc: DocumentData; version: string }> {
+	}: { expected_version?: string; on_write?: (doc: DocumentData) => void } = {}
+): Promise<{ doc: DocumentData; version: string }> {
+	const root_type: string | undefined = nodes[document_id]?.type;
 	const page_node = nodes[document_id];
-	if (page_node?.type !== 'page') {
-		throw new InvalidDocumentError(`Root node must be a page: ${document_id}`);
+	if (root_type !== 'page' && !(shared_document_types as readonly string[]).includes(root_type!)) {
+		throw new InvalidDocumentError(
+			`Root node must be a page, banner, nav, or footer: ${document_id}`
+		);
 	}
 
 	// Enforce document invariants at the write boundary — a malformed graph
@@ -402,24 +410,20 @@ export async function persist_combined_page(
 		);
 	}
 
-	// validate_document guarantees these required references resolve to existing nodes.
-	const shared_roots = shared_document_types.map((type) => ({
-		document_id: page_node[type] as string,
-		type
-	}));
+	// validate_document guarantees a page's shared references resolve to existing nodes.
+	const shared_roots =
+		root_type === 'page'
+			? shared_document_types.map((type) => ({ document_id: page_node[type] as string, type }))
+			: [];
 	const exclude_roots = new Set(shared_roots.map((root) => root.document_id));
-	const documents = [{ document_id, type: 'page' }, ...shared_roots].map((root) => {
-		const node_ids = collect_node_ids(
-			root.document_id,
-			nodes,
-			root.type === 'page' ? exclude_roots : undefined
-		);
+	const documents = [{ document_id, type: root_type }, ...shared_roots].map((root) => {
+		const node_ids = collect_node_ids(root.document_id, nodes, exclude_roots);
 		const doc = extract_document(root.document_id, node_ids, nodes);
 		return { ...root, node_ids, doc, data: JSON.stringify(doc) };
 	});
 
 	// Everything up to the write runs synchronously, so no other save can interleave.
-	if (expected_version !== undefined && get_page_version(document_id) !== expected_version) {
+	if (expected_version !== undefined && get_document_version(document_id) !== expected_version) {
 		throw new VersionConflictError();
 	}
 
@@ -440,7 +444,7 @@ export async function persist_combined_page(
 		'INSERT OR REPLACE INTO document_refs (target_document_id, source_document_id, ref_order) VALUES (?, ?, ?)'
 	);
 
-	const page_doc = documents[0].doc;
+	const doc = documents[0].doc;
 
 	const version = await with_asset_cleanup(() =>
 		with_transaction(() => {
@@ -459,8 +463,8 @@ export async function persist_combined_page(
 				rebuild_asset_refs(document_id);
 			}
 
-			on_write?.(page_doc);
-			return get_page_version(document_id)!;
+			on_write?.(doc);
+			return get_document_version(document_id)!;
 		})
 	);
 
@@ -468,5 +472,5 @@ export async function persist_combined_page(
 	// safety snapshot (never throws, never blocks the save).
 	void snapshot_if_stale();
 
-	return { page_doc, version };
+	return { doc, version };
 }

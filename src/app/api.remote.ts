@@ -28,10 +28,10 @@ import {
 	get_doc_from_db,
 	get_home_page_id_from_db,
 	get_optional_doc_from_db,
-	get_page_version,
+	get_document_version,
 	get_shared_root_ids,
 	is_home_page_document_id,
-	persist_combined_page,
+	persist_document,
 	resolve_slug,
 	update_document_refs,
 	with_asset_cleanup
@@ -109,7 +109,7 @@ export const get_document = query(v.string(), async (slug) => {
 
 	return {
 		document: get_combined_document(resolved.document_id),
-		version: get_page_version(resolved.document_id),
+		version: get_document_version(resolved.document_id),
 		slug: resolved.active_slug,
 		redirect_to_slug: resolved.is_active ? null : resolved.active_slug
 	};
@@ -149,7 +149,7 @@ export const get_home_document = query(v.void(), async () => {
 
 	return {
 		document: get_combined_document(home_page_id),
-		version: get_page_version(home_page_id),
+		version: get_document_version(home_page_id),
 		slug: get_active_slug_for_document_id(home_page_id),
 		redirect_to_slug: null
 	};
@@ -507,7 +507,7 @@ export const save_document = command(save_document_input_schema, async (combined
 
 	let version: string;
 	try {
-		({ version } = await persist_combined_page(
+		({ version } = await persist_document(
 			combined_doc.document_id,
 			structuredClone(combined_doc.nodes),
 			{

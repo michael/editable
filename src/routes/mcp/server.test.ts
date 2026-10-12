@@ -6,8 +6,8 @@ vi.mock('#app/server_oauth.js', () => ({
 	verify_access_token: (token: string) => (token === 'secret' ? { grant_id: 'grant' } : null),
 	resource_metadata_url: () => metadata_url
 }));
-vi.mock('#app/server_mcp_pages.js', () => ({
-	read_mcp_page: (page_href: string) => ({ page_href })
+vi.mock('#app/server_mcp_documents.js', () => ({
+	read_mcp_document: (document: string) => ({ document })
 }));
 
 import { POST } from './+server.js';
@@ -53,13 +53,13 @@ it('requires an access token and points clients to the OAuth metadata', async ()
 });
 
 it('returns structured tool results and names current arguments on invalid input', async () => {
-	const ok = await (await call_tool('read_page', { page_href: '/about' })).json();
-	expect(ok.result.structuredContent).toEqual({ page_href: '/about' });
+	const ok = await (await call_tool('read_document', { document: '/about' })).json();
+	expect(ok.result.structuredContent).toEqual({ document: '/about' });
 
-	const invalid = await (await call_tool('read_page', { path: '/about' })).json();
+	const invalid = await (await call_tool('read_document', { path: '/about' })).json();
 	expect(invalid.result.isError).toBe(true);
 	expect(invalid.result.content[0].text).toMatch(
-		/read_page takes page_href, language \(optional\), include_shared \(optional\)\.$/
+		/read_document takes document, language \(optional\)\.$/
 	);
 });
 
