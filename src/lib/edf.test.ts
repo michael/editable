@@ -81,10 +81,10 @@ const sample_edf = `<page id="about" banner="${banner_id}" nav="${nav_id}" foote
 		<image id="img" src="a.webp" width="10" height="5" alt="A &quot;cat&quot;"/>
 	</image>
 	<body>
-		<section>
+		<section id="s">
 			<prose id="pr">
 				<body>
-					<paragraph id="t1" layout="muted">Hi 😀 <link href="/x" target="_blank">you</link> &amp; <strong>all</strong>
+					<paragraph id="t1" layout="muted">Hi 😀 <link id="m" href="/x" target="_blank">you</link> &amp; <strong id="st">all</strong>
 Again</paragraph>
 					<heading_2 id="t2"/>
 				</body>
@@ -99,12 +99,18 @@ Again</paragraph>
 </page>
 `;
 
+/** Ids for new nodes, the same sequence on the JSON and the EDF side. */
+function id_sequence() {
+	let counter = 0;
+	return () => `new${++counter}`;
+}
+
 it('writes attributes for primitives, elements for structure, and inline tags for ranges', () => {
 	expect(serialize_edf(sample, document_schema, { exclude: shared_ids })).toBe(sample_edf);
 });
 
-it('parses back to the stored document, reusing the ids of unchanged marks', () => {
-	const parsed = parse_edf(sample_edf, document_schema, { stored: sample.nodes });
+it('parses back to exactly the stored document, ids of marks and sections included', () => {
+	const parsed = parse_edf(sample_edf, document_schema);
 	expect(normalize(parsed)).toBe(normalize(sample));
 	// Like saves, validation runs on the document with defaults filled.
 	validate_document(
@@ -116,24 +122,86 @@ it('parses back to the stored document, reusing the ids of unchanged marks', () 
 	);
 });
 
-it('assigns ids to new nodes and marks and keeps ids of moved marks', () => {
-	let counter = 0;
-	const generate_id = () => `new${++counter}`;
-	const edited = sample_edf
-		.replace('Hi 😀 <link', 'Hello 😀 <link')
-		.replace('<strong>all</strong>', '<emphasis>all</emphasis>')
-		.replace('<heading_2 id="t2"/>', '<heading_2>Fresh</heading_2>');
-	const { nodes } = parse_edf(edited, document_schema, { stored: sample.nodes, generate_id });
-	const content = nodes.t1.content;
-	expect(content.content).toBe('Hello 😀 you & all\nAgain');
-	// The link moved with the text; same href, so it keeps its id.
-	expect(content.marks).toContainEqual({ start_offset: 8, end_offset: 11, node_id: 'm' });
-	expect(nodes.m).toEqual({ id: 'm', type: 'link', href: '/x', target: '_blank' });
-	// Nodes get ids while parsing; marks afterwards. The replaced strong mark is gone.
-	expect(nodes.new1).toMatchObject({ type: 'heading_2', content: { content: 'Fresh' } });
-	expect(nodes.pr.body.nodes).toEqual(['t1', 'new1']);
-	expect(nodes.new2).toEqual({ id: 'new2', type: 'emphasis' });
-	expect(nodes.st).toBeUndefined();
+/**
+ * The contract: an edit made the editor's way, on the JSON, and the same edit
+ * made the agent's way, on the EDF, give the identical document, ids included.
+ */
+it.each([
+	{
+		name: 'editing text before a link keeps the link and shifts it',
+		json: (doc: Document) => {
+			doc.nodes.t1.content.content = 'Hello 😀 you & all\nAgain';
+			doc.nodes.t1.content.marks = [
+				{ start_offset: 8, end_offset: 11, node_id: 'm' },
+				{ start_offset: 14, end_offset: 17, node_id: 'st' }
+			];
+		},
+		edf: (text: string) => text.replace('>Hi 😀 ', '>Hello 😀 ')
+	},
+	{
+		name: 'replacing a link with an identical new one gives it a new id',
+		json: (doc: Document) => {
+			delete doc.nodes.m;
+			doc.nodes.new1 = { id: 'new1', type: 'link', href: '/x', target: '_blank' };
+			doc.nodes.t1.content.marks[1].node_id = 'new1';
+		},
+		edf: (text: string) => text.replace('<link id="m" ', '<link ')
+	},
+	{
+		name: 'moving bold to another word gives the new bold a new id',
+		json: (doc: Document) => {
+			delete doc.nodes.st;
+			doc.nodes.new1 = { id: 'new1', type: 'strong' };
+			doc.nodes.t1.content.marks[0] = { start_offset: 15, end_offset: 20, node_id: 'new1' };
+		},
+		edf: (text: string) =>
+			text.replace('<strong id="st">all</strong>\nAgain', 'all\n<strong>Again</strong>')
+	},
+	{
+		name: 'moving a block keeps its id',
+		json: (doc: Document) => {
+			doc.nodes.pr.body.nodes = ['t2', 't1'];
+		},
+		edf: (text: string) => {
+			const heading = '\t\t\t\t\t<heading_2 id="t2"/>\n';
+			return text.replace(heading, '').replace('\t\t\t\t\t<paragraph id="t1"', `${heading}$&`);
+		}
+	},
+	{
+		name: 'new blocks and marks get ids in document order',
+		json: (doc: Document) => {
+			doc.nodes.pr.body.nodes.push('new1');
+			doc.nodes.new1 = {
+				id: 'new1',
+				type: 'paragraph',
+				content: {
+					content: 'See more',
+					marks: [{ start_offset: 4, end_offset: 8, node_id: 'new2' }],
+					annotations: []
+				}
+			};
+			doc.nodes.new2 = { id: 'new2', type: 'emphasis' };
+		},
+		edf: (text: string) =>
+			text.replace(
+				'<heading_2 id="t2"/>\n',
+				'<heading_2 id="t2"/>\n\t\t\t\t\t<paragraph>See <emphasis>more</emphasis></paragraph>\n'
+			)
+	},
+	{
+		name: 'removing a section wrapper removes its range node',
+		json: (doc: Document) => {
+			delete doc.nodes.s;
+			doc.nodes.about.body.marks = [];
+		},
+		edf: (text: string) =>
+			text.replace('\t\t<section id="s">\n', '').replace('\t\t</section>\n', '')
+	}
+])('$name', ({ json, edf }) => {
+	const expected = structuredClone(sample);
+	json(expected);
+	const actual = parse_edf(edf(sample_edf), document_schema, { generate_id: id_sequence() });
+	expect(normalize(actual)).toBe(normalize(expected));
 });
 
 it('round-trips the default site, including the shared documents on their own', () => {
@@ -143,17 +211,54 @@ it('round-trips the default site, including the shared documents on their own', 
 	};
 	const edf = serialize_edf(page, document_schema, { exclude: shared_ids });
 	expect(edf).not.toMatch(/offset|node_id/);
-	const parsed = parse_edf(edf, document_schema, { stored: page.nodes });
+	const parsed = parse_edf(edf, document_schema);
 	const merged = { document_id: parsed.document_id, nodes: { ...shared_nodes, ...parsed.nodes } };
 	expect(normalize(merged)).toBe(normalize(page));
 	validate_document(fill_document_defaults(merged, document_schema), document_schema);
 
 	for (const doc of shared_documents) {
-		const reparsed = parse_edf(serialize_edf(doc, document_schema), document_schema, {
-			stored: doc.nodes
-		});
+		const reparsed = parse_edf(serialize_edf(doc, document_schema), document_schema);
 		expect(normalize(reparsed)).toBe(normalize(doc));
 	}
+});
+
+it('refuses schemas whose element names could be read two ways', () => {
+	const doc = { document_id: 'd', nodes: { d: { id: 'd', type: 'doc' } } };
+	const schema_with = (properties: object, extra: object = {}) => ({
+		doc: { kind: 'document', properties },
+		block: { kind: 'block', properties: {} },
+		x: { kind: 'mark', properties: {} },
+		...extra
+	});
+	const refuses = (schema: object, message: string) =>
+		expect(() => serialize_edf(doc, schema as never)).toThrow(message);
+
+	refuses(
+		schema_with({ items: { type: 'node_array', node_types: ['block', 'x'], mark_types: ['x'] } }),
+		'doc.items allows x as both child and range'
+	);
+	refuses(
+		schema_with({
+			body: { type: 'text', mark_types: ['x'], annotation_types: ['x'], allow_newlines: false }
+		}),
+		'doc.body allows x as both mark and annotation'
+	);
+	refuses(
+		schema_with(
+			{},
+			{
+				note: {
+					kind: 'text',
+					properties: {
+						layout: { type: 'string' },
+						content: { type: 'text', mark_types: ['layout'], allow_newlines: false }
+					}
+				},
+				layout: { kind: 'mark', properties: {} }
+			}
+		),
+		'note.content allows ranges named like properties of note: layout'
+	);
 });
 
 it('reports mistakes with line numbers', () => {
@@ -178,6 +283,10 @@ it('reports mistakes with line numbers', () => {
 	expect(parse('<page id="p"><title>a &nbsp; b</title></page>')).toThrow('unknown entity &nbsp;');
 	expect(parse('<page id="p"><body><bogus/></body></page>')).toThrow(
 		'<bogus> is not allowed in page.body'
+	);
+	// Marks share the id space of nodes.
+	expect(parse('<paragraph id="p">a <strong id="p">b</strong></paragraph>')).toThrow(
+		'duplicate node id p'
 	);
 
 	const overlapping = structuredClone(sample);
