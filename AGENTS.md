@@ -19,6 +19,10 @@ Repository-specific guidance for coding agents working on Svedit.
 
 - Prefix all project-defined CSS classes with `ew-`, including component, state, and custom utility classes. Standard Tailwind classes and classes required by third-party libraries retain their original names.
 
+## Commits
+
+- The person who makes a commit is its author. Do not sign commits or pull requests with an agent name: no `Co-Authored-By` trailers, "Generated with" lines, or other agent attribution in commit messages or pull request descriptions.
+
 ## UI verification
 
 - The user manually verifies UI changes. Do not use a browser, screenshots, or computer-use tools to verify the UI unless the user explicitly asks.
