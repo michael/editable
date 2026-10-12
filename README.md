@@ -69,16 +69,18 @@ Call `list_pages` to confirm the connection. After updating Editable, start a ne
 
 - `get_schema` describes the document model: the EDF writing rules, then every node type with its properties, allowed child types, and defaults.
 - `list_pages` lists pages in the same hierarchy as the page browser.
-- `read_page` returns a page as EDF together with the `version` that `save_page` requires. It accepts a path such as `/about`, a full URL, a language-prefixed path, or a document id. The shared banner, navigation, and footer are referenced by id and left out unless `include_shared` is set.
-- `create_page` creates a page from EDF. The shared documents are linked automatically, and the URL comes from `slug` or the page title.
-- `save_page` saves the complete page as EDF. Nodes left out of the document are deleted, new elements get ids, and the shared documents change only when they were included.
+- `read_document` returns a document as EDF together with the `version` that `write_document` requires. Documents are pages and the shared banner, navigation, and footer. It accepts a page path such as `/about`, a full URL, a language-prefixed path, or a document id such as `nav_1`.
+- `create_page` creates a page from EDF. The shared documents are referenced automatically, and the URL comes from `slug` or the page title.
+- `write_document` writes a complete document as EDF. Nodes left out of the document are deleted, and new elements get ids.
 - `prepare_image_upload` returns a 30-minute upload token and the exact encoding and upload steps for adding images.
 
-Agents read a page, send it back with their changes and the version they read, and keep editing with the version each save returns. A save is rejected when the page changed in between, for example when you saved it in the editor. The reverse is handled too: saving a page in the editor that an agent changed since you opened it asks which version to keep. Every save is validated against the schema and the single-owner rule before anything is written, so an agent cannot persist a malformed document. Editing the shared banner, navigation, or footer affects every page.
+Agents read a document, send it back with their changes and the version they read, and keep editing with the version each write returns. A write is rejected when the document changed in between, for example when you saved it in the editor. The reverse is handled too: saving a page in the editor that an agent changed since you opened it asks which version to keep. Every write is validated against the schema and the single-owner rule before anything is written, so an agent cannot persist a malformed document.
+
+A page references its banner, navigation, and footer by id, as in `nav="nav_1"`. They are documents of their own, shared by every page, so an agent edits the navigation by reading and writing `nav_1` directly, and a page written with the navigation's content inside it is rejected. Edits to page content therefore can never change the navigation by accident.
 
 #### EDF
 
-Pages travel as EDF, an XML form of the stored document that needs no character offsets. It is a transport encoding: the server parses it back into the same JSON the editor stores and runs the same validation. Each node is an element named by its type with an `id` and its primitive properties as attributes, structure is nested elements, text nodes hold their content directly, and marks are inline tags:
+Documents travel as EDF, an XML form of the stored document that needs no character offsets. It is a transport encoding: the server parses it back into the same JSON the editor stores and runs the same validation. Each node is an element named by its type with an `id` and its primitive properties as attributes, structure is nested elements, text nodes hold their content directly, and marks are inline tags:
 
 ```xml
 <page id="about" banner="banner_1" nav="nav_1" footer="footer_1">
@@ -96,7 +98,7 @@ Pages travel as EDF, an XML form of the stored document that needs no character 
 </page>
 ```
 
-Every value is written out, so an EDF document means the same thing even after a default in the schema changes. When writing new content, a left-out attribute gets the schema default at that moment, as when you insert a block in the editor. Ids are identity, exactly as in the editor: everything kept keeps its id, including marks, and anything new, such as a link that replaces another, has no id and gets a fresh one. Element names alternate between node types and property names, and the schema decides how each is read, including whether a property holds one node or a list. Schemas whose names could be read two ways are refused. The serializer and parser live in `src/lib/edf.ts` and work with any such Svedit schema.
+Every value is written out, so an EDF document means the same thing even after a default in the schema changes. When writing new content, a left-out attribute gets the schema default at that moment, as when you insert a block in the editor. Ids are identity, exactly as in the editor: everything kept keeps its id, including marks, and anything new, such as a link that replaces another, has no id and gets a fresh one. Element names alternate between node types and property names, and the schema decides how each is read, including whether a property holds one node or a list. Schemas whose names could be read two ways are refused. An element includes its content in the document, while a node property written as an attribute, like `nav="nav_1"` above, is a reference to another document that is read on its own. A document always contains all of its nodes, and only a page refers to other documents, for its banner, navigation, and footer. The serializer and parser live in `src/lib/edf.ts` and work with any such Svedit schema.
 
 #### Images
 
@@ -104,7 +106,7 @@ Image files do not travel through tool calls. `prepare_image_upload` tells the a
 
 #### Translations
 
-With [translations](#translations-experimental) enabled, `read_page` with a language-prefixed path such as `/de/about`, or with the `language` argument, returns the translated page, and `save_page` with `language` saves it. Like the editor, translations can change text, inline formatting, and media only; structure and layout are edited in the main language.
+With [translations](#translations-experimental) enabled, `read_document` with a language-prefixed path such as `/de/about`, or with the `language` argument, returns the translated document, and `write_document` with `language` writes it. The banner, navigation, and footer are translated on their own, like every other document. Like the editor, translations can change text, inline formatting, and media only; structure and layout are edited in the main language.
 
 ## Make it yours
 

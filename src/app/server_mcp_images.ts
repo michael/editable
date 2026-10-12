@@ -28,7 +28,7 @@ export function prepare_image_upload(origin: string, grant_id: string) {
 			'For every width in variant_widths that is smaller than the original width, encode a WebP scaled to exactly that width.',
 			'The asset id is the SHA-256 hex digest of the original file plus ".webp".',
 			'Upload the original, then every variant, with the requests below.',
-			'Use the image in save_page or create_page as { type: "image", src: <asset id>, mime_type: "image/webp", width, height, alt }. Saves are rejected while variants are missing or width and height do not match the file.'
+			'Use the image in write_document or create_page as <image src="<asset id>" mime_type="image/webp" width="<original width>" height="<original height>" alt="<description>"/>. Writes are rejected while variants are missing or width and height do not match the file.'
 		],
 		upload_original: {
 			method: 'POST',
