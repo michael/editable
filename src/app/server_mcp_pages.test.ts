@@ -201,8 +201,8 @@ it('includes the shared documents on request and saves them with the page', asyn
 
 	// Filling in a nav link changes the nav document, not the page.
 	const edited = edf.replace(
-		/<nav_link id="(\w+)"\/>/,
-		'<nav_link id="$1" href="/about"><label>Renamed</label></nav_link>'
+		/<nav_link id="(\w+)" href="" target="_self">(\s*)<label><\/label>/,
+		'<nav_link id="$1" href="/about" target="_self">$2<label>Renamed</label>'
 	);
 	expect(edited).not.toBe(edf);
 	await save(edited, version!);
@@ -217,7 +217,10 @@ it('creates pages linked to the shared documents with a slug from the title', as
 	const { edf, version } = read('/about-us');
 	expect(version).toBe(result.version);
 	expect(edf).toContain(`nav="${nav_id}"`);
-	expect(edf).toMatch(/<image>\n\t\t<image id="[A-Za-z]{23}"\/>\n\t<\/image>/);
+	// The empty preview image states every value, defaults included.
+	expect(edf).toMatch(
+		/<image>\n\t\t<image id="[A-Za-z]{23}" src="" mime_type="" width="0" height="0" alt="" focal_point_x="0.5" focal_point_y="0.5" scale="1" object_fit="contain"\/>\n\t<\/image>/
+	);
 	expect((await create('about_again')).page_href).toBe('/about-us-2');
 	// Editable's own routes keep their paths.
 	expect((await create('routed', undefined, 'mcp')).page_href).toBe('/mcp-2');

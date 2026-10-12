@@ -24,7 +24,6 @@
  * mean two things (see assert_unambiguous_schema).
  */
 import type { Attachment, Document, DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
-import { get_property_default } from 'svedit';
 
 type Schema = Record<string, NodeSchema>;
 type Ranges = { marks?: Attachment[]; annotations?: Attachment[] };
@@ -261,10 +260,6 @@ function primitive_from_string(definition: PropertyDefinition, value: string, wh
 	}
 }
 
-function is_default(definition: PropertyDefinition, value: unknown) {
-	return JSON.stringify(value) === JSON.stringify(get_property_default(definition));
-}
-
 /**
  * Text nodes whose only structured property is their content keep it inline,
  * like HTML: <paragraph id="p">Hello <strong id="s">world</strong></paragraph>.
@@ -339,7 +334,7 @@ export function serialize_edf(document: Document, schema: Schema, options: Seria
 		return type_schema;
 	};
 
-	/** Attributes of a node: its id, then primitive properties that differ from their default. */
+	/** Attributes of a node: its id, then every primitive property it has. */
 	const attributes = (node: DocumentNode) => {
 		const parts = [` id="${escape_attribute(node.id)}"`];
 		for (const [name, definition] of Object.entries<PropertyDefinition>(
@@ -347,7 +342,6 @@ export function serialize_edf(document: Document, schema: Schema, options: Seria
 		)) {
 			const value = node[name];
 			if (!is_attribute_type(definition.type) || value === undefined) continue;
-			if (is_default(definition, value)) continue;
 			parts.push(` ${name}="${escape_attribute(primitive_to_string(value))}"`);
 		}
 		return parts.join('');
@@ -409,12 +403,15 @@ export function serialize_edf(document: Document, schema: Schema, options: Seria
 		);
 	};
 
+	/**
+	 * Every property is written, empty text and lists included, so the output
+	 * never depends on defaults and means the same after the schema changes.
+	 */
 	function write_node(node: DocumentNode, depth: number) {
 		const indent = '\t'.repeat(depth);
 		const open = `${indent}<${node.type}${attributes(node)}`;
 		if (has_inline_content(node_schema(node))) {
-			const text = node.content ? inline_text(node, 'content', node.content) : '';
-			lines.push(text ? `${open}>${text}</${node.type}>` : `${open}/>`);
+			lines.push(`${open}>${inline_text(node, 'content', node.content)}</${node.type}>`);
 			return;
 		}
 		const start = lines.length;
@@ -435,13 +432,13 @@ export function serialize_edf(document: Document, schema: Schema, options: Seria
 				write_node(child, depth + 2);
 				lines.push(`${indent}\t</${name}>`);
 			} else if (definition.type === 'text') {
-				if (!value.content && !ranges_of(value).length) continue;
 				lines.push(`${indent}\t<${name}>${inline_text(node, name, value)}</${name}>`);
 			} else if (definition.type === 'node_array') {
-				if (!value.nodes.length && !ranges_of(value).length) continue;
+				const array_start = lines.length;
 				lines.push(`${indent}\t<${name}>`);
 				write_array(node, name, value, depth + 2);
-				lines.push(`${indent}\t</${name}>`);
+				if (lines.length === array_start + 1) lines[array_start] += `</${name}>`;
+				else lines.push(`${indent}\t</${name}>`);
 			}
 		}
 		if (lines.length === start + 1) lines[start] = `${open}${references}/>`;

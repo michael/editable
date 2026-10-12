@@ -96,7 +96,7 @@ Pages travel as EDF, an XML form of the stored document that needs no character 
 </page>
 ```
 
-Defaults are omitted, so an element without a `layout` uses the schema default. Ids are identity, exactly as in the editor: everything kept keeps its id, including marks, and anything new, such as a link that replaces another, has no id and gets a fresh one. Element names alternate between node types and property names, and the schema decides how each is read, including whether a property holds one node or a list. Schemas whose names could be read two ways are refused. The serializer and parser live in `src/lib/edf.ts` and work with any such Svedit schema.
+Every value is written out, so an EDF document means the same thing even after a default in the schema changes. When writing new content, a left-out attribute gets the schema default at that moment, as when you insert a block in the editor. Ids are identity, exactly as in the editor: everything kept keeps its id, including marks, and anything new, such as a link that replaces another, has no id and gets a fresh one. Element names alternate between node types and property names, and the schema decides how each is read, including whether a property holds one node or a list. Schemas whose names could be read two ways are refused. The serializer and parser live in `src/lib/edf.ts` and work with any such Svedit schema.
 
 #### Images
 
