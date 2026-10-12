@@ -78,17 +78,17 @@ Agents read a page, send it back with their changes and the version they read, a
 
 #### EDF
 
-Pages travel as EDF, an XML form of the stored document that is about a third of the size of the JSON and needs no character offsets. It is a transport encoding: the server parses it back into the same JSON the editor stores and runs the same validation. Each node is an element named by its type with an `id` and its primitive properties as attributes, structure is nested elements, text nodes hold their content directly, and marks are inline tags:
+Pages travel as EDF, an XML form of the stored document that needs no character offsets. It is a transport encoding: the server parses it back into the same JSON the editor stores and runs the same validation. Each node is an element named by its type with an `id` and its primitive properties as attributes, structure is nested elements, text nodes hold their content directly, and marks are inline tags:
 
 ```xml
 <page id="about" banner="banner_1" nav="nav_1" footer="footer_1">
 	<title>About us</title>
 	<body>
-		<section>
-			<prose id="intro" layout="wide">
+		<section id="s1">
+			<prose id="intro" layout="wide-left">
 				<body>
 					<heading_1 id="h1">Who we are</heading_1>
-					<paragraph id="p1">A small team with a <link href="/story">long story</link>.</paragraph>
+					<paragraph id="p1">A small team with a <link id="l1" href="/story">long story</link>.</paragraph>
 				</body>
 			</prose>
 		</section>
@@ -96,7 +96,7 @@ Pages travel as EDF, an XML form of the stored document that is about a third of
 </page>
 ```
 
-Defaults are omitted, so an element without a `layout` uses the schema default. Marks carry no ids; when a page is saved, each mark keeps the id of the stored mark it matches, so translations and links stay attached. The serializer and parser live in `src/lib/edf.ts` and work with any Svedit schema.
+Defaults are omitted, so an element without a `layout` uses the schema default. Ids are identity, exactly as in the editor: everything kept keeps its id, including marks, and anything new, such as a link that replaces another, has no id and gets a fresh one. Element names alternate between node types and property names, and the schema decides how each is read, including whether a property holds one node or a list. Schemas whose names could be read two ways are refused. The serializer and parser live in `src/lib/edf.ts` and work with any such Svedit schema.
 
 #### Images
 

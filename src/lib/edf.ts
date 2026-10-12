@@ -1,21 +1,27 @@
 /**
  * EDF, the Editable document format: an XML projection of a Svedit document
- * for agents and humans. Node elements carry primitive properties as
- * attributes and text, node, and node_array properties as child elements.
- * Marks and annotations are inline elements in text and wrapper elements in
- * node arrays, so no offsets or range ids appear. Parsing yields the same
- * document JSON the editor stores; it is a transport encoding, not a model.
+ * for agents and humans. Node elements carry their id and primitive
+ * properties as attributes, and text, node, and node_array properties as
+ * child elements. Marks and annotations are inline elements in text and
+ * wrapper elements in node arrays, so no offsets appear. Every node, marks
+ * and annotations included, keeps its id: elements without one are new.
+ * Parsing yields the same document JSON the editor stores; it is a transport
+ * encoding, not a model.
  *
  *   <page id="about">
- *     <title>About <strong>us</strong></title>
+ *     <title>About us</title>
  *     <body>
- *       <section>
+ *       <section id="s1">
  *         <prose id="p1" layout="narrow-left">
- *           <body><paragraph id="t1">Hello <link href="/">home</link></paragraph></body>
+ *           <body><paragraph id="t1">Hello <link id="l1" href="/">home</link></paragraph></body>
  *         </prose>
  *       </section>
  *     </body>
  *   </page>
+ *
+ * Element names alternate between node types and property names, and the
+ * schema decides how each is read, so EDF refuses schemas where a name could
+ * mean two things (see assert_unambiguous_schema).
  */
 import type { Attachment, Document, DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
 import { get_property_default } from 'svedit';
@@ -261,7 +267,7 @@ function is_default(definition: PropertyDefinition, value: unknown) {
 
 /**
  * Text nodes whose only structured property is their content keep it inline,
- * like HTML: <paragraph id="p">Hello <strong>world</strong></paragraph>.
+ * like HTML: <paragraph id="p">Hello <strong id="s">world</strong></paragraph>.
  */
 function has_inline_content(type_schema: NodeSchema) {
 	return (
@@ -270,6 +276,45 @@ function has_inline_content(type_schema: NodeSchema) {
 			name === 'content' ? definition.type === 'text' : is_attribute_type(definition.type)
 		)
 	);
+}
+
+const checked_schemas = new WeakSet<Schema>();
+
+/**
+ * Refuse schemas whose element names would be ambiguous in EDF: a range type
+ * that is also a child node type or a property name where both can appear,
+ * or a type allowed both as a mark and an annotation on the same property.
+ */
+export function assert_unambiguous_schema(schema: Schema) {
+	if (checked_schemas.has(schema)) return;
+	for (const [type, type_schema] of Object.entries(schema)) {
+		for (const [name, definition] of Object.entries<PropertyDefinition>(type_schema.properties)) {
+			if (definition.type !== 'text' && definition.type !== 'node_array') continue;
+			const marks: string[] = definition.mark_types ?? [];
+			const annotations: string[] = definition.annotation_types ?? [];
+			const where = `${type}.${name}`;
+			const both = marks.filter((range_type) => annotations.includes(range_type));
+			if (both.length)
+				throw new EdfError(`${where} allows ${both.join(', ')} as both mark and annotation.`);
+			if (definition.type === 'node_array') {
+				const clashes = [...marks, ...annotations].filter((range_type) =>
+					definition.node_types.includes(range_type)
+				);
+				if (clashes.length)
+					throw new EdfError(`${where} allows ${clashes.join(', ')} as both child and range.`);
+			}
+			if (name === 'content' && has_inline_content(type_schema)) {
+				const clashes = [...marks, ...annotations].filter(
+					(range_type) => range_type in type_schema.properties
+				);
+				if (clashes.length)
+					throw new EdfError(
+						`${where} allows ranges named like properties of ${type}: ${clashes.join(', ')}.`
+					);
+			}
+		}
+	}
+	checked_schemas.add(schema);
 }
 
 // ---------------------------------------------------------------------------
@@ -281,6 +326,7 @@ export type SerializeOptions = {
 };
 
 export function serialize_edf(document: Document, schema: Schema, options: SerializeOptions = {}) {
+	assert_unambiguous_schema(schema);
 	const exclude = new Set(options.exclude ?? []);
 	const { nodes } = document;
 	const lines: string[] = [];
@@ -294,8 +340,8 @@ export function serialize_edf(document: Document, schema: Schema, options: Seria
 	};
 
 	/** Attributes of a node: its id, then primitive properties that differ from their default. */
-	const attributes = (node: DocumentNode, with_id: boolean) => {
-		const parts = with_id ? [` id="${escape_attribute(node.id)}"`] : [];
+	const attributes = (node: DocumentNode) => {
+		const parts = [` id="${escape_attribute(node.id)}"`];
 		for (const [name, definition] of Object.entries<PropertyDefinition>(
 			node_schema(node).properties
 		)) {
@@ -323,7 +369,7 @@ export function serialize_edf(document: Document, schema: Schema, options: Seria
 			(start, end) => (out += escape_text(chars.slice(start, end).join(''))),
 			(range, inner) => {
 				const mark = range_node(range, `${node.id}.${name}`);
-				out += `<${mark.type}${attributes(mark, false)}>`;
+				out += `<${mark.type}${attributes(mark)}>`;
 				inner();
 				out += `</${mark.type}>`;
 			},
@@ -353,7 +399,7 @@ export function serialize_edf(document: Document, schema: Schema, options: Seria
 			},
 			(range, inner) => {
 				const mark = range_node(range, `${node.id}.${name}`);
-				lines.push(`${'\t'.repeat(current_depth)}<${mark.type}${attributes(mark, false)}>`);
+				lines.push(`${'\t'.repeat(current_depth)}<${mark.type}${attributes(mark)}>`);
 				current_depth += 1;
 				inner();
 				current_depth -= 1;
@@ -365,7 +411,7 @@ export function serialize_edf(document: Document, schema: Schema, options: Seria
 
 	function write_node(node: DocumentNode, depth: number) {
 		const indent = '\t'.repeat(depth);
-		const open = `${indent}<${node.type}${attributes(node, true)}`;
+		const open = `${indent}<${node.type}${attributes(node)}`;
 		if (has_inline_content(node_schema(node))) {
 			const text = node.content ? inline_text(node, 'content', node.content) : '';
 			lines.push(text ? `${open}>${text}</${node.type}>` : `${open}/>`);
@@ -413,24 +459,19 @@ export function serialize_edf(document: Document, schema: Schema, options: Seria
 // Parse
 
 export type ParseOptions = {
-	/** Previously stored nodes, used to keep the ids of unchanged marks and annotations. */
-	stored?: Record<string, DocumentNode>;
-	/** Id generator for nodes without an id attribute. */
+	/** Id generator for elements without an id attribute, which are new nodes. */
 	generate_id?: () => string;
 };
 
-type PendingRange = {
-	owner: DocumentNode;
-	property: string;
-	node: DocumentNode;
-	range: Attachment;
-};
-
 export function parse_edf(source: string, schema: Schema, options: ParseOptions = {}): Document {
-	const stored = options.stored ?? {};
+	assert_unambiguous_schema(schema);
 	const generate_id = options.generate_id ?? (() => `n${Math.random().toString(36).slice(2, 12)}`);
 	const nodes: Record<string, DocumentNode> = {};
-	const pending: PendingRange[] = [];
+
+	const add_node = (node: DocumentNode, element: XmlElement) => {
+		if (node.id in nodes) throw new EdfError(`Line ${element.line}: duplicate node id ${node.id}.`);
+		nodes[node.id] = node;
+	};
 
 	const type_schema = (element: XmlElement) => {
 		const type_schema = schema[element.name];
@@ -448,19 +489,12 @@ export function parse_edf(source: string, schema: Schema, options: ParseOptions 
 		return definition;
 	};
 
-	/** Primitive properties come from attributes; node references may too. */
-	const node_from_attributes = (element: XmlElement, with_id: boolean) => {
-		const node: DocumentNode = {
-			id: with_id ? (element.attributes.id ?? generate_id()) : '',
-			type: element.name
-		};
+	/** The id and primitive properties come from attributes; node references may too. */
+	const node_from_attributes = (element: XmlElement) => {
+		const node: DocumentNode = { id: element.attributes.id ?? generate_id(), type: element.name };
 		type_schema(element);
 		for (const [name, raw] of Object.entries(element.attributes)) {
-			if (name === 'id') {
-				if (!with_id)
-					throw new EdfError(`Line ${element.line}: <${element.name}> is a mark and takes no id.`);
-				continue;
-			}
+			if (name === 'id') continue;
 			const definition = property_definition(element, name, element.line);
 			const where = `Line ${element.line}: ${element.name}.${name}`;
 			if (is_attribute_type(definition.type))
@@ -506,7 +540,8 @@ export function parse_edf(source: string, schema: Schema, options: ParseOptions 
 				throw new EdfError(
 					`Line ${child.line}: <${child.name}> is not allowed in ${owner.type}.${name}. Allowed: ${[...allowed.marks, ...allowed.annotations].join(', ') || 'none'}.`
 				);
-			const node = node_from_attributes(child, false);
+			const node = node_from_attributes(child);
+			add_node(node, child);
 			const start = length;
 			for (const inner of child.children) {
 				if (inner.kind === 'element')
@@ -516,9 +551,7 @@ export function parse_edf(source: string, schema: Schema, options: ParseOptions 
 				value.content += inner.text;
 				length += graphemes(inner.text).length;
 			}
-			const range = { start_offset: start, end_offset: length, node_id: '' };
-			value[kind].push(range);
-			pending.push({ owner, property: name, node, range });
+			value[kind].push({ start_offset: start, end_offset: length, node_id: node.id });
 		}
 		return value;
 	};
@@ -549,12 +582,11 @@ export function parse_edf(source: string, schema: Schema, options: ParseOptions 
 					throw new EdfError(
 						`Line ${child.line}: <${child.name}> is not allowed in ${owner.type}.${name}. Allowed: ${[...node_types, ...allowed.marks, ...allowed.annotations].join(', ')}.`
 					);
-				const node = node_from_attributes(child, false);
+				const node = node_from_attributes(child);
+				add_node(node, child);
 				const start = value.nodes.length;
 				visit(child);
-				const range = { start_offset: start, end_offset: value.nodes.length, node_id: '' };
-				value[kind].push(range);
-				pending.push({ owner, property: name, node, range });
+				value[kind].push({ start_offset: start, end_offset: value.nodes.length, node_id: node.id });
 			}
 		};
 		visit(element);
@@ -562,9 +594,8 @@ export function parse_edf(source: string, schema: Schema, options: ParseOptions 
 	};
 
 	function parse_node(element: XmlElement): DocumentNode {
-		const node = node_from_attributes(element, true);
-		if (node.id in nodes) throw new EdfError(`Line ${element.line}: duplicate node id ${node.id}.`);
-		nodes[node.id] = node;
+		const node = node_from_attributes(element);
+		add_node(node, element);
 		const schema_of = type_schema(element);
 		// Inline content, unless the children spell out properties explicitly.
 		if (
@@ -601,7 +632,6 @@ export function parse_edf(source: string, schema: Schema, options: ParseOptions 
 
 	const root = parse_xml(source);
 	parse_node(root);
-	assign_range_ids(pending, nodes, stored, schema, generate_id);
 	return { document_id: root_id(root), nodes };
 }
 
@@ -614,48 +644,4 @@ function root_id(root: XmlElement) {
 /** The document id of an EDF document, without interpreting it against a schema. */
 export function edf_root_id(source: string) {
 	return root_id(parse_xml(source));
-}
-
-/**
- * Marks and annotations carry no ids in EDF. Reuse the stored id of a range
- * with the same type and properties on the same property, preferring equal
- * offsets, so unchanged formatting keeps its identity.
- */
-function assign_range_ids(
-	pending: PendingRange[],
-	nodes: Record<string, DocumentNode>,
-	stored: Record<string, DocumentNode>,
-	schema: Schema,
-	generate_id: () => string
-) {
-	const used = new Set<string>();
-	const signature = (node: DocumentNode) => {
-		const properties = schema[node.type]?.properties ?? {};
-		const values = Object.entries<PropertyDefinition>(properties).map(([name, definition]) => [
-			name,
-			node[name] ?? get_property_default(definition)
-		]);
-		return JSON.stringify([node.type, values]);
-	};
-	for (const { owner, property, node, range } of pending) {
-		const candidates = ranges_of(stored[owner.id]?.[property])
-			.map((stored_range) => ({ stored_range, stored_node: stored[stored_range.node_id] }))
-			.filter(
-				({ stored_range, stored_node }) =>
-					stored_node &&
-					!used.has(stored_range.node_id) &&
-					!(stored_range.node_id in nodes) &&
-					signature(stored_node) === signature(node)
-			);
-		const match =
-			candidates.find(
-				({ stored_range }) =>
-					stored_range.start_offset === range.start_offset &&
-					stored_range.end_offset === range.end_offset
-			) ?? candidates[0];
-		node.id = match ? match.stored_range.node_id : generate_id();
-		used.add(node.id);
-		range.node_id = node.id;
-		nodes[node.id] = node;
-	}
 }

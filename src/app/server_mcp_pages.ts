@@ -138,7 +138,7 @@ export function read_mcp_page(page: string, requested_language?: string, include
  * the submitted root leaves them out.
  */
 function parse_submitted(edf: string, stored_nodes: Record<string, DocumentNode>) {
-	const parsed = parse_edf(edf, document_schema, { stored: stored_nodes, generate_id: nanoid });
+	const parsed = parse_edf(edf, document_schema, { generate_id: nanoid });
 	const nodes: Record<string, DocumentNode> = {};
 	const changed: string[] = [];
 	for (const [id, node] of Object.entries(parsed.nodes)) {
