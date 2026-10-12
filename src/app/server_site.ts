@@ -2,6 +2,7 @@ import { getRequestEvent } from '$app/server';
 import { LANGUAGES, ORIGIN, VERCEL } from '$app/env/private';
 import { language_path, parse_languages } from './languages.js';
 import { without_site_base } from './site_links.js';
+import type { SiteStorage } from './services.js';
 
 /**
  * The site a request belongs to. A deployment serves one site, configured by
@@ -15,6 +16,8 @@ export type Site = {
 	base: string;
 	/** Enabled languages, the main language first; empty for a single-language site. */
 	languages: string[];
+	/** The site's database and asset files; the deployment's own in DATA_DIR when unset. */
+	storage?: SiteStorage;
 };
 
 // No database dependencies: safe to import from static/no-backend routes.

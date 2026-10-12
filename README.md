@@ -1105,15 +1105,17 @@ A deployment normally serves one site, configured by `ORIGIN` and `LANGUAGES`. A
 event.locals.site = {
 	origin: 'https://host.example',
 	base: '/alice',
-	languages: []
+	languages: [],
+	storage: { db, with_transaction, assets }
 };
 ```
 
 - `origin` is the public origin, used for canonical URLs, the sitemap, and the canonical host redirect.
 - `base` is the path the site is served under, or `''` at the root. Stored links never include it: `/about` stays `/about` in the database and is rendered as `/alice/about`, so a site can move to another path or its own domain without changing content.
 - `languages` lists the site's languages, the main language first, or none.
+- `storage` holds the site's SQLite database, a `with_transaction` function, and its asset files, created with `create_database` and `create_asset_storage` from `src/lib/server/`. Editable reads and writes through it for the request and caches nothing; opening, caching, and closing site data is up to the host. Run `run_migrations(storage)` from `src/app/migrations.ts` when opening a site's database. Asset cleanup deletes files the site's database no longer references, so a host that shares asset files between sites supplies asset functions that keep them.
 
-Requests for `/alice/...` must reach Editable's routes, either through a proxy that strips the base or through a `reroute` hook that maps `/alice/about` to `/about`. When no site is set, Editable uses its own from the environment, so single-site deployments need no changes.
+Requests for `/alice/...` must reach Editable's routes, either through a proxy that strips the base or through a `reroute` hook that maps `/alice/about` to `/about`. When no site is set, Editable uses its own from the environment and opens its database in `DATA_DIR` on first use, so single-site deployments need no changes. Backups and the `pnpm data:*` commands work on `DATA_DIR` and are not used for host-provided storage.
 
 ## Upgrading
 

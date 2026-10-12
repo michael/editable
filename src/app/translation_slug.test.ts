@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, expect, it, vi } from 'vitest';
+import type { DatabaseSync } from 'node:sqlite';
 import { fill_document_defaults } from 'svedit';
 import { document_schema } from './document_schema.js';
 import {
@@ -145,7 +146,8 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 	});
 });
 
-afterAll(() => db.close());
+// The mocked services export a real database.
+afterAll(() => (db as unknown as DatabaseSync).close());
 beforeEach(() => {
 	vi.restoreAllMocks();
 	languages.splice(0, languages.length, 'en', 'de');

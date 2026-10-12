@@ -21,6 +21,7 @@ Editable is minimalistic by design: less, but better.
 - Files using Svelte runes (`$state`, `$derived`, `$effect`, etc.) must use the `.svelte.js` or `.svelte.ts` extension.
 - Use sentence case for documentation headings and comments; capitalize `Svedit` as a proper noun.
 - Read the site's origin, base path, and languages through `get_site()` from `#app/server_site.js`, never from `ORIGIN` or `LANGUAGES` directly: a host serving several sites sets them per request. Render internal links with `site_href()` from `#app/site_links.js`, and build absolute URLs with `absolute_page_url(path, origin, base)`. Stored links never include the base.
+- Use `db`, `with_transaction`, and the asset functions from `#app/services.js` only inside functions: they go to the current request's site storage. Never prepare statements or capture storage at module level.
 
 ## Code style
 
