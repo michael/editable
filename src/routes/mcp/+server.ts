@@ -36,7 +36,7 @@ function define_tool<TInput extends ToolInput>(tool: Tool<TInput>): Tool {
 /** How documents are written in EDF, the XML form read_page returns and save_page and create_page take. */
 const edf_rules = [
 	'EDF is XML. Each node is an element named by its type with an id attribute; ids match /^[A-Za-z_][A-Za-z0-9_-]*$/ and are unique. Leave the id off new nodes to have one assigned.',
-	'Properties of type string, integer, number, and boolean are attributes; omit one to use its default. When values is listed, use one of them.',
+	'Properties of type string, integer, number, and boolean are attributes. read_page writes every value; keep them. On a new node you may leave an attribute out to get its default. When values is listed, use one of them.',
 	'Properties of type node and node_array are child elements named after the property, containing node elements of the listed node_types (exactly one for a node property).',
 	'Properties of type text are child elements named after the property containing the text. Nodes of kind "text" hold their content directly: <paragraph id="p1">Hello</paragraph>. Text is literal: whitespace and line breaks inside a text element are stored as written, so never indent or wrap text content. Line breaks are only allowed where allow_newlines is true.',
 	'Marks are inline elements named by the mark type, with an id and the mark’s properties as attributes: <strong id="s1">bold</strong>, <link id="l1" href="/about">about</link>. mark_types lists what each property allows. Marks do not nest. In a node_array, a mark such as <section id="s2"> wraps the consecutive child elements it spans.',

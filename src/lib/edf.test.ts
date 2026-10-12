@@ -86,7 +86,7 @@ const sample_edf = `<page id="about" banner="${banner_id}" nav="${nav_id}" foote
 				<body>
 					<paragraph id="t1" layout="muted">Hi 😀 <link id="m" href="/x" target="_blank">you</link> &amp; <strong id="st">all</strong>
 Again</paragraph>
-					<heading_2 id="t2"/>
+					<heading_2 id="t2"></heading_2>
 				</body>
 			</prose>
 		</section>
@@ -163,7 +163,7 @@ it.each([
 			doc.nodes.pr.body.nodes = ['t2', 't1'];
 		},
 		edf: (text: string) => {
-			const heading = '\t\t\t\t\t<heading_2 id="t2"/>\n';
+			const heading = '\t\t\t\t\t<heading_2 id="t2"></heading_2>\n';
 			return text.replace(heading, '').replace('\t\t\t\t\t<paragraph id="t1"', `${heading}$&`);
 		}
 	},
@@ -184,8 +184,8 @@ it.each([
 		},
 		edf: (text: string) =>
 			text.replace(
-				'<heading_2 id="t2"/>\n',
-				'<heading_2 id="t2"/>\n\t\t\t\t\t<paragraph>See <emphasis>more</emphasis></paragraph>\n'
+				'<heading_2 id="t2"></heading_2>\n',
+				'<heading_2 id="t2"></heading_2>\n\t\t\t\t\t<paragraph>See <emphasis>more</emphasis></paragraph>\n'
 			)
 	},
 	{
@@ -220,6 +220,68 @@ it('round-trips the default site, including the shared documents on their own', 
 		const reparsed = parse_edf(serialize_edf(doc, document_schema), document_schema);
 		expect(normalize(reparsed)).toBe(normalize(doc));
 	}
+});
+
+it('writes every value, so documents keep their meaning when defaults change', () => {
+	const doc: Document = {
+		document_id: 'p',
+		nodes: {
+			p: {
+				id: 'p',
+				type: 'prose',
+				layout: 'narrow-left',
+				body: { nodes: ['t'], marks: [], annotations: [] }
+			},
+			t: {
+				id: 't',
+				type: 'paragraph',
+				layout: 'regular',
+				content: { content: 'Hi', marks: [], annotations: [] }
+			}
+		}
+	};
+	const edf = serialize_edf(doc, document_schema);
+	expect(edf).toContain('<prose id="p" layout="narrow-left">');
+	expect(edf).toContain('<paragraph id="t" layout="regular">Hi</paragraph>');
+
+	// Empty values are values too.
+	const empty: Document = {
+		document_id: 'g',
+		nodes: {
+			g: {
+				id: 'g',
+				type: 'prose_grid',
+				layout: 'plain',
+				items: { nodes: [], marks: [], annotations: [] }
+			},
+			pg: { id: 'pg', type: 'page', title: { content: '', marks: [], annotations: [] } },
+			h: {
+				id: 'h',
+				type: 'heading_2',
+				layout: 'regular',
+				content: { content: '', marks: [], annotations: [] }
+			}
+		}
+	};
+	expect(serialize_edf(empty, document_schema)).toBe(
+		'<prose_grid id="g" layout="plain">\n\t<items></items>\n</prose_grid>\n'
+	);
+	expect(serialize_edf({ ...empty, document_id: 'pg' }, document_schema)).toBe(
+		'<page id="pg">\n\t<title></title>\n</page>\n'
+	);
+	expect(serialize_edf({ ...empty, document_id: 'h' }, document_schema)).toBe(
+		'<heading_2 id="h" layout="regular"></heading_2>\n'
+	);
+
+	// The same text read under a schema with other defaults gives the same document.
+	const changed = structuredClone(document_schema);
+	changed.prose.properties.layout.default = 'wide-left';
+	changed.paragraph.properties.layout.default = 'muted';
+	expect(normalize(parse_edf(edf, changed))).toBe(normalize(doc));
+
+	// Only new content left without a value gets the default at that moment.
+	const added = parse_edf('<paragraph id="n">New</paragraph>', changed);
+	expect(fill_document_defaults(added, changed).nodes.n.layout).toBe('muted');
 });
 
 it('refuses schemas whose element names could be read two ways', () => {
