@@ -1,5 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import { VERCEL } from '$app/env/private';
+import { get_site } from '#app/server_site.js';
+import { with_site_base } from '#app/site_links.js';
 import type { PageServerLoad } from './$types';
 
 // Deliberately no `await parent()` here — see routes/+page.server.ts.
@@ -12,7 +14,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	}
 
 	if (!locals.is_admin) {
-		throw redirect(303, '/');
+		throw redirect(303, with_site_base('/', get_site().base));
 	}
 
 	const api_module = await import('#app/api.remote.js');

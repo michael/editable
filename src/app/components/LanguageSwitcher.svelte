@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { get_app_context } from '#app/app_context.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
-	import { language_href } from '#app/languages.js';
+	import { site_language_href } from '#app/site_links.js';
 
 	const app = get_app_context();
 	const svedit = get_svedit_context();
@@ -147,7 +147,7 @@
 					<a
 						href={disabled || app.language === language
 							? undefined
-							: language_href(page.url.href, language, app.languages)}
+							: site_language_href(page.url, language, app.languages)}
 						tabindex={disabled || app.language === language ? -1 : undefined}
 						hreflang={language}
 						lang={language}

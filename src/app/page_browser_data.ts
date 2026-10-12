@@ -10,7 +10,7 @@ import {
 	shared_document_types
 } from '#app/server_documents.js';
 import { is_reserved_language_slug } from '#app/languages.js';
-import { languages } from '#app/server_languages.js';
+import { get_site } from '#app/server_site.js';
 import { is_reserved_markdown_slug } from '#app/markdown/registry.js';
 import { extract_page_metadata, collect_page_body_node_ids } from '#app/page_metadata.js';
 import type { PreviewMediaNode } from '#app/page_metadata.js';
@@ -80,7 +80,9 @@ function summarize_page_document(page_doc: PageDocumentRecord): PageSummary {
 		page_href: active_slug ? `/${active_slug}` : '/',
 		slug: active_slug ?? '',
 		shadowed_by_markdown: active_slug ? is_reserved_markdown_slug(active_slug) : false,
-		shadowed_by_language: active_slug ? is_reserved_language_slug(active_slug, languages) : false,
+		shadowed_by_language: active_slug
+			? is_reserved_language_slug(active_slug, get_site().languages)
+			: false,
 		created_at: page_doc.created_at ?? null,
 		updated_at: page_doc.updated_at ?? null
 	};

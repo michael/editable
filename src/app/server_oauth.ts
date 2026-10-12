@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { error } from '@sveltejs/kit';
-import { ORIGIN } from '$app/env/private';
+import { get_site } from './server_site.js';
 import { require_admin_session } from '#lib/server/auth.js';
 import { db } from './services.js';
 
@@ -39,8 +39,8 @@ const now = () => Math.floor(Date.now() / 1000);
 const new_secret = () => randomBytes(32).toString('base64url');
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 
-// Read lazily: static deployments import this module without an ORIGIN.
-export const issuer = () => new URL(ORIGIN).origin;
+// Read per request: a host may serve several sites, each its own authorization server.
+export const issuer = () => new URL(get_site().origin).origin;
 export const mcp_resource = () => `${issuer()}/mcp`;
 export const resource_metadata_url = () => `${issuer()}/.well-known/oauth-protected-resource/mcp`;
 
@@ -64,7 +64,7 @@ export function protected_resource_metadata() {
 		resource: mcp_resource(),
 		authorization_servers: [issuer()],
 		bearer_methods_supported: ['header'],
-		resource_name: new URL(ORIGIN).host
+		resource_name: new URL(issuer()).host
 	};
 }
 

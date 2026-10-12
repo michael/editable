@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { site_href } from '#app/site_links.js';
 	import type { Nodes } from '#app/document_schema.js';
 	import type { DocumentPath } from 'svedit';
 	import { get_svedit_context } from '#app/svedit_context.js';
@@ -18,7 +19,7 @@
 <Node class="gallery-item" {path}>
 	<svelte:element
 		this={render_as_link ? 'a' : 'div'}
-		href={render_as_link ? node.href : undefined}
+		href={render_as_link ? site_href(node.href) : undefined}
 		target={render_as_link && node.target !== '_self' ? node.target : undefined}
 		aria-label={render_as_link ? link_label : undefined}
 		class="image-wrapper block overflow-hidden outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"

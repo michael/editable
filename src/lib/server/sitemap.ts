@@ -21,15 +21,15 @@ export function latest_modified(values: (string | null | undefined)[]): string |
 }
 
 /** Render canonical absolute URLs with XML escaping. */
-export function render_sitemap(entries: SitemapEntry[], origin: string): string {
+export function render_sitemap(entries: SitemapEntry[], origin: string, base = ''): string {
 	const unique_entries = new Map(entries.map((entry) => [entry.path, entry]));
 	const has_alternates = entries.some((entry) => entry.alternates?.length);
 	const urls = [...unique_entries.values()].map(({ path, lastmod, alternates = [] }) => {
-		const location = escape_xml(absolute_page_url(path, origin));
+		const location = escape_xml(absolute_page_url(path, origin, base));
 		const alternate_xml = alternates
 			.map(
 				({ language, path }) =>
-					`<xhtml:link rel="alternate" hreflang="${escape_xml(language)}" href="${escape_xml(absolute_page_url(path, origin))}" />`
+					`<xhtml:link rel="alternate" hreflang="${escape_xml(language)}" href="${escape_xml(absolute_page_url(path, origin, base))}" />`
 			)
 			.join('');
 		const modified_at = lastmod ? new Date(lastmod) : null;

@@ -1,5 +1,5 @@
-import { languages, request_language } from '#app/server_languages.js';
-import { ORIGIN, VERCEL } from '$app/env/private';
+import { get_site, request_language } from '#app/server_site.js';
+import { VERCEL } from '$app/env/private';
 import {
 	default_banner_document,
 	default_footer_document,
@@ -41,6 +41,7 @@ function create_not_found_document(shared_documents): Document {
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const has_backend = !VERCEL;
+	const site = get_site();
 	const language = request_language(url);
 
 	let site_metadata;
@@ -77,11 +78,12 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 	}
 
 	return {
-		languages,
+		languages: site.languages,
 		language,
 		has_backend,
 		is_admin: !!locals.is_admin,
-		origin: ORIGIN,
+		origin: site.origin,
+		site_base: site.base,
 		favicon: site_metadata.favicon,
 		not_found_document
 	};

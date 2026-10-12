@@ -1,6 +1,7 @@
 import type { TranslationMap } from './translations.js';
 import { translation_payloads } from '../lib/asset_references.js';
-import { languages, request_language } from './server_languages.js';
+import { get_site, request_language } from './server_site.js';
+import { without_site_base } from './site_links.js';
 import { translated_href, parse_internal_page_href } from './document_links.js';
 import { language_path, language_href, is_reserved_language_slug } from './languages.js';
 import { getRequestEvent, query, command } from '$app/server';
@@ -212,10 +213,12 @@ export const logout_admin = command(v.void(), async () => {
 export const get_page_browser_data = query(v.string(), async (href) => {
 	const event = getRequestEvent();
 	require_admin_session(event.locals);
+	const { base, languages } = get_site();
 	const url = new URL(href);
-	const result = build_page_browser_data(language_path(url.pathname, languages).pathname);
+	const pathname = without_site_base(url.pathname, base);
+	const result = build_page_browser_data(language_path(pathname, languages).pathname);
 	const language = request_language(url);
-	if (language && language !== languages[0] && url.pathname !== '/new') {
+	if (language && language !== languages[0] && pathname !== '/new') {
 		const visit = (nodes: PageTreeNode[]) => {
 			for (const node of nodes) {
 				node.navigation_href = translated_href(node.page_href, language, url.origin, languages);
@@ -229,6 +232,7 @@ export const get_page_browser_data = query(v.string(), async (href) => {
 
 /** Return public URLs and saved timestamps for pages reachable from Home. */
 export const get_sitemap_entries = query(async () => {
+	const { languages } = get_site();
 	const { page_forest } = build_page_browser_data('/', true);
 	const records = db
 		.prepare(
@@ -332,7 +336,7 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
  * Return a lightweight preview for a simple internal page href like `/some-slug`.
  */
 export const get_internal_link_preview = query(v.string(), async (href) => {
-	const parsed = parse_internal_page_href(href, languages);
+	const parsed = parse_internal_page_href(href, get_site().languages);
 	if (!parsed) {
 		return null;
 	}
@@ -383,7 +387,7 @@ function rewrite_internal_page_hrefs(
 	nodes: Record<string, DocumentNode>,
 	target_document_id: string,
 	new_slug: string,
-	link_languages = languages
+	link_languages = get_site().languages
 ) {
 	for (const node of Object.values(nodes)) {
 		if (!node || typeof node !== 'object') continue;
@@ -483,7 +487,7 @@ export const save_translations = command(
 
 export const save_document = command(save_document_input_schema, async (combined_doc) => {
 	require_admin_session(getRequestEvent().locals);
-	if (combined_doc.language && combined_doc.language !== languages[0])
+	if (combined_doc.language && combined_doc.language !== get_site().languages[0])
 		error(400, 'Use the translation save command for additional languages.');
 
 	if (combined_doc.create && get_optional_doc_from_db(combined_doc.document_id)) {
@@ -547,7 +551,7 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		);
 	}
 
-	if (is_reserved_language_slug(normalized_slug, languages)) {
+	if (is_reserved_language_slug(normalized_slug, get_site().languages)) {
 		return create_page_url_error_result(
 			'page_url_reserved',
 			'That Page URL is reserved by a language homepage and cannot be used.'
@@ -654,7 +658,9 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 			language: string;
 			value: string;
 		}[];
-		const link_languages = [...new Set([...languages, ...translations.map((row) => row.language)])];
+		const link_languages = [
+			...new Set([...get_site().languages, ...translations.map((row) => row.language)])
+		];
 
 		for (const row of page_rows) {
 			const doc = JSON.parse(row.data);

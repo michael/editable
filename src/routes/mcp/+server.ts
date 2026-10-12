@@ -1,7 +1,8 @@
 import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { toJsonSchema } from '@valibot/to-json-schema';
-import { ORIGIN, VERCEL } from '$app/env/private';
+import { VERCEL } from '$app/env/private';
+import { get_site } from '#app/server_site.js';
 import type { RequestHandler } from './$types';
 import { version } from '../../../package.json' with { type: 'json' };
 
@@ -10,7 +11,7 @@ const legacy_protocol_version = '2025-11-25';
 
 // Every site is its own MCP server, so clients see the site's host, not "editable".
 const server_info = () => {
-	const { host } = new URL(ORIGIN);
+	const { host } = new URL(get_site().origin);
 	return { name: host, title: host, version };
 };
 
@@ -120,7 +121,7 @@ const tools = [
 		annotations: { readOnlyHint: true },
 		handler: async (_args, { grant_id }) => {
 			const { prepare_image_upload } = await import('#app/server_mcp_images.js');
-			return prepare_image_upload(new URL(ORIGIN).origin, grant_id);
+			return prepare_image_upload(new URL(get_site().origin).origin, grant_id);
 		}
 	}),
 	define_tool({

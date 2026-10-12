@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
-	import type { PathnameWithSearchOrHash } from '$app/types';
+	import { site_href } from '#app/site_links.js';
 	import { page } from '$app/state';
 
 	import { get_page_browser_data } from '#app/api.remote.js';
@@ -237,7 +236,7 @@
 	}
 
 	function get_resolved_page_href(page_href: string) {
-		return resolve((page_href || '/') as PathnameWithSearchOrHash);
+		return site_href(page_href || '/');
 	}
 
 	function get_page_slug_label(page_href) {

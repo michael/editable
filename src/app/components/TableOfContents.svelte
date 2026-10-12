@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { site_href } from '#app/site_links.js';
+
 	export type TocEntry = {
 		href: string;
 		title: string;
@@ -17,7 +19,7 @@
 	let toc_open = $state(false);
 
 	function get_target_element(href: string) {
-		const target_url = new URL(href, window.location.href);
+		const target_url = new URL(site_href(href), window.location.href);
 		if (
 			target_url.origin !== window.location.origin ||
 			target_url.pathname !== window.location.pathname ||

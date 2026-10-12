@@ -1097,6 +1097,24 @@ pnpm dev                                            # inspect the restored state
 
 When you've found the state you want live, restore production to it with `pnpm data:restore-cloud --at <timestamp>`.
 
+## Hosting several sites (experimental)
+
+A deployment normally serves one site, configured by `ORIGIN` and `LANGUAGES`. A hosting service that serves several sites from one process can set the site per request instead: in its own `handle` hook, running before Editable's, it sets `event.locals.site`:
+
+```ts
+event.locals.site = {
+	origin: 'https://host.example',
+	base: '/alice',
+	languages: []
+};
+```
+
+- `origin` is the public origin, used for canonical URLs, the sitemap, and the canonical host redirect.
+- `base` is the path the site is served under, or `''` at the root. Stored links never include it: `/about` stays `/about` in the database and is rendered as `/alice/about`, so a site can move to another path or its own domain without changing content.
+- `languages` lists the site's languages, the main language first, or none.
+
+Requests for `/alice/...` must reach Editable's routes, either through a proxy that strips the base or through a `reroute` hook that maps `/alice/about` to `/about`. When no site is set, Editable uses its own from the environment, so single-site deployments need no changes.
+
 ## Upgrading
 
 New Editable releases are one `git pull` away.

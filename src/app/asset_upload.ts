@@ -11,6 +11,7 @@ import {
 	VARIANT_WIDTHS
 } from '#app/config.js';
 import { get_video_dimensions, get_media_dimensions } from '#lib/client/media_dimensions.js';
+import { site_href } from '#app/site_links.js';
 import type { DocumentNode } from 'svedit';
 
 export type PendingAsset = {
@@ -299,7 +300,7 @@ async function upload_asset(entry: PendingAsset): Promise<UploadedAsset> {
 	const content_type = EXT_TO_MIME[ext];
 
 	// Upload original
-	const result = await upload_blob('/api/assets', entry.original.blob, {
+	const result = await upload_blob(site_href('/api/assets'), entry.original.blob, {
 		'Content-Type': content_type,
 		'X-Content-Hash': entry.hash,
 		'X-Asset-Width': String(entry.original.width),
@@ -310,12 +311,14 @@ async function upload_asset(entry: PendingAsset): Promise<UploadedAsset> {
 	// so older content-addressed assets can gain a poster on their next save.
 	if (entry.poster) {
 		try {
-			await upload_blob(`/api/assets/${result.asset_id}/poster`, entry.poster, {
+			await upload_blob(site_href(`/api/assets/${result.asset_id}/poster`), entry.poster, {
 				'Content-Type': 'image/webp'
 			});
 		} catch (err) {
 			if (!result.deduplicated) {
-				await fetch(`/api/assets/${result.asset_id}`, { method: 'DELETE' }).catch(() => {});
+				await fetch(site_href(`/api/assets/${result.asset_id}`), { method: 'DELETE' }).catch(
+					() => {}
+				);
 			}
 			throw new Error(`Poster upload failed: ${err instanceof Error ? err.message : err}`, {
 				cause: err
@@ -336,14 +339,14 @@ async function upload_asset(entry: PendingAsset): Promise<UploadedAsset> {
 	for (let i = 0; i < entry.variants.length; i++) {
 		const variant = entry.variants[i];
 		try {
-			await upload_blob(`/api/assets/${result.asset_id}/variants`, variant.blob, {
+			await upload_blob(site_href(`/api/assets/${result.asset_id}/variants`), variant.blob, {
 				'Content-Type': 'image/webp',
 				'X-Variant-Width': String(variant.width)
 			});
 		} catch (err) {
 			// Clean up the partially uploaded asset
 			try {
-				await fetch(`/api/assets/${result.asset_id}`, { method: 'DELETE' });
+				await fetch(site_href(`/api/assets/${result.asset_id}`), { method: 'DELETE' });
 			} catch {
 				/* best effort cleanup */
 			}

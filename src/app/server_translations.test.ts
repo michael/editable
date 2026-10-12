@@ -30,7 +30,7 @@ vi.mock('./services.js', async () => {
 	};
 });
 
-import { languages } from './server_languages.js';
+import { default_site } from './server_site.js';
 import { db, asset_exists } from './services.js';
 import migration from './migrations/20260923T180000000Z_editable_translations.js';
 import {
@@ -48,6 +48,9 @@ import { property_payload, translation_properties, type TranslationMap } from '.
 import { replace_translation } from './test_helpers/translations.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { referenced_assets } from '../../scripts/asset-references.js';
+
+// With no site set by a host, the code under test uses the deployment's own.
+const { languages } = default_site;
 
 afterAll(() => (db as DatabaseSync).close());
 

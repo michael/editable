@@ -1,4 +1,5 @@
 import { language_href } from './languages.js';
+import { with_site_base } from './site_links.js';
 
 export type LanguageAlternate = { language: string; path: string };
 
@@ -14,10 +15,13 @@ export function language_alternates(pathname: string, languages: string[]): Lang
 	];
 }
 
-/** Canonical URLs contain only the configured origin and page pathname. */
-export function absolute_page_url(pathname: string, origin: string) {
+/**
+ * Canonical URLs contain only the configured origin, the path the site is
+ * served under, and the page pathname.
+ */
+export function absolute_page_url(pathname: string, origin: string, base = '') {
 	const url = new URL(origin);
-	url.pathname = pathname;
+	url.pathname = with_site_base(pathname, base);
 	url.search = '';
 	url.hash = '';
 	return url.href;

@@ -2,8 +2,7 @@
 	import { parse_internal_page_href } from '#app/document_links.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { get_app_context } from '#app/app_context.js';
-	import { resolve } from '$app/paths';
-	import type { PathnameWithSearchOrHash } from '$app/types';
+	import { site_href } from '#app/site_links.js';
 	import { serialize_path } from 'svedit';
 	import { tooltip } from '#app/tooltip.js';
 	import Media from './Media.svelte';
@@ -38,10 +37,7 @@
 	}
 
 	function get_preview_href(href: unknown) {
-		if (typeof href !== 'string') return '';
-		if (!href.startsWith('/') || href.startsWith('//')) return href;
-		if (href === '/') return resolve('/');
-		return resolve(href.slice(1) as PathnameWithSearchOrHash);
+		return typeof href === 'string' ? site_href(href) : '';
 	}
 
 	function get_preview_label(href: unknown) {

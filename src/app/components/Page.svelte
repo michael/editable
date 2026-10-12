@@ -3,6 +3,7 @@
 	import { get_app_context } from '#app/app_context.js';
 	import { page } from '$app/state';
 	import { absolute_page_url, language_alternates } from '#app/seo.js';
+	import { site_href } from '#app/site_links.js';
 	import type { DocumentPath } from 'svedit';
 	import type { Nodes } from '#app/document_schema.js';
 	import { TextProperty, Node, NodeArrayProperty } from 'svedit';
@@ -27,18 +28,20 @@
 			? page_image.mime_type === 'image/svg+xml'
 			: page_image?.src?.toLowerCase().endsWith('.svg')
 	);
+	let site_base = $derived(page.data.site_base ?? '');
+	let canonical_path = $derived(app.canonical_path ?? (app.slug ? `/${app.slug}` : '/'));
 	let canonical_url = $derived(
 		app.origin && !app.is_new && page.status < 400
-			? absolute_page_url(app.canonical_path ?? (app.slug ? `/${app.slug}` : '/'), app.origin)
+			? absolute_page_url(canonical_path, app.origin, site_base)
 			: null
 	);
 	let alternates = $derived(
-		canonical_url && app.can_edit
-			? language_alternates(new URL(canonical_url).pathname, app.languages)
-			: []
+		canonical_url && app.can_edit ? language_alternates(canonical_path, app.languages) : []
 	);
 	let social_image = $derived(get_social_image(head_metadata.preview_media_node));
-	let social_image_url = $derived(social_image ? `${app.origin || ''}${social_image.url}` : null);
+	let social_image_url = $derived(
+		social_image ? `${app.origin || ''}${site_href(social_image.url)}` : null
+	);
 	let toc_source = $derived.by(() => {
 		const body_node_ids = svedit.session.get([...path, 'body'])?.nodes || [];
 
@@ -126,7 +129,7 @@
 			<link
 				rel="alternate"
 				hreflang={alternate.language}
-				href={absolute_page_url(alternate.path, app.origin!)}
+				href={absolute_page_url(alternate.path, app.origin!, site_base)}
 			/>
 		{/each}
 	{/if}

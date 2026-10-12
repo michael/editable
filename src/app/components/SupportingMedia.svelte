@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { site_href } from '#app/site_links.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { media_link_label } from '#app/media_link_label.js';
 	import type { Nodes } from '#app/document_schema.js';
@@ -35,7 +36,7 @@
 <Node {path}>
 	{#if render_as_link}
 		<a
-			href={node.href}
+			href={site_href(node.href)}
 			target={render_as_link && node.target !== '_self' ? node.target : undefined}
 			aria-label={link_label}
 			class="group contents"

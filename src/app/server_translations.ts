@@ -1,4 +1,4 @@
-import { languages } from '#app/server_languages.js';
+import { get_site } from '#app/server_site.js';
 import { is_media_property } from './media.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { ASSET_ID_REGEX } from './config.js';
@@ -8,7 +8,6 @@ import {
 	translate_document_links
 } from './document_links.js';
 import { createHash } from 'node:crypto';
-import { ORIGIN } from '$app/env/private';
 import { error } from '@sveltejs/kit';
 import { fill_document_defaults, validate_document, validate_node, type Document } from 'svedit';
 import { db, with_transaction, asset_exists } from './services.js';
@@ -71,13 +70,14 @@ function compose(records: Document[]): Document {
 }
 
 export function translated_document(document_id: string, requested?: string) {
+	const { origin, languages } = get_site();
 	const language = select_language(languages, requested);
 	const records = load_records(document_id);
 	const rows = language && language !== languages[0] ? read_rows(records, language) : [];
 	const document = translate_document_links(
 		overlay_document(compose(records), records, rows),
 		language !== languages[0] ? language : '',
-		ORIGIN,
+		origin,
 		languages
 	);
 	return { document, language, languages, translation_revision: revision(records, rows) };
@@ -183,6 +183,7 @@ function write_map(document_id: string, language: string, map: TranslationMap, p
 }
 
 export function translate_shared_document(source: Document, requested: string) {
+	const { origin, languages } = get_site();
 	const language = select_language(languages, requested);
 	if (!language || language === languages[0]) return source;
 	return translate_document_links(
@@ -192,7 +193,7 @@ export function translate_shared_document(source: Document, requested: string) {
 			read_rows([source], language)
 		),
 		language,
-		ORIGIN,
+		origin,
 		languages
 	);
 }
@@ -203,6 +204,7 @@ export function save_translated_document(input: {
 	language: string;
 	translation_revision: string;
 }) {
+	const { origin, languages } = get_site();
 	if (!languages.includes(input.language) || input.language === languages[0])
 		error(400, 'Translation language is not enabled');
 	return with_transaction(() => {
@@ -221,7 +223,7 @@ export function save_translated_document(input: {
 			),
 			overlay_document(original, records, rows),
 			input.language,
-			ORIGIN,
+			origin,
 			languages
 		);
 		try {

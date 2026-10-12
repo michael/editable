@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto, refreshAll } from '$app/navigation';
+	import { site_href } from '#app/site_links.js';
 	import { get_page_browser } from '#app/page_browser_context.svelte.js';
 	import { get_page_delete_dialog } from '#app/page_delete_dialog_context.svelte.js';
 
@@ -70,7 +71,7 @@
 			if (current.is_current_page) {
 				// The page we are looking at is gone, so leave before refreshing.
 				page_browser.close?.();
-				await goto('/');
+				await goto(site_href('/'));
 			} else {
 				page_browser.invalidate?.();
 				await refreshAll();

@@ -1,5 +1,6 @@
 import { default_site_document } from '#app/default_site.js';
-import { languages, request_language } from '#app/server_languages.js';
+import { get_site, request_language } from '#app/server_site.js';
+import { with_site_base } from '#app/site_links.js';
 import { language_href } from '#app/languages.js';
 import { error, redirect } from '@sveltejs/kit';
 import { dev } from '$app/env';
@@ -16,6 +17,7 @@ export const load_page = async ({
 	params: { page_id?: string; language?: string };
 	url: URL;
 }) => {
+	const { base, languages } = get_site();
 	if (params.language && !languages.slice(1).includes(params.language))
 		error(404, 'Page not found');
 	if (!params.language && languages.slice(1).includes(params.page_id ?? ''))
@@ -54,11 +56,10 @@ export const load_page = async ({
 		const result = await get_document(params.page_id);
 
 		if (result.redirect_to_slug) {
+			const path = `/${result.redirect_to_slug}${url.search}`;
 			throw redirect(
 				301,
-				languages.length
-					? language_href(`/${result.redirect_to_slug}${url.search}`, language, languages)
-					: `/${result.redirect_to_slug}`
+				with_site_base(languages.length ? language_href(path, language, languages) : path, base)
 			);
 		}
 
@@ -116,6 +117,7 @@ export const load_home = async ({ url }: { url: URL }) => {
 
 	const { get_home_document, get_translated_document } = await import('#app/api.remote.js');
 	const result = await get_home_document();
+	const { languages } = get_site();
 	if (!languages.length) return result;
 	const language = request_language(url);
 	return {

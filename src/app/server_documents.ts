@@ -10,7 +10,7 @@ import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { cleanup_translations } from './server_translations.js';
 import { assert_safe_hrefs, parse_internal_page_href } from './document_links.js';
-import { languages } from './server_languages.js';
+import { get_site } from './server_site.js';
 import { is_reserved_language_slug } from './languages.js';
 import { is_reserved_markdown_slug } from '#app/markdown/registry.js';
 
@@ -149,7 +149,7 @@ export function create_page_slug(document_id: string, base: string): string {
 		slug_exists_stmt.get(slug) ||
 		is_reserved_route_slug(slug) ||
 		is_reserved_markdown_slug(slug) ||
-		is_reserved_language_slug(slug, languages)
+		is_reserved_language_slug(slug, get_site().languages)
 	) {
 		slug = `${base_slug}-${suffix}`;
 		suffix += 1;
@@ -165,7 +165,7 @@ export function normalize_internal_page_href(
 	href: string,
 	source_document_id: string | undefined
 ): string | null {
-	const parsed = parse_internal_page_href(href, languages);
+	const parsed = parse_internal_page_href(href, get_site().languages);
 	if (!parsed) return null;
 
 	const resolved = resolve_slug(parsed.slug);
