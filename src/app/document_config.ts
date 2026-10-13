@@ -42,6 +42,7 @@ import {
 } from './commands.svelte.js';
 
 import Overlays from './components/Overlays.svelte';
+import AuthDialog from './components/AuthDialog.svelte';
 import Page from './components/Page.svelte';
 import Banner from './components/Banner.svelte';
 import Nav from './components/Nav.svelte';
@@ -229,9 +230,11 @@ export const document_config = {
 	// Custom ID generator function
 	generate_id: nanoid,
 	// Provide definitions/overrides for system native components,
-	// such as node_gap, node_gap_markers, node_selection_markers, or overlays
+	// such as node_gap, node_gap_markers, node_selection_markers, or overlays.
+	// auth_dialog is Editable's login dialog; replace it with your own (see AuthDialogProps).
 	system_components: {
-		overlays: Overlays
+		overlays: Overlays,
+		auth_dialog: AuthDialog
 	},
 	// Registry of components for each node type
 	node_components: {

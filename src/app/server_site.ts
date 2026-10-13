@@ -3,6 +3,7 @@ import { LANGUAGES, ORIGIN, VERCEL } from '$app/env/private';
 import { language_path, parse_languages } from './languages.js';
 import { without_site_base } from './site_links.js';
 import type { SiteStorage } from './services.js';
+import type { AdminAuth } from './server_admin_auth.js';
 
 /**
  * The site a request belongs to. A deployment serves one site, configured by
@@ -18,6 +19,8 @@ export type Site = {
 	languages: string[];
 	/** The site's database and asset files; the deployment's own in DATA_DIR when unset. */
 	storage?: SiteStorage;
+	/** Who may edit the site and how they sign in; the admin password when unset. */
+	auth?: AdminAuth;
 };
 
 // No database dependencies: safe to import from static/no-backend routes.

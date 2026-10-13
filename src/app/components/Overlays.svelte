@@ -9,7 +9,6 @@
 	import EditLink from './EditLink.svelte';
 	import EditMedia from './EditMedia.svelte';
 	import LinkPreview from './LinkPreview.svelte';
-	import AuthDialog from './AuthDialog.svelte';
 	import Drawer from './Drawer.svelte';
 	import PageUrlDialog from './PageUrlDialog.svelte';
 	import PageDeleteDialog from './PageDeleteDialog.svelte';
@@ -228,6 +227,7 @@
 			drawer_height_mode="auto"
 			center_content
 		>
+			{@const AuthDialog = svedit.session.config.system_components.auth_dialog}
 			<AuthDialog onedit_for_fun={app.edit_for_fun} onlogin_success={app.handle_auth_success} />
 		</Drawer>
 	{/if}

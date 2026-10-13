@@ -51,18 +51,12 @@ import { extract_page_metadata, extract_site_metadata } from '#app/page_metadata
 import type { PreviewMediaNode } from '#app/page_metadata.js';
 import type { DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
 import type { StatementSync } from 'node:sqlite';
-import {
-	admin_session_cookie_name,
-	delete_session,
-	clear_admin_session_cookie,
-	require_admin_session,
-	log_in_admin
-} from '#lib/server/auth.js';
+import { require_admin_session } from '#lib/server/auth.js';
+import { get_admin_auth } from './server_admin_auth.js';
 import { revoke_all_grants } from '#app/server_oauth.js';
 
-const admin_login_input_schema = v.object({
-	password: v.string()
-});
+// Whatever the login dialog sends; Editable's own dialog sends the password.
+const admin_login_input_schema = v.record(v.string(), v.string());
 
 function create_page_url_error_result(code: string, message: string) {
 	return {
@@ -186,25 +180,15 @@ export const get_shared_documents = query(v.void(), async () => {
 	return { banner_document, nav_document, footer_document };
 });
 
-export const login_admin = command(admin_login_input_schema, async ({ password }) => {
-	return log_in_admin(db, getRequestEvent().cookies, password);
+export const login_admin = command(admin_login_input_schema, async (credentials) => {
+	return get_admin_auth().log_in(getRequestEvent(), credentials);
 });
 
 export const logout_admin = command(v.void(), async () => {
-	const { cookies } = getRequestEvent();
-	const session_id = cookies.get(admin_session_cookie_name);
-
-	if (session_id) {
-		await delete_session(session_id, db);
-	}
-
-	clear_admin_session_cookie(cookies);
+	await get_admin_auth().log_out(getRequestEvent());
 	// Logging out also ends every MCP connection the admin approved.
 	revoke_all_grants();
-
-	return {
-		ok: true
-	};
+	return { ok: true };
 });
 
 /**

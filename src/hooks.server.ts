@@ -5,15 +5,6 @@ import { with_site_base, without_site_base } from '#app/site_links.js';
 import { ORIGIN, VERCEL } from '$app/env/private';
 import { dev } from '$app/env';
 
-import {
-	admin_session_cookie_name,
-	clear_admin_session_cookie,
-	get_session_expires_at,
-	session_duration_seconds,
-	session_renewal_interval_seconds,
-	set_admin_session_cookie
-} from '#lib/server/auth.js';
-
 // Health checks and internal calls arrive without a forwarded host.
 const internal_hostnames = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 
@@ -58,36 +49,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	event.locals.is_admin = false;
-
 	if (!VERCEL) {
-		const session_id = event.cookies.get(admin_session_cookie_name);
-
-		if (session_id) {
-			const { db } = await import('#app/services.js');
-			const row = db
-				.prepare('SELECT expires FROM sessions WHERE session_id = ?')
-				.get(session_id) as unknown as { expires: number } | undefined;
-
-			const now = Math.floor(Date.now() / 1000);
-
-			if (!row) {
-				clear_admin_session_cookie(event.cookies);
-			} else if (row.expires <= now) {
-				db.prepare('DELETE FROM sessions WHERE session_id = ?').run(session_id);
-				clear_admin_session_cookie(event.cookies);
-			} else {
-				// Sliding renewal, at most once per renewal interval
-				const last_renewed_at = row.expires - session_duration_seconds;
-				if (now - last_renewed_at >= session_renewal_interval_seconds) {
-					db.prepare('UPDATE sessions SET expires = ? WHERE session_id = ?').run(
-						get_session_expires_at(),
-						session_id
-					);
-					set_admin_session_cookie(event.cookies, session_id);
-				}
-				event.locals.is_admin = true;
-			}
-		}
+		const { get_admin_auth } = await import('#app/server_admin_auth.js');
+		event.locals.is_admin = await get_admin_auth().is_admin(event);
 	}
 
 	const language = request_language(event.url) || 'en';
