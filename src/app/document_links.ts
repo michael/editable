@@ -81,6 +81,25 @@ export function restore_document_links(
 	return document;
 }
 
+const SAFE_HREF_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:', 'sms:']);
+
+/** Links may be relative or use a protocol that cannot run code, so stored content cannot script the site. */
+export function is_safe_href(href: string): boolean {
+	const url = URL.parse(href.trim(), 'http://editable.local');
+	return !!url && SAFE_HREF_PROTOCOLS.has(url.protocol);
+}
+
+/** Throw if any node links with an unsafe protocol such as javascript: or data:. */
+export function assert_safe_hrefs(nodes: Document['nodes']) {
+	const unsafe = Object.values(nodes)
+		.filter((node) => typeof node.href === 'string' && !is_safe_href(node.href))
+		.map((node) => node.id);
+	if (unsafe.length)
+		throw new Error(
+			`Links must be relative or use http, https, mailto, tel, or sms. Unsafe href on: ${unsafe.join(', ')}.`
+		);
+}
+
 /** Identify stored internal page links without losing their language, query, or fragment. */
 export function parse_internal_page_href(href: unknown, languages: string[]) {
 	if (typeof href !== 'string' || !href.startsWith('/') || href.startsWith('//')) return null;

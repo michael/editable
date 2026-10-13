@@ -70,6 +70,7 @@ export const load_page = async ({
 				? language_href(`/${result.slug}`, language, languages)
 				: null,
 			slug: result.slug,
+			version: result.version,
 			can_edit: true
 		};
 	} catch (err) {

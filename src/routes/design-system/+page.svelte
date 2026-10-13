@@ -1108,6 +1108,66 @@
 				</div>
 			</section>
 
+			<section id="dialog-buttons" aria-labelledby="dialog-buttons-heading" class="space-y-8">
+				<div class="space-y-2">
+					<h2 id="dialog-buttons-heading" class="text-xl font-medium">Dialog buttons</h2>
+					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+						For the editing dialogs outside the toolbar: the login dialog, the save conflict dialog,
+						and the OAuth consent page. The primary action uses the editing colors, since these
+						dialogs belong to editing rather than to the site.
+					</p>
+				</div>
+
+				<!--
+				Pill height: a fixed 36px, 46px from the sm breakpoint, matching the toolbar. Fields that sit
+				next to these buttons, such as the login password input, use the same height.
+				14px text with a 20px line height, no wrapping, 1.25rem horizontal padding, and a 150ms color transition.
+				The icon button is square at the same height and reuses the secondary surface.
+				Keyboard focus uses the 2px editing outline with a 2px offset; disabled buttons drop to 40% opacity.
+			-->
+				<div class="grid gap-10 sm:grid-cols-3 sm:gap-8">
+					<div id="dialog-button-primary" class="min-w-0 space-y-4">
+						<h3 class="text-sm text-(--muted-foreground)">Primary</h3>
+						<!-- Main action. Mix in sRGB for visible feedback; keep text opaque. -->
+						<button
+							type="button"
+							class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--editing) px-5 text-sm leading-5 whitespace-nowrap text-(--editing-foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)] disabled:cursor-default disabled:opacity-40 sm:h-11.5"
+							>Login</button
+						>
+					</div>
+
+					<div id="dialog-button-secondary" class="min-w-0 space-y-4">
+						<h3 class="text-sm text-(--muted-foreground)">Secondary</h3>
+						<!-- Supporting action on the opaque background surface, with the stroke border. -->
+						<button
+							type="button"
+							class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-11.5"
+							>Deny</button
+						>
+					</div>
+
+					<div id="dialog-button-icon" class="min-w-0 space-y-4">
+						<h3 class="text-sm text-(--muted-foreground)">Icon</h3>
+						<!-- Square secondary button for a single icon, such as the back arrow in the login dialog. -->
+						<button
+							type="button"
+							class="inline-flex aspect-square h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-11.5"
+							title="Back"
+							aria-label="Back"
+						>
+							<svg class="size-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+								<path
+									d="M13.5 6L7.5 12L13.5 18"
+									stroke="currentColor"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
+							</svg>
+						</button>
+					</div>
+				</div>
+			</section>
+
 			<section id="boxed-prose" aria-labelledby="boxed-prose-heading" class="space-y-8">
 				<div class="space-y-2">
 					<h2 id="boxed-prose-heading" class="text-xl font-medium">Boxed items</h2>

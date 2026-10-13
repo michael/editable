@@ -25,6 +25,7 @@ export const {
 	asset_size,
 	touch_asset,
 	delete_orphaned_assets,
+	asset_path,
 	variant_path,
 	poster_path
 } = asset_storage;

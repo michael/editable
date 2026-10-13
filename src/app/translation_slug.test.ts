@@ -185,6 +185,39 @@ it('rejects a language homepage slug without changing the page or its links', as
 	});
 });
 
+it('renames a page without marking any document as modified', async () => {
+	const insert_doc = db.prepare(
+		'INSERT INTO documents (document_id, type, data, updated_at) VALUES (?, ?, ?, ?)'
+	);
+	const saved_at = '2026-10-01T00:00:00Z';
+	for (const [document_id, href] of [
+		['about-page', null],
+		['linking-page', '/about'],
+		['other-page', '/elsewhere']
+	] as const) {
+		const doc = structuredClone(default_page_document) as {
+			document_id: string;
+			nodes: Record<string, any>;
+		};
+		const root = doc.nodes[doc.document_id];
+		delete doc.nodes[doc.document_id];
+		doc.document_id = document_id;
+		doc.nodes[document_id] = { ...root, id: document_id };
+		if (href) doc.nodes.link = { id: 'link', type: 'button', href };
+		insert_doc.run(document_id, 'page', JSON.stringify(doc), saved_at);
+	}
+	db.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)').run('about', 'about-page', 1, 'now');
+
+	expect(await update_page_slug({ document_id: 'about-page', slug: 'about-us' })).toMatchObject({
+		ok: true
+	});
+	const rows = db
+		.prepare('SELECT document_id, data, updated_at FROM documents ORDER BY document_id')
+		.all() as { document_id: string; data: string; updated_at: string }[];
+	expect(rows.map((row) => row.updated_at)).toEqual([saved_at, saved_at, saved_at]);
+	expect(JSON.parse(rows[1].data).nodes.link.href).toBe('/about-us');
+});
+
 it('flags language collisions in the page browser and clears the flag after renaming', async () => {
 	const page = structuredClone(default_page_document);
 	db.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)').run(

@@ -123,3 +123,40 @@ export function require_admin_session(locals: { is_admin?: boolean }) {
 		error(401, 'Unauthorized');
 	}
 }
+
+function format_lockout_duration(seconds: number): string {
+	if (seconds < 60) return `${seconds} seconds`;
+	const minutes = Math.ceil(seconds / 60);
+	return minutes === 1 ? '1 minute' : `${minutes} minutes`;
+}
+
+/** Start an admin session for a correct password, subject to the login throttle. */
+export function log_in_admin(
+	db: DatabaseSync,
+	cookies: Cookies,
+	password: string
+): { ok: true } | { ok: false; code: string; message: string } {
+	const lockout_seconds = get_login_lockout_seconds(db);
+	if (lockout_seconds > 0) {
+		return {
+			ok: false,
+			code: 'too_many_attempts',
+			message: `Too many attempts. Try again in ${format_lockout_duration(lockout_seconds)}.`
+		};
+	}
+
+	if (!passwords_match(password, get_required_admin_password())) {
+		register_failed_login(db);
+		return { ok: false, code: 'invalid_password', message: 'Incorrect admin password.' };
+	}
+
+	reset_login_throttle(db);
+
+	const session_id = crypto.randomUUID();
+	db.prepare('INSERT INTO sessions (session_id, expires) VALUES (?, ?)').run(
+		session_id,
+		get_session_expires_at()
+	);
+	set_admin_session_cookie(cookies, session_id);
+	return { ok: true };
+}

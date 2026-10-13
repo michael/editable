@@ -9,7 +9,13 @@ export const GET: RequestHandler = async () => {
 
 	const { get_sitemap_entries } = await import('#app/api.remote.js');
 	const entries = await get_sitemap_entries();
-	return new Response(render_sitemap(entries, ORIGIN), {
-		headers: { 'Content-Type': 'application/xml; charset=utf-8' }
+	const body = new TextEncoder().encode(render_sitemap(entries, ORIGIN));
+	// Crawlers get a complete, sized response they may cache briefly.
+	return new Response(body, {
+		headers: {
+			'Content-Type': 'application/xml; charset=utf-8',
+			'Content-Length': String(body.byteLength),
+			'Cache-Control': 'public, max-age=3600'
+		}
 	});
 };

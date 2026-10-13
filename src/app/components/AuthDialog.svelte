@@ -1,35 +1,22 @@
 <script lang="ts">
 	let {
-		onedit_for_fun = () => {},
+		onedit_for_fun,
 		onlogin_success = () => {}
 	}: {
+		/** Offers editing without logging in; without it the dialog goes straight to login. */
 		onedit_for_fun?: () => void;
 		onlogin_success?: () => Promise<void> | void;
 	} = $props();
-
-	// Toolbar height on small screens, roomier once there is space for it.
-	const TW_PILL_HEIGHT = 'h-9 sm:h-[46px]';
-
-	const TW_BTN_BASE = `inline-flex ${TW_PILL_HEIGHT} shrink-0 items-center justify-center rounded-(--button-border-radius) text-sm leading-5 whitespace-nowrap transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer disabled:cursor-default disabled:opacity-40`;
-
-	// Filled primary action with the shared editing treatment.
-	const TW_PRIMARY_BTN = `${TW_BTN_BASE} border border-transparent bg-(--editing) px-5 text-(--editing-foreground) enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)]`;
-
-	// Secondary action styling from the toolbar's cancel button.
-	const TW_SECONDARY_SURFACE =
-		'border border-(--stroke) bg-(--background) text-(--foreground) enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10';
-	const TW_SECONDARY_BTN = `${TW_BTN_BASE} ${TW_SECONDARY_SURFACE} px-5`;
-
-	const TW_ICON_BTN = `${TW_BTN_BASE} ${TW_SECONDARY_SURFACE} aspect-square`;
 
 	let password = $state('');
 	let error = $state('');
 	let error_timeout_id = $state<ReturnType<typeof setTimeout> | null>(null);
 	let pending = $state(false);
-	let step = $state('choice');
+	let chosen_step = $state<'choice' | 'login' | null>(null);
+	// Without an edit-for-fun option there is no choice to make.
+	let step = $derived(chosen_step ?? (onedit_for_fun ? 'choice' : 'login'));
 	let password_input_ref = $state<HTMLInputElement>();
 	let edit_for_fun_button_ref = $state<HTMLButtonElement>();
-	let should_focus_password_input = $state(false);
 
 	$effect(() => {
 		if (step !== 'choice' || !edit_for_fun_button_ref) return;
@@ -40,12 +27,11 @@
 	});
 
 	$effect(() => {
-		if (step !== 'login' || !password_input_ref || !should_focus_password_input) return;
+		if (step !== 'login' || !password_input_ref) return;
 
 		requestAnimationFrame(() => {
 			password_input_ref?.focus();
 			password_input_ref?.select();
-			should_focus_password_input = false;
 		});
 	});
 
@@ -76,13 +62,12 @@
 		password = '';
 		error = '';
 		pending = false;
-		step = 'choice';
-		should_focus_password_input = false;
+		chosen_step = null;
 	}
 
 	function handle_edit_for_fun() {
 		reset_dialog();
-		onedit_for_fun();
+		onedit_for_fun?.();
 	}
 
 	function back_to_choice() {
@@ -92,10 +77,9 @@
 
 	function open_login_step() {
 		clear_error_timeout();
-		step = 'login';
+		chosen_step = 'login';
 		error = '';
 		password = '';
-		should_focus_password_input = true;
 	}
 
 	async function login_and_edit() {
@@ -144,14 +128,16 @@
 				<button
 					bind:this={edit_for_fun_button_ref}
 					type="button"
-					class={TW_PRIMARY_BTN}
+					class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--editing) px-5 text-sm leading-5 whitespace-nowrap text-(--editing-foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)] disabled:cursor-default disabled:opacity-40 sm:h-11.5"
 					onclick={handle_edit_for_fun}
 				>
 					Try out editing
 				</button>
 
-				<button type="button" class={TW_SECONDARY_BTN} onclick={open_login_step}
-					>Login as admin</button
+				<button
+					type="button"
+					class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-11.5"
+					onclick={open_login_step}>Login as admin</button
 				>
 			</div>
 		</div>
@@ -172,22 +158,24 @@
 					aria-hidden="true"
 				/>
 
-				<button
-					type="button"
-					class={TW_ICON_BTN}
-					onclick={back_to_choice}
-					title="Back"
-					aria-label="Back"
-				>
-					<svg class="size-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-						<path
-							d="M13.5 6L7.5 12L13.5 18"
-							stroke="currentColor"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						/>
-					</svg>
-				</button>
+				{#if onedit_for_fun}
+					<button
+						type="button"
+						class="inline-flex aspect-square h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-11.5"
+						onclick={back_to_choice}
+						title="Back"
+						aria-label="Back"
+					>
+						<svg class="size-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+							<path
+								d="M13.5 6L7.5 12L13.5 18"
+								stroke="currentColor"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+						</svg>
+					</button>
+				{/if}
 
 				<input
 					type="password"
@@ -195,15 +183,18 @@
 					bind:this={password_input_ref}
 					bind:value={password}
 					placeholder={error || 'Enter password'}
-					class={`${TW_PILL_HEIGHT} min-w-0 flex-1 appearance-none rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-4 text-base leading-5 text-(--foreground) transition-[border-color] duration-150 outline-none ${error ? 'placeholder:text-[color-mix(in_oklch,red_65%,var(--foreground))]' : 'placeholder:text-(--muted-foreground)'} focus:ring-0 focus:outline-none focus-visible:border-(--editing)`}
+					class={`h-9 min-w-0 flex-1 appearance-none rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-4 text-base leading-5 text-(--foreground) transition-[border-color] duration-150 outline-none sm:h-11.5 ${error ? 'placeholder:text-[color-mix(in_oklch,red_65%,var(--foreground))]' : 'placeholder:text-(--muted-foreground)'} focus:ring-0 focus:outline-none focus-visible:border-(--editing)`}
 					oninput={handle_password_input}
 				/>
 
-				<button type="submit" class={TW_PRIMARY_BTN} disabled={pending}>
+				<button
+					type="submit"
+					class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--editing) px-5 text-sm leading-5 whitespace-nowrap text-(--editing-foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)] disabled:cursor-default disabled:opacity-40 sm:h-11.5"
+					disabled={pending}
+				>
 					Login
 				</button>
 			</form>
-
 		</div>
 	{/if}
 </div>

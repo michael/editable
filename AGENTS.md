@@ -4,6 +4,16 @@ Repository-specific guidance for coding agents working on Svedit.
 
 `README.md` is the user-facing manual and source of truth for setup, customization, and usage patterns. Consult only the relevant sections when working on those areas; keep agent-specific guidance here.
 
+## Principles
+
+Editable is minimalistic by design: less, but better.
+
+- **Correctness first, optimization later.** Build on solid foundations: deterministic behavior, explicit data, and no guessing. Add optimizations as a separate, optional layer, and only once the foundation is right.
+- **Keep the code small.** Every line is maintained forever. Client-side code matters most, because it is loaded for every page. A performance optimization that adds noticeable code for a small gain is not justified.
+- **Remove code where it is justified.** Eliminate redundancy, dead code, and needless abstraction when the result is clearly simpler and still correct. Do not shrink code at the expense of clarity or correctness.
+- **Avoid growth at all costs.** Prefer extending an existing mechanism over adding a new one. Before adding code, check whether the problem can be solved with less, and say so when a change grows the codebase noticeably.
+- **Write idiomatic code.** Sites are built by adapting Editable, and its patterns get copied and repeated. Use the most idiomatic Svelte, SvelteKit, and Svedit patterns, so that what gets copied is worth copying.
+
 ## Important constraints
 
 - For code running from `/` in no-backend/Vercel mode, do not add top-level imports of backend-only modules such as `#app/api.remote.js` or anything that imports `#lib/server/db.js`.
@@ -18,6 +28,10 @@ Repository-specific guidance for coding agents working on Svedit.
 - Prefer Tailwind classes and minimize custom CSS. For CSS custom properties, use Tailwind's arbitrary-value utilities, such as `text-(--editing)` and `border-(--editing)`, where applicable.
 
 - Prefix all project-defined CSS classes with `ew-`, including component, state, and custom utility classes. Standard Tailwind classes and classes required by third-party libraries retain their original names.
+
+## Commits
+
+- The person who makes a commit is its author. Do not sign commits or pull requests with an agent name: no `Co-Authored-By` trailers, "Generated with" lines, or other agent attribution in commit messages or pull request descriptions.
 
 ## UI verification
 

@@ -14,6 +14,10 @@ export default defineConfig({
 		sveltekit({
 			adapter,
 			prerender,
+			// OAuth clients post token requests as forms without an Origin header,
+			// which SvelteKit's origin check would reject. The admin cookie is
+			// SameSite=Lax, so cross-site form posts cannot carry it anyway.
+			csrf: { trustedOrigins: ['*'] },
 			experimental: {
 				remoteFunctions: true
 			},

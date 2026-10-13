@@ -49,6 +49,63 @@ Open [http://localhost:5173](http://localhost:5173), press `⌘` or `Ctrl` + `E`
 
 You can also use `Ctrl` + `Shift` + `E` to edit. In read mode, admins can create a new page with `Ctrl` + `Shift` + `N`.
 
+### Connect an MCP client
+
+Editable is a remote [MCP](https://modelcontextprotocol.io) server at `https://your-site.example.com/mcp`. Agents can list, read, create, and edit pages and the shared banner, navigation, and footer. The endpoint is part of the backend, so static deployments do not have it.
+
+Add the server to your client and follow its login prompt. For Claude Code:
+
+```sh
+claude mcp add --transport http editable https://your-site.example.com/mcp
+```
+
+Then run `/mcp` inside Claude Code to authenticate. In claude.ai, add the same URL as a custom connector under Settings → Connectors. Other clients with MCP authorization, such as Codex, connect the same way, and so does `http://localhost:5173/mcp` during development.
+
+The client registers itself with your site and opens a browser window where you log in as admin and allow the connection. The consent page names the app and the address it receives access at, so only allow connections you started yourself. An approval lasts 48 hours, and logging out of Editable ends every connection right away. Registrations that were never approved expire after a day. The token endpoint accepts form posts from any origin, as OAuth requires, so `vite.config.ts` disables SvelteKit's cross-site form check; the admin cookie's `SameSite=Lax` setting protects the login and consent forms instead. Call `list_pages` to confirm the connection. After updating Editable, start a new session in your MCP client so it sees the current tools.
+
+#### Tools
+
+- `get_schema` returns the EDF rules and every node type with its properties, allowed child types, and defaults.
+- `list_pages` returns the page hierarchy shown in the page browser.
+- `read_document` returns a document as EDF together with the `version` that `write_document` requires. It takes a page path such as `/about`, a full URL, a language-prefixed path, or a document id such as `nav_1`.
+- `write_document` writes the complete document as EDF with the version it was read at. Nodes left out are deleted, and new elements get ids.
+- `create_page` creates a page from EDF. It gets the shared banner, navigation, and footer, and its URL comes from `slug` or the title.
+- `prepare_image_upload` returns a 30-minute upload token and the steps for adding images over HTTP.
+
+Every write is checked before anything is stored: the document must be valid against the schema and the single-owner rule, and its version must still be current. A write fails when the document changed in between, for example because you saved it in the editor. The reverse is handled too: saving in the editor after an agent changed the page asks which version to keep.
+
+The banner, navigation, and footer are documents of their own. Pages reference them by id, as in `nav="nav_1"`, and agents read and write them by that id, so editing a page can never change the navigation by accident.
+
+#### EDF
+
+Documents travel as EDF, an XML form of the stored document. Each node is an element named by its type with an `id`, primitive properties are attributes, text and nested nodes are child elements, and marks are inline tags, so no character offsets appear:
+
+```xml
+<page id="about" banner="banner_1" nav="nav_1" footer="footer_1">
+	<title>About us</title>
+	<body>
+		<section id="s1">
+			<prose id="intro" layout="wide-left">
+				<body>
+					<heading_1 id="h1">Who we are</heading_1>
+					<paragraph id="p1">A small team with a <link id="l1" href="/story">long story</link>.</paragraph>
+				</body>
+			</prose>
+		</section>
+	</body>
+</page>
+```
+
+Ids are identity, exactly as in the editor: whatever keeps its id is kept, marks included, and anything without an id is new and gets one. Every value is written out, so a document keeps its meaning after a default in the schema changes; a left-out attribute on a new node gets the current default, like a block inserted in the editor. A node property written as an attribute, like `nav="nav_1"` above, refers to another document, and only a page does this. The server parses EDF back into the JSON the editor stores and runs the same validation. The serializer and parser live in `src/lib/edf.ts` and work with any Svedit schema whose element names cannot be read two ways.
+
+#### Images
+
+Image bytes do not travel through tool calls. `prepare_image_upload` returns a token and the steps to encode a WebP original with its resized variants, as the editor does in the browser, and to upload them over HTTP, so the agent needs a shell with network access to the site. Token uploads must be valid WebP files that match the declared dimensions, and a document can only reference images whose variants are all uploaded. Videos cannot be uploaded through MCP.
+
+#### Translations
+
+With [translations](#translations-experimental) enabled, a language-prefixed path such as `/de/about` or the `language` argument reads the translation, and `write_document` with `language` writes it. The banner, navigation, and footer are translated on their own, like every document. As in the editor, translations change text, inline formatting, and media only; structure and layout are edited in the main language.
+
 ## Make it yours
 
 Your repository, your styles, your components.

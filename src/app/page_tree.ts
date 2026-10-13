@@ -1,4 +1,4 @@
-import type { PageSummary, PageTreeNode } from '#app/api.remote.js';
+import type { PageSummary, PageTreeNode } from '#app/page_browser_data.js';
 
 export function build_page_forest(
 	root_ids: string[],
