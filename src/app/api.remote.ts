@@ -3,7 +3,6 @@ import { translation_payloads } from '../lib/asset_references.js';
 import { languages, request_language } from './server_languages.js';
 import { translated_href, parse_internal_page_href } from './document_links.js';
 import { language_path, language_href, is_reserved_language_slug } from './languages.js';
-import { is_reserved_route_slug } from './route_slugs.js';
 import { getRequestEvent, query, command } from '$app/server';
 import {
 	cleanup_translations,
@@ -29,10 +28,11 @@ import {
 	get_home_page_id_from_db,
 	get_optional_doc_from_db,
 	get_document_version,
-	get_shared_root_ids,
 	is_home_page_document_id,
+	is_reserved_route_slug,
 	persist_document,
 	resolve_slug,
+	shared_document_types,
 	update_document_refs,
 	with_asset_cleanup
 } from '#app/server_documents.js';
@@ -173,31 +173,16 @@ export const get_site_metadata = query(v.void(), async () => {
  */
 export const get_shared_documents = query(v.void(), async () => {
 	const home_page_id = get_home_page_id_from_db();
+	if (!home_page_id) throw new Error('Home page is not configured');
 
-	if (!home_page_id) {
-		throw new Error('Home page is not configured');
-	}
-
-	const home_page_doc = get_doc_from_db(home_page_id);
-	const { banner_root_id, nav_root_id, footer_root_id } = get_shared_root_ids(home_page_doc);
-
-	if (!banner_root_id) {
-		throw new Error('Home page banner document is not configured');
-	}
-
-	if (!nav_root_id) {
-		throw new Error('Home page nav document is not configured');
-	}
-
-	if (!footer_root_id) {
-		throw new Error('Home page footer document is not configured');
-	}
-
-	return {
-		banner_document: get_doc_from_db(banner_root_id),
-		nav_document: get_doc_from_db(nav_root_id),
-		footer_document: get_doc_from_db(footer_root_id)
-	};
+	const home_page_node = get_doc_from_db(home_page_id).nodes[home_page_id];
+	const [banner_document, nav_document, footer_document] = shared_document_types.map((type) => {
+		const shared_id = home_page_node?.[type];
+		if (typeof shared_id !== 'string')
+			throw new Error(`Home page ${type} document is not configured`);
+		return get_doc_from_db(shared_id);
+	});
+	return { banner_document, nav_document, footer_document };
 });
 
 export const login_admin = command(admin_login_input_schema, async ({ password }) => {

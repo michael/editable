@@ -16,42 +16,14 @@ export function prepare_image_upload(origin: string, grant_id: string) {
 	return {
 		upload_token,
 		expires_at: new Date(expires_at * 1000).toISOString(),
-		spec: {
-			format: 'image/webp',
-			// Matches the editor's in-browser encoder.
-			quality: 80,
-			max_width: MAX_IMAGE_WIDTH,
-			variant_widths: VARIANT_WIDTHS
-		},
 		steps: [
-			`Scale the image down to at most ${MAX_IMAGE_WIDTH}px wide, keeping its aspect ratio, and encode it as WebP at quality 80. This is the original.`,
-			'For every width in variant_widths that is smaller than the original width, encode a WebP scaled to exactly that width.',
+			`Scale the image down to at most ${MAX_IMAGE_WIDTH}px wide, keeping its aspect ratio, and encode it as WebP at quality 80, like the editor does. This is the original.`,
+			`For every width in ${VARIANT_WIDTHS.join(', ')} that is smaller than the original, encode a WebP scaled to exactly that width.`,
 			'The asset id is the SHA-256 hex digest of the original file plus ".webp".',
-			'Upload the original, then every variant, with the requests below.',
+			`POST the original to ${origin}/api/assets with the headers Authorization, Content-Type: image/webp, X-Content-Hash (the digest), X-Asset-Width, and X-Asset-Height, and the file as the body.`,
+			`POST every variant to ${origin}/api/assets/<asset id>/variants with Authorization, Content-Type: image/webp, and X-Variant-Width.`,
 			'Use the image in write_document or create_page as <image src="<asset id>" mime_type="image/webp" width="<original width>" height="<original height>" alt="<description>"/>. Writes are rejected while variants are missing or width and height do not match the file.'
 		],
-		upload_original: {
-			method: 'POST',
-			url: `${origin}/api/assets`,
-			headers: {
-				Authorization: authorization,
-				'Content-Type': 'image/webp',
-				'X-Content-Hash': '<SHA-256 hex of the original>',
-				'X-Asset-Width': '<original width>',
-				'X-Asset-Height': '<original height>'
-			},
-			body: 'The original WebP file'
-		},
-		upload_variant: {
-			method: 'POST',
-			url: `${origin}/api/assets/<asset id>/variants`,
-			headers: {
-				Authorization: authorization,
-				'Content-Type': 'image/webp',
-				'X-Variant-Width': '<variant width>'
-			},
-			body: 'The variant WebP file'
-		},
 		example: [
 			`curl -X POST ${origin}/api/assets -H "Authorization: ${authorization}" -H "Content-Type: image/webp" -H "X-Content-Hash: $(shasum -a 256 original.webp | cut -d' ' -f1)" -H "X-Asset-Width: 2048" -H "X-Asset-Height: 1365" --data-binary @original.webp`,
 			`curl -X POST ${origin}/api/assets/<asset id>/variants -H "Authorization: ${authorization}" -H "Content-Type: image/webp" -H "X-Variant-Width: 640" --data-binary @w640.webp`

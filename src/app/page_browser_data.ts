@@ -6,8 +6,8 @@ import {
 	collect_document_refs,
 	get_active_slug_for_document_id,
 	get_home_page_id_from_db,
-	get_shared_root_ids,
-	resolve_slug
+	resolve_slug,
+	shared_document_types
 } from '#app/server_documents.js';
 import { is_reserved_language_slug } from '#app/languages.js';
 import { languages } from '#app/server_languages.js';
@@ -111,10 +111,6 @@ export function build_page_browser_data(
 	const page_docs_by_id = new Map(page_docs.map((page_doc) => [page_doc.document_id, page_doc]));
 	const summaries = page_docs.map(summarize_page_document);
 	const summaries_by_id = new Map(summaries.map((summary) => [summary.document_id, summary]));
-	const home_page_doc = home_page_id ? (page_docs_by_id.get(home_page_id) ?? null) : null;
-	const { banner_root_id, nav_root_id, footer_root_id } = home_page_doc
-		? get_shared_root_ids(home_page_doc)
-		: { banner_root_id: null, nav_root_id: null, footer_root_id: null };
 	const refs_by_page_id = new Map<string, string[]>();
 	for (const page_doc of page_docs) {
 		const body_node_ids = collect_page_body_node_ids(page_doc);
@@ -123,12 +119,15 @@ export function build_page_browser_data(
 			collect_document_refs(page_doc.nodes, body_node_ids, page_doc.document_id)
 		);
 	}
-	if (home_page_id && summaries_by_id.has(home_page_id)) {
-		const banner_refs = banner_root_id ? get_outgoing_refs(banner_root_id) : [];
-		const nav_refs = nav_root_id ? get_outgoing_refs(nav_root_id) : [];
-		const footer_refs = footer_root_id ? get_outgoing_refs(footer_root_id) : [];
-		const home_body_refs = refs_by_page_id.get(home_page_id) ?? [];
-		refs_by_page_id.set(home_page_id, [
+	// The home page also lists what the shared documents link to: banner and nav before its body, footer after.
+	const home_page_doc = home_page_id ? page_docs_by_id.get(home_page_id) : undefined;
+	if (home_page_doc) {
+		const [banner_refs, nav_refs, footer_refs] = shared_document_types.map((type) => {
+			const shared_id = home_page_doc.nodes[home_page_doc.document_id]?.[type];
+			return typeof shared_id === 'string' ? get_outgoing_refs(shared_id) : [];
+		});
+		const home_body_refs = refs_by_page_id.get(home_page_doc.document_id) ?? [];
+		refs_by_page_id.set(home_page_doc.document_id, [
 			...banner_refs,
 			...nav_refs,
 			...home_body_refs,

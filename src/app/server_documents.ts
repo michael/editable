@@ -12,7 +12,6 @@ import { cleanup_translations } from './server_translations.js';
 import { assert_safe_hrefs, parse_internal_page_href } from './document_links.js';
 import { languages } from './server_languages.js';
 import { is_reserved_language_slug } from './languages.js';
-import { is_reserved_route_slug } from './route_slugs.js';
 import { is_reserved_markdown_slug } from '#app/markdown/registry.js';
 
 export type DocumentData = {
@@ -129,6 +128,13 @@ export function resolve_slug(
 	};
 }
 
+/** Top-level paths served by Editable's own routes; pages cannot use them as slugs. */
+const RESERVED_ROUTE_SLUGS = new Set(['api', 'assets', 'design-system', 'mcp', 'new', 'oauth']);
+
+export function is_reserved_route_slug(slug: string) {
+	return RESERVED_ROUTE_SLUGS.has(slug);
+}
+
 /**
  * Give a new page its first active slug, derived from base (a requested slug
  * or the page title) and suffixed when it is taken or reserved.
@@ -220,20 +226,6 @@ export function update_document_refs(
 	for (const [ref_order, target_document_id] of target_document_ids.entries()) {
 		insert_stmt.run(target_document_id, source_document_id, ref_order);
 	}
-}
-
-export function get_shared_root_ids(page_doc: DocumentData): {
-	banner_root_id: string | null;
-	nav_root_id: string | null;
-	footer_root_id: string | null;
-} {
-	const page_node = page_doc.nodes[page_doc.document_id];
-
-	return {
-		banner_root_id: typeof page_node?.banner === 'string' ? page_node.banner : null,
-		nav_root_id: typeof page_node?.nav === 'string' ? page_node.nav : null,
-		footer_root_id: typeof page_node?.footer === 'string' ? page_node.footer : null
-	};
 }
 
 /** Stitch the shared documents (banner, nav, footer) into a page document. */

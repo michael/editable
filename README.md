@@ -51,36 +51,34 @@ You can also use `Ctrl` + `Shift` + `E` to edit. In read mode, admins can create
 
 ### Connect an MCP client
 
-Editable exposes a remote [MCP](https://modelcontextprotocol.io) endpoint at `https://your-site.example.com/mcp` that lets agents list, read, create, and edit pages. It is part of the backend, so it is not available on static deployments.
+Editable is a remote [MCP](https://modelcontextprotocol.io) server at `https://your-site.example.com/mcp`. Agents can list, read, create, and edit pages and the shared banner, navigation, and footer. The endpoint is part of the backend, so static deployments do not have it.
 
-Clients connect with OAuth: when you add the server, the client opens a browser window where you log in as admin and approve the connection. The consent page names the app and the address it receives access at, so only approve connections you started yourself. An approval lasts 48 hours, after which the client asks you to connect again. Logging out of Editable ends all MCP connections immediately.
-
-For Claude Code, add the server and authenticate from `/mcp` inside Claude Code:
+Add the server to your client and follow its login prompt. For Claude Code:
 
 ```sh
 claude mcp add --transport http editable https://your-site.example.com/mcp
 ```
 
-Other clients that support MCP authorization, such as Codex, connect the same way: add the URL and follow the login prompt. During development, `http://localhost:5173/mcp` works the same way.
+Then run `/mcp` inside Claude Code to authenticate. Other clients with MCP authorization, such as Codex, connect the same way, and so does `http://localhost:5173/mcp` during development.
 
-Call `list_pages` to confirm the connection. After updating Editable, start a new session in your MCP client so it picks up the current tool descriptions.
+The client opens a browser window where you log in as admin and allow the connection. The consent page names the app and the address it receives access at, so only allow connections you started yourself. An approval lasts 48 hours, and logging out of Editable ends every connection right away. Call `list_pages` to confirm the connection. After updating Editable, start a new session in your MCP client so it sees the current tools.
 
 #### Tools
 
-- `get_schema` describes the document model: the EDF writing rules, then every node type with its properties, allowed child types, and defaults.
-- `list_pages` lists pages in the same hierarchy as the page browser.
-- `read_document` returns a document as EDF together with the `version` that `write_document` requires. Documents are pages and the shared banner, navigation, and footer. It accepts a page path such as `/about`, a full URL, a language-prefixed path, or a document id such as `nav_1`.
-- `create_page` creates a page from EDF. The shared documents are referenced automatically, and the URL comes from `slug` or the page title.
-- `write_document` writes a complete document as EDF. Nodes left out of the document are deleted, and new elements get ids.
-- `prepare_image_upload` returns a 30-minute upload token and the exact encoding and upload steps for adding images.
+- `get_schema` returns the EDF rules and every node type with its properties, allowed child types, and defaults.
+- `list_pages` returns the page hierarchy shown in the page browser.
+- `read_document` returns a document as EDF together with the `version` that `write_document` requires. It takes a page path such as `/about`, a full URL, a language-prefixed path, or a document id such as `nav_1`.
+- `write_document` writes the complete document as EDF with the version it was read at. Nodes left out are deleted, and new elements get ids.
+- `create_page` creates a page from EDF. It gets the shared banner, navigation, and footer, and its URL comes from `slug` or the title.
+- `prepare_image_upload` returns a 30-minute upload token and the steps for adding images over HTTP.
 
-Agents read a document, send it back with their changes and the version they read, and keep editing with the version each write returns. A write is rejected when the document changed in between, for example when you saved it in the editor. The reverse is handled too: saving a page in the editor that an agent changed since you opened it asks which version to keep. Every write is validated against the schema and the single-owner rule before anything is written, so an agent cannot persist a malformed document.
+Every write is checked before anything is stored: the document must be valid against the schema and the single-owner rule, and its version must still be current. A write fails when the document changed in between, for example because you saved it in the editor. The reverse is handled too: saving in the editor after an agent changed the page asks which version to keep.
 
-A page references its banner, navigation, and footer by id, as in `nav="nav_1"`. They are documents of their own, shared by every page, so an agent edits the navigation by reading and writing `nav_1` directly, and a page written with the navigation's content inside it is rejected. Edits to page content therefore can never change the navigation by accident.
+The banner, navigation, and footer are documents of their own. Pages reference them by id, as in `nav="nav_1"`, and agents read and write them by that id, so editing a page can never change the navigation by accident.
 
 #### EDF
 
-Documents travel as EDF, an XML form of the stored document that needs no character offsets. It is a transport encoding: the server parses it back into the same JSON the editor stores and runs the same validation. Each node is an element named by its type with an `id` and its primitive properties as attributes, structure is nested elements, text nodes hold their content directly, and marks are inline tags:
+Documents travel as EDF, an XML form of the stored document. Each node is an element named by its type with an `id`, primitive properties are attributes, text and nested nodes are child elements, and marks are inline tags, so no character offsets appear:
 
 ```xml
 <page id="about" banner="banner_1" nav="nav_1" footer="footer_1">
@@ -98,15 +96,15 @@ Documents travel as EDF, an XML form of the stored document that needs no charac
 </page>
 ```
 
-Every value is written out, so an EDF document means the same thing even after a default in the schema changes. When writing new content, a left-out attribute gets the schema default at that moment, as when you insert a block in the editor. Ids are identity, exactly as in the editor: everything kept keeps its id, including marks, and anything new, such as a link that replaces another, has no id and gets a fresh one. Element names alternate between node types and property names, and the schema decides how each is read, including whether a property holds one node or a list. Schemas whose names could be read two ways are refused. An element includes its content in the document, while a node property written as an attribute, like `nav="nav_1"` above, is a reference to another document that is read on its own. A document always contains all of its nodes, and only a page refers to other documents, for its banner, navigation, and footer. The serializer and parser live in `src/lib/edf.ts` and work with any such Svedit schema.
+Ids are identity, exactly as in the editor: whatever keeps its id is kept, marks included, and anything without an id is new and gets one. Every value is written out, so a document keeps its meaning after a default in the schema changes; a left-out attribute on a new node gets the current default, like a block inserted in the editor. A node property written as an attribute, like `nav="nav_1"` above, refers to another document, and only a page does this. The server parses EDF back into the JSON the editor stores and runs the same validation. The serializer and parser live in `src/lib/edf.ts` and work with any Svedit schema whose element names cannot be read two ways.
 
 #### Images
 
-Image files do not travel through tool calls. `prepare_image_upload` tells the agent how to encode a WebP original and its resized variants, exactly as the editor does in the browser, and how to upload them over HTTP with the token. The agent needs a shell with network access to the site. Uploads with a token must be valid WebP files whose dimensions match the declared ones, and a page can only reference images whose variants are all uploaded. Videos cannot be uploaded through MCP.
+Image bytes do not travel through tool calls. `prepare_image_upload` returns a token and the steps to encode a WebP original with its resized variants, as the editor does in the browser, and to upload them over HTTP, so the agent needs a shell with network access to the site. Token uploads must be valid WebP files that match the declared dimensions, and a document can only reference images whose variants are all uploaded. Videos cannot be uploaded through MCP.
 
 #### Translations
 
-With [translations](#translations-experimental) enabled, `read_document` with a language-prefixed path such as `/de/about`, or with the `language` argument, returns the translated document, and `write_document` with `language` writes it. The banner, navigation, and footer are translated on their own, like every other document. Like the editor, translations can change text, inline formatting, and media only; structure and layout are edited in the main language.
+With [translations](#translations-experimental) enabled, a language-prefixed path such as `/de/about` or the `language` argument reads the translation, and `write_document` with `language` writes it. The banner, navigation, and footer are translated on their own, like every document. As in the editor, translations change text, inline formatting, and media only; structure and layout are edited in the main language.
 
 ## Make it yours
 
