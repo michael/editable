@@ -13,8 +13,3 @@ export const POST: RequestHandler = async ({ request }) => {
 		return oauth.oauth_error_response(err);
 	}
 };
-
-export const OPTIONS: RequestHandler = async () => {
-	const { oauth_preflight } = await import('#app/server_oauth.js');
-	return oauth_preflight();
-};

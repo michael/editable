@@ -8,8 +8,3 @@ export const GET: RequestHandler = async ({ params }) => {
 	const { oauth_json, protected_resource_metadata } = await import('#app/server_oauth.js');
 	return oauth_json(protected_resource_metadata());
 };
-
-export const OPTIONS: RequestHandler = async () => {
-	const { oauth_preflight } = await import('#app/server_oauth.js');
-	return oauth_preflight();
-};

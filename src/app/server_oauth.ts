@@ -80,10 +80,6 @@ export function is_allowed_redirect_uri(value: unknown): value is string {
 	return url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
 }
 
-export function is_loopback_redirect(redirect_uri: string) {
-	return URL.parse(redirect_uri)?.protocol === 'http:';
-}
-
 /** Tokens are bound to this server; clients may omit the resource or send it with a trailing slash. */
 export function is_own_resource(resource: string | null | undefined) {
 	return !resource || resource.replace(/\/$/, '').toLowerCase() === mcp_resource().toLowerCase();
@@ -327,19 +323,9 @@ export function assert_small_body(request: Request) {
 		throw new OAuthError('invalid_request', 'The request body is too large.', 413);
 }
 
-const CORS_HEADERS = {
-	'Access-Control-Allow-Origin': '*',
-	'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-	'Access-Control-Allow-Headers': 'Content-Type, Authorization, MCP-Protocol-Version'
-};
-
-/** JSON response for the public OAuth endpoints, which browser-based clients call cross-origin. */
+/** JSON response for the OAuth endpoints; tokens and metadata must not be cached. */
 export function oauth_json(body: unknown, status = 200) {
-	return Response.json(body, { status, headers: { ...CORS_HEADERS, 'Cache-Control': 'no-store' } });
-}
-
-export function oauth_preflight() {
-	return new Response(null, { status: 204, headers: CORS_HEADERS });
+	return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
 export function oauth_error_response(err: unknown) {
