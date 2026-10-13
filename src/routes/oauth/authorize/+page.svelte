@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import AuthDialog from '#app/components/AuthDialog.svelte';
-	import { TW_PRIMARY_BTN, TW_SECONDARY_BTN } from '#app/buttons.js';
 
 	let { data, form } = $props();
 </script>
@@ -42,8 +41,20 @@
 				</p>
 			{/if}
 			<form method="POST" class="flex flex-wrap items-center justify-center gap-3">
-				<button type="submit" name="decision" value="deny" class={TW_SECONDARY_BTN}>Deny</button>
-				<button type="submit" name="decision" value="allow" class={TW_PRIMARY_BTN}>Allow</button>
+				<button
+					type="submit"
+					name="decision"
+					value="deny"
+					class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-[46px]"
+					>Deny</button
+				>
+				<button
+					type="submit"
+					name="decision"
+					value="allow"
+					class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--editing) px-5 text-sm leading-5 whitespace-nowrap text-(--editing-foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)] disabled:cursor-default disabled:opacity-40 sm:h-[46px]"
+					>Allow</button
+				>
 			</form>
 		{:else}
 			<div class="flex flex-col gap-2">

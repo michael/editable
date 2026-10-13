@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { TW_ICON_BTN, TW_PILL_HEIGHT, TW_PRIMARY_BTN, TW_SECONDARY_BTN } from '#app/buttons.js';
-
 	let {
 		onedit_for_fun,
 		onlogin_success = () => {}
@@ -130,14 +128,16 @@
 				<button
 					bind:this={edit_for_fun_button_ref}
 					type="button"
-					class={TW_PRIMARY_BTN}
+					class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--editing) px-5 text-sm leading-5 whitespace-nowrap text-(--editing-foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)] disabled:cursor-default disabled:opacity-40 sm:h-[46px]"
 					onclick={handle_edit_for_fun}
 				>
 					Try out editing
 				</button>
 
-				<button type="button" class={TW_SECONDARY_BTN} onclick={open_login_step}
-					>Login as admin</button
+				<button
+					type="button"
+					class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-[46px]"
+					onclick={open_login_step}>Login as admin</button
 				>
 			</div>
 		</div>
@@ -161,7 +161,7 @@
 				{#if onedit_for_fun}
 					<button
 						type="button"
-						class={TW_ICON_BTN}
+						class="inline-flex aspect-square h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-[46px]"
 						onclick={back_to_choice}
 						title="Back"
 						aria-label="Back"
@@ -183,11 +183,17 @@
 					bind:this={password_input_ref}
 					bind:value={password}
 					placeholder={error || 'Enter password'}
-					class={`${TW_PILL_HEIGHT} min-w-0 flex-1 appearance-none rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-4 text-base leading-5 text-(--foreground) transition-[border-color] duration-150 outline-none ${error ? 'placeholder:text-[color-mix(in_oklch,red_65%,var(--foreground))]' : 'placeholder:text-(--muted-foreground)'} focus:ring-0 focus:outline-none focus-visible:border-(--editing)`}
+					class={`h-9 min-w-0 flex-1 appearance-none rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-4 text-base leading-5 text-(--foreground) transition-[border-color] duration-150 outline-none sm:h-[46px] ${error ? 'placeholder:text-[color-mix(in_oklch,red_65%,var(--foreground))]' : 'placeholder:text-(--muted-foreground)'} focus:ring-0 focus:outline-none focus-visible:border-(--editing)`}
 					oninput={handle_password_input}
 				/>
 
-				<button type="submit" class={TW_PRIMARY_BTN} disabled={pending}> Login </button>
+				<button
+					type="submit"
+					class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--editing) px-5 text-sm leading-5 whitespace-nowrap text-(--editing-foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)] disabled:cursor-default disabled:opacity-40 sm:h-[46px]"
+					disabled={pending}
+				>
+					Login
+				</button>
 			</form>
 		</div>
 	{/if}

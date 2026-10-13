@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { TW_PRIMARY_BTN, TW_SECONDARY_BTN } from '#app/buttons.js';
-
 	let {
 		open = false,
 		onreload,
@@ -53,8 +51,16 @@
 				</p>
 			</div>
 			<div class="flex flex-wrap items-center justify-center gap-3">
-				<button type="button" class={TW_SECONDARY_BTN} onclick={onreload}>Use their version</button>
-				<button type="button" class={TW_PRIMARY_BTN} onclick={onoverwrite}>Save my version</button>
+				<button
+					type="button"
+					class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-[46px]"
+					onclick={onreload}>Use their version</button
+				>
+				<button
+					type="button"
+					class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--editing) px-5 text-sm leading-5 whitespace-nowrap text-(--editing-foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)] disabled:cursor-default disabled:opacity-40 sm:h-[46px]"
+					onclick={onoverwrite}>Save my version</button
+				>
 			</div>
 		</div>
 	{/if}
