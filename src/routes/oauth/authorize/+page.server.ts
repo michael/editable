@@ -2,10 +2,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { VERCEL } from '$app/env/private';
 import type { Actions, PageServerLoad } from './$types';
 
-/**
- * Validate an authorization request. Only called for a logged-in admin, so
- * fetching a client ID metadata document cannot be triggered anonymously.
- */
+/** Validate an authorization request. */
 async function validate_request(params: URLSearchParams) {
 	const oauth = await import('#app/server_oauth.js');
 	const code_challenge = params.get('code_challenge') ?? '';
@@ -16,7 +13,7 @@ async function validate_request(params: URLSearchParams) {
 	if (!oauth.is_own_resource(params.get('resource')))
 		return { error: `Access can only be granted to ${oauth.mcp_resource()}.` } as const;
 
-	const client = await oauth.find_client(params.get('client_id') ?? '');
+	const client = oauth.find_client(params.get('client_id') ?? '');
 	if (!client)
 		return {
 			error: 'The app could not be identified. Start connecting again from the app.'
@@ -40,8 +37,6 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		step: 'consent' as const,
 		site_host: url.host,
 		client_name: request.client.client_name,
-		// A metadata document URL proves which domain published the app's details.
-		client_domain: URL.parse(request.client.client_id)?.host ?? null,
 		redirect_host: target.host,
 		// Only loopback redirects may use plain http, so they lead to an app on this computer.
 		on_this_computer: target.protocol === 'http:'

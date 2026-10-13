@@ -64,7 +64,7 @@ it('issues tokens for approved clients with PKCE and rotates refresh tokens', as
 		client_name: 'Claude Code',
 		redirect_uris: [redirect_uri]
 	});
-	expect(await find_client(client_id)).toMatchObject({ client_name: 'Claude Code' });
+	expect(find_client(client_id)).toMatchObject({ client_name: 'Claude Code' });
 
 	const code = approve_client({ client_id, redirect_uri, code_challenge });
 	const params = { grant_type: 'authorization_code', code, client_id, redirect_uri };
@@ -148,44 +148,18 @@ it('keeps approved clients registered but evicts stale pending registrations', a
 	// Reconnecting after a logout or after 48 hours reuses the stored client_id.
 	vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
 	const { client_id: pending_id } = register_client({ redirect_uris: [redirect_uri] });
-	expect(await find_client(client_id)).not.toBeNull();
+	expect(find_client(client_id)).not.toBeNull();
 	expect(verify_access_token(connect(client_id).access_token)).toMatchObject({ client_id });
 	expect(db.prepare('SELECT COUNT(*) AS count FROM oauth_grants').get()).toEqual({ count: 1 });
 
 	// A flood of registrations makes room instead of blocking new clients.
 	for (let i = 0; i < 100; i++) register_client({ redirect_uris: [redirect_uri] });
-	expect(await find_client(pending_id)).toBeNull();
-	expect(await find_client(client_id)).not.toBeNull();
+	expect(find_client(pending_id)).toBeNull();
+	expect(find_client(client_id)).not.toBeNull();
 	expect(db.prepare('SELECT COUNT(*) AS count FROM oauth_clients').get()).toEqual({ count: 101 });
 
 	// Pending registrations expire after a day.
 	vi.setSystemTime(new Date('2026-10-22T12:00:00Z'));
 	register_client({ redirect_uris: [redirect_uri] });
 	expect(db.prepare('SELECT COUNT(*) AS count FROM oauth_clients').get()).toEqual({ count: 2 });
-});
-
-it('reads clients from their metadata documents', async () => {
-	const client_id = 'https://app.example/oauth/client.json';
-	const metadata = { client_id, client_name: 'Example', redirect_uris: [redirect_uri] };
-	const fetch = vi.fn(async () => Response.json(metadata));
-	vi.stubGlobal('fetch', fetch);
-	expect(await find_client(client_id)).toEqual(metadata);
-
-	// Metadata documents are only fetched from public hosts.
-	for (const internal of [
-		'https://localhost/client.json',
-		'https://127.0.0.1/client.json',
-		'https://[::1]/client.json',
-		'https://intranet/client.json',
-		'https://printer.local/client.json'
-	])
-		expect(await find_client(internal)).toBeNull();
-	expect(fetch).toHaveBeenCalledTimes(1);
-
-	vi.stubGlobal(
-		'fetch',
-		vi.fn(async () => Response.json({ ...metadata, client_id: 'https://other' }))
-	);
-	expect(await find_client(client_id)).toBeNull();
-	vi.unstubAllGlobals();
 });

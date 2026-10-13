@@ -31,9 +31,6 @@
 			</div>
 			<p class="m-0 text-sm leading-6">
 				Access is sent to <strong class="font-medium">{data.redirect_host}</strong>
-				{#if data.client_domain}
-					<br />App details published by <strong class="font-medium">{data.client_domain}</strong>
-				{/if}
 			</p>
 			{#if data.on_this_computer}
 				<p class="m-0 text-sm leading-6 text-(--muted-foreground)">

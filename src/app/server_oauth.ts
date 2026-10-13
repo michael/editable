@@ -1,5 +1,4 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { isIP } from 'node:net';
 import { error } from '@sveltejs/kit';
 import { ORIGIN } from '$app/env/private';
 import { require_admin_session } from '#lib/server/auth.js';
@@ -15,8 +14,6 @@ const UPLOAD_TOKEN_TTL_SECONDS = 30 * 60;
 // they can reconnect with the same client_id after their approval ends.
 const PENDING_CLIENT_TTL_SECONDS = 24 * 60 * 60;
 const MAX_PENDING_CLIENTS = 100;
-const CLIENT_METADATA_TIMEOUT_MS = 5000;
-const CLIENT_METADATA_MAX_BYTES = 64 * 1024;
 
 type TokenKind = 'code' | 'access' | 'refresh' | 'upload';
 type Grant = {
@@ -58,8 +55,7 @@ export function authorization_server_metadata() {
 		grant_types_supported: ['authorization_code', 'refresh_token'],
 		code_challenge_methods_supported: ['S256'],
 		token_endpoint_auth_methods_supported: ['none'],
-		authorization_response_iss_parameter_supported: true,
-		client_id_metadata_document_supported: true
+		authorization_response_iss_parameter_supported: true
 	};
 }
 
@@ -85,7 +81,7 @@ export function is_own_resource(resource: string | null | undefined) {
 	return !resource || resource.replace(/\/$/, '').toLowerCase() === mcp_resource().toLowerCase();
 }
 
-/** Dynamic client registration (RFC 7591) for public clients without a metadata document. */
+/** Dynamic client registration (RFC 7591) for public clients. */
 export function register_client(input: { client_name?: unknown; redirect_uris?: unknown }) {
 	const redirect_uris = input.redirect_uris;
 	if (
@@ -123,49 +119,7 @@ export function register_client(input: { client_name?: unknown; redirect_uris?: 
 	return client;
 }
 
-/** Fetch a client ID metadata document. Only called for logged-in admins, never anonymously. */
-async function fetch_client_metadata(client_id: string): Promise<OAuthClient | null> {
-	const response = await fetch(client_id, {
-		redirect: 'error',
-		signal: AbortSignal.timeout(CLIENT_METADATA_TIMEOUT_MS),
-		headers: { accept: 'application/json' }
-	}).catch(() => null);
-	if (!response?.ok) return null;
-	const text = await response.text().catch(() => '');
-	if (text.length > CLIENT_METADATA_MAX_BYTES) return null;
-	let metadata: any;
-	try {
-		metadata = JSON.parse(text);
-	} catch {
-		return null;
-	}
-	if (
-		metadata?.client_id !== client_id ||
-		!Array.isArray(metadata.redirect_uris) ||
-		!metadata.redirect_uris.every(is_allowed_redirect_uri)
-	)
-		return null;
-	return {
-		client_id,
-		client_name:
-			typeof metadata.client_name === 'string' ? metadata.client_name.slice(0, 100) : client_id,
-		redirect_uris: metadata.redirect_uris
-	};
-}
-
-/** Metadata documents live on public HTTPS hosts; the server never fetches internal addresses. */
-function is_metadata_document_url(client_id: string) {
-	const url = URL.parse(client_id);
-	if (url?.protocol !== 'https:' || url.pathname === '/' || url.username || url.password)
-		return false;
-	const hostname = url.hostname.replace(/^\[|\]$/g, '');
-	return (
-		isIP(hostname) === 0 && hostname.includes('.') && !/(^|\.)(localhost|local)$/.test(hostname)
-	);
-}
-
-export async function find_client(client_id: string): Promise<OAuthClient | null> {
-	if (is_metadata_document_url(client_id)) return fetch_client_metadata(client_id);
+export function find_client(client_id: string): OAuthClient | null {
 	const row = db
 		.prepare('SELECT client_id, client_name, redirect_uris FROM oauth_clients WHERE client_id = ?')
 		.get(client_id) as

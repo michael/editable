@@ -59,9 +59,9 @@ Add the server to your client and follow its login prompt. For Claude Code:
 claude mcp add --transport http editable https://your-site.example.com/mcp
 ```
 
-Then run `/mcp` inside Claude Code to authenticate. Other clients with MCP authorization, such as Codex, connect the same way, and so does `http://localhost:5173/mcp` during development.
+Then run `/mcp` inside Claude Code to authenticate. In claude.ai, add the same URL as a custom connector under Settings → Connectors. Other clients with MCP authorization, such as Codex, connect the same way, and so does `http://localhost:5173/mcp` during development.
 
-The client opens a browser window where you log in as admin and allow the connection. The consent page names the app and the address it receives access at, so only allow connections you started yourself. An approval lasts 48 hours, and logging out of Editable ends every connection right away. Call `list_pages` to confirm the connection. After updating Editable, start a new session in your MCP client so it sees the current tools.
+The client registers itself with your site and opens a browser window where you log in as admin and allow the connection. The consent page names the app and the address it receives access at, so only allow connections you started yourself. An approval lasts 48 hours, and logging out of Editable ends every connection right away. Registrations that were never approved expire after a day. The token endpoint accepts form posts from any origin, as OAuth requires, so `vite.config.ts` disables SvelteKit's cross-site form check; the admin cookie's `SameSite=Lax` setting protects the login and consent forms instead. Call `list_pages` to confirm the connection. After updating Editable, start a new session in your MCP client so it sees the current tools.
 
 #### Tools
 
