@@ -52,7 +52,7 @@ const tools = [
 	define_tool({
 		name: 'get_schema',
 		description:
-			'Describe the document model and EDF, the XML form used by read_document, write_document, and create_page: the writing rules, then every node type with its kind and properties (allowed child node_types, mark_types, string values, and defaults). Call this before using node types you have not seen in a document.',
+			'The document model and the EDF rules used by read_document, write_document, and create_page: how documents are written as XML, then every node type with its kind and properties (allowed child node_types, mark_types, string values, and defaults). Call it before using node types you have not seen in a document.',
 		input: v.strictObject({}),
 		annotations: { readOnlyHint: true },
 		handler: async () => {
@@ -63,7 +63,7 @@ const tools = [
 	define_tool({
 		name: 'list_pages',
 		description:
-			'List site pages in the same hierarchy as Editable’s page browser. Linked pages are nested under their first parent; unlinked pages are top-level entries.',
+			'List the site’s pages as a tree, like Editable’s page browser: linked pages nest under their first parent, unlinked pages are top-level entries.',
 		input: v.strictObject({}),
 		annotations: { readOnlyHint: true },
 		handler: async () => {
@@ -74,7 +74,7 @@ const tools = [
 	define_tool({
 		name: 'read_document',
 		description:
-			'Read a page or a shared document (banner, nav, or footer) as EDF (XML, see get_schema). document can be a page path (/about, or / for the home page), a full URL, a language-prefixed or old path, or a document id: a page id from list_pages, or the banner, nav, or footer id that every page references. Returns edf, the complete document, plus the version required by write_document; pages also return their current page_href. A language prefix (/de/about) or the language argument reads the translation: text and media that are not translated yet show the main language. The result lists the enabled languages; the first is the main language.',
+			'Read a page or a shared document (banner, nav, or footer) as EDF. document is a page path (/about, / for the home page, /de/about for a translation), a full URL, or a document id: a page id from list_pages, or the banner, nav, or footer id every page carries. Returns edf, the version that write_document requires, page_href for pages, and the enabled languages, the first being the main one. A translation shows the main language wherever nothing is translated yet.',
 		input: v.strictObject({
 			document: v.pipe(
 				v.string(),
@@ -96,7 +96,7 @@ const tools = [
 	define_tool({
 		name: 'create_page',
 		description:
-			'Create a new page from EDF: a <page> element with a new unique id and its content, written as described by get_schema. Leave out banner, nav, and footer; the page references the shared ones automatically. Omitted properties use their defaults, and an empty preview image is added if the page has none. The URL comes from slug if given, otherwise from the page title, with a numeric suffix when taken. The page is public at its URL right away but not linked from anywhere; to add it to the navigation, read the nav with read_document and write it back with a link. Returns page_href and the version for write_document.',
+			'Create a page from EDF: a <page> with a new unique id and its content, as described by get_schema. Leave banner, nav, and footer out; the page gets the shared ones. Omitted properties take their defaults, and a page without an image gets an empty preview image. The URL comes from slug, or else the title, with a numeric suffix when taken. The page is public right away but linked from nowhere; to add it to the navigation, write the nav document. Returns page_href and the version for write_document.',
 		input: v.strictObject({
 			edf: v.pipe(v.string(), v.description('The page as EDF, starting with <page id="...">.')),
 			slug: v.optional(
@@ -115,7 +115,7 @@ const tools = [
 	define_tool({
 		name: 'prepare_image_upload',
 		description:
-			'Get instructions and a 30-minute upload token for adding new images. Image files are uploaded over HTTP, not through MCP: encode a WebP original and resized variants as described, upload them (e.g. with curl), then reference the asset in create_page or write_document. Requires a shell and network access to the site. Videos are not supported.',
+			'Get a 30-minute upload token and the steps for adding images, which are uploaded over HTTP rather than through MCP: encode a WebP original and its resized variants, upload them with curl, then reference the asset in write_document or create_page. Needs a shell with network access to the site. Videos cannot be uploaded.',
 		input: v.strictObject({}),
 		annotations: { readOnlyHint: true },
 		handler: async (_args, { grant_id }) => {
@@ -126,7 +126,7 @@ const tools = [
 	define_tool({
 		name: 'write_document',
 		description:
-			'Write a page or a shared document: send the complete document as EDF, as returned by read_document, with your changes applied. Nodes left out are deleted; new elements without an id get one. Include expected_version: the version from read_document, or from your previous write_document result to keep editing without reading again. The server validates the whole document and rejects stale versions or invalid changes before writing anything. A page keeps its banner, nav, and footer attributes unchanged; write those documents on their own, and remember that they appear on every page. To write a translation, pass language and the version from reading the document in that language; only text, inline formatting, and media may differ from the main language, and text equal to the main language removes its translation. Structural and layout changes belong in the main language.',
+			'Write a page or a shared document: the complete EDF as read_document returned it, with your changes. Nodes left out are deleted; elements without an id are new. expected_version is the version from read_document or from your previous write_document, so you can keep editing without reading again; a stale version or an invalid document is rejected before anything is written. A page keeps its banner, nav, and footer attributes; write those documents on their own, remembering that they appear on every page. With language, writes a translation: pass the version from reading in that language. Only text, inline formatting, and media may differ from the main language, and text equal to the main language removes its translation.',
 		input: v.strictObject({
 			edf: v.pipe(v.string(), v.description('The complete document as EDF.')),
 			expected_version: v.pipe(
@@ -183,8 +183,9 @@ function json_response(body: unknown, status = 200): Response {
 	return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
-function rpc_error(id: unknown, code: number, message: string, status = 400): Response {
-	return json_response({ jsonrpc: '2.0', id: id ?? null, error: { code, message } }, status);
+function rpc_error(id: unknown, code: number, message: string, status = 400, data?: unknown) {
+	const error = { code, message, ...(data !== undefined && { data }) };
+	return json_response({ jsonrpc: '2.0', id: id ?? null, error }, status);
 }
 
 /**
@@ -212,11 +213,10 @@ function resolve_protocol(request: Request, message: any): Protocol | Response {
 		header_version === legacy_protocol_version
 	)
 		return 'legacy';
-	return rpc_error(
-		message.id,
-		-32010,
-		`Unsupported protocol version. Supported versions: ${protocol_version}, ${legacy_protocol_version}.`
-	);
+	return rpc_error(message.id, -32022, 'Unsupported protocol version.', 400, {
+		supported: [protocol_version, legacy_protocol_version],
+		requested: meta_version ?? header_version
+	});
 }
 
 async function handle_method(message: any, protocol: Protocol, context: ToolContext) {
@@ -249,7 +249,13 @@ async function handle_method(message: any, protocol: Protocol, context: ToolCont
 			return { ...(await call_tool(tool, message.params.arguments, context)), ...modern_meta };
 		}
 		default:
-			return rpc_error(message.id, -32601, `Method not found: ${message.method}`, 200);
+			// Modern clients tell a 404 with a JSON-RPC body apart from a server without MCP.
+			return rpc_error(
+				message.id,
+				-32601,
+				`Method not found: ${message.method}`,
+				protocol === 'modern' ? 404 : 200
+			);
 	}
 }
 

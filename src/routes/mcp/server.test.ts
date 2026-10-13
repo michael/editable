@@ -78,7 +78,7 @@ it('checks protocol versions and modern request headers', async () => {
 		await (await post(modern_list, { ...modern_headers, 'mcp-method': 'ping' })).json()
 	).toMatchObject({ error: { code: -32020 } });
 	expect(await (await post(list, { 'mcp-protocol-version': '2024-01-01' })).json()).toMatchObject({
-		error: { code: -32010 }
+		error: { code: -32022, data: { supported: [modern_version, legacy_version] } }
 	});
 	// Without the header, clients are assumed to speak an older version.
 	expect(await (await post(list, { 'mcp-protocol-version': '' })).json()).toMatchObject({
