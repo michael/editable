@@ -1131,7 +1131,7 @@
 						<!-- Main action. Mix in sRGB for visible feedback; keep text opaque. -->
 						<button
 							type="button"
-							class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--editing) px-5 text-sm leading-5 whitespace-nowrap text-(--editing-foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)] disabled:cursor-default disabled:opacity-40 sm:h-[46px]"
+							class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--editing) px-5 text-sm leading-5 whitespace-nowrap text-(--editing-foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)] disabled:cursor-default disabled:opacity-40 sm:h-11.5"
 							>Login</button
 						>
 					</div>
@@ -1141,7 +1141,7 @@
 						<!-- Supporting action on the opaque background surface, with the stroke border. -->
 						<button
 							type="button"
-							class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-[46px]"
+							class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-11.5"
 							>Deny</button
 						>
 					</div>
@@ -1151,7 +1151,7 @@
 						<!-- Square secondary button for a single icon, such as the back arrow in the login dialog. -->
 						<button
 							type="button"
-							class="inline-flex aspect-square h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-[46px]"
+							class="inline-flex aspect-square h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-11.5"
 							title="Back"
 							aria-label="Back"
 						>
