@@ -35,55 +35,40 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const request = await validate_request(url.searchParams);
 	if ('error' in request) return { step: 'error' as const, message: request.error };
 
-	const { is_loopback_redirect } = await import('#app/server_oauth.js');
+	const target = new URL(request.redirect_uri);
 	return {
 		step: 'consent' as const,
 		site_host: url.host,
 		client_name: request.client.client_name,
 		// A metadata document URL proves which domain published the app's details.
 		client_domain: URL.parse(request.client.client_id)?.host ?? null,
-		redirect_host: new URL(request.redirect_uri).host,
-		on_this_computer: is_loopback_redirect(request.redirect_uri)
+		redirect_host: target.host,
+		// Only loopback redirects may use plain http, so they lead to an app on this computer.
+		on_this_computer: target.protocol === 'http:'
 	};
 };
 
 export const actions: Actions = {
-	login: async ({ request, cookies }) => {
-		const [{ db }, { log_in_admin }] = await Promise.all([
-			import('#app/services.js'),
-			import('#lib/server/auth.js')
-		]);
-		const password = String((await request.formData()).get('password') ?? '');
-		const result = log_in_admin(db, cookies, password);
-		if ('message' in result) return fail(400, { message: result.message });
-	},
+	// The decision is posted to the page URL, so the OAuth parameters stay with it.
+	default: async ({ request, url, locals }) => {
+		if (!locals.is_admin) return fail(401, { message: 'Log in to review the request.' });
+		const validated = await validate_request(url.searchParams);
+		if ('error' in validated) return fail(400, { message: validated.error });
 
-	approve: async ({ url, locals }) => {
-		if (!locals.is_admin) return fail(401, { message: 'Log in to approve the connection.' });
-		const request = await validate_request(url.searchParams);
-		if ('error' in request) return fail(400, { message: request.error });
-
-		const { approve_client, issuer } = await import('#app/server_oauth.js');
-		const code = approve_client({
-			client_id: request.client.client_id,
-			redirect_uri: request.redirect_uri,
-			code_challenge: request.code_challenge
-		});
-		const target = new URL(request.redirect_uri);
-		target.searchParams.set('code', code);
-		if (request.state) target.searchParams.set('state', request.state);
-		target.searchParams.set('iss', issuer());
-		redirect(303, target.href, { external: [target.origin] });
-	},
-
-	deny: async ({ url, locals }) => {
-		if (!locals.is_admin) return fail(401, { message: 'Log in first.' });
-		const request = await validate_request(url.searchParams);
-		if ('error' in request) return fail(400, { message: request.error });
-
-		const target = new URL(request.redirect_uri);
-		target.searchParams.set('error', 'access_denied');
-		if (request.state) target.searchParams.set('state', request.state);
+		const target = new URL(validated.redirect_uri);
+		if ((await request.formData()).get('decision') === 'allow') {
+			const { approve_client, issuer } = await import('#app/server_oauth.js');
+			const code = approve_client({
+				client_id: validated.client.client_id,
+				redirect_uri: validated.redirect_uri,
+				code_challenge: validated.code_challenge
+			});
+			target.searchParams.set('code', code);
+			target.searchParams.set('iss', issuer());
+		} else {
+			target.searchParams.set('error', 'access_denied');
+		}
+		if (validated.state) target.searchParams.set('state', validated.state);
 		redirect(303, target.href, { external: [target.origin] });
 	}
 };
