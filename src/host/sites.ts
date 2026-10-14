@@ -42,7 +42,7 @@ function get_registry() {
 	return registry;
 }
 
-function site_exists(name: string) {
+export function site_exists(name: string) {
 	return !!get_registry().prepare('SELECT 1 FROM sites WHERE name = ?').get(name);
 }
 
@@ -133,6 +133,15 @@ function end_session(cookies: Cookies) {
 	cookies.delete(SESSION_COOKIE, cookie_options);
 }
 
+/** Start a session for the site when the password is right. */
+export function log_in_site(name: string, password: string, cookies: Cookies) {
+	const row = get_registry().prepare('SELECT password_hash FROM sites WHERE name = ?').get(name) as
+		{ password_hash: string } | undefined;
+	if (!row || !password_matches(password, row.password_hash)) return false;
+	start_session(name, cookies);
+	return true;
+}
+
 /** The site's password, with sessions in the site's own database. */
 function site_auth(name: string): AdminAuth {
 	return {
@@ -147,12 +156,8 @@ function site_auth(name: string): AdminAuth {
 			return false;
 		},
 		log_in({ cookies }, { password = '' }) {
-			const row = get_registry()
-				.prepare('SELECT password_hash FROM sites WHERE name = ?')
-				.get(name) as { password_hash: string } | undefined;
-			if (!row || !password_matches(password, row.password_hash))
+			if (!log_in_site(name, password, cookies))
 				return { ok: false, code: 'invalid_password', message: 'Incorrect password.' };
-			start_session(name, cookies);
 			return { ok: true };
 		},
 		log_out({ cookies }) {
