@@ -104,12 +104,14 @@ it('resolves every link of a document on the way out and normalizes it on the wa
 });
 
 it('builds absolute URLs from the origin, the base, and the page path', () => {
-	expect(absolute_page_url('/about', 'https://example.com', '/alice')).toBe(
+	expect(absolute_page_url('/about', { origin: 'https://example.com', base: '/alice' })).toBe(
 		'https://example.com/alice/about'
 	);
-	expect(absolute_page_url('/', 'https://example.com', '/alice')).toBe('https://example.com/alice');
+	expect(absolute_page_url('/', { origin: 'https://example.com', base: '/alice' })).toBe(
+		'https://example.com/alice'
+	);
 	// A path in the configured origin is still ignored.
-	expect(absolute_page_url('/about', 'https://example.com/ignored', '/alice')).toBe(
-		'https://example.com/alice/about'
-	);
+	expect(
+		absolute_page_url('/about', { origin: 'https://example.com/ignored', base: '/alice' })
+	).toBe('https://example.com/alice/about');
 });

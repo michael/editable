@@ -31,9 +31,7 @@
 	);
 	let canonical_path = $derived(app.canonical_path ?? (app.slug ? `/${app.slug}` : '/'));
 	let canonical_url = $derived(
-		app.origin && !app.is_new && page.status < 400
-			? absolute_page_url(canonical_path, app.origin, site.base)
-			: null
+		app.origin && !app.is_new && page.status < 400 ? absolute_page_url(canonical_path, site) : null
 	);
 	let alternates = $derived(
 		canonical_url && app.can_edit ? language_alternates(canonical_path, app.languages) : []
@@ -129,7 +127,7 @@
 			<link
 				rel="alternate"
 				hreflang={alternate.language}
-				href={absolute_page_url(alternate.path, app.origin!, site.base)}
+				href={absolute_page_url(alternate.path, site)}
 			/>
 		{/each}
 	{/if}

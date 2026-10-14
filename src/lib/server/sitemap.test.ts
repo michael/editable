@@ -5,7 +5,7 @@ import { language_alternates } from '#app/seo.js';
 describe('render_sitemap', () => {
 	it('renders unique absolute canonical URLs and escapes XML', () => {
 		const entries = ['/', '/about', '/a&b', '/about'].map((path) => ({ path, lastmod: null }));
-		const xml = render_sitemap(entries, 'https://example.com');
+		const xml = render_sitemap(entries, { origin: 'https://example.com', base: '' });
 		expect(xml).toContain('xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"');
 		expect(xml).toContain('<loc>https://example.com/</loc>');
 		expect(xml).toContain('<loc>https://example.com/about</loc>');
@@ -19,7 +19,7 @@ describe('render_sitemap', () => {
 				{ path: '/', lastmod: '2025-05-28T11:40:22.299Z' },
 				{ path: '/about', lastmod: '2025-05-28T13:40:22.299+02:00' }
 			],
-			'https://example.com'
+			{ origin: 'https://example.com', base: '' }
 		);
 		expect(xml.match(/<lastmod>2025-05-28T11:40:22.299Z<\/lastmod>/g)).toHaveLength(2);
 	});
@@ -30,21 +30,21 @@ describe('render_sitemap', () => {
 				{ path: '/', lastmod: null },
 				{ path: '/about', lastmod: 'invalid' }
 			],
-			'https://example.com'
+			{ origin: 'https://example.com', base: '' }
 		);
 		expect(xml).not.toContain('<lastmod>');
 		expect(xml.match(/<url>/g)).toHaveLength(2);
 	});
 
 	it('returns an empty sitemap when no homepage exists', () => {
-		expect(render_sitemap([], 'https://example.com')).not.toContain('<url>');
+		expect(render_sitemap([], { origin: 'https://example.com', base: '' })).not.toContain('<url>');
 	});
 
 	it('lists reciprocal language alternatives on every localized URL', () => {
 		const alternates = language_alternates('/a&b', ['en', 'es']);
 		const xml = render_sitemap(
 			['/a&b', '/es/a&b'].map((path) => ({ path, lastmod: null, alternates })),
-			'https://example.com/'
+			{ origin: 'https://example.com/', base: '' }
 		);
 		expect(xml).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
 		expect(xml.match(/<url>/g)).toHaveLength(2);

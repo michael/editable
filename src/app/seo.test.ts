@@ -19,8 +19,13 @@ it('produces reciprocal language alternatives and the original-language fallback
 });
 
 it('normalizes the configured origin without retaining its path, query, or fragment', () => {
-	expect(absolute_page_url('/es/about', 'https://example.com/ignored?preview=1#fragment')).toBe(
-		'https://example.com/es/about'
+	expect(
+		absolute_page_url('/es/about', {
+			origin: 'https://example.com/ignored?preview=1#fragment',
+			base: ''
+		})
+	).toBe('https://example.com/es/about');
+	expect(absolute_page_url('/', { origin: 'https://example.com/', base: '' })).toBe(
+		'https://example.com/'
 	);
-	expect(absolute_page_url('/', 'https://example.com/')).toBe('https://example.com/');
 });

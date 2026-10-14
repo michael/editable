@@ -10,8 +10,7 @@ export const GET: RequestHandler = async () => {
 
 	const { get_sitemap_entries } = await import('#app/api.remote.js');
 	const entries = await get_sitemap_entries();
-	const { origin, base } = site;
-	const body = new TextEncoder().encode(render_sitemap(entries, origin, base));
+	const body = new TextEncoder().encode(render_sitemap(entries, site));
 	// Crawlers get a complete, sized response they may cache briefly.
 	return new Response(body, {
 		headers: {

@@ -6,9 +6,8 @@ import type { RequestHandler } from './$types';
 export const prerender = !!VERCEL;
 
 export const GET: RequestHandler = () => {
-	const { origin, base } = site;
 	const sitemap =
-		!VERCEL && origin ? `Sitemap: ${absolute_page_url('/sitemap.xml', origin, base)}\n` : '';
+		!VERCEL && site.origin ? `Sitemap: ${absolute_page_url('/sitemap.xml', site)}\n` : '';
 	return new Response(`User-agent: *\nDisallow:\n${sitemap}`, {
 		headers: { 'Content-Type': 'text/plain; charset=utf-8' }
 	});
