@@ -1,6 +1,5 @@
 import { default_site_document } from '#app/default_site.js';
 import { get_site, request_language } from '#app/server_site.js';
-import { with_site_base } from '#app/site_links.js';
 import { language_href } from '#app/languages.js';
 import { error, redirect } from '@sveltejs/kit';
 import { dev } from '$app/env';
@@ -17,7 +16,8 @@ export const load_page = async ({
 	params: { page_id?: string; language?: string };
 	url: URL;
 }) => {
-	const { base, languages } = get_site();
+	const site = get_site();
+	const { languages } = site;
 	if (params.language && !languages.slice(1).includes(params.language))
 		error(404, 'Page not found');
 	if (!params.language && languages.slice(1).includes(params.page_id ?? ''))
@@ -32,10 +32,8 @@ export const load_page = async ({
 			const shared_documents = await get_shared_site_documents(language);
 			const page_doc = convert_markdown(markdown_page.markdown, markdown_page);
 			document = compose_markdown_document(page_doc, shared_documents);
-			if (language && language !== languages[0]) {
-				const { translate_document_links } = await import('#app/document_links.js');
-				document = translate_document_links(document, language, url.origin, languages);
-			}
+			const { resolve_hrefs } = await import('#app/document_links.js');
+			document = resolve_hrefs(document, site, language !== languages[0] ? language : '');
 		} catch (err) {
 			// Log the detailed error (with filesystem paths) server-side only.
 			console.error(`Failed to render markdown page ${markdown_page.pathname}:`, err);
@@ -56,11 +54,8 @@ export const load_page = async ({
 		const result = await get_document(params.page_id);
 
 		if (result.redirect_to_slug) {
-			const path = `/${result.redirect_to_slug}${url.search}`;
-			throw redirect(
-				301,
-				with_site_base(languages.length ? language_href(path, language, languages) : path, base)
-			);
+			const { resolve_href } = await import('#app/document_links.js');
+			throw redirect(301, resolve_href(`/${result.redirect_to_slug}${url.search}`, site, language));
 		}
 
 		return {

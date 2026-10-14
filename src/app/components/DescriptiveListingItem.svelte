@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { site_href } from '#app/site_links.js';
 	import type { Nodes } from '#app/document_schema.js';
 	import type { DocumentPath } from 'svedit';
 	import { get_svedit_context } from '#app/svedit_context.js';
@@ -16,7 +15,7 @@
 <Node class="descriptive-listing-item group border-b border-(--stroke)" {path}>
 	<svelte:element
 		this={render_as_link ? 'a' : 'div'}
-		href={render_as_link ? site_href(node.href) : undefined}
+		href={render_as_link ? node.href : undefined}
 		target={render_as_link && node.target !== '_self' ? node.target : undefined}
 		class="group/listing-link block py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) sm:py-2 md:py-3"
 		use:reveal

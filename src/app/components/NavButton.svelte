@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { site_href } from '#app/site_links.js';
 	import type { Nodes } from '#app/document_schema.js';
 	import type { DocumentPath } from 'svedit';
 	import { get_svedit_context } from '#app/svedit_context.js';
@@ -15,7 +14,7 @@
 {#snippet primary()}
 	<svelte:element
 		this={render_as_link ? 'a' : 'div'}
-		href={render_as_link ? site_href(node.href) : undefined}
+		href={render_as_link ? node.href : undefined}
 		target={render_as_link && node.target !== '_self' ? node.target : undefined}
 		class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-3 py-1.5 text-center text-sm leading-5 font-medium wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {render_as_link
 			? 'cursor-pointer hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)]'
@@ -28,7 +27,7 @@
 {#snippet secondary()}
 	<svelte:element
 		this={render_as_link ? 'a' : 'div'}
-		href={render_as_link ? site_href(node.href) : undefined}
+		href={render_as_link ? node.href : undefined}
 		target={render_as_link && node.target !== '_self' ? node.target : undefined}
 		class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent px-3 py-1.5 text-center text-sm leading-5 font-medium wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {render_as_link
 			? 'cursor-pointer hover:bg-(--muted) active:bg-(--foreground)/10'

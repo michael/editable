@@ -1,32 +1,88 @@
 import { expect, it } from 'vitest';
-import { with_site_base, without_site_base } from './site_links.js';
+import type { Document } from 'svedit';
+import { normalize_href, normalize_hrefs, resolve_href, resolve_hrefs } from './document_links.js';
 import { absolute_page_url } from './seo.js';
 
-it('prefixes site-relative links with the base and leaves other links alone', () => {
-	const cases = [
-		['/', '/alice'],
-		['/about', '/alice/about'],
-		['/about?x=1#top', '/alice/about?x=1#top'],
-		['/?x=1', '/alice?x=1'],
-		['/#top', '/alice#top'],
-		['https://example.com/about', 'https://example.com/about'],
-		['//cdn.example.com/a.js', '//cdn.example.com/a.js'],
-		['mailto:hi@example.com', 'mailto:hi@example.com'],
-		['#top', '#top'],
-		['./relative', './relative']
+const site = { origin: 'https://example.com', base: '/alice', languages: ['en', 'de'] };
+
+it("serves links under the site base and page links in the reader's language", () => {
+	const cases: [string, string, string][] = [
+		['/', '', '/alice'],
+		['/about', '', '/alice/about'],
+		['/about?x=1#top', '', '/alice/about?x=1#top'],
+		['/?x=1', '', '/alice?x=1'],
+		['/about', 'de', '/alice/de/about'],
+		['/', 'de', '/alice/de'],
+		// A link naming a language keeps it.
+		['/de/about', 'fr', '/alice/de/about'],
+		// Not pages: the base only.
+		['/assets/a.webp', 'de', '/alice/assets/a.webp'],
+		['/new', 'de', '/alice/new'],
+		['/api/assets', 'de', '/alice/api/assets'],
+		['https://example.com/about', 'de', 'https://example.com/alice/de/about'],
+		['https://elsewhere.com/about', 'de', 'https://elsewhere.com/about'],
+		['//cdn.example.com/a.js', 'de', '//cdn.example.com/a.js'],
+		['mailto:hi@example.com', 'de', 'mailto:hi@example.com'],
+		['#top', 'de', '#top']
 	];
-	for (const [href, expected] of cases) expect(with_site_base(href, '/alice')).toBe(expected);
-	expect(with_site_base('/about', '')).toBe('/about');
+	for (const [href, language, expected] of cases) {
+		expect(resolve_href(href, site, language)).toBe(expected);
+		// Resolving a resolved link changes nothing.
+		expect(resolve_href(expected, site, language)).toBe(expected);
+	}
+	expect(resolve_href('/about', { ...site, base: '' }, '')).toBe('/about');
 });
 
-it('strips the base from pathnames that carry it', () => {
-	expect(without_site_base('/alice', '/alice')).toBe('/');
-	expect(without_site_base('/alice/de/about', '/alice')).toBe('/de/about');
+it('normalizes served links back to their stored form', () => {
+	expect(normalize_href('/alice', site, '')).toBe('/');
+	expect(normalize_href('/alice/de/about?x', site, 'de')).toBe('/about?x');
+	// A language other than the reader's stays explicit.
+	expect(normalize_href('/alice/de/about', site, '')).toBe('/de/about');
+	expect(normalize_href('/alice/assets/a.webp', site, 'de')).toBe('/assets/a.webp');
+	expect(normalize_href('https://example.com/alice/about', site, '')).toBe(
+		'https://example.com/about'
+	);
 	// A path that only starts with the same letters is not under the base.
-	expect(without_site_base('/alicia/about', '/alice')).toBe('/alicia/about');
+	expect(normalize_href('/alicia/about', site, '')).toBe('/alicia/about');
 	// Hosts that strip the base before Editable sees the request.
-	expect(without_site_base('/about', '/alice')).toBe('/about');
-	expect(without_site_base('/about', '')).toBe('/about');
+	expect(normalize_href('/about', site, '')).toBe('/about');
+	expect(normalize_href('https://elsewhere.com/alice/about', site, '')).toBe(
+		'https://elsewhere.com/alice/about'
+	);
+});
+
+it('resolves every link of a document on the way out and normalizes it on the way back', () => {
+	const link = (id: string, href: string) => [id, { id, type: 'link', href }];
+	const doc = {
+		document_id: 'p',
+		nodes: Object.fromEntries([
+			link('1', '/about'),
+			link('2', '/de/about?x=1#top'),
+			link('3', 'https://example.com/'),
+			link('4', 'https://other.example/about')
+		])
+	} as Document;
+	const hrefs = (document: Document) => Object.values(document.nodes).map((node) => node.href);
+
+	const served = resolve_hrefs(doc, site, '');
+	expect(hrefs(served)).toEqual([
+		'/alice/about',
+		'/alice/de/about?x=1#top',
+		'https://example.com/alice',
+		'https://other.example/about'
+	]);
+	expect(hrefs(resolve_hrefs(doc, site, 'de'))).toEqual([
+		'/alice/de/about',
+		'/alice/de/about?x=1#top',
+		'https://example.com/alice/de',
+		'https://other.example/about'
+	]);
+	expect(normalize_hrefs(served, doc, site, '')).toEqual(doc);
+
+	// A link added in the editor is stored without the base and the current language.
+	const edited = { document_id: 'p', nodes: Object.fromEntries([link('5', '/alice/de/team?x')]) };
+	const empty = { document_id: 'p', nodes: {} };
+	expect(normalize_hrefs(edited as Document, empty, site, 'de').nodes['5'].href).toBe('/team?x');
 });
 
 it('builds absolute URLs from the origin, the base, and the page path', () => {

@@ -1,7 +1,7 @@
 import { getRequestEvent } from '$app/server';
 import { LANGUAGES, ORIGIN, VERCEL } from '$app/env/private';
 import { language_path, parse_languages } from './languages.js';
-import { without_site_base } from './site_links.js';
+import { normalize_href } from './document_links.js';
 import type { SiteStorage } from './services.js';
 import type { AdminAuth } from './server_admin_auth.js';
 
@@ -41,7 +41,7 @@ export function get_site(): Site {
 
 /** The language of a request URL, read after the site base. */
 export function request_language(url: URL) {
-	const { base, languages } = get_site();
-	if (!languages.length) return '';
-	return language_path(without_site_base(url.pathname, base), languages).language;
+	const site = get_site();
+	if (!site.languages.length) return '';
+	return language_path(normalize_href(url.pathname, site, ''), site.languages).language;
 }

@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { Handle, ServerInit } from '@sveltejs/kit/hooks';
-import { get_site, request_language } from '#app/server_site.js';
-import { with_site_base, without_site_base } from '#app/site_links.js';
+import { get_site, request_language, type Site } from '#app/server_site.js';
+import { normalize_href, resolve_href } from '#app/document_links.js';
 import { ORIGIN, VERCEL } from '$app/env/private';
 import { dev } from '$app/env';
 
@@ -13,7 +13,7 @@ if (ORIGIN && !URL.parse(ORIGIN))
 	console.error(`Invalid ORIGIN, canonical host redirect disabled: ${ORIGIN}`);
 
 /** Redirect target when the request host is not the site's origin. */
-function get_canonical_redirect(url: URL, canonical_origin: URL, base: string): string | null {
+function get_canonical_redirect(url: URL, canonical_origin: URL, site: Site): string | null {
 	if (VERCEL || dev) return null;
 	if (internal_hostnames.has(url.hostname)) return null;
 	if (url.host === canonical_origin.host && url.protocol === canonical_origin.protocol) return null;
@@ -21,7 +21,7 @@ function get_canonical_redirect(url: URL, canonical_origin: URL, base: string): 
 	const target = new URL(url);
 	target.protocol = canonical_origin.protocol;
 	target.host = canonical_origin.host;
-	target.pathname = with_site_base(without_site_base(url.pathname, base), base);
+	target.pathname = resolve_href(url.pathname, site, '');
 	return target.href;
 }
 
@@ -44,7 +44,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const site = get_site();
 	const canonical_origin = URL.parse(site.origin);
 	if (canonical_origin && (event.request.method === 'GET' || event.request.method === 'HEAD')) {
-		const canonical_url = get_canonical_redirect(event.url, canonical_origin, site.base);
+		const canonical_url = get_canonical_redirect(event.url, canonical_origin, site);
 		if (canonical_url) redirect(301, canonical_url, { external: [canonical_origin.origin] });
 	}
 
@@ -59,7 +59,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		transformPageChunk: ({ html }) => html.replace('%lang%', language)
 	});
 	// The OAuth consent page must not be embeddable, so a framed click cannot approve an app.
-	if (without_site_base(event.url.pathname, site.base) === '/oauth/authorize')
+	if (normalize_href(event.url.pathname, site, '') === '/oauth/authorize')
 		response.headers.set('X-Frame-Options', 'DENY');
 	return response;
 };

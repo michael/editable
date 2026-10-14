@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { site_href } from '#app/site_links.js';
 	import type { Nodes } from '#app/document_schema.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { Node, NodeArrayProperty } from 'svedit';
@@ -24,7 +23,7 @@
 	<div class="flex h-full w-full items-center">
 		<svelte:element
 			this={render_as_link ? 'a' : 'div'}
-			href={render_as_link ? site_href(node.href) : undefined}
+			href={render_as_link ? node.href : undefined}
 			target={render_as_link && node.target !== '_self' ? node.target : undefined}
 			class="block w-full overflow-hidden outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
 			style:border-radius={border_radius ? 'var(--image-border-radius)' : undefined}

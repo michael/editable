@@ -1,14 +1,12 @@
-import {
-	restore_document_links,
-	translate_document_links,
-	translated_href
-} from './document_links.js';
+import { normalize_hrefs, resolve_hrefs, resolve_href } from './document_links.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Document } from 'svedit';
 import { document_structure, normalized_payload, property_payload } from './translations.js';
 import { replace_translation } from './test_helpers/translations.js';
 import { language_href, parse_languages } from './languages.js';
 import * as id_generator from './nanoid.js';
+
+const example_site = { origin: 'https://example.com', base: '', languages: ['en', 'de'] };
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -123,21 +121,15 @@ describe('experimental translation boundaries', () => {
 			href: '/about?ref=a%20b#contact',
 			target: '_self'
 		};
-		const rendered = translate_document_links(original, 'de', 'https://example.com', ['en', 'de']);
+		const rendered = resolve_hrefs(original, example_site, 'de');
 		expect(rendered.nodes.bold.href).toBe('/de/about?ref=a%20b#contact');
 		expect(original.nodes.bold.href).toBe('/about?ref=a%20b#contact');
-		expect(
-			restore_document_links(rendered, original, 'de', 'https://example.com', ['en', 'de'])
-		).toEqual(original);
-		expect(translated_href('/about?lang=en', 'de', 'https://example.com', ['en', 'de'])).toBe(
-			'/de/about?lang=en'
+		expect(normalize_hrefs(rendered, original, example_site, 'de')).toEqual(original);
+		expect(resolve_href('/about?lang=en', example_site, 'de')).toBe('/de/about?lang=en');
+		expect(resolve_href('https://elsewhere.com/about', example_site, 'de')).toBe(
+			'https://elsewhere.com/about'
 		);
-		expect(
-			translated_href('https://elsewhere.com/about', 'de', 'https://example.com', ['en', 'de'])
-		).toBe('https://elsewhere.com/about');
-		expect(translated_href('/assets/photo.webp', 'de', 'https://example.com', ['en', 'de'])).toBe(
-			'/assets/photo.webp'
-		);
+		expect(resolve_href('/assets/photo.webp', example_site, 'de')).toBe('/assets/photo.webp');
 	});
 
 	it('keeps empty translations and removes original marks even without replacements', () => {

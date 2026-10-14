@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { site_href } from '#app/site_links.js';
 	import type { Nodes } from '#app/document_schema.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { media_link_label } from '#app/media_link_label.js';
@@ -23,7 +22,7 @@
 {#snippet media_frame(border_radius = true)}
 	<svelte:element
 		this={render_as_link ? 'a' : 'div'}
-		href={render_as_link ? site_href(node.href) : undefined}
+		href={render_as_link ? node.href : undefined}
 		target={render_as_link && node.target !== '_self' ? node.target : undefined}
 		aria-label={render_as_link ? link_label : undefined}
 		class="block overflow-hidden outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"

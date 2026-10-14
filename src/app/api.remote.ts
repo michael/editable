@@ -1,8 +1,13 @@
 import type { TranslationMap } from './translations.js';
 import { translation_payloads } from '../lib/asset_references.js';
 import { get_site, request_language } from './server_site.js';
-import { without_site_base } from './site_links.js';
-import { translated_href, parse_internal_page_href } from './document_links.js';
+import {
+	normalize_href,
+	normalize_hrefs,
+	parse_internal_page_href,
+	resolve_href,
+	resolve_hrefs
+} from './document_links.js';
 import { language_path, language_href, is_reserved_language_slug } from './languages.js';
 import { getRequestEvent, query, command } from '$app/server';
 import {
@@ -92,6 +97,11 @@ const delete_page_input_schema = v.object({
 	document_id: v.string()
 });
 
+/** Documents reach the editor with their links resolved for the site, in the main language. */
+function resolve_site_links(document: DocumentData): DocumentData {
+	return resolve_hrefs(document, get_site(), '');
+}
+
 /**
  * Get a document from the database, stitching in shared documents (banner, nav, footer).
  */
@@ -103,7 +113,7 @@ export const get_document = query(v.string(), async (slug) => {
 	}
 
 	return {
-		document: get_combined_document(resolved.document_id),
+		document: resolve_site_links(get_combined_document(resolved.document_id)),
 		version: get_document_version(resolved.document_id),
 		slug: resolved.active_slug,
 		redirect_to_slug: resolved.is_active ? null : resolved.active_slug
@@ -128,7 +138,7 @@ export const get_page_document_for_duplicate = query(v.string(), async (slug) =>
 	}
 
 	return {
-		document: get_doc_from_db(document_id)
+		document: resolve_site_links(get_doc_from_db(document_id))
 	};
 });
 
@@ -143,7 +153,7 @@ export const get_home_document = query(v.void(), async () => {
 	}
 
 	return {
-		document: get_combined_document(home_page_id),
+		document: resolve_site_links(get_combined_document(home_page_id)),
 		version: get_document_version(home_page_id),
 		slug: get_active_slug_for_document_id(home_page_id),
 		redirect_to_slug: null
@@ -175,7 +185,7 @@ export const get_shared_documents = query(v.void(), async () => {
 		const shared_id = home_page_node?.[type];
 		if (typeof shared_id !== 'string')
 			throw new Error(`Home page ${type} document is not configured`);
-		return get_doc_from_db(shared_id);
+		return resolve_site_links(get_doc_from_db(shared_id));
 	});
 	return { banner_document, nav_document, footer_document };
 });
@@ -197,15 +207,16 @@ export const logout_admin = command(v.void(), async () => {
 export const get_page_browser_data = query(v.string(), async (href) => {
 	const event = getRequestEvent();
 	require_admin_session(event.locals);
-	const { base, languages } = get_site();
+	const site = get_site();
+	const { languages } = site;
 	const url = new URL(href);
-	const pathname = without_site_base(url.pathname, base);
+	const pathname = normalize_href(url.pathname, site, '');
 	const result = build_page_browser_data(language_path(pathname, languages).pathname);
 	const language = request_language(url);
 	if (language && language !== languages[0] && pathname !== '/new') {
 		const visit = (nodes: PageTreeNode[]) => {
 			for (const node of nodes) {
-				node.navigation_href = translated_href(node.page_href, language, url.origin, languages);
+				node.navigation_href = resolve_href(node.page_href, site, language);
 				visit(node.children);
 			}
 		};
@@ -320,7 +331,8 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
  * Return a lightweight preview for a simple internal page href like `/some-slug`.
  */
 export const get_internal_link_preview = query(v.string(), async (href) => {
-	const parsed = parse_internal_page_href(href, get_site().languages);
+	const site = get_site();
+	const parsed = parse_internal_page_href(normalize_href(href, site, ''), site.languages);
 	if (!parsed) {
 		return null;
 	}
@@ -478,28 +490,35 @@ export const save_document = command(save_document_input_schema, async (combined
 		error(409, `Document already exists: ${combined_doc.document_id}`);
 	}
 
+	// Links come back resolved for the site; stored links never include the base.
+	const baseline = get_optional_doc_from_db(combined_doc.document_id)
+		? get_combined_document(combined_doc.document_id)
+		: { document_id: combined_doc.document_id, nodes: {} };
+	const { nodes } = normalize_hrefs(
+		{ document_id: combined_doc.document_id, nodes: structuredClone(combined_doc.nodes) },
+		baseline,
+		get_site(),
+		''
+	);
+
 	let version: string;
 	try {
-		({ version } = await persist_document(
-			combined_doc.document_id,
-			structuredClone(combined_doc.nodes),
-			{
-				expected_version:
-					combined_doc.create || combined_doc.force ? undefined : combined_doc.expected_version,
-				on_write: (page_doc) => {
-					if (
-						!combined_doc.create ||
-						get_active_slug_for_document_id(combined_doc.document_id) ||
-						is_home_page_document_id(combined_doc.document_id)
-					)
-						return;
-					create_page_slug(
-						combined_doc.document_id,
-						extract_page_metadata(page_doc).title || 'Untitled page'
-					);
-				}
+		({ version } = await persist_document(combined_doc.document_id, nodes, {
+			expected_version:
+				combined_doc.create || combined_doc.force ? undefined : combined_doc.expected_version,
+			on_write: (page_doc) => {
+				if (
+					!combined_doc.create ||
+					get_active_slug_for_document_id(combined_doc.document_id) ||
+					is_home_page_document_id(combined_doc.document_id)
+				)
+					return;
+				create_page_slug(
+					combined_doc.document_id,
+					extract_page_metadata(page_doc).title || 'Untitled page'
+				);
 			}
-		));
+		}));
 	} catch (err) {
 		if (err instanceof InvalidDocumentError) error(400, err.message);
 		if (err instanceof VersionConflictError) {

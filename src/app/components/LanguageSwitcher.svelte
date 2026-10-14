@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { get_app_context } from '#app/app_context.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
-	import { site_language_href } from '#app/site_links.js';
+	import { site_href, site_relative_href } from '#app/site_links.js';
 
 	const app = get_app_context();
 	const svedit = get_svedit_context();
@@ -85,7 +85,11 @@
 	});
 
 	function language_name(language: string) {
-		return new Intl.DisplayNames([language], { type: 'language', languageDisplay: 'standard' }).of(language) ?? language;
+		return (
+			new Intl.DisplayNames([language], { type: 'language', languageDisplay: 'standard' }).of(
+				language
+			) ?? language
+		);
 	}
 
 	async function choose(event: MouseEvent, language: string) {
@@ -147,7 +151,10 @@
 					<a
 						href={disabled || app.language === language
 							? undefined
-							: site_language_href(page.url, language, app.languages)}
+							: site_href(
+									site_relative_href(`${page.url.pathname}${page.url.search}${page.url.hash}`),
+									language
+								)}
 						tabindex={disabled || app.language === language ? -1 : undefined}
 						hreflang={language}
 						lang={language}

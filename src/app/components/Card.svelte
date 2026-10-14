@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { site_href } from '#app/site_links.js';
 	import type { Snippet } from 'svelte';
 	import { reveal } from '#app/reveal.js';
 
@@ -23,7 +22,7 @@
 
 <svelte:element
 	this={render_as_link ? 'a' : 'div'}
-	href={render_as_link ? site_href(href) : undefined}
+	href={render_as_link ? href : undefined}
 	target={render_as_link && target !== '_self' ? target : undefined}
 	class="ew-card group/card block min-w-0 outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
 	use:reveal

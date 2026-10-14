@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { language_path } from '#app/languages.js';
 	import { is_media_selection } from '#app/media.js';
 	import { get_app_context } from '#app/app_context.js';
 	import { resolve } from '$app/paths';
-	import { site_href, site_pathname } from '#app/site_links.js';
+	import { site_href, site_relative_href } from '#app/site_links.js';
 	import { page } from '$app/state';
 	import { get_page_browser } from '#app/page_browser_context.svelte.js';
 	import { get_page_delete_dialog } from '#app/page_delete_dialog_context.svelte.js';
@@ -87,18 +86,15 @@
 	);
 
 	// Home is served from `/` and has no editable slug.
-	let is_home_page = $derived(
-		language_path(site_pathname(page.url), app.languages).pathname === '/'
-	);
+	let is_home_page = $derived(site_relative_href(page.url.pathname) === '/');
 
 	// The nav isn't sticky while editing, so the toolbar shows the language being edited.
 	let editing_language_name = $derived(
 		app.languages.length > 1
 			? (new Intl.DisplayNames([app.language], {
-									type: 'language',
-									languageDisplay: 'standard'
-								}).of(app.language) ??
-					app.language)
+					type: 'language',
+					languageDisplay: 'standard'
+				}).of(app.language) ?? app.language)
 			: null
 	);
 

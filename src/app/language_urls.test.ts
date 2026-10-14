@@ -2,9 +2,9 @@ import { expect, it } from 'vitest';
 import { language_href, language_path } from './languages.js';
 import {
 	parse_internal_page_href,
-	translated_href,
-	restore_document_links,
-	translate_document_links
+	resolve_href,
+	normalize_links,
+	resolve_links
 } from './document_links.js';
 import type { Document } from 'svedit';
 
@@ -47,24 +47,24 @@ it('projects internal links once, preserves explicit language/external/asset lin
 			links.map((href, index) => [String(index), { id: String(index), type: 'link', href }])
 		)
 	};
-	const translated = translate_document_links(doc, 'de', 'https://example.com', languages);
+	const translated = resolve_links(doc, 'de', 'https://example.com', languages);
 	expect(Object.values(translated.nodes).map((node) => node.href)).toEqual([
 		'/de',
 		'/de/about?ref=a%20b#contact',
 		'https://example.com/de/about',
 		...links.slice(3)
 	]);
-	expect(translate_document_links(translated, 'de', 'https://example.com', languages)).toEqual(
+	expect(resolve_links(translated, 'de', 'https://example.com', languages)).toEqual(
 		translated
 	);
-	expect(restore_document_links(translated, doc, 'de', 'https://example.com', languages)).toEqual(
+	expect(normalize_links(translated, doc, 'de', 'https://example.com', languages)).toEqual(
 		doc
 	);
 	translated.nodes['1'].href = '/de/another?ref=a%20b#contact';
 	expect(
-		restore_document_links(translated, doc, 'de', 'https://example.com', languages).nodes['1'].href
+		normalize_links(translated, doc, 'de', 'https://example.com', languages).nodes['1'].href
 	).toBe('/another?ref=a%20b#contact');
-	expect(translated_href('/de/about', 'fr', 'https://example.com', languages)).toBe('/de/about');
+	expect(resolve_href('/de/about', 'fr', 'https://example.com', languages)).toBe('/de/about');
 });
 
 it('resolves prefixed internal references while preserving URL suffixes for slug changes', () => {

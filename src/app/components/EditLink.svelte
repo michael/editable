@@ -7,8 +7,7 @@
 	import type { DocumentNode, DocumentPath, Transaction } from 'svedit';
 	import { serialize_path } from 'svedit';
 	import { get_page_browser } from '#app/page_browser_context.svelte.js';
-	import { language_path } from '#app/languages.js';
-	import { site_href, site_pathname } from '#app/site_links.js';
+	import { site_href, site_relative_href } from '#app/site_links.js';
 
 	const svedit = get_svedit_context();
 	const app = get_app_context();
@@ -146,10 +145,10 @@
 		}
 	}
 
-	// Internal links are stored without the site base and language prefix, so they
-	// follow the site's location and the reader's language.
+	// Internal links are stored as the document shows them: resolved for the
+	// site and the current language, which the save normalizes away.
 	function get_internal_href(url: URL) {
-		return `${language_path(site_pathname(url), app.languages).pathname}${url.search}${url.hash}`;
+		return `${site_href(site_relative_href(url.pathname))}${url.search}${url.hash}`;
 	}
 
 	// Shortens pasted URLs of this site, e.g. from Copy link to block, to internal links.
@@ -158,7 +157,8 @@
 		if (!URL.canParse(text)) return null;
 		const url = new URL(text);
 		const is_this_site =
-			url.origin === location.origin && site_href(site_pathname(url)) === url.pathname;
+			url.origin === location.origin &&
+			site_href(site_relative_href(url.pathname, ''), '') === url.pathname;
 		return is_this_site ? get_internal_href(url) : null;
 	}
 

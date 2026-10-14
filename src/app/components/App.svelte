@@ -4,7 +4,7 @@
 	import { DEMO_MODE } from '$app/env/public';
 	import { beforeNavigate, goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { site_href, site_language_href, site_pathname } from '#app/site_links.js';
+	import { site_href, site_relative_href } from '#app/site_links.js';
 	import { page } from '$app/state';
 	import { Svedit, KeyMapper, Command, define_keymap, get_char_length } from 'svedit';
 	import Toolbar from './Toolbar.svelte';
@@ -12,7 +12,6 @@
 	import SaveConflictDialog from './SaveConflictDialog.svelte';
 
 	import { paste_media, is_media_selection } from '#app/media.js';
-	import { language_path } from '#app/languages.js';
 	import { EXT_TO_MIME } from '#app/config.js';
 	import { create_session } from '#app/session.js';
 	import type { AppSession } from '#app/session.js';
@@ -108,7 +107,8 @@
 			return;
 		switching_language = true;
 		try {
-			await goto(site_language_href(page.url, next_language, languages), { reset: false });
+			const current = `${page.url.pathname}${page.url.search}${page.url.hash}`;
+			await goto(site_href(site_relative_href(current), next_language), { reset: false });
 		} finally {
 			switching_language = false;
 		}
@@ -708,7 +708,7 @@
 		}
 	}
 
-	let is_home_page = $derived(language_path(site_pathname(page.url), languages).pathname === '/');
+	let is_home_page = $derived(site_relative_href(page.url.pathname) === '/');
 	let duplicate_source = $derived(is_home_page ? '/' : slug);
 
 	class DuplicatePageCommand extends Command {

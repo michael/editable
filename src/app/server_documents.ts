@@ -9,7 +9,11 @@ import { collect_node_ids_in_order } from '#lib/document_graph.js';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { cleanup_translations } from './server_translations.js';
-import { assert_safe_hrefs, parse_internal_page_href } from './document_links.js';
+import {
+	RESERVED_ROUTE_SLUGS,
+	assert_safe_hrefs,
+	parse_internal_page_href
+} from './document_links.js';
 import { get_site } from './server_site.js';
 import { is_reserved_language_slug } from './languages.js';
 import { is_reserved_markdown_slug } from '#app/markdown/registry.js';
@@ -127,9 +131,6 @@ export function resolve_slug(
 		active_slug
 	};
 }
-
-/** Top-level paths served by Editable's own routes; pages cannot use them as slugs. */
-const RESERVED_ROUTE_SLUGS = new Set(['api', 'assets', 'design-system', 'mcp', 'new', 'oauth']);
 
 export function is_reserved_route_slug(slug: string) {
 	return RESERVED_ROUTE_SLUGS.has(slug);

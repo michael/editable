@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { site_href } from '#app/site_links.js';
 	import type { Nodes } from '#app/document_schema.js';
 	import type { DocumentPath } from 'svedit';
 	import { get_svedit_context } from '#app/svedit_context.js';
@@ -19,7 +18,7 @@
 {#snippet compact()}
 	<svelte:element
 		this={render_as_link ? 'a' : 'div'}
-		href={render_as_link ? site_href(node.href) : undefined}
+		href={render_as_link ? node.href : undefined}
 		target={render_as_link && node.target !== '_self' ? node.target : undefined}
 		class="group/gallery-link flex items-center gap-5 outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) sm:gap-7"
 		use:reveal

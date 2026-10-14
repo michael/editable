@@ -2,11 +2,7 @@ import { get_site } from '#app/server_site.js';
 import { is_media_property } from './media.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { ASSET_ID_REGEX } from './config.js';
-import {
-	assert_safe_hrefs,
-	restore_document_links,
-	translate_document_links
-} from './document_links.js';
+import { assert_safe_hrefs, normalize_hrefs, resolve_hrefs } from './document_links.js';
 import { createHash } from 'node:crypto';
 import { error } from '@sveltejs/kit';
 import { fill_document_defaults, validate_document, validate_node, type Document } from 'svedit';
@@ -70,15 +66,15 @@ function compose(records: Document[]): Document {
 }
 
 export function translated_document(document_id: string, requested?: string) {
-	const { origin, languages } = get_site();
+	const site = get_site();
+	const { languages } = site;
 	const language = select_language(languages, requested);
 	const records = load_records(document_id);
 	const rows = language && language !== languages[0] ? read_rows(records, language) : [];
-	const document = translate_document_links(
+	const document = resolve_hrefs(
 		overlay_document(compose(records), records, rows),
-		language !== languages[0] ? language : '',
-		origin,
-		languages
+		site,
+		language !== languages[0] ? language : ''
 	);
 	return { document, language, languages, translation_revision: revision(records, rows) };
 }
@@ -183,18 +179,17 @@ function write_map(document_id: string, language: string, map: TranslationMap, p
 }
 
 export function translate_shared_document(source: Document, requested: string) {
-	const { origin, languages } = get_site();
-	const language = select_language(languages, requested);
-	if (!language || language === languages[0]) return source;
-	return translate_document_links(
+	const site = get_site();
+	const language = select_language(site.languages, requested);
+	if (!language || language === site.languages[0]) return source;
+	return resolve_hrefs(
 		overlay_document(
 			fill_document_defaults(source, document_schema),
 			[source],
 			read_rows([source], language)
 		),
-		language,
-		origin,
-		languages
+		site,
+		language
 	);
 }
 
@@ -204,7 +199,8 @@ export function save_translated_document(input: {
 	language: string;
 	translation_revision: string;
 }) {
-	const { origin, languages } = get_site();
+	const site = get_site();
+	const { languages } = site;
 	if (!languages.includes(input.language) || input.language === languages[0])
 		error(400, 'Translation language is not enabled');
 	return with_transaction(() => {
@@ -216,15 +212,14 @@ export function save_translated_document(input: {
 				'This page or its translations changed. Keep a copy of your edits and reload before saving.'
 			);
 		const original = compose(records);
-		const edited = restore_document_links(
+		const edited = normalize_hrefs(
 			fill_document_defaults(
 				{ document_id: input.document_id, nodes: input.nodes },
 				document_schema
 			),
 			overlay_document(original, records, rows),
-			input.language,
-			origin,
-			languages
+			site,
+			input.language
 		);
 		try {
 			validate_document(edited, document_schema);

@@ -1,5 +1,5 @@
 import { language_href } from './languages.js';
-import { with_site_base } from './site_links.js';
+import { resolve_href } from './document_links.js';
 
 export type LanguageAlternate = { language: string; path: string };
 
@@ -21,7 +21,7 @@ export function language_alternates(pathname: string, languages: string[]): Lang
  */
 export function absolute_page_url(pathname: string, origin: string, base = '') {
 	const url = new URL(origin);
-	url.pathname = with_site_base(pathname, base);
+	url.pathname = resolve_href(pathname, { origin, base, languages: [] }, '');
 	url.search = '';
 	url.hash = '';
 	return url.href;
