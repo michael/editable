@@ -43,6 +43,16 @@ export const OPTIMIZED_VIDEO_REGEX = /[._-]optimized\.(?:mp4|webm)$/i;
 /** URL prefix for serving assets */
 export const ASSET_BASE = '/assets';
 
+/** Top-level paths served by Editable's own routes; never page slugs. */
+export const RESERVED_ROUTE_SLUGS = new Set([
+	'api',
+	'assets',
+	'design-system',
+	'mcp',
+	'new',
+	'oauth'
+]);
+
 /** Assets are content-addressed: {sha256}.{ext}. Everything else is rejected. */
 export const ASSET_ID_REGEX = /^[a-f0-9]{64}\.[a-z0-9]+$/;
 

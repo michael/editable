@@ -9,11 +9,8 @@ import { collect_node_ids_in_order } from '#lib/document_graph.js';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { cleanup_translations } from './server_translations.js';
-import {
-	RESERVED_ROUTE_SLUGS,
-	assert_safe_hrefs,
-	parse_internal_page_href
-} from './document_links.js';
+import { assert_safe_hrefs, parse_internal_page_href } from './document_links.js';
+import { RESERVED_ROUTE_SLUGS } from './config.js';
 import { site } from './server_site.js';
 import { is_reserved_language_slug } from './languages.js';
 import { is_reserved_markdown_slug } from '#app/markdown/registry.js';

@@ -1,3 +1,4 @@
+import { RESERVED_ROUTE_SLUGS } from './config.js';
 import { language_path } from './languages.js';
 import type { Document } from 'svedit';
 
@@ -19,16 +20,6 @@ type Href = string | Pick<URL, 'pathname' | 'search' | 'hash'>;
 
 const href_of = (href: Href) =>
 	typeof href === 'string' ? href : `${href.pathname}${href.search}${href.hash}`;
-
-/** Top-level paths served by Editable's own routes; never page slugs. */
-export const RESERVED_ROUTE_SLUGS = new Set([
-	'api',
-	'assets',
-	'design-system',
-	'mcp',
-	'new',
-	'oauth'
-]);
 
 /** A link to this site, root-relative or absolute on its origin, split for rebuilding. */
 function own_link(href: string, origin: string): { url: URL; prefix: string } | null {
