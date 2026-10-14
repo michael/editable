@@ -32,7 +32,7 @@ export const load_page = async ({
 			const page_doc = convert_markdown(markdown_page.markdown, markdown_page);
 			document = compose_markdown_document(page_doc, shared_documents);
 			const { resolve_hrefs } = await import('#app/document_links.js');
-			document = resolve_hrefs(document, site, language !== languages[0] ? language : '');
+			document = resolve_hrefs(document, site, language);
 		} catch (err) {
 			// Log the detailed error (with filesystem paths) server-side only.
 			console.error(`Failed to render markdown page ${markdown_page.pathname}:`, err);

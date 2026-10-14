@@ -1,11 +1,10 @@
 import type { TranslationMap } from './translations.js';
 import { translation_payloads } from '../lib/asset_references.js';
-import { site, request_language } from './server_site.js';
+import { site } from './server_site.js';
 import {
 	normalize_href,
 	normalize_hrefs,
 	parse_internal_page_href,
-	resolve_href,
 	resolve_hrefs
 } from './document_links.js';
 import { language_path, language_href, is_reserved_language_slug } from './languages.js';
@@ -44,7 +43,6 @@ import {
 } from '#app/server_documents.js';
 
 import { build_page_browser_data } from '#app/page_browser_data.js';
-import type { PageTreeNode } from '#app/page_browser_data.js';
 export type { PageSummary, PageTreeNode } from '#app/page_browser_data.js';
 import type { SitemapEntry } from '#lib/server/sitemap.js';
 import { latest_modified } from '#lib/server/sitemap.js';
@@ -207,21 +205,8 @@ export const logout_admin = command(v.void(), async () => {
 export const get_page_browser_data = query(v.string(), async (href) => {
 	const event = getRequestEvent();
 	require_admin_session(event.locals);
-	const { languages } = site;
-	const url = new URL(href);
-	const pathname = normalize_href(url.pathname, site);
-	const result = build_page_browser_data(language_path(pathname, languages).pathname);
-	const language = request_language(url);
-	if (language && language !== languages[0] && pathname !== '/new') {
-		const visit = (nodes: PageTreeNode[]) => {
-			for (const node of nodes) {
-				node.navigation_href = resolve_href(node.page_href, site, language);
-				visit(node.children);
-			}
-		};
-		visit(result.page_forest);
-	}
-	return result;
+	const pathname = normalize_href(new URL(href).pathname, site);
+	return build_page_browser_data(language_path(pathname, site.languages).pathname);
 });
 
 /** Return public URLs and saved timestamps for pages reachable from Home. */
@@ -460,7 +445,8 @@ function assign_active_slug(
 export const get_translated_document = query(
 	v.object({ document_id: v.string(), language: v.string() }),
 	async (input) => {
-		return translated_document(input.document_id, input.language);
+		const result = translated_document(input.document_id, input.language);
+		return { ...result, document: resolve_hrefs(result.document, site, result.language) };
 	}
 );
 

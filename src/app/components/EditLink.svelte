@@ -155,7 +155,7 @@
 		const url = new URL(text);
 		const is_this_site =
 			url.origin === location.origin &&
-			(!site.base || normalize_href(url, site, '') !== url.pathname);
+			(!site.base || normalize_href(url.pathname, site, '') !== url.pathname);
 		return is_this_site ? resolve_href(url, site) : null;
 	}
 

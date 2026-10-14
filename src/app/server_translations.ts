@@ -70,11 +70,7 @@ export function translated_document(document_id: string, requested?: string) {
 	const language = select_language(languages, requested);
 	const records = load_records(document_id);
 	const rows = language && language !== languages[0] ? read_rows(records, language) : [];
-	const document = resolve_hrefs(
-		overlay_document(compose(records), records, rows),
-		site,
-		language !== languages[0] ? language : ''
-	);
+	const document = overlay_document(compose(records), records, rows);
 	return { document, language, languages, translation_revision: revision(records, rows) };
 }
 

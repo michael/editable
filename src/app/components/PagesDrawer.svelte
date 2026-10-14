@@ -453,11 +453,7 @@ Updated: ${updated_at_label}`;
 
 	async function open_in_new_tab() {
 		if (!menu_item?.page_href) return;
-		window.open(
-			get_resolved_page_href(menu_item.navigation_href ?? menu_item.page_href),
-			'_blank',
-			'noopener,noreferrer'
-		);
+		window.open(get_resolved_page_href(menu_item.page_href), '_blank', 'noopener,noreferrer');
 		close_menu();
 	}
 
@@ -730,7 +726,7 @@ Updated: ${updated_at_label}`;
 									?.document_id === node.document_id}
 								data-page-browser-row={node.document_id}
 								title={get_page_title_tooltip(node)}
-								href={get_resolved_page_href(node.navigation_href ?? node.page_href)}
+								href={get_resolved_page_href(node.page_href)}
 								onclick={(event) => handle_page_click(event, node.document_id)}
 							>
 								<div class="page-illustration tree-illustration" aria-hidden="true">

@@ -7,7 +7,7 @@ import type { Document } from 'svedit';
  * /alice/de/about. resolve_href and normalize_href convert one link each
  * way. Every root-relative link gets the base, so asset URLs and Editable's
  * own routes resolve too; only page links get a language, and a link that
- * names a language keeps it. The language is '' for the main language.
+ * names a language keeps it. The main language is '' or its own code.
  *
  * Both sides pass their `site`: the server's names the request's site and the
  * language to serve; the browser's carries the page's language too, so links it
@@ -72,8 +72,9 @@ export function resolve_href(
 	const path = strip_base(link.url.pathname, site.base);
 	const page = language_path(path, site.languages).pathname;
 	const explicit = page !== path;
+	const translation = language !== site.languages[0] ? language : '';
 	const localized =
-		language && !explicit && is_page(page) ? `/${language}${page === '/' ? '' : page}` : path;
+		translation && !explicit && is_page(page) ? `/${translation}${page === '/' ? '' : page}` : path;
 	const resolved = add_base(localized, site.base);
 	return resolved === link.url.pathname ? href_of(href) : rebuild(link, resolved);
 }
@@ -93,24 +94,32 @@ export function normalize_href(
 	return normalized === link.url.pathname ? href_of(href) : rebuild(link, normalized);
 }
 
-/** resolve_href on every link of a document, on a copy. */
+/** The document with the links a function changes replaced, copying only what changes. */
+function map_hrefs(source: Document, map: (href: string, id: string) => string): Document {
+	let document = source;
+	for (const [id, node] of Object.entries(source.nodes)) {
+		if (typeof node.href !== 'string') continue;
+		const href = map(node.href, id);
+		if (href === node.href) continue;
+		if (document === source) document = { ...source, nodes: { ...source.nodes } };
+		document.nodes[id] = { ...node, href };
+	}
+	return document;
+}
+
+/** resolve_href on every link of a document. */
 export function resolve_hrefs(
 	source: Document,
 	site: SiteLinks,
 	language: string = site.language ?? ''
 ): Document {
-	if (!language && !site.base) return source;
-	const document = structuredClone(source);
-	for (const node of Object.values(document.nodes)) {
-		if (typeof node.href === 'string') node.href = resolve_href(node.href, site, language);
-	}
-	return document;
+	return map_hrefs(source, (href) => resolve_href(href, site, language));
 }
 
 /**
- * normalize_href on every link of a document, on a copy. A link that still
- * resolves to what was stored before stays exactly as it was stored, so a
- * link naming a language keeps naming it.
+ * normalize_href on every link of a document. A link that still resolves to
+ * what was stored before stays exactly as it was stored, so a link naming a
+ * language keeps naming it.
  */
 export function normalize_hrefs(
 	source: Document,
@@ -118,16 +127,12 @@ export function normalize_hrefs(
 	site: SiteLinks,
 	language: string = site.language ?? ''
 ): Document {
-	const document = structuredClone(source);
-	for (const node of Object.values(document.nodes)) {
-		if (typeof node.href !== 'string') continue;
-		const original_href = baseline.nodes[node.id]?.href;
-		node.href =
-			typeof original_href === 'string' && node.href === resolve_href(original_href, site, language)
-				? original_href
-				: normalize_href(node.href, site, language);
-	}
-	return document;
+	return map_hrefs(source, (href, id) => {
+		const original_href = baseline.nodes[id]?.href;
+		return typeof original_href === 'string' && href === resolve_href(original_href, site, language)
+			? original_href
+			: normalize_href(href, site, language);
+	});
 }
 
 const SAFE_HREF_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:', 'sms:']);

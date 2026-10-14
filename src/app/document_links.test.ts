@@ -31,6 +31,20 @@ it("serves links under the site base and page links in the reader's language", (
 		expect(resolve_href(expected, site, language)).toBe(expected);
 	}
 	expect(resolve_href('/about', { ...site, base: '' }, '')).toBe('/about');
+	// The main language by its code means no prefix either.
+	expect(resolve_href('/about', site, 'en')).toBe('/alice/about');
+	expect(resolve_href('/', site, 'en')).toBe('/alice');
+});
+
+it("takes the page's language off first when the site carries one, as the browser's does", () => {
+	const page = { ...site, language: 'de' };
+	expect(resolve_href('/alice/de/about?x', page)).toBe('/alice/de/about?x');
+	expect(resolve_href('/alice/de/about', page, 'en')).toBe('/alice/about');
+	expect(resolve_href('/alice/de/about', page, 'fr')).toBe('/alice/fr/about');
+	expect(resolve_href('/assets/a.webp', page)).toBe('/alice/assets/a.webp');
+	expect(normalize_href('/alice/de/about', page)).toBe('/about');
+	expect(normalize_href('/alice/de/about', page, '')).toBe('/de/about');
+	expect(normalize_href('/alice/about', { ...site, language: 'en' })).toBe('/about');
 });
 
 it('normalizes served links back to their stored form', () => {
@@ -78,6 +92,10 @@ it('resolves every link of a document on the way out and normalizes it on the wa
 		'https://other.example/about'
 	]);
 	expect(normalize_hrefs(served, doc, site, '')).toEqual(doc);
+	// Nothing to change, nothing copied.
+	const root = { ...site, base: '' };
+	expect(resolve_hrefs(doc, root)).toBe(doc);
+	expect(normalize_hrefs(doc, doc, root)).toBe(doc);
 
 	// A link added in the editor is stored without the base and the current language.
 	const edited = { document_id: 'p', nodes: Object.fromEntries([link('5', '/alice/de/team?x')]) };

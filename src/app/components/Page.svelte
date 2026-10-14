@@ -29,11 +29,10 @@
 			? page_image.mime_type === 'image/svg+xml'
 			: page_image?.src?.toLowerCase().endsWith('.svg')
 	);
-	let site_base = $derived(page.data.site_base ?? '');
 	let canonical_path = $derived(app.canonical_path ?? (app.slug ? `/${app.slug}` : '/'));
 	let canonical_url = $derived(
 		app.origin && !app.is_new && page.status < 400
-			? absolute_page_url(canonical_path, app.origin, site_base)
+			? absolute_page_url(canonical_path, app.origin, site.base)
 			: null
 	);
 	let alternates = $derived(
@@ -130,7 +129,7 @@
 			<link
 				rel="alternate"
 				hreflang={alternate.language}
-				href={absolute_page_url(alternate.path, app.origin!, site_base)}
+				href={absolute_page_url(alternate.path, app.origin!, site.base)}
 			/>
 		{/each}
 	{/if}

@@ -37,7 +37,6 @@ export type PageSummary = {
 };
 
 export type PageTreeNode = {
-	navigation_href?: string;
 	document_id: string;
 	title: string;
 	description: string | null;
