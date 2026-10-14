@@ -83,6 +83,10 @@
 			<p role="alert" class="m-0 text-sm text-[color-mix(in_oklch,red_65%,var(--foreground))]">
 				{form.message}
 			</p>
+		{:else if taken}
+			<p class="m-0 text-sm leading-6 text-(--muted-foreground)">
+				This site exists. If it is yours, log in with its password.
+			</p>
 		{/if}
 		<button
 			type="submit"
