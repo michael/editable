@@ -25,10 +25,11 @@ import { is_site_name } from './site_names.js';
 const SESSION_SECONDS = 14 * 24 * 60 * 60;
 const now = () => Math.floor(Date.now() / 1000);
 
-const root = new URL(ORIGIN);
+// Read lazily: the build analyses this module without an ORIGIN.
+const root = () => new URL(ORIGIN);
 
 /** The public origin of a hosted site. */
-export const site_origin = (name: string) => `${root.protocol}//${name}.${root.host}`;
+export const site_origin = (name: string) => `${root().protocol}//${name}.${root().host}`;
 
 let registry: DatabaseSync | undefined;
 
@@ -97,15 +98,15 @@ export function create_site(name: string, password: string): string | null {
 // and every site, so registering at the root lands on the new site logged in.
 // Logging in elsewhere replaces it.
 const SESSION_COOKIE = 'ew_site_session';
-const cookie_options = {
+const cookie_options = () => ({
 	path: '/',
 	httpOnly: true,
 	sameSite: 'lax' as const,
 	secure: NODE_ENV === 'production',
 	// Browsers only share cookies across subdomains of a registrable domain, so
 	// a local host such as localhost gets a host-only cookie.
-	...(root.hostname.includes('.') && { domain: root.hostname })
-};
+	...(root().hostname.includes('.') && { domain: root().hostname })
+});
 
 function current_session(cookies: Cookies): { name: string; session_id: string } | null {
 	const [name, session_id] = cookies.get(SESSION_COOKIE)?.split('.') ?? [];
@@ -119,7 +120,7 @@ export function start_session(name: string, cookies: Cookies) {
 		.db.prepare('INSERT INTO sessions (session_id, expires) VALUES (?, ?)')
 		.run(session_id, now() + SESSION_SECONDS);
 	cookies.set(SESSION_COOKIE, `${name}.${session_id}`, {
-		...cookie_options,
+		...cookie_options(),
 		maxAge: SESSION_SECONDS
 	});
 }
@@ -130,7 +131,7 @@ function end_session(cookies: Cookies) {
 		open_storage(session.name)
 			.db.prepare('DELETE FROM sessions WHERE session_id = ?')
 			.run(session.session_id);
-	cookies.delete(SESSION_COOKIE, cookie_options);
+	cookies.delete(SESSION_COOKIE, cookie_options());
 }
 
 /** Start a session for the site when the password is right. */
@@ -168,7 +169,7 @@ function site_auth(name: string): AdminAuth {
 
 /** The hosted site a request's hostname names, or null for the deployment's own site. */
 function site_name_of({ url }: RequestEvent): string | null {
-	const suffix = `.${root.host}`;
+	const suffix = `.${root().host}`;
 	return url.host.endsWith(suffix) ? url.host.slice(0, -suffix.length) : null;
 }
 
