@@ -46,7 +46,7 @@
 					name="name"
 					bind:value={name}
 					placeholder="you"
-					autocomplete="username"
+					autocomplete="off"
 					autocapitalize="off"
 					spellcheck="false"
 					required
@@ -79,6 +79,12 @@
 				class="h-9 min-w-0 appearance-none rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-4 text-base leading-5 text-(--foreground) transition-[border-color] duration-150 outline-none placeholder:text-(--muted-foreground) focus:ring-0 focus:outline-none focus-visible:border-(--editing) sm:h-11.5"
 			/>
 		</div>
+		<button
+			type="submit"
+			class="inline-flex h-9 shrink-0 items-center justify-center self-center rounded-(--button-border-radius) border border-transparent bg-(--editing) px-5 text-sm leading-5 whitespace-nowrap text-(--editing-foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)] disabled:cursor-default disabled:opacity-40 sm:h-11.5"
+		>
+			{taken ? 'Log in' : 'Create site'}
+		</button>
 		{#if form?.message}
 			<p role="alert" class="m-0 text-sm text-[color-mix(in_oklch,red_65%,var(--foreground))]">
 				{form.message}
@@ -88,11 +94,5 @@
 				This site exists. If it is yours, log in with its password.
 			</p>
 		{/if}
-		<button
-			type="submit"
-			class="inline-flex h-9 shrink-0 items-center justify-center self-center rounded-(--button-border-radius) border border-transparent bg-(--editing) px-5 text-sm leading-5 whitespace-nowrap text-(--editing-foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)] disabled:cursor-default disabled:opacity-40 sm:h-11.5"
-		>
-			{taken ? 'Log in' : 'Create site'}
-		</button>
 	</form>
 </main>
