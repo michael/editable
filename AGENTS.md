@@ -20,7 +20,7 @@ Editable is minimalistic by design: less, but better.
 - In home-route server files, import backend-only code lazily inside the `has_backend` guard so static deployments do not evaluate database code at module load time.
 - Files using Svelte runes (`$state`, `$derived`, `$effect`, etc.) must use the `.svelte.js` or `.svelte.ts` extension.
 - Use sentence case for documentation headings and comments; capitalize `Svedit` as a proper noun.
-- Read the site's origin, base path, and languages through `get_site()` from `#app/server_site.js`, never from `ORIGIN` or `LANGUAGES` directly: a host serving several sites sets them per request. Documents reach the browser with internal links already under the base, so components render `node.href` as is; build asset URLs and navigation targets with `site_href()` from `#app/site_links.js`, and absolute URLs with `absolute_page_url(path, origin, base)`. Stored links never include the base.
+- Read the site's origin, base path, and languages through `site` from `#app/server_site.js` on the server and `#app/client_site.js` in the browser, never from `ORIGIN` or `LANGUAGES` directly: a host serving several sites sets them per request. Documents reach the browser with internal links already under the base, so components render `node.href` as is. Links the browser makes up itself, such as asset URLs and navigation targets, go through `resolve_href(href, site)` from `#app/document_links.js`; absolute URLs use `absolute_page_url(path, origin, base)`. Stored links never include the base.
 - Use `db`, `with_transaction`, and the asset functions from `#app/services.js` only inside functions: they go to the current request's site storage. Never prepare statements or capture storage at module level.
 
 ## Code style

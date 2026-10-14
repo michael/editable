@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import { VERCEL } from '$app/env/private';
-import { get_site } from '#app/server_site.js';
+import { site } from '#app/server_site.js';
 import { resolve_href } from '#app/document_links.js';
 import type { PageServerLoad } from './$types';
 
@@ -14,7 +14,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	}
 
 	if (!locals.is_admin) {
-		throw redirect(303, resolve_href('/', get_site(), ''));
+		throw redirect(303, resolve_href('/', site));
 	}
 
 	const api_module = await import('#app/api.remote.js');

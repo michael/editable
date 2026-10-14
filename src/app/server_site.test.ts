@@ -12,16 +12,16 @@ it('uses the site a host sets for the request, and the deployment’s own otherw
 	const hosted = { origin: 'https://host.example', base: '/alice', languages: ['en', 'fr'] };
 	let locals: { site?: typeof hosted } = { site: hosted };
 	vi.doMock('$app/server', () => ({ getRequestEvent: () => ({ locals }) }));
-	const { default_site, get_site, request_language } = await import('./server_site.js');
+	const { default_site, site, request_language } = await import('./server_site.js');
 
-	expect(get_site()).toBe(hosted);
+	expect({ ...site }).toEqual(hosted);
 	// The language is read after the base.
 	expect(request_language(new URL('https://host.example/alice/fr/about'))).toBe('fr');
 	expect(request_language(new URL('https://host.example/alice'))).toBe('en');
 
 	locals = {};
-	expect(get_site()).toEqual({ origin: 'https://example.com', base: '', languages: ['en', 'de'] });
-	expect(get_site()).toBe(default_site);
+	expect({ ...site }).toEqual({ origin: 'https://example.com', base: '', languages: ['en', 'de'] });
+	expect({ ...site }).toEqual(default_site);
 });
 
 it.each([

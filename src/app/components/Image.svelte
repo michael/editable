@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ASSET_BASE, VARIANT_WIDTHS } from '#app/config.js';
-	import { site_href } from '#app/site_links.js';
+	import { site } from '#app/client_site.js';
+	import { resolve_href } from '#app/document_links.js';
 
 	import type { PreviewMediaNode } from '#app/page_metadata.js';
 
@@ -9,7 +10,7 @@
 	// Determine if src is a blob URL (unsaved), a saved asset id, or empty
 	let is_blob = $derived(node.src?.startsWith('blob:'));
 	let is_saved = $derived(node.src && !is_blob);
-	let assets = $derived(site_href(ASSET_BASE));
+	let assets = $derived(resolve_href(ASSET_BASE, site));
 
 	// Resolve the display URL
 	let display_src = $derived(is_blob ? node.src : is_saved ? `${assets}/${node.src}` : '');

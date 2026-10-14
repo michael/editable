@@ -3,7 +3,8 @@
 	import { get_app_context } from '#app/app_context.js';
 	import { page } from '$app/state';
 	import { absolute_page_url, language_alternates } from '#app/seo.js';
-	import { site_href } from '#app/site_links.js';
+	import { site } from '#app/client_site.js';
+	import { resolve_href } from '#app/document_links.js';
 	import type { DocumentPath } from 'svedit';
 	import type { Nodes } from '#app/document_schema.js';
 	import { TextProperty, Node, NodeArrayProperty } from 'svedit';
@@ -40,7 +41,7 @@
 	);
 	let social_image = $derived(get_social_image(head_metadata.preview_media_node));
 	let social_image_url = $derived(
-		social_image ? `${app.origin || ''}${site_href(social_image.url)}` : null
+		social_image ? `${app.origin || ''}${resolve_href(social_image.url, site)}` : null
 	);
 	let toc_source = $derived.by(() => {
 		const body_node_ids = svedit.session.get([...path, 'body'])?.nodes || [];

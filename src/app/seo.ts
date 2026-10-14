@@ -21,7 +21,7 @@ export function language_alternates(pathname: string, languages: string[]): Lang
  */
 export function absolute_page_url(pathname: string, origin: string, base = '') {
 	const url = new URL(origin);
-	url.pathname = resolve_href(pathname, { origin, base, languages: [] }, '');
+	url.pathname = resolve_href(pathname, { origin, base, languages: [] });
 	url.search = '';
 	url.hash = '';
 	return url.href;

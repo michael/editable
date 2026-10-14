@@ -31,7 +31,7 @@ export const default_site: Site = {
 };
 
 /** The current request's site; outside a request, such as at startup, the deployment's own. */
-export function get_site(): Site {
+function current_site(): Site {
 	try {
 		return getRequestEvent().locals.site ?? default_site;
 	} catch {
@@ -39,9 +39,27 @@ export function get_site(): Site {
 	}
 }
 
+/** The site of the request being handled, read on every access. */
+export const site: Site = {
+	get origin() {
+		return current_site().origin;
+	},
+	get base() {
+		return current_site().base;
+	},
+	get languages() {
+		return current_site().languages;
+	},
+	get storage() {
+		return current_site().storage;
+	},
+	get auth() {
+		return current_site().auth;
+	}
+};
+
 /** The language of a request URL, read after the site base. */
 export function request_language(url: URL) {
-	const site = get_site();
 	if (!site.languages.length) return '';
-	return language_path(normalize_href(url.pathname, site, ''), site.languages).language;
+	return language_path(normalize_href(url.pathname, site), site.languages).language;
 }

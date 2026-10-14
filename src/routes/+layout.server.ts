@@ -1,4 +1,4 @@
-import { get_site, request_language } from '#app/server_site.js';
+import { site, request_language } from '#app/server_site.js';
 import { VERCEL } from '$app/env/private';
 import {
 	default_banner_document,
@@ -41,7 +41,6 @@ function create_not_found_document(shared_documents): Document {
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const has_backend = !VERCEL;
-	const site = get_site();
 	const language = request_language(url);
 
 	let site_metadata;

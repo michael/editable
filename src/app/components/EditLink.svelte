@@ -7,7 +7,8 @@
 	import type { DocumentNode, DocumentPath, Transaction } from 'svedit';
 	import { serialize_path } from 'svedit';
 	import { get_page_browser } from '#app/page_browser_context.svelte.js';
-	import { site_href, site_relative_href } from '#app/site_links.js';
+	import { site } from '#app/client_site.js';
+	import { resolve_href, normalize_href } from '#app/document_links.js';
 
 	const svedit = get_svedit_context();
 	const app = get_app_context();
@@ -145,21 +146,17 @@
 		}
 	}
 
-	// Internal links are stored as the document shows them: resolved for the
-	// site and the current language, which the save normalizes away.
-	function get_internal_href(url: URL) {
-		return `${site_href(site_relative_href(url.pathname))}${url.search}${url.hash}`;
-	}
-
-	// Shortens pasted URLs of this site, e.g. from Copy link to block, to internal links.
-	// Other sites on the same host lie outside the site base and stay absolute.
+	// Shortens pasted URLs of this site, e.g. from Copy link to block, to internal
+	// links as the document shows them, resolved for the site and the current
+	// language, which the save normalizes away. Other sites on the same host lie
+	// outside the site base and stay absolute.
 	function get_same_site_href(text: string) {
 		if (!URL.canParse(text)) return null;
 		const url = new URL(text);
 		const is_this_site =
 			url.origin === location.origin &&
-			site_href(site_relative_href(url.pathname, ''), '') === url.pathname;
-		return is_this_site ? get_internal_href(url) : null;
+			(!site.base || normalize_href(url, site, '') !== url.pathname);
+		return is_this_site ? resolve_href(url, site) : null;
 	}
 
 	function handle_paste(event: ClipboardEvent) {

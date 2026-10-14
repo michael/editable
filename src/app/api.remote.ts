@@ -1,6 +1,6 @@
 import type { TranslationMap } from './translations.js';
 import { translation_payloads } from '../lib/asset_references.js';
-import { get_site, request_language } from './server_site.js';
+import { site, request_language } from './server_site.js';
 import {
 	normalize_href,
 	normalize_hrefs,
@@ -99,7 +99,7 @@ const delete_page_input_schema = v.object({
 
 /** Documents reach the editor with their links resolved for the site, in the main language. */
 function resolve_site_links(document: DocumentData): DocumentData {
-	return resolve_hrefs(document, get_site(), '');
+	return resolve_hrefs(document, site);
 }
 
 /**
@@ -207,10 +207,9 @@ export const logout_admin = command(v.void(), async () => {
 export const get_page_browser_data = query(v.string(), async (href) => {
 	const event = getRequestEvent();
 	require_admin_session(event.locals);
-	const site = get_site();
 	const { languages } = site;
 	const url = new URL(href);
-	const pathname = normalize_href(url.pathname, site, '');
+	const pathname = normalize_href(url.pathname, site);
 	const result = build_page_browser_data(language_path(pathname, languages).pathname);
 	const language = request_language(url);
 	if (language && language !== languages[0] && pathname !== '/new') {
@@ -227,7 +226,7 @@ export const get_page_browser_data = query(v.string(), async (href) => {
 
 /** Return public URLs and saved timestamps for pages reachable from Home. */
 export const get_sitemap_entries = query(async () => {
-	const { languages } = get_site();
+	const { languages } = site;
 	const { page_forest } = build_page_browser_data('/', true);
 	const records = db
 		.prepare(
@@ -331,8 +330,7 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
  * Return a lightweight preview for a simple internal page href like `/some-slug`.
  */
 export const get_internal_link_preview = query(v.string(), async (href) => {
-	const site = get_site();
-	const parsed = parse_internal_page_href(normalize_href(href, site, ''), site.languages);
+	const parsed = parse_internal_page_href(normalize_href(href, site), site.languages);
 	if (!parsed) {
 		return null;
 	}
@@ -383,7 +381,7 @@ function rewrite_internal_page_hrefs(
 	nodes: Record<string, DocumentNode>,
 	target_document_id: string,
 	new_slug: string,
-	link_languages = get_site().languages
+	link_languages = site.languages
 ) {
 	for (const node of Object.values(nodes)) {
 		if (!node || typeof node !== 'object') continue;
@@ -483,7 +481,7 @@ export const save_translations = command(
 
 export const save_document = command(save_document_input_schema, async (combined_doc) => {
 	require_admin_session(getRequestEvent().locals);
-	if (combined_doc.language && combined_doc.language !== get_site().languages[0])
+	if (combined_doc.language && combined_doc.language !== site.languages[0])
 		error(400, 'Use the translation save command for additional languages.');
 
 	if (combined_doc.create && get_optional_doc_from_db(combined_doc.document_id)) {
@@ -497,8 +495,7 @@ export const save_document = command(save_document_input_schema, async (combined
 	const { nodes } = normalize_hrefs(
 		{ document_id: combined_doc.document_id, nodes: structuredClone(combined_doc.nodes) },
 		baseline,
-		get_site(),
-		''
+		site
 	);
 
 	let version: string;
@@ -554,7 +551,7 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		);
 	}
 
-	if (is_reserved_language_slug(normalized_slug, get_site().languages)) {
+	if (is_reserved_language_slug(normalized_slug, site.languages)) {
 		return create_page_url_error_result(
 			'page_url_reserved',
 			'That Page URL is reserved by a language homepage and cannot be used.'
@@ -662,7 +659,7 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 			value: string;
 		}[];
 		const link_languages = [
-			...new Set([...get_site().languages, ...translations.map((row) => row.language)])
+			...new Set([...site.languages, ...translations.map((row) => row.language)])
 		];
 
 		for (const row of page_rows) {

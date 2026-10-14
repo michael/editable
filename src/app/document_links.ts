@@ -8,8 +8,17 @@ import type { Document } from 'svedit';
  * way. Every root-relative link gets the base, so asset URLs and Editable's
  * own routes resolve too; only page links get a language, and a link that
  * names a language keeps it. The language is '' for the main language.
+ *
+ * Both sides pass their `site`: the server's names the request's site and the
+ * language to serve; the browser's carries the page's language too, so links it
+ * hands over are taken out of that language first and it is the default to serve.
  */
-export type SiteLinks = { origin: string; base: string; languages: string[] };
+export type SiteLinks = { origin: string; base: string; languages: string[]; language?: string };
+
+type Href = string | Pick<URL, 'pathname' | 'search' | 'hash'>;
+
+const href_of = (href: Href) =>
+	typeof href === 'string' ? href : `${href.pathname}${href.search}${href.hash}`;
 
 /** Top-level paths served by Editable's own routes; never page slugs. */
 export const RESERVED_ROUTE_SLUGS = new Set([
@@ -51,32 +60,45 @@ const add_base = (pathname: string, base: string) =>
 const is_page = (pathname: string) =>
 	pathname === '/' || (/^\/[^/.]+$/.test(pathname) && !RESERVED_ROUTE_SLUGS.has(pathname.slice(1)));
 
-/** A stored link as the browser needs it for this site and language. */
-export function resolve_href(href: string, site: SiteLinks, language: string): string {
-	const link = own_link(href, site.origin);
-	if (!link) return href;
+/** A link as the browser needs it for this site and language. */
+export function resolve_href(
+	href: Href,
+	site: SiteLinks,
+	language: string = site.language ?? ''
+): string {
+	if (site.language) href = normalize_href(href, site, site.language);
+	const link = own_link(href_of(href), site.origin);
+	if (!link) return href_of(href);
 	const path = strip_base(link.url.pathname, site.base);
 	const page = language_path(path, site.languages).pathname;
 	const explicit = page !== path;
 	const localized =
 		language && !explicit && is_page(page) ? `/${language}${page === '/' ? '' : page}` : path;
 	const resolved = add_base(localized, site.base);
-	return resolved === link.url.pathname ? href : rebuild(link, resolved);
+	return resolved === link.url.pathname ? href_of(href) : rebuild(link, resolved);
 }
 
 /** A served link in its stored form: without the base, and without the given language. */
-export function normalize_href(href: string, site: SiteLinks, language: string): string {
-	const link = own_link(href, site.origin);
-	if (!link) return href;
+export function normalize_href(
+	href: Href,
+	site: SiteLinks,
+	language: string = site.language ?? ''
+): string {
+	const link = own_link(href_of(href), site.origin);
+	if (!link) return href_of(href);
 	const path = strip_base(link.url.pathname, site.base);
 	const resolved = language_path(path, site.languages);
 	const normalized =
 		resolved.language === language && resolved.pathname !== path ? resolved.pathname : path;
-	return normalized === link.url.pathname ? href : rebuild(link, normalized);
+	return normalized === link.url.pathname ? href_of(href) : rebuild(link, normalized);
 }
 
 /** resolve_href on every link of a document, on a copy. */
-export function resolve_hrefs(source: Document, site: SiteLinks, language: string): Document {
+export function resolve_hrefs(
+	source: Document,
+	site: SiteLinks,
+	language: string = site.language ?? ''
+): Document {
 	if (!language && !site.base) return source;
 	const document = structuredClone(source);
 	for (const node of Object.values(document.nodes)) {
@@ -94,7 +116,7 @@ export function normalize_hrefs(
 	source: Document,
 	baseline: Document,
 	site: SiteLinks,
-	language: string
+	language: string = site.language ?? ''
 ): Document {
 	const document = structuredClone(source);
 	for (const node of Object.values(document.nodes)) {

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { site_href } from '#app/site_links.js';
+	import { site } from '#app/client_site.js';
+	import { resolve_href } from '#app/document_links.js';
 	import { page } from '$app/state';
 
 	import { get_page_browser_data } from '#app/api.remote.js';
@@ -236,7 +237,7 @@
 	}
 
 	function get_resolved_page_href(page_href: string) {
-		return site_href(page_href || '/');
+		return resolve_href(page_href || '/', site);
 	}
 
 	function get_page_slug_label(page_href) {

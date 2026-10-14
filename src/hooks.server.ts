@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { Handle, ServerInit } from '@sveltejs/kit/hooks';
-import { get_site, request_language, type Site } from '#app/server_site.js';
+import { site, request_language, type Site } from '#app/server_site.js';
 import { normalize_href, resolve_href } from '#app/document_links.js';
 import { ORIGIN, VERCEL } from '$app/env/private';
 import { dev } from '$app/env';
@@ -21,7 +21,7 @@ function get_canonical_redirect(url: URL, canonical_origin: URL, site: Site): st
 	const target = new URL(url);
 	target.protocol = canonical_origin.protocol;
 	target.host = canonical_origin.host;
-	target.pathname = resolve_href(url.pathname, site, '');
+	target.pathname = resolve_href(url.pathname, site);
 	return target.href;
 }
 
@@ -41,7 +41,6 @@ export const init: ServerInit = async () => {
 export const handle: Handle = async ({ event, resolve }) => {
 	// Navigations only. The target counts as external, so the site's origin is
 	// allowlisted — not `external: true`, which would permit redirecting anywhere.
-	const site = get_site();
 	const canonical_origin = URL.parse(site.origin);
 	if (canonical_origin && (event.request.method === 'GET' || event.request.method === 'HEAD')) {
 		const canonical_url = get_canonical_redirect(event.url, canonical_origin, site);
@@ -59,7 +58,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		transformPageChunk: ({ html }) => html.replace('%lang%', language)
 	});
 	// The OAuth consent page must not be embeddable, so a framed click cannot approve an app.
-	if (normalize_href(event.url.pathname, site, '') === '/oauth/authorize')
+	if (normalize_href(event.url.pathname, site) === '/oauth/authorize')
 		response.headers.set('X-Frame-Options', 'DENY');
 	return response;
 };

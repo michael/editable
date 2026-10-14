@@ -1,5 +1,5 @@
 import { default_site_document } from '#app/default_site.js';
-import { get_site, request_language } from '#app/server_site.js';
+import { site, request_language } from '#app/server_site.js';
 import { language_href } from '#app/languages.js';
 import { error, redirect } from '@sveltejs/kit';
 import { dev } from '$app/env';
@@ -16,7 +16,6 @@ export const load_page = async ({
 	params: { page_id?: string; language?: string };
 	url: URL;
 }) => {
-	const site = get_site();
 	const { languages } = site;
 	if (params.language && !languages.slice(1).includes(params.language))
 		error(404, 'Page not found');
@@ -112,7 +111,7 @@ export const load_home = async ({ url }: { url: URL }) => {
 
 	const { get_home_document, get_translated_document } = await import('#app/api.remote.js');
 	const result = await get_home_document();
-	const { languages } = get_site();
+	const { languages } = site;
 	if (!languages.length) return result;
 	const language = request_language(url);
 	return {

@@ -3,7 +3,7 @@ import { DATA_DIR, DB_PATH, ASSET_PATH, ASSET_GRACE_PERIOD_DAYS } from '#app/ser
 import { ASSET_ID_REGEX } from '#app/config.js';
 import { create_database } from '#lib/server/db.js';
 import { create_asset_storage } from '#lib/server/asset_storage.js';
-import { get_site } from '#app/server_site.js';
+import { site } from '#app/server_site.js';
 
 /** A site's database and asset files. */
 export type SiteStorage = {
@@ -30,7 +30,7 @@ export function get_default_storage(): SiteStorage {
 
 /** The storage of the current request's site. */
 export function get_storage(): SiteStorage {
-	return get_site().storage ?? get_default_storage();
+	return site.storage ?? get_default_storage();
 }
 
 /**

@@ -2,7 +2,8 @@
 	import { parse_internal_page_href } from '#app/document_links.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { get_app_context } from '#app/app_context.js';
-	import { site_relative_href } from '#app/site_links.js';
+	import { site } from '#app/client_site.js';
+	import { normalize_href } from '#app/document_links.js';
 	import { resolve } from '$app/paths';
 	import type { PathnameWithSearchOrHash } from '$app/types';
 	import { serialize_path } from 'svedit';
@@ -16,7 +17,7 @@
 
 	let internal_page_href = $derived(
 		typeof node?.href === 'string' &&
-			parse_internal_page_href(site_relative_href(node.href, ''), app.languages)
+			parse_internal_page_href(normalize_href(node.href, site, ''), app.languages)
 			? node.href
 			: null
 	);

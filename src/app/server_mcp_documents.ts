@@ -7,7 +7,7 @@ import {
 } from 'svedit';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
 import { edf_root_id, parse_edf, serialize_edf } from '#lib/edf.js';
-import { get_site } from './server_site.js';
+import { site } from './server_site.js';
 import { language_href, language_path } from './languages.js';
 import { save_translated_document, translated_document } from './server_translations.js';
 import { parse_internal_page_href } from './document_links.js';
@@ -38,7 +38,7 @@ import {
  * language comes from the path prefix and defaults to the main language.
  */
 function resolve_document(reference: string): { document_id: string | null; language: string } {
-	const { languages } = get_site();
+	const { languages } = site;
 	if (get_optional_doc_from_db(reference))
 		return { document_id: reference, language: languages[0] ?? '' };
 
@@ -57,7 +57,7 @@ function resolve_document(reference: string): { document_id: string | null; lang
 
 /** The translation language to read or write, or null for the main language. */
 function translation_language(language: string | undefined): string | null {
-	const { languages } = get_site();
+	const { languages } = site;
 	if (!language || language === languages[0]) return null;
 	if (languages.slice(1).includes(language)) return language;
 	throw new Error(
@@ -77,7 +77,7 @@ function unwrap_http_error<T>(fn: () => T): T {
 }
 
 function page_href_for(document_id: string, language: string | null): string {
-	const { languages } = get_site();
+	const { languages } = site;
 	const slug = get_active_slug_for_document_id(document_id);
 	const href = slug ? `/${slug}` : '/';
 	return language ? language_href(href, language, languages) : href;
@@ -115,7 +115,7 @@ function normalize_node(node: DocumentNode): DocumentNode {
  * and footer by id; they are documents of their own.
  */
 export function read_mcp_document(reference: string, requested_language?: string) {
-	const { languages } = get_site();
+	const { languages } = site;
 	const { document_id, language: path_language } = resolve_document(reference);
 	const stored = document_id && get_optional_doc_from_db(document_id);
 	if (!document_id || !stored)

@@ -1,6 +1,6 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { db } from './services.js';
-import { get_site } from './server_site.js';
+import { site } from './server_site.js';
 import {
 	admin_session_cookie_name,
 	clear_admin_session_cookie,
@@ -79,5 +79,5 @@ export const password_auth: AdminAuth = {
 
 /** The current request's site's admin auth; the admin password by default. */
 export function get_admin_auth(): AdminAuth {
-	return get_site().auth ?? password_auth;
+	return site.auth ?? password_auth;
 }

@@ -1,4 +1,4 @@
-import { get_site } from '#app/server_site.js';
+import { site } from '#app/server_site.js';
 import { is_media_property } from './media.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
 import { ASSET_ID_REGEX } from './config.js';
@@ -66,7 +66,6 @@ function compose(records: Document[]): Document {
 }
 
 export function translated_document(document_id: string, requested?: string) {
-	const site = get_site();
 	const { languages } = site;
 	const language = select_language(languages, requested);
 	const records = load_records(document_id);
@@ -179,7 +178,6 @@ function write_map(document_id: string, language: string, map: TranslationMap, p
 }
 
 export function translate_shared_document(source: Document, requested: string) {
-	const site = get_site();
 	const language = select_language(site.languages, requested);
 	if (!language || language === site.languages[0]) return source;
 	return resolve_hrefs(
@@ -199,7 +197,6 @@ export function save_translated_document(input: {
 	language: string;
 	translation_revision: string;
 }) {
-	const site = get_site();
 	const { languages } = site;
 	if (!languages.includes(input.language) || input.language === languages[0])
 		error(400, 'Translation language is not enabled');

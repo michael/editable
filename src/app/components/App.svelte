@@ -4,7 +4,8 @@
 	import { DEMO_MODE } from '$app/env/public';
 	import { beforeNavigate, goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { site_href, site_relative_href } from '#app/site_links.js';
+	import { site } from '#app/client_site.js';
+	import { resolve_href, normalize_href } from '#app/document_links.js';
 	import { page } from '$app/state';
 	import { Svedit, KeyMapper, Command, define_keymap, get_char_length } from 'svedit';
 	import Toolbar from './Toolbar.svelte';
@@ -107,8 +108,7 @@
 			return;
 		switching_language = true;
 		try {
-			const current = `${page.url.pathname}${page.url.search}${page.url.hash}`;
-			await goto(site_href(site_relative_href(current), next_language), { reset: false });
+			await goto(resolve_href(page.url, site, next_language), { reset: false });
 		} finally {
 			switching_language = false;
 		}
@@ -264,7 +264,7 @@
 
 	const page_browser: PageBrowser = create_page_browser({
 		// Page hrefs are site-relative.
-		goto: (href) => goto(site_href(href)),
+		goto: (href) => goto(resolve_href(href, site)),
 		is_admin: () => app.is_admin
 	});
 
@@ -466,7 +466,7 @@
 			session.selection = null;
 
 			if (is_new) {
-				await goto(site_href(resolve('/')));
+				await goto(resolve_href(resolve('/'), site));
 				return;
 			}
 
@@ -609,7 +609,7 @@
 				if (result?.created && result.document_id && result.slug) {
 					this.context.editable = false;
 					save_progress_visible = false;
-					await goto(site_href(resolve('/[page_id]', { page_id: result.slug })), {
+					await goto(resolve_href(resolve('/[page_id]', { page_id: result.slug }), site), {
 						replace: true,
 						refreshAll: true
 					});
@@ -704,11 +704,11 @@
 		}
 
 		execute() {
-			return goto(site_href(resolve('new')));
+			return goto(resolve_href(resolve('new'), site));
 		}
 	}
 
-	let is_home_page = $derived(site_relative_href(page.url.pathname) === '/');
+	let is_home_page = $derived(normalize_href(page.url, site) === '/');
 	let duplicate_source = $derived(is_home_page ? '/' : slug);
 
 	class DuplicatePageCommand extends Command {
@@ -719,7 +719,9 @@
 		execute() {
 			if (!duplicate_source) return;
 			toolbar_ref?.close_page_menu();
-			return goto(`${site_href(resolve('new'))}?from=${encodeURIComponent(duplicate_source)}`);
+			return goto(
+				`${resolve_href(resolve('new'), site)}?from=${encodeURIComponent(duplicate_source)}`
+			);
 		}
 	}
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { site_href } from '#app/site_links.js';
+	import { site } from '#app/client_site.js';
+	import { resolve_href } from '#app/document_links.js';
 	import { page } from '$app/state';
 	import App from '#app/components/App.svelte';
 
@@ -36,7 +37,7 @@
 					: 'Please try again, or return to the home page.'}
 			</p>
 			<a
-				href={site_href(resolve('/'))}
+				href={resolve_href(resolve('/'), site)}
 				class="ew-button inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-5 py-2 text-base leading-6 font-medium wrap-anywhere text-(--accent-foreground) hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)]"
 			>
 				Back home

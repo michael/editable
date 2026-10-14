@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { toJsonSchema } from '@valibot/to-json-schema';
 import { VERCEL } from '$app/env/private';
-import { get_site } from '#app/server_site.js';
+import { site } from '#app/server_site.js';
 import type { RequestHandler } from './$types';
 import { version } from '../../../package.json' with { type: 'json' };
 
@@ -11,7 +11,7 @@ const legacy_protocol_version = '2025-11-25';
 
 /** The site's public URL: its origin plus the path a host serves it under. */
 const site_url = () => {
-	const { origin, base } = get_site();
+	const { origin, base } = site;
 	return `${new URL(origin).origin}${base}`;
 };
 
