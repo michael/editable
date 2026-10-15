@@ -50,6 +50,7 @@ export const RESERVED_ROUTE_SLUGS = new Set([
 	'design-system',
 	'mcp',
 	'new',
+	'new-site',
 	'oauth'
 ]);
 
