@@ -3,7 +3,8 @@
 	import { dev } from '$app/env';
 	import { DEMO_MODE } from '$app/env/public';
 	import { beforeNavigate, goto, refreshAll } from '$app/navigation';
-	import { resolve } from '$app/paths';
+	import { site } from '#app/client_site.js';
+	import { resolve_href, normalize_href } from '#app/document_links.js';
 	import { page } from '$app/state';
 	import { Svedit, KeyMapper, Command, define_keymap, get_char_length } from 'svedit';
 	import Toolbar from './Toolbar.svelte';
@@ -11,7 +12,6 @@
 	import SaveConflictDialog from './SaveConflictDialog.svelte';
 
 	import { paste_media, is_media_selection } from '#app/media.js';
-	import { language_href, language_path } from '#app/languages.js';
 	import { EXT_TO_MIME } from '#app/config.js';
 	import { create_session } from '#app/session.js';
 	import type { AppSession } from '#app/session.js';
@@ -107,7 +107,7 @@
 			return;
 		switching_language = true;
 		try {
-			await goto(language_href(page.url.href, next_language, languages), { reset: false });
+			await goto(resolve_href(page.url, site, next_language), { reset: false });
 		} finally {
 			switching_language = false;
 		}
@@ -262,7 +262,8 @@
 	setContext('app', app);
 
 	const page_browser: PageBrowser = create_page_browser({
-		goto,
+		// Page hrefs are site-relative.
+		goto: (href) => goto(resolve_href(href, site)),
 		is_admin: () => app.is_admin
 	});
 
@@ -464,7 +465,7 @@
 			session.selection = null;
 
 			if (is_new) {
-				await goto(resolve('/'));
+				await goto(resolve_href('/', site));
 				return;
 			}
 
@@ -607,7 +608,7 @@
 				if (result?.created && result.document_id && result.slug) {
 					this.context.editable = false;
 					save_progress_visible = false;
-					await goto(resolve('/[page_id]', { page_id: result.slug }), {
+					await goto(resolve_href(`/${result.slug}`, site), {
 						replace: true,
 						refreshAll: true
 					});
@@ -702,11 +703,11 @@
 		}
 
 		execute() {
-			return goto(resolve('new'));
+			return goto(resolve_href('/new', site));
 		}
 	}
 
-	let is_home_page = $derived(language_path(page.url.pathname, languages).pathname === '/');
+	let is_home_page = $derived(normalize_href(page.url, site) === '/');
 	let duplicate_source = $derived(is_home_page ? '/' : slug);
 
 	class DuplicatePageCommand extends Command {
@@ -717,7 +718,7 @@
 		execute() {
 			if (!duplicate_source) return;
 			toolbar_ref?.close_page_menu();
-			return goto(`${resolve('new')}?from=${encodeURIComponent(duplicate_source)}`);
+			return goto(`${resolve_href('/new', site)}?from=${encodeURIComponent(duplicate_source)}`);
 		}
 	}
 

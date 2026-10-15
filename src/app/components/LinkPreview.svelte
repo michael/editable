@@ -2,6 +2,8 @@
 	import { parse_internal_page_href } from '#app/document_links.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { get_app_context } from '#app/app_context.js';
+	import { site } from '#app/client_site.js';
+	import { normalize_href } from '#app/document_links.js';
 	import { resolve } from '$app/paths';
 	import type { PathnameWithSearchOrHash } from '$app/types';
 	import { serialize_path } from 'svedit';
@@ -14,7 +16,10 @@
 	let { node, path } = $props();
 
 	let internal_page_href = $derived(
-		parse_internal_page_href(node?.href, app.languages) ? node.href : null
+		typeof node?.href === 'string' &&
+			parse_internal_page_href(normalize_href(node.href, site, ''), app.languages)
+			? node.href
+			: null
 	);
 
 	let page_preview = $derived.by(async () => {

@@ -3,6 +3,8 @@ import { MAX_VIDEO_FILESIZE } from '#app/config.js';
 import { start_processing, upload_pending } from './asset_upload.js';
 import { create_video_poster, process_video } from '#lib/client/process_video.js';
 
+// Uploads run in the browser, where page data is always readable.
+vi.mock('$app/state', () => ({ page: { data: {} } }));
 vi.mock('#lib/client/process_video.js', () => ({
 	create_video_poster: vi.fn(async () => new Blob(['poster'], { type: 'image/webp' })),
 	process_video: vi.fn(async () => ({

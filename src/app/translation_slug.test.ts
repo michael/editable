@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, expect, it, vi } from 'vitest';
+import type { DatabaseSync } from 'node:sqlite';
 import { fill_document_defaults } from 'svedit';
 import { document_schema } from './document_schema.js';
 import {
@@ -49,7 +50,7 @@ vi.mock('./services.js', async () => {
 });
 
 import { db } from './services.js';
-import { languages } from './server_languages.js';
+import { default_site } from './server_site.js';
 import {
 	update_page_slug,
 	delete_page,
@@ -59,6 +60,9 @@ import {
 } from './api.remote.js';
 import { warn_about_language_slug_collisions } from './server_language_slugs.js';
 import * as markdown_registry from './markdown/registry.js';
+
+// With no site set by a host, the code under test uses the deployment's own.
+const { languages } = default_site;
 
 it('publishes localized sitemap URLs with translation dates while excluding hidden pages and redirects', async () => {
 	const insert_doc = db.prepare(
@@ -142,7 +146,8 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 	});
 });
 
-afterAll(() => db.close());
+// The mocked services export a real database.
+afterAll(() => (db as unknown as DatabaseSync).close());
 beforeEach(() => {
 	vi.restoreAllMocks();
 	languages.splice(0, languages.length, 'en', 'de');

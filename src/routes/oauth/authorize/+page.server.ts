@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { VERCEL } from '$app/env/private';
+import { site } from '#app/server_site.js';
 import type { Actions, PageServerLoad } from './$types';
 
 /** Validate an authorization request. */
@@ -35,7 +36,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const target = new URL(request.redirect_uri);
 	return {
 		step: 'consent' as const,
-		site_host: url.host,
+		site_host: `${url.host}${site.base}`,
 		client_name: request.client.client_name,
 		redirect_host: target.host,
 		// Only loopback redirects may use plain http, so they lead to an app on this computer.

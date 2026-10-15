@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onNavigate } from '$app/navigation';
+	import { site } from '#app/client_site.js';
+	import { resolve_href } from '#app/document_links.js';
 
 	import '../app.css';
 
@@ -24,7 +26,11 @@
 
 <svelte:head>
 	{#if data.favicon}
-		<link rel="icon" type={data.favicon.type ?? undefined} href={data.favicon.href} />
+		<link
+			rel="icon"
+			type={data.favicon.type ?? undefined}
+			href={resolve_href(data.favicon.href, site)}
+		/>
 	{/if}
 </svelte:head>
 {@render children()}

@@ -8,6 +8,8 @@ declare global {
 		// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 		interface Locals {
 			is_admin: boolean;
+			/** Set by a host serving several sites; otherwise the deployment's own site is used. */
+			site?: import('#app/server_site.js').Site;
 		}
 		// interface PageData {}
 		// interface PageState {}

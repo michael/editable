@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { ASSET_BASE, VARIANT_WIDTHS } from '#app/config.js';
+	import { site } from '#app/client_site.js';
+	import { resolve_href } from '#app/document_links.js';
 
 	import type { PreviewMediaNode } from '#app/page_metadata.js';
 
@@ -8,9 +10,10 @@
 	// Determine if src is a blob URL (unsaved), a saved asset id, or empty
 	let is_blob = $derived(node.src?.startsWith('blob:'));
 	let is_saved = $derived(node.src && !is_blob);
+	let assets = $derived(resolve_href(ASSET_BASE, site));
 
 	// Resolve the display URL
-	let display_src = $derived(is_blob ? node.src : is_saved ? `${ASSET_BASE}/${node.src}` : '');
+	let display_src = $derived(is_blob ? node.src : is_saved ? `${assets}/${node.src}` : '');
 
 	// Use mime_type with fallback to file extension for legacy data
 	let is_svg = $derived(
@@ -34,9 +37,9 @@
 
 		if (applicable.length === 0) return '';
 
-		const variant_entries = applicable.map((w) => `${ASSET_BASE}/${asset_stem}/w${w}.webp ${w}w`);
+		const variant_entries = applicable.map((w) => `${assets}/${asset_stem}/w${w}.webp ${w}w`);
 		// The original is the largest entry
-		variant_entries.push(`${ASSET_BASE}/${node.src} ${node.width}w`);
+		variant_entries.push(`${assets}/${node.src} ${node.width}w`);
 
 		return variant_entries.join(', ');
 	}

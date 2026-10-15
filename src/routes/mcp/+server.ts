@@ -1,17 +1,24 @@
 import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { toJsonSchema } from '@valibot/to-json-schema';
-import { ORIGIN, VERCEL } from '$app/env/private';
+import { VERCEL } from '$app/env/private';
+import { site } from '#app/server_site.js';
 import type { RequestHandler } from './$types';
 import { version } from '../../../package.json' with { type: 'json' };
 
 const protocol_version = '2026-07-28';
 const legacy_protocol_version = '2025-11-25';
 
-// Every site is its own MCP server, so clients see the site's host, not "editable".
+/** The site's public URL: its origin plus the path a host serves it under. */
+const site_url = () => {
+	const { origin, base } = site;
+	return `${new URL(origin).origin}${base}`;
+};
+
+// Every site is its own MCP server, so clients see the site's address, not "editable".
 const server_info = () => {
-	const { host } = new URL(ORIGIN);
-	return { name: host, title: host, version };
+	const name = site_url().replace(/^https?:\/\//, '');
+	return { name, title: name, version };
 };
 
 type Protocol = 'modern' | 'legacy';
@@ -120,7 +127,7 @@ const tools = [
 		annotations: { readOnlyHint: true },
 		handler: async (_args, { grant_id }) => {
 			const { prepare_image_upload } = await import('#app/server_mcp_images.js');
-			return prepare_image_upload(new URL(ORIGIN).origin, grant_id);
+			return prepare_image_upload(site_url(), grant_id);
 		}
 	}),
 	define_tool({

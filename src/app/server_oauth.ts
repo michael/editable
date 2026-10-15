@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { error } from '@sveltejs/kit';
-import { ORIGIN } from '$app/env/private';
+import { site } from './server_site.js';
 import { require_admin_session } from '#lib/server/auth.js';
 import { db } from './services.js';
 
@@ -39,10 +39,17 @@ const now = () => Math.floor(Date.now() / 1000);
 const new_secret = () => randomBytes(32).toString('base64url');
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 
-// Read lazily: static deployments import this module without an ORIGIN.
-export const issuer = () => new URL(ORIGIN).origin;
+// Each site is its own authorization server at its origin and base path, read per request.
+export const issuer = () => {
+	const { origin, base } = site;
+	return `${new URL(origin).origin}${base}`;
+};
 export const mcp_resource = () => `${issuer()}/mcp`;
-export const resource_metadata_url = () => `${issuer()}/.well-known/oauth-protected-resource/mcp`;
+// RFC 9728 puts a resource's metadata at the host root with the resource's path appended.
+export const resource_metadata_url = () => {
+	const { origin, base } = site;
+	return `${new URL(origin).origin}/.well-known/oauth-protected-resource${base}/mcp`;
+};
 
 export function authorization_server_metadata() {
 	const issuer_url = issuer();
@@ -64,7 +71,7 @@ export function protected_resource_metadata() {
 		resource: mcp_resource(),
 		authorization_servers: [issuer()],
 		bearer_methods_supported: ['header'],
-		resource_name: new URL(ORIGIN).host
+		resource_name: issuer().replace(/^https?:\/\//, '')
 	};
 }
 

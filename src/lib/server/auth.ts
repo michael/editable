@@ -4,6 +4,9 @@ import type { Cookies } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';
 import { ADMIN_PASSWORD, NODE_ENV } from '$app/env/private';
 
+/** The database calls auth needs: a DatabaseSync or a facade over the current site's. */
+type Database = Pick<DatabaseSync, 'prepare'>;
+
 export const admin_session_cookie_name = 'ew_admin_session';
 export const session_duration_seconds = 14 * 24 * 60 * 60;
 
@@ -32,7 +35,7 @@ export function passwords_match(a: string, b: string): boolean {
 	return crypto.timingSafeEqual(digest(a), digest(b));
 }
 
-function get_login_throttle_state(db: DatabaseSync): {
+function get_login_throttle_state(db: Database): {
 	failed_count: number;
 	locked_until: number;
 } {
@@ -44,7 +47,7 @@ function get_login_throttle_state(db: DatabaseSync): {
 }
 
 function set_login_throttle_state(
-	db: DatabaseSync,
+	db: Database,
 	state: { failed_count: number; locked_until: number }
 ) {
 	db.prepare('INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)').run(
@@ -56,12 +59,12 @@ function set_login_throttle_state(
 /**
  * Seconds until login attempts are accepted again (0 when unlocked).
  */
-export function get_login_lockout_seconds(db: DatabaseSync): number {
+export function get_login_lockout_seconds(db: Database): number {
 	const { locked_until } = get_login_throttle_state(db);
 	return Math.max(locked_until - Math.floor(Date.now() / 1000), 0);
 }
 
-export function register_failed_login(db: DatabaseSync) {
+export function register_failed_login(db: Database) {
 	const state = get_login_throttle_state(db);
 	state.failed_count += 1;
 
@@ -77,7 +80,7 @@ export function register_failed_login(db: DatabaseSync) {
 	set_login_throttle_state(db, state);
 }
 
-export function reset_login_throttle(db: DatabaseSync) {
+export function reset_login_throttle(db: Database) {
 	set_login_throttle_state(db, { failed_count: 0, locked_until: 0 });
 }
 
@@ -114,7 +117,7 @@ export function set_admin_session_cookie(cookies: Cookies, session_id: string) {
 	});
 }
 
-export async function delete_session(session_id: string, db: DatabaseSync) {
+export async function delete_session(session_id: string, db: Database) {
 	db.prepare('DELETE FROM sessions WHERE session_id = ?').run(session_id);
 }
 
@@ -132,7 +135,7 @@ function format_lockout_duration(seconds: number): string {
 
 /** Start an admin session for a correct password, subject to the login throttle. */
 export function log_in_admin(
-	db: DatabaseSync,
+	db: Database,
 	cookies: Cookies,
 	password: string
 ): { ok: true } | { ok: false; code: string; message: string } {

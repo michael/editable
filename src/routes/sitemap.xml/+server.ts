@@ -1,4 +1,5 @@
-import { ORIGIN, VERCEL } from '$app/env/private';
+import { VERCEL } from '$app/env/private';
+import { site } from '#app/server_site.js';
 import { error } from '@sveltejs/kit';
 import { render_sitemap } from '#lib/server/sitemap.js';
 import type { RequestHandler } from './$types';
@@ -9,7 +10,7 @@ export const GET: RequestHandler = async () => {
 
 	const { get_sitemap_entries } = await import('#app/api.remote.js');
 	const entries = await get_sitemap_entries();
-	const body = new TextEncoder().encode(render_sitemap(entries, ORIGIN));
+	const body = new TextEncoder().encode(render_sitemap(entries, site));
 	// Crawlers get a complete, sized response they may cache briefly.
 	return new Response(body, {
 		headers: {

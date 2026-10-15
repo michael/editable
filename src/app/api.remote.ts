@@ -1,7 +1,12 @@
 import type { TranslationMap } from './translations.js';
 import { translation_payloads } from '../lib/asset_references.js';
-import { languages, request_language } from './server_languages.js';
-import { translated_href, parse_internal_page_href } from './document_links.js';
+import { site } from './server_site.js';
+import {
+	normalize_href,
+	normalize_hrefs,
+	parse_internal_page_href,
+	resolve_hrefs
+} from './document_links.js';
 import { language_path, language_href, is_reserved_language_slug } from './languages.js';
 import { getRequestEvent, query, command } from '$app/server';
 import {
@@ -38,7 +43,6 @@ import {
 } from '#app/server_documents.js';
 
 import { build_page_browser_data } from '#app/page_browser_data.js';
-import type { PageTreeNode } from '#app/page_browser_data.js';
 export type { PageSummary, PageTreeNode } from '#app/page_browser_data.js';
 import type { SitemapEntry } from '#lib/server/sitemap.js';
 import { latest_modified } from '#lib/server/sitemap.js';
@@ -50,18 +54,12 @@ import { extract_page_metadata, extract_site_metadata } from '#app/page_metadata
 import type { PreviewMediaNode } from '#app/page_metadata.js';
 import type { DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
 import type { StatementSync } from 'node:sqlite';
-import {
-	admin_session_cookie_name,
-	delete_session,
-	clear_admin_session_cookie,
-	require_admin_session,
-	log_in_admin
-} from '#lib/server/auth.js';
+import { require_admin_session } from '#lib/server/auth.js';
+import { get_admin_auth } from './server_admin_auth.js';
 import { revoke_all_grants } from '#app/server_oauth.js';
 
-const admin_login_input_schema = v.object({
-	password: v.string()
-});
+// Whatever the login dialog sends; Editable's own dialog sends the password.
+const admin_login_input_schema = v.record(v.string(), v.string());
 
 function create_page_url_error_result(code: string, message: string) {
 	return {
@@ -97,6 +95,11 @@ const delete_page_input_schema = v.object({
 	document_id: v.string()
 });
 
+/** Documents reach the editor with their links resolved for the site, in the main language. */
+function resolve_site_links(document: DocumentData): DocumentData {
+	return resolve_hrefs(document, site);
+}
+
 /**
  * Get a document from the database, stitching in shared documents (banner, nav, footer).
  */
@@ -108,7 +111,7 @@ export const get_document = query(v.string(), async (slug) => {
 	}
 
 	return {
-		document: get_combined_document(resolved.document_id),
+		document: resolve_site_links(get_combined_document(resolved.document_id)),
 		version: get_document_version(resolved.document_id),
 		slug: resolved.active_slug,
 		redirect_to_slug: resolved.is_active ? null : resolved.active_slug
@@ -133,7 +136,7 @@ export const get_page_document_for_duplicate = query(v.string(), async (slug) =>
 	}
 
 	return {
-		document: get_doc_from_db(document_id)
+		document: resolve_site_links(get_doc_from_db(document_id))
 	};
 });
 
@@ -148,7 +151,7 @@ export const get_home_document = query(v.void(), async () => {
 	}
 
 	return {
-		document: get_combined_document(home_page_id),
+		document: resolve_site_links(get_combined_document(home_page_id)),
 		version: get_document_version(home_page_id),
 		slug: get_active_slug_for_document_id(home_page_id),
 		redirect_to_slug: null
@@ -180,30 +183,20 @@ export const get_shared_documents = query(v.void(), async () => {
 		const shared_id = home_page_node?.[type];
 		if (typeof shared_id !== 'string')
 			throw new Error(`Home page ${type} document is not configured`);
-		return get_doc_from_db(shared_id);
+		return resolve_site_links(get_doc_from_db(shared_id));
 	});
 	return { banner_document, nav_document, footer_document };
 });
 
-export const login_admin = command(admin_login_input_schema, async ({ password }) => {
-	return log_in_admin(db, getRequestEvent().cookies, password);
+export const login_admin = command(admin_login_input_schema, async (credentials) => {
+	return get_admin_auth().log_in(getRequestEvent(), credentials);
 });
 
 export const logout_admin = command(v.void(), async () => {
-	const { cookies } = getRequestEvent();
-	const session_id = cookies.get(admin_session_cookie_name);
-
-	if (session_id) {
-		await delete_session(session_id, db);
-	}
-
-	clear_admin_session_cookie(cookies);
+	await get_admin_auth().log_out(getRequestEvent());
 	// Logging out also ends every MCP connection the admin approved.
 	revoke_all_grants();
-
-	return {
-		ok: true
-	};
+	return { ok: true };
 });
 
 /**
@@ -212,23 +205,13 @@ export const logout_admin = command(v.void(), async () => {
 export const get_page_browser_data = query(v.string(), async (href) => {
 	const event = getRequestEvent();
 	require_admin_session(event.locals);
-	const url = new URL(href);
-	const result = build_page_browser_data(language_path(url.pathname, languages).pathname);
-	const language = request_language(url);
-	if (language && language !== languages[0] && url.pathname !== '/new') {
-		const visit = (nodes: PageTreeNode[]) => {
-			for (const node of nodes) {
-				node.navigation_href = translated_href(node.page_href, language, url.origin, languages);
-				visit(node.children);
-			}
-		};
-		visit(result.page_forest);
-	}
-	return result;
+	const pathname = normalize_href(new URL(href).pathname, site);
+	return build_page_browser_data(language_path(pathname, site.languages).pathname);
 });
 
 /** Return public URLs and saved timestamps for pages reachable from Home. */
 export const get_sitemap_entries = query(async () => {
+	const { languages } = site;
 	const { page_forest } = build_page_browser_data('/', true);
 	const records = db
 		.prepare(
@@ -332,7 +315,7 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
  * Return a lightweight preview for a simple internal page href like `/some-slug`.
  */
 export const get_internal_link_preview = query(v.string(), async (href) => {
-	const parsed = parse_internal_page_href(href, languages);
+	const parsed = parse_internal_page_href(normalize_href(href, site), site.languages);
 	if (!parsed) {
 		return null;
 	}
@@ -383,7 +366,7 @@ function rewrite_internal_page_hrefs(
 	nodes: Record<string, DocumentNode>,
 	target_document_id: string,
 	new_slug: string,
-	link_languages = languages
+	link_languages = site.languages
 ) {
 	for (const node of Object.values(nodes)) {
 		if (!node || typeof node !== 'object') continue;
@@ -462,7 +445,8 @@ function assign_active_slug(
 export const get_translated_document = query(
 	v.object({ document_id: v.string(), language: v.string() }),
 	async (input) => {
-		return translated_document(input.document_id, input.language);
+		const result = translated_document(input.document_id, input.language);
+		return { ...result, document: resolve_hrefs(result.document, site, result.language) };
 	}
 );
 
@@ -483,35 +467,41 @@ export const save_translations = command(
 
 export const save_document = command(save_document_input_schema, async (combined_doc) => {
 	require_admin_session(getRequestEvent().locals);
-	if (combined_doc.language && combined_doc.language !== languages[0])
+	if (combined_doc.language && combined_doc.language !== site.languages[0])
 		error(400, 'Use the translation save command for additional languages.');
 
 	if (combined_doc.create && get_optional_doc_from_db(combined_doc.document_id)) {
 		error(409, `Document already exists: ${combined_doc.document_id}`);
 	}
 
+	// Links come back resolved for the site; stored links never include the base.
+	const baseline = get_optional_doc_from_db(combined_doc.document_id)
+		? get_combined_document(combined_doc.document_id)
+		: { document_id: combined_doc.document_id, nodes: {} };
+	const { nodes } = normalize_hrefs(
+		{ document_id: combined_doc.document_id, nodes: structuredClone(combined_doc.nodes) },
+		baseline,
+		site
+	);
+
 	let version: string;
 	try {
-		({ version } = await persist_document(
-			combined_doc.document_id,
-			structuredClone(combined_doc.nodes),
-			{
-				expected_version:
-					combined_doc.create || combined_doc.force ? undefined : combined_doc.expected_version,
-				on_write: (page_doc) => {
-					if (
-						!combined_doc.create ||
-						get_active_slug_for_document_id(combined_doc.document_id) ||
-						is_home_page_document_id(combined_doc.document_id)
-					)
-						return;
-					create_page_slug(
-						combined_doc.document_id,
-						extract_page_metadata(page_doc).title || 'Untitled page'
-					);
-				}
+		({ version } = await persist_document(combined_doc.document_id, nodes, {
+			expected_version:
+				combined_doc.create || combined_doc.force ? undefined : combined_doc.expected_version,
+			on_write: (page_doc) => {
+				if (
+					!combined_doc.create ||
+					get_active_slug_for_document_id(combined_doc.document_id) ||
+					is_home_page_document_id(combined_doc.document_id)
+				)
+					return;
+				create_page_slug(
+					combined_doc.document_id,
+					extract_page_metadata(page_doc).title || 'Untitled page'
+				);
 			}
-		));
+		}));
 	} catch (err) {
 		if (err instanceof InvalidDocumentError) error(400, err.message);
 		if (err instanceof VersionConflictError) {
@@ -547,7 +537,7 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		);
 	}
 
-	if (is_reserved_language_slug(normalized_slug, languages)) {
+	if (is_reserved_language_slug(normalized_slug, site.languages)) {
 		return create_page_url_error_result(
 			'page_url_reserved',
 			'That Page URL is reserved by a language homepage and cannot be used.'
@@ -654,7 +644,9 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 			language: string;
 			value: string;
 		}[];
-		const link_languages = [...new Set([...languages, ...translations.map((row) => row.language)])];
+		const link_languages = [
+			...new Set([...site.languages, ...translations.map((row) => row.language)])
+		];
 
 		for (const row of page_rows) {
 			const doc = JSON.parse(row.data);

@@ -3,6 +3,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('$app/env/private', () => ({
 	ORIGIN: 'https://example.com',
+	LANGUAGES: '',
+	VERCEL: undefined,
 	ADMIN_PASSWORD: 'secret',
 	NODE_ENV: 'test'
 }));

@@ -1,5 +1,5 @@
-import { languages, request_language } from '#app/server_languages.js';
-import { ORIGIN, VERCEL } from '$app/env/private';
+import { site, request_language } from '#app/server_site.js';
+import { VERCEL } from '$app/env/private';
 import {
 	default_banner_document,
 	default_footer_document,
@@ -77,11 +77,12 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 	}
 
 	return {
-		languages,
+		languages: site.languages,
 		language,
 		has_backend,
 		is_admin: !!locals.is_admin,
-		origin: ORIGIN,
+		origin: site.origin,
+		site_base: site.base,
 		favicon: site_metadata.favicon,
 		not_found_document
 	};

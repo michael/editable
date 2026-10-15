@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { language_path } from '#app/languages.js';
 	import { is_media_selection } from '#app/media.js';
 	import { get_app_context } from '#app/app_context.js';
-	import { resolve } from '$app/paths';
+	import { site } from '#app/client_site.js';
+	import { resolve_href, normalize_href } from '#app/document_links.js';
 	import { page } from '$app/state';
 	import { get_page_browser } from '#app/page_browser_context.svelte.js';
 	import { get_page_delete_dialog } from '#app/page_delete_dialog_context.svelte.js';
@@ -86,16 +86,15 @@
 	);
 
 	// Home is served from `/` and has no editable slug.
-	let is_home_page = $derived(language_path(page.url.pathname, app.languages).pathname === '/');
+	let is_home_page = $derived(normalize_href(page.url, site) === '/');
 
 	// The nav isn't sticky while editing, so the toolbar shows the language being edited.
 	let editing_language_name = $derived(
 		app.languages.length > 1
 			? (new Intl.DisplayNames([app.language], {
-									type: 'language',
-									languageDisplay: 'standard'
-								}).of(app.language) ??
-					app.language)
+					type: 'language',
+					languageDisplay: 'standard'
+				}).of(app.language) ?? app.language)
 			: null
 	);
 
@@ -437,7 +436,7 @@
 								{#if can_create_pages}
 									<a
 										class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
-										href={resolve('/new')}
+										href={resolve_href('/new', site)}
 										use:tooltip={{ label: 'New page', keys: ['⌃', '⇧', 'N'] }}
 										aria-keyshortcuts="Control+Shift+N"
 										aria-label="New page"

@@ -1,43 +1,27 @@
 import { redirect } from '@sveltejs/kit';
 import type { Handle, ServerInit } from '@sveltejs/kit/hooks';
-import { request_language } from '#app/server_languages.js';
+import { site, request_language, type Site } from '#app/server_site.js';
+import { normalize_href, resolve_href } from '#app/document_links.js';
 import { ORIGIN, VERCEL } from '$app/env/private';
 import { dev } from '$app/env';
-
-import {
-	admin_session_cookie_name,
-	clear_admin_session_cookie,
-	get_session_expires_at,
-	session_duration_seconds,
-	session_renewal_interval_seconds,
-	set_admin_session_cookie
-} from '#lib/server/auth.js';
 
 // Health checks and internal calls arrive without a forwarded host.
 const internal_hostnames = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 
-// Parsed once at startup; a malformed ORIGIN disables the redirect.
-const canonical_origin = parse_canonical_origin();
+// A malformed origin disables the redirect.
+if (ORIGIN && !URL.parse(ORIGIN))
+	console.error(`Invalid ORIGIN, canonical host redirect disabled: ${ORIGIN}`);
 
-function parse_canonical_origin(): URL | null {
-	if (!ORIGIN) return null;
-	try {
-		return new URL(ORIGIN);
-	} catch {
-		console.error(`Invalid ORIGIN, canonical host redirect disabled: ${ORIGIN}`);
-		return null;
-	}
-}
-
-/** Redirect target when the request host is not ORIGIN. */
-function get_canonical_redirect(url: URL): string | null {
-	if (VERCEL || dev || !canonical_origin) return null;
+/** Redirect target when the request host is not the site's origin. */
+function get_canonical_redirect(url: URL, canonical_origin: URL, site: Site): string | null {
+	if (VERCEL || dev) return null;
 	if (internal_hostnames.has(url.hostname)) return null;
 	if (url.host === canonical_origin.host && url.protocol === canonical_origin.protocol) return null;
 
 	const target = new URL(url);
 	target.protocol = canonical_origin.protocol;
 	target.host = canonical_origin.host;
+	target.pathname = resolve_href(url.pathname, site);
 	return target.href;
 }
 
@@ -55,44 +39,18 @@ export const init: ServerInit = async () => {
 };
 
 export const handle: Handle = async ({ event, resolve }) => {
-	// Navigations only. The target counts as external, so ORIGIN is allowlisted —
-	// not `external: true`, which would permit redirecting anywhere.
+	// Navigations only. The target counts as external, so the site's origin is
+	// allowlisted — not `external: true`, which would permit redirecting anywhere.
+	const canonical_origin = URL.parse(site.origin);
 	if (canonical_origin && (event.request.method === 'GET' || event.request.method === 'HEAD')) {
-		const canonical_url = get_canonical_redirect(event.url);
+		const canonical_url = get_canonical_redirect(event.url, canonical_origin, site);
 		if (canonical_url) redirect(301, canonical_url, { external: [canonical_origin.origin] });
 	}
 
 	event.locals.is_admin = false;
-
 	if (!VERCEL) {
-		const session_id = event.cookies.get(admin_session_cookie_name);
-
-		if (session_id) {
-			const { db } = await import('#app/services.js');
-			const row = db
-				.prepare('SELECT expires FROM sessions WHERE session_id = ?')
-				.get(session_id) as unknown as { expires: number } | undefined;
-
-			const now = Math.floor(Date.now() / 1000);
-
-			if (!row) {
-				clear_admin_session_cookie(event.cookies);
-			} else if (row.expires <= now) {
-				db.prepare('DELETE FROM sessions WHERE session_id = ?').run(session_id);
-				clear_admin_session_cookie(event.cookies);
-			} else {
-				// Sliding renewal, at most once per renewal interval
-				const last_renewed_at = row.expires - session_duration_seconds;
-				if (now - last_renewed_at >= session_renewal_interval_seconds) {
-					db.prepare('UPDATE sessions SET expires = ? WHERE session_id = ?').run(
-						get_session_expires_at(),
-						session_id
-					);
-					set_admin_session_cookie(event.cookies, session_id);
-				}
-				event.locals.is_admin = true;
-			}
-		}
+		const { get_admin_auth } = await import('#app/server_admin_auth.js');
+		event.locals.is_admin = await get_admin_auth().is_admin(event);
 	}
 
 	const language = request_language(event.url) || 'en';
@@ -100,6 +58,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		transformPageChunk: ({ html }) => html.replace('%lang%', language)
 	});
 	// The OAuth consent page must not be embeddable, so a framed click cannot approve an app.
-	if (event.url.pathname === '/oauth/authorize') response.headers.set('X-Frame-Options', 'DENY');
+	if (normalize_href(event.url.pathname, site) === '/oauth/authorize')
+		response.headers.set('X-Frame-Options', 'DENY');
 	return response;
 };

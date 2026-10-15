@@ -1,12 +1,15 @@
-<script lang="ts">
-	let {
-		onedit_for_fun,
-		onlogin_success = () => {}
-	}: {
+<script module lang="ts">
+	/** What a login dialog receives, including one set as system_components.auth_dialog. */
+	export type AuthDialogProps = {
 		/** Offers editing without logging in; without it the dialog goes straight to login. */
 		onedit_for_fun?: () => void;
+		/** Call after signing in on this page; it reloads the page as an admin and closes the drawer. */
 		onlogin_success?: () => Promise<void> | void;
-	} = $props();
+	};
+</script>
+
+<script lang="ts">
+	let { onedit_for_fun, onlogin_success = () => {} }: AuthDialogProps = $props();
 
 	let password = $state('');
 	let error = $state('');

@@ -1,5 +1,5 @@
 import { db } from './services.js';
-import { languages } from './server_languages.js';
+import { default_site } from './server_site.js';
 import { is_reserved_language_slug } from './languages.js';
 import { get_markdown_page_pathnames } from './markdown/registry.js';
 
@@ -7,6 +7,8 @@ type SlugRow = { slug: string; document_id: string; is_active: number };
 
 /** Detect existing pages and redirects hidden by newly configured languages. */
 export function warn_about_language_slug_collisions() {
+	// Runs at startup, for the deployment's own site.
+	const { languages } = default_site;
 	if (!languages.length) return;
 	const rows = db
 		.prepare(

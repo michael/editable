@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { ASSET_BASE } from '#app/config.js';
+	import { site } from '#app/client_site.js';
+	import { resolve_href } from '#app/document_links.js';
 
 	import type { PreviewMediaNode } from '#app/page_metadata.js';
 
@@ -8,11 +10,12 @@
 	// Determine if src is a blob URL (unsaved), a saved asset id, or empty
 	let is_blob = $derived(node.src?.startsWith('blob:'));
 	let is_saved = $derived(node.src && !is_blob);
+	let assets = $derived(resolve_href(ASSET_BASE, site));
 
 	// Resolve the display URL and the saved video's derived poster URL.
-	let display_src = $derived(is_blob ? node.src : is_saved ? `${ASSET_BASE}/${node.src}` : '');
+	let display_src = $derived(is_blob ? node.src : is_saved ? `${assets}/${node.src}` : '');
 	let poster_src = $derived(
-		is_saved ? `${ASSET_BASE}/${node.src.slice(0, node.src.lastIndexOf('.'))}/poster.webp` : ''
+		is_saved ? `${assets}/${node.src.slice(0, node.src.lastIndexOf('.'))}/poster.webp` : ''
 	);
 
 	// Apply scale to video (same as Image.svelte)

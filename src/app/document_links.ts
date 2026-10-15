@@ -1,84 +1,129 @@
+import { RESERVED_ROUTE_SLUGS } from './config.js';
 import { language_path } from './languages.js';
 import type { Document } from 'svedit';
 
-function internal_page_url(href: string, origin: string, languages: string[]): URL | null {
+/**
+ * Links are stored site-relative and language-free: /about. Served, they
+ * carry the path the site is served under and the reader's language:
+ * /alice/de/about. resolve_href and normalize_href convert one link each
+ * way. Every root-relative link gets the base, so asset URLs and Editable's
+ * own routes resolve too; only page links get a language, and a link that
+ * names a language keeps it. The main language is '' or its own code.
+ *
+ * Both sides pass their `site`: the server's names the request's site and the
+ * language to serve; the browser's carries the page's language too, so links it
+ * hands over are taken out of that language first and it is the default to serve.
+ */
+export type SiteLinks = { origin: string; base: string; languages: string[]; language?: string };
+
+type Href = string | Pick<URL, 'pathname' | 'search' | 'hash'>;
+
+const href_of = (href: Href) =>
+	typeof href === 'string' ? href : `${href.pathname}${href.search}${href.hash}`;
+
+/** A link to this site, root-relative or absolute on its origin, split for rebuilding. */
+function own_link(href: string, origin: string): { url: URL; prefix: string } | null {
 	if (!href || href.startsWith('#')) return null;
-	try {
-		const base = origin || 'http://editable.local';
-		const url = new URL(href, base);
-		if (url.origin !== new URL(base).origin || !['http:', 'https:'].includes(url.protocol))
-			return null;
-		const { pathname } = language_path(url.pathname, languages);
-		if (
-			pathname !== '/' &&
-			(!/^\/[^/.]+$/.test(pathname) || ['/new', '/design-system'].includes(pathname))
-		)
-			return null;
-		return url;
-	} catch {
+	const site_origin = origin || 'http://editable.local';
+	const url = URL.parse(href, site_origin);
+	if (
+		!url ||
+		url.origin !== new URL(site_origin).origin ||
+		!['http:', 'https:'].includes(url.protocol)
+	)
 		return null;
-	}
+	const prefix = href.startsWith('//') ? `//${url.host}` : /^https?:/i.test(href) ? url.origin : '';
+	return { url, prefix };
 }
 
-function page_href(href: string, url: URL, pathname: string) {
-	const origin = href.startsWith('//') ? `//${url.host}` : /^https?:/.test(href) ? url.origin : '';
-	return `${origin}${pathname}${url.search}${url.hash}`;
+const rebuild = ({ url, prefix }: { url: URL; prefix: string }, pathname: string) =>
+	`${prefix}${pathname}${url.search}${url.hash}`;
+
+function strip_base(pathname: string, base: string) {
+	if (!base || (pathname !== base && !pathname.startsWith(`${base}/`))) return pathname;
+	return pathname.slice(base.length) || '/';
 }
 
-/** Project unprefixed internal links; explicit language links keep their destination. */
-export function translated_href(
-	href: string,
-	language: string,
-	origin: string,
-	languages: string[]
+// The home page is the base itself, without a trailing slash.
+const add_base = (pathname: string, base: string) =>
+	base ? base + (pathname === '/' ? '' : pathname) : pathname;
+
+const is_page = (pathname: string) =>
+	pathname === '/' || (/^\/[^/.]+$/.test(pathname) && !RESERVED_ROUTE_SLUGS.has(pathname.slice(1)));
+
+/** A link as the browser needs it for this site and language. */
+export function resolve_href(
+	href: Href,
+	site: SiteLinks,
+	language: string = site.language ?? ''
 ): string {
-	const url = internal_page_url(href, origin, languages);
-	if (!language || !url || language_path(url.pathname, languages).pathname !== url.pathname)
-		return href;
-	return page_href(href, url, `/${language}${url.pathname === '/' ? '' : url.pathname}`);
+	if (site.language) href = normalize_href(href, site, site.language);
+	const link = own_link(href_of(href), site.origin);
+	if (!link) return href_of(href);
+	const path = strip_base(link.url.pathname, site.base);
+	const page = language_path(path, site.languages).pathname;
+	const explicit = page !== path;
+	const translation = language !== site.languages[0] ? language : '';
+	const localized =
+		translation && !explicit && is_page(page) ? `/${translation}${page === '/' ? '' : page}` : path;
+	const resolved = add_base(localized, site.base);
+	return resolved === link.url.pathname ? href_of(href) : rebuild(link, resolved);
 }
 
-export function translate_document_links(
-	source: Document,
-	language: string,
-	origin: string,
-	languages: string[]
-): Document {
-	if (!language) return source;
-	const document = structuredClone(source);
-	for (const node of Object.values(document.nodes)) {
-		if (typeof node.href === 'string')
-			node.href = translated_href(node.href, language, origin, languages);
+/** A served link in its stored form: without the base, and without the given language. */
+export function normalize_href(
+	href: Href,
+	site: SiteLinks,
+	language: string = site.language ?? ''
+): string {
+	const link = own_link(href_of(href), site.origin);
+	if (!link) return href_of(href);
+	const path = strip_base(link.url.pathname, site.base);
+	const resolved = language_path(path, site.languages);
+	const normalized =
+		resolved.language === language && resolved.pathname !== path ? resolved.pathname : path;
+	return normalized === link.url.pathname ? href_of(href) : rebuild(link, normalized);
+}
+
+/** The document with the links a function changes replaced, copying only what changes. */
+function map_hrefs(source: Document, map: (href: string, id: string) => string): Document {
+	let document = source;
+	for (const [id, node] of Object.entries(source.nodes)) {
+		if (typeof node.href !== 'string') continue;
+		const href = map(node.href, id);
+		if (href === node.href) continue;
+		if (document === source) document = { ...source, nodes: { ...source.nodes } };
+		document.nodes[id] = { ...node, href };
 	}
 	return document;
 }
 
-/** Language prefixes are a projection, not a change to stored content. */
-export function restore_document_links(
+/** resolve_href on every link of a document. */
+export function resolve_hrefs(
+	source: Document,
+	site: SiteLinks,
+	language: string = site.language ?? ''
+): Document {
+	return map_hrefs(source, (href) => resolve_href(href, site, language));
+}
+
+/**
+ * normalize_href on every link of a document. A link that still resolves to
+ * what was stored before stays exactly as it was stored, so a link naming a
+ * language keeps naming it.
+ */
+export function normalize_hrefs(
 	source: Document,
 	baseline: Document,
-	language: string,
-	origin: string,
-	languages: string[]
+	site: SiteLinks,
+	language: string = site.language ?? ''
 ): Document {
-	const document = structuredClone(source);
-	for (const node of Object.values(document.nodes)) {
-		if (typeof node.href !== 'string') continue;
-		const original_href = baseline.nodes[node.id]?.href;
-		if (
-			typeof original_href === 'string' &&
-			node.href === translated_href(original_href, language, origin, languages)
-		) {
-			node.href = original_href;
-			continue;
-		}
-		const url = internal_page_url(node.href, origin, languages);
-		if (!url) continue;
-		const resolved = language_path(url.pathname, languages);
-		if (resolved.language === language && resolved.pathname !== url.pathname)
-			node.href = page_href(node.href, url, resolved.pathname);
-	}
-	return document;
+	return map_hrefs(source, (href, id) => {
+		const original_href = baseline.nodes[id]?.href;
+		return typeof original_href === 'string' && href === resolve_href(original_href, site, language)
+			? original_href
+			: normalize_href(href, site, language);
+	});
 }
 
 const SAFE_HREF_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:', 'sms:']);

@@ -1,6 +1,10 @@
 import { expect, it, vi } from 'vitest';
 
-vi.mock('$app/env/private', () => ({ ORIGIN: 'https://example.com', VERCEL: undefined }));
+vi.mock('$app/env/private', () => ({
+	ORIGIN: 'https://example.com',
+	LANGUAGES: '',
+	VERCEL: undefined
+}));
 vi.mock('#app/api.remote.js', () => ({
 	get_sitemap_entries: async () => [{ path: '/über', lastmod: null }]
 }));
