@@ -1,4 +1,5 @@
 import { redirect } from '@sveltejs/kit';
+import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle, ServerInit } from '@sveltejs/kit/hooks';
 import { site, request_language, type Site } from '#app/server_site.js';
 import { normalize_href, resolve_href } from '#app/document_links.js';
@@ -38,7 +39,11 @@ export const init: ServerInit = async () => {
 	}
 };
 
-export const handle: Handle = async ({ event, resolve }) => {
+// The hosting prototype sets the request's site; static deployments have no host.
+const host_handle: Handle = async (input) =>
+	VERCEL ? input.resolve(input.event) : (await import('./host/sites.js')).host_handle(input);
+
+const editable_handle: Handle = async ({ event, resolve }) => {
 	// Navigations only. The target counts as external, so the site's origin is
 	// allowlisted — not `external: true`, which would permit redirecting anywhere.
 	const canonical_origin = URL.parse(site.origin);
@@ -62,3 +67,5 @@ export const handle: Handle = async ({ event, resolve }) => {
 		response.headers.set('X-Frame-Options', 'DENY');
 	return response;
 };
+
+export const handle = sequence(host_handle, editable_handle);
