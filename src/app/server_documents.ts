@@ -2,12 +2,11 @@ import { createHash } from 'node:crypto';
 import slugify from 'slugify';
 import { validate_document } from 'svedit';
 import type { Attachment, DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
-import type { StatementSync } from 'node:sqlite';
-import { db, with_transaction, delete_orphaned_assets, touch_asset } from '#app/services.js';
+import { store, with_transaction, delete_orphaned_assets, touch_asset } from '#app/services.js';
+import { collect_asset_ids, translation_payloads } from '#lib/asset_references.js';
 import { document_schema } from '#app/document_schema.js';
 import { collect_node_ids_in_order } from '#lib/document_graph.js';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
-import { rebuild_asset_refs } from './server_asset_refs.js';
 import { cleanup_translations } from './server_translations.js';
 import { assert_safe_hrefs, parse_internal_page_href } from './document_links.js';
 import { RESERVED_ROUTE_SLUGS } from './config.js';
@@ -18,14 +17,6 @@ import { is_reserved_markdown_slug } from '#app/markdown/registry.js';
 export type DocumentData = {
 	document_id: string;
 	nodes: Record<string, DocumentNode>;
-};
-
-export type DocumentRow = {
-	document_id: string;
-	type: string;
-	data: string;
-	created_at: string | null | undefined;
-	updated_at: string | null | undefined;
 };
 
 /** Page properties that reference shared documents, named after their document type. */
@@ -72,12 +63,7 @@ export function extract_document(
 }
 
 export function get_optional_doc_from_db(document_id: string): DocumentData | null {
-	const doc_row = db
-		.prepare('SELECT data FROM documents WHERE document_id = ?')
-		.get(document_id) as { data: string } | undefined;
-
-	if (!doc_row) return null;
-	return JSON.parse(doc_row.data);
+	return store.documents.get(document_id)?.data ?? null;
 }
 
 export function get_doc_from_db(document_id: string): DocumentData {
@@ -89,10 +75,7 @@ export function get_doc_from_db(document_id: string): DocumentData {
 }
 
 export function get_home_page_id_from_db(): string | null {
-	const row = db.prepare('SELECT value FROM site_settings WHERE key = ?').get('home_page_id') as
-		{ value: string } | undefined;
-
-	return row?.value ?? null;
+	return store.settings.get('home_page_id');
 }
 
 export function is_home_page_document_id(document_id: string): boolean {
@@ -100,21 +83,17 @@ export function is_home_page_document_id(document_id: string): boolean {
 }
 
 export function get_active_slug_for_document_id(document_id: string): string | null {
-	const row = db
-		.prepare('SELECT slug FROM document_slugs WHERE document_id = ? AND is_active = 1')
-		.get(document_id) as unknown as { slug: string } | undefined;
-
-	return row?.slug ?? null;
+	return (
+		store.slugs.all().find((record) => record.document_id === document_id && record.is_active)
+			?.slug ?? null
+	);
 }
 
 /** Resolve an active or historical slug to its document and current active slug. */
 export function resolve_slug(
 	slug: string
 ): { document_id: string; is_active: boolean; active_slug: string } | null {
-	const row = db
-		.prepare('SELECT document_id, is_active FROM document_slugs WHERE slug = ?')
-		.get(slug) as unknown as { document_id: string; is_active: number } | undefined;
-
+	const row = store.slugs.get(slug);
 	if (!row) return null;
 
 	const active_slug = get_active_slug_for_document_id(row.document_id);
@@ -124,7 +103,7 @@ export function resolve_slug(
 
 	return {
 		document_id: row.document_id,
-		is_active: row.is_active === 1,
+		is_active: row.is_active,
 		active_slug
 	};
 }
@@ -139,12 +118,11 @@ export function is_reserved_route_slug(slug: string) {
  */
 export function create_page_slug(document_id: string, base: string): string {
 	const base_slug = slugify(base, { lower: true, strict: true, trim: true }) || document_id;
-	const slug_exists_stmt = db.prepare('SELECT document_id FROM document_slugs WHERE slug = ?');
 
 	let slug = base_slug;
 	let suffix = 2;
 	while (
-		slug_exists_stmt.get(slug) ||
+		store.slugs.get(slug) ||
 		is_reserved_route_slug(slug) ||
 		is_reserved_markdown_slug(slug) ||
 		is_reserved_language_slug(slug, site.languages)
@@ -153,9 +131,12 @@ export function create_page_slug(document_id: string, base: string): string {
 		suffix += 1;
 	}
 
-	db.prepare(
-		'INSERT INTO document_slugs (slug, document_id, is_active, created_at) VALUES (?, ?, 1, ?)'
-	).run(slug, document_id, new Date().toISOString());
+	store.slugs.put(slug, {
+		slug,
+		document_id,
+		is_active: true,
+		created_at: new Date().toISOString()
+	});
 	return slug;
 }
 
@@ -214,18 +195,6 @@ export function collect_document_refs(
 	return refs;
 }
 
-export function update_document_refs(
-	source_document_id: string,
-	target_document_ids: string[],
-	delete_stmt: StatementSync,
-	insert_stmt: StatementSync
-) {
-	delete_stmt.run(source_document_id);
-	for (const [ref_order, target_document_id] of target_document_ids.entries()) {
-		insert_stmt.run(target_document_id, source_document_id, ref_order);
-	}
-}
-
 /** Stitch the shared documents (banner, nav, footer) into a page document. */
 export function combine_page_document(page_doc: DocumentData): DocumentData {
 	const page_node = page_doc.nodes[page_doc.document_id];
@@ -241,11 +210,14 @@ export function get_combined_document(document_id: string): DocumentData {
 	return combine_page_document(get_doc_from_db(document_id));
 }
 
+/** Every asset any document or translation refers to. */
 function get_referenced_asset_ids(): Set<string> {
-	const rows = db.prepare('SELECT DISTINCT asset_id FROM asset_refs').all() as unknown as Array<{
-		asset_id: string;
-	}>;
-	return new Set(rows.map((row) => row.asset_id));
+	return collect_asset_ids([
+		...store.documents.all().map((record) => record.data),
+		...store.translations
+			.all()
+			.flatMap((record) => [...translation_payloads(JSON.parse(record.value))])
+	]);
 }
 
 /**
@@ -348,16 +320,15 @@ function has_same_nodes(a: DocumentData, b: DocumentData): boolean {
  * however it was written.
  */
 export function get_document_version(document_id: string): string | null {
-	const select_data = db.prepare('SELECT data FROM documents WHERE document_id = ?');
-	const page_row = select_data.get(document_id) as { data: string } | undefined;
-	if (!page_row) return null;
+	const page = store.documents.get(document_id);
+	if (!page) return null;
 
-	const page_node = (JSON.parse(page_row.data) as DocumentData).nodes[document_id];
-	const hash = createHash('sha256').update(page_row.data);
+	const page_node = page.data.nodes[document_id];
+	const hash = createHash('sha256').update(JSON.stringify(page.data));
 	for (const type of shared_document_types) {
 		const shared_id = page_node?.[type];
-		const row = typeof shared_id === 'string' ? select_data.get(shared_id) : undefined;
-		hash.update('\0').update((row as { data: string } | undefined)?.data ?? '');
+		const record = typeof shared_id === 'string' ? store.documents.get(shared_id) : null;
+		hash.update('\0').update(record ? JSON.stringify(record.data) : '');
 	}
 	return hash.digest('hex');
 }
@@ -409,7 +380,7 @@ export async function persist_document(
 	const documents = [{ document_id, type: root_type }, ...shared_roots].map((root) => {
 		const node_ids = collect_node_ids(root.document_id, nodes, exclude_roots);
 		const doc = extract_document(root.document_id, node_ids, nodes);
-		return { ...root, node_ids, doc, data: JSON.stringify(doc) };
+		return { ...root, node_ids, doc };
 	});
 
 	// Everything up to the write runs synchronously, so no other save can interleave.
@@ -417,40 +388,31 @@ export async function persist_document(
 		throw new VersionConflictError();
 	}
 
-	const select_row = db.prepare('SELECT type, data FROM documents WHERE document_id = ?');
 	const changed_documents = documents.filter(({ document_id, type, doc }) => {
-		const row = select_row.get(document_id) as { type: string; data: string } | undefined;
-		if (row && row.type !== type) {
-			throw new InvalidDocumentError(`Document ${document_id} is a ${row.type}, not a ${type}.`);
+		const record = store.documents.get(document_id);
+		if (record && record.type !== type) {
+			throw new InvalidDocumentError(`Document ${document_id} is a ${record.type}, not a ${type}.`);
 		}
-		return !row || !has_same_nodes(JSON.parse(row.data), doc);
+		return !record || !has_same_nodes(record.data, doc);
 	});
-
-	const upsert = db.prepare(
-		'INSERT INTO documents (document_id, type, data, created_at, updated_at) VALUES(?, ?, ?, ?, ?) ON CONFLICT(document_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at'
-	);
-	const delete_document_refs = db.prepare('DELETE FROM document_refs WHERE source_document_id = ?');
-	const insert_document_ref = db.prepare(
-		'INSERT OR REPLACE INTO document_refs (target_document_id, source_document_id, ref_order) VALUES (?, ?, ?)'
-	);
 
 	const doc = documents[0].doc;
 
 	const version = await with_asset_cleanup(() =>
 		with_transaction(() => {
-			// created_at is only written on insert; the upsert keeps the existing value on conflict.
 			const now_iso = new Date().toISOString();
 
-			for (const { document_id, type, node_ids, data } of changed_documents) {
-				upsert.run(document_id, type, data, now_iso, now_iso);
-				update_document_refs(
+			for (const { document_id, type, doc } of changed_documents) {
+				// A document keeps its created_at; only new ones get stamped now.
+				const created_at = store.documents.get(document_id)?.created_at ?? now_iso;
+				store.documents.put(document_id, {
 					document_id,
-					collect_document_refs(nodes, node_ids, document_id),
-					delete_document_refs,
-					insert_document_ref
-				);
+					type,
+					data: doc,
+					created_at,
+					updated_at: now_iso
+				});
 				cleanup_translations(document_id);
-				rebuild_asset_refs(document_id);
 			}
 
 			on_write?.(doc);

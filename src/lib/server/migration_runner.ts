@@ -3,11 +3,11 @@ import type { DatabaseSync } from 'node:sqlite';
 import { plan_pending_migrations } from './migration_plan.js';
 import { create_migration_helpers } from './migration_helpers.js';
 
-type SeedInitialDocuments = (context: { db: any }) => unknown;
+type Seed = () => unknown;
 
 export default function migrate(
 	migrations: Migration[],
-	seed_initial_documents: SeedInitialDocuments,
+	seed: Seed,
 	db: DatabaseSync,
 	with_transaction: <T>(fn: () => T) => T
 ) {
@@ -80,6 +80,6 @@ export default function migrate(
 			).run(migration.id, new Date().toISOString());
 		}
 
-		if (is_fresh_database) seed_initial_documents({ db });
+		if (is_fresh_database) seed();
 	});
 }

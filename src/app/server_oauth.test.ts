@@ -10,10 +10,14 @@ vi.mock('$app/env/private', () => ({
 }));
 vi.mock('./services.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
-	return { db: new DatabaseSync(':memory:') };
+	const { sqlite_store } = await import('#lib/server/sqlite_store.js');
+	const db = new DatabaseSync(':memory:');
+	return { db, store: sqlite_store(db, (fn) => fn()) };
 });
 
-import { db } from './services.js';
+import type { DatabaseSync } from 'node:sqlite';
+import * as services from './services.js';
+const { db } = services as unknown as { db: DatabaseSync };
 import migration from './migrations/20261010T180000000Z_editable_mcp_oauth.js';
 import {
 	approve_client,

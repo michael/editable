@@ -1,9 +1,8 @@
 import type { DocumentNode } from 'svedit';
-import { db } from '#app/services.js';
+import { store } from '#app/services.js';
 import {
-	type DocumentData,
-	type DocumentRow,
 	collect_document_refs,
+	collect_node_ids,
 	get_active_slug_for_document_id,
 	get_home_page_id_from_db,
 	resolve_slug,
@@ -51,18 +50,16 @@ export type PageTreeNode = {
 };
 
 function list_page_documents(): PageDocumentRecord[] {
-	const rows = db
-		.prepare('SELECT * FROM documents WHERE type = ? ORDER BY document_id')
-		.all('page') as unknown as DocumentRow[];
-	return rows.map((row) => {
-		const doc = JSON.parse(row.data) as DocumentData;
-		return {
-			document_id: doc.document_id,
-			nodes: doc.nodes,
-			created_at: row.created_at ?? null,
-			updated_at: row.updated_at ?? null
-		};
-	});
+	return store.documents
+		.all()
+		.filter((record) => record.type === 'page')
+		.sort((a, b) => a.document_id.localeCompare(b.document_id))
+		.map((record) => ({
+			document_id: record.document_id,
+			nodes: record.data.nodes,
+			created_at: record.created_at ?? null,
+			updated_at: record.updated_at ?? null
+		}));
 }
 
 function summarize_page_document(page_doc: PageDocumentRecord): PageSummary {
@@ -87,13 +84,12 @@ function summarize_page_document(page_doc: PageDocumentRecord): PageSummary {
 	};
 }
 
-function get_outgoing_refs(source_document_id: string): string[] {
-	const rows = db
-		.prepare(
-			'SELECT target_document_id FROM document_refs WHERE source_document_id = ? ORDER BY ref_order, rowid'
-		)
-		.all(source_document_id) as Array<{ target_document_id: string }>;
-	return rows.map((row) => row.target_document_id);
+/** The pages a shared document links to, in document order. */
+function get_outgoing_refs(document_id: string): string[] {
+	const record = store.documents.get(document_id);
+	if (!record) return [];
+	const { nodes } = record.data;
+	return collect_document_refs(nodes, collect_node_ids(document_id, nodes), document_id);
 }
 
 /** Build the same page tree used by the Pages drawer. */

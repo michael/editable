@@ -1106,7 +1106,7 @@ event.locals.site = {
 	origin: 'https://host.example',
 	base: '/alice',
 	languages: [],
-	storage: { db, with_transaction, assets },
+	storage: { store, assets },
 	auth
 };
 ```
@@ -1114,7 +1114,7 @@ event.locals.site = {
 - `origin` is the public origin, used for canonical URLs, the sitemap, and the canonical host redirect.
 - `base` is the path the site is served under, or `''` at the root. Stored links never include it: `/about` stays `/about` in the database, reaches the browser as `/alice/about` the way language prefixes do, and is stored without it again, so a site can move to another path or its own domain without changing content. Components render `node.href` as is; asset URLs and the editor's own navigation go through `resolve_href(href, site)`.
 - `languages` lists the site's languages, the main language first, or none.
-- `storage` holds the site's SQLite database, a `with_transaction` function, and its asset files, created with `create_database` and `create_asset_storage` from `src/lib/server/`. Editable reads and writes through it for the request and caches nothing; opening, caching, and closing site data is up to the host. Run `run_migrations(storage)` from `src/app/migrations.ts` when opening a site's database. Asset cleanup deletes files the site's database no longer references, so a host that shares asset files between sites supplies asset functions that keep them.
+- `storage` holds the site's records and its asset files. `store` is a `SiteStore` (`src/lib/server/store.ts`): a few collections of records with get, all, put, and delete each, plus a transaction wrapper. Editable ships two: `sqlite_store(db, with_transaction)` over a database from `create_database`, brought up to date with `migrate` from `src/app/migrations.ts`, and `file_store(options)` over a folder of EDF documents and JSON files. Assets come from `create_asset_storage`. Editable reads and writes through the storage for the request and caches nothing; opening, caching, and closing site data is up to the host. Asset cleanup deletes files the site's records no longer reference, so a host that shares asset files between sites supplies asset functions that keep them.
 - `auth` decides who may edit the site and how they sign in, replacing the admin password. It implements `is_admin(event)`, `log_in(event, credentials)`, and `log_out(event)` (types in `src/app/server_admin_auth.ts`). `log_in` receives whatever the login dialog sends to `login_admin`; Editable's own dialog sends `{ password }`. It either starts a session or returns `{ ok: true, redirect }` to continue elsewhere: to sign in with OAuth, have your own login dialog send a username, return the provider's authorization URL, and handle the callback in a route of your own that sets your session, which `is_admin` then reads. `event.url` in `log_in` is the page the login started from. Editable's own sessions use one cookie for the whole host, so a host serving several sites from one origin scopes its sessions to the site, for example with a cookie that names it.
 
 To replace the login dialog itself, for example to ask for a username, to offer several sign-in providers, or when embedding Editable in another environment, set your own component in place of `AuthDialog` as `auth_dialog` in `system_components` in `src/app/document_config.ts`. It opens in the same drawer and receives `onlogin_success`, to call after signing in on the page, and `onedit_for_fun`, for editing without saving (see `AuthDialogProps` in `src/app/components/AuthDialog.svelte`):

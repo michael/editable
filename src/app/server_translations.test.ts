@@ -12,26 +12,30 @@ vi.mock('$app/env/private', () => ({
 }));
 vi.mock('./services.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
+	const { sqlite_store } = await import('#lib/server/sqlite_store.js');
 	const db = new DatabaseSync(':memory:');
+	const with_transaction = <T>(callback: () => T): T => {
+		db.exec('BEGIN');
+		try {
+			const result = callback();
+			db.exec('COMMIT');
+			return result;
+		} catch (err) {
+			db.exec('ROLLBACK');
+			throw err;
+		}
+	};
 	return {
 		db,
+		store: sqlite_store(db, with_transaction),
 		asset_exists: vi.fn(() => true),
-		with_transaction: (callback: () => unknown) => {
-			db.exec('BEGIN');
-			try {
-				const result = callback();
-				db.exec('COMMIT');
-				return result;
-			} catch (error) {
-				db.exec('ROLLBACK');
-				throw error;
-			}
-		}
+		with_transaction
 	};
 });
 
 import { default_site } from './server_site.js';
-import { db, asset_exists } from './services.js';
+import * as services from './services.js';
+const { db, asset_exists } = services as unknown as typeof services & { db: DatabaseSync };
 import migration from './migrations/20260923T180000000Z_editable_translations.js';
 import {
 	default_page_document,
@@ -46,7 +50,6 @@ import {
 } from './server_translations.js';
 import { property_payload, translation_properties, type TranslationMap } from './translations.js';
 import { replace_translation } from './test_helpers/translations.js';
-import { rebuild_asset_refs } from './server_asset_refs.js';
 import { referenced_assets } from '../../scripts/asset-references.js';
 
 // With no site set by a host, the code under test uses the deployment's own.
@@ -56,13 +59,9 @@ afterAll(() => (db as DatabaseSync).close());
 
 beforeEach(() => {
 	languages.splice(0, languages.length, 'en', 'de', 'fr');
-	db.exec(
-		'DROP TABLE IF EXISTS documents; DROP TABLE IF EXISTS asset_refs; DROP TABLE IF EXISTS translations'
-	);
+	db.exec('DROP TABLE IF EXISTS documents; DROP TABLE IF EXISTS translations');
 	vi.mocked(asset_exists).mockReturnValue(true);
-	db.exec(
-		'CREATE TABLE documents (document_id TEXT PRIMARY KEY, data TEXT); CREATE TABLE asset_refs (asset_id TEXT, document_id TEXT, PRIMARY KEY (asset_id, document_id))'
-	);
+	db.exec('CREATE TABLE documents (document_id TEXT PRIMARY KEY, data TEXT)');
 	migration.up({ db });
 	for (const doc of [
 		default_page_document,
@@ -212,18 +211,14 @@ it('stores media overrides, loads original fallback, and retains assets across l
 	const french = load_input('fr');
 	replace_image(french, id, 'image', asset_a);
 	save_translated_document(french);
-	// Rebuilding after an original save must retain translation-only assets.
+	// Cleaning up after an original save must retain translation-only assets.
 	cleanup_translations(id);
-	rebuild_asset_refs(id);
 	expect(referenced_assets(db)).toContain(asset_a);
-	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_a)).toHaveLength(1);
 	for (const language of ['de', 'fr']) {
 		const reset = load_input(language);
 		replace_translation(reset, id, 'image', property_payload(original, id, 'image'));
 		save_translated_document(reset);
-		expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_a)).toHaveLength(
-			language === 'de' ? 1 : 0
-		);
+		expect([...referenced_assets(db)].includes(asset_a)).toBe(language === 'de');
 	}
 	expect(referenced_assets(db)).not.toContain(asset_a);
 });
@@ -242,11 +237,7 @@ it.each([false, true])(
 		save_translated_document(input);
 		const loaded = load_input();
 		expect(loaded.nodes[loaded.nodes[node_id][property_id]].type).toBe('video');
-		expect(
-			db.prepare('SELECT document_id FROM asset_refs WHERE asset_id = ?').get(asset_b)
-		).toEqual({
-			document_id: default_nav_document.document_id
-		});
+		expect(referenced_assets(db)).toContain(asset_b);
 		const nav: Document = structuredClone(default_nav_document);
 		const spanish_map = stored_map(nav.document_id);
 		db.prepare('INSERT INTO translations VALUES (?, ?, ?, ?)').run(
@@ -262,9 +253,8 @@ it.each([false, true])(
 			nav.document_id
 		);
 		cleanup_translations(nav.document_id);
-		rebuild_asset_refs(nav.document_id);
 		expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(0);
-		expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_b)).toHaveLength(0);
+		expect(referenced_assets(db)).not.toContain(asset_b);
 	}
 );
 
@@ -284,16 +274,15 @@ it('rejects unuploaded media, stale saves, extraneous nodes and structural chang
 	invalid.nodes[id].body.nodes = [];
 	expect(() => save_translated_document(invalid)).toThrow();
 	expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(0);
-	expect(db.prepare('SELECT * FROM asset_refs').all()).toHaveLength(0);
+	expect(referenced_assets(db)).not.toContain(asset_a);
 	save_translated_document(input);
 	expect(() => save_translated_document(input)).toThrow();
-	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_a)).toHaveLength(1);
+	expect(referenced_assets(db)).toContain(asset_a);
 	// Deleting the owning document releases translations and their assets too.
 	db.prepare('DELETE FROM documents WHERE document_id = ?').run(id);
 	cleanup_translations(id);
-	rebuild_asset_refs(id);
 	expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(0);
-	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_a)).toHaveLength(0);
+	expect(referenced_assets(db)).not.toContain(asset_a);
 });
 
 it('keeps a translated asset alive while a regular document still references it', () => {
@@ -311,14 +300,13 @@ it('keeps a translated asset alive while a regular document still references it'
 	replace_translation(reset, id, 'image', property_payload(original, id, 'image'));
 	save_translated_document(reset);
 	expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(0);
-	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_a)).toHaveLength(1);
+	expect(referenced_assets(db)).toContain(asset_a);
 	original.nodes[original.nodes[id].image].src = '';
 	db.prepare('UPDATE documents SET data = ? WHERE document_id = ?').run(
 		JSON.stringify(original),
 		id
 	);
-	rebuild_asset_refs(id);
-	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_a)).toHaveLength(0);
+	expect(referenced_assets(db)).not.toContain(asset_a);
 });
 
 it('removes incompatible media overrides and their asset references during original cleanup', () => {
@@ -338,12 +326,10 @@ it('removes incompatible media overrides and their asset references during origi
 		JSON.stringify({ node_id: node.id, nodes: { [node.id]: node } }),
 		new Date().toISOString()
 	);
-	rebuild_asset_refs(id);
-	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_b)).toHaveLength(1);
+	expect(referenced_assets(db)).toContain(asset_b);
 	cleanup_translations(id);
-	rebuild_asset_refs(id);
 	expect(db.prepare('SELECT * FROM translations').all()).toHaveLength(0);
-	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_b)).toHaveLength(0);
+	expect(referenced_assets(db)).not.toContain(asset_b);
 });
 
 it('persists deleted translated media as an empty override and releases its asset reference', () => {
@@ -366,7 +352,7 @@ it('persists deleted translated media as an empty override and releases its asse
 	const result = load_input();
 	expect(result.nodes[result.nodes[id].image]).toMatchObject(MEDIA_DEFAULTS);
 	expect(stored_map(id)[id].image).toBeDefined();
-	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_a)).toHaveLength(0);
+	expect(referenced_assets(db)).not.toContain(asset_a);
 	expect(translated_document(id, 'en').document).toEqual(original);
 	const french = translated_document(id, 'fr').document;
 	expect(french.nodes[french.nodes[id].image]).toEqual(original.nodes[original.nodes[id].image]);
@@ -386,33 +372,24 @@ it('keeps server references in sync with backup scanning across documents and di
 		JSON.stringify(nav),
 		nav_id
 	);
-	for (const id of [page_id, nav_id, default_footer_document.document_id]) rebuild_asset_refs(id);
-	const server_assets = () =>
-		new Set(
-			(db.prepare('SELECT DISTINCT asset_id FROM asset_refs').all() as { asset_id: string }[]).map(
-				(row) => row.asset_id
-			)
-		);
-	expect(server_assets()).toEqual(referenced_assets(db));
-	expect(db.prepare('SELECT * FROM asset_refs WHERE asset_id = ?').all(asset_a)).toHaveLength(2);
+	expect(referenced_assets(db)).toContain(asset_a);
 	db.prepare('DELETE FROM translations WHERE document_id = ?').run(page_id);
-	rebuild_asset_refs(page_id);
-	expect(server_assets()).toEqual(referenced_assets(db));
-	expect(db.prepare('SELECT document_id FROM asset_refs WHERE asset_id = ?').get(asset_a)).toEqual({
-		document_id: nav_id
-	});
+	// The nav still refers to it.
+	expect(referenced_assets(db)).toContain(asset_a);
+	db.prepare('UPDATE documents SET data = ? WHERE document_id = ?').run(
+		JSON.stringify(default_nav_document),
+		nav_id
+	);
+	expect(referenced_assets(db)).not.toContain(asset_a);
 });
 
-it('fails before removing existing references when a stored translation is malformed', () => {
+it('refuses to compute references while a stored translation is malformed', () => {
 	const id = default_page_document.document_id;
 	const input = load_input();
 	replace_image(input, id, 'image', asset_a);
 	save_translated_document(input);
-	const refs_before = db.prepare('SELECT * FROM asset_refs').all();
 	db.prepare('UPDATE translations SET value = ?').run('{invalid');
-	expect(() => rebuild_asset_refs(id)).toThrow();
 	expect(() => referenced_assets(db)).toThrow();
-	expect(db.prepare('SELECT * FROM asset_refs').all()).toEqual(refs_before);
 });
 
 it('composes 500 translated paragraphs with one full-document validation', () => {
