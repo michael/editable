@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { is_media_selection } from '#app/media.js';
 	import { get_app_context } from '#app/app_context.js';
-	import { resolve } from '$app/paths';
 	import { site } from '#app/client_site.js';
 	import { resolve_href, normalize_href } from '#app/document_links.js';
 	import { page } from '$app/state';
@@ -437,7 +436,7 @@
 								{#if can_create_pages}
 									<a
 										class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
-										href={resolve_href(resolve('/new'), site)}
+										href={resolve_href('/new', site)}
 										use:tooltip={{ label: 'New page', keys: ['⌃', '⇧', 'N'] }}
 										aria-keyshortcuts="Control+Shift+N"
 										aria-label="New page"

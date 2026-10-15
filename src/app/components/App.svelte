@@ -3,7 +3,6 @@
 	import { dev } from '$app/env';
 	import { DEMO_MODE } from '$app/env/public';
 	import { beforeNavigate, goto, refreshAll } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { site } from '#app/client_site.js';
 	import { resolve_href, normalize_href } from '#app/document_links.js';
 	import { page } from '$app/state';
@@ -466,7 +465,7 @@
 			session.selection = null;
 
 			if (is_new) {
-				await goto(resolve_href(resolve('/'), site));
+				await goto(resolve_href('/', site));
 				return;
 			}
 
@@ -609,7 +608,7 @@
 				if (result?.created && result.document_id && result.slug) {
 					this.context.editable = false;
 					save_progress_visible = false;
-					await goto(resolve_href(resolve('/[page_id]', { page_id: result.slug }), site), {
+					await goto(resolve_href(`/${result.slug}`, site), {
 						replace: true,
 						refreshAll: true
 					});
@@ -704,7 +703,7 @@
 		}
 
 		execute() {
-			return goto(resolve_href(resolve('new'), site));
+			return goto(resolve_href('/new', site));
 		}
 	}
 
@@ -719,9 +718,7 @@
 		execute() {
 			if (!duplicate_source) return;
 			toolbar_ref?.close_page_menu();
-			return goto(
-				`${resolve_href(resolve('new'), site)}?from=${encodeURIComponent(duplicate_source)}`
-			);
+			return goto(`${resolve_href('/new', site)}?from=${encodeURIComponent(duplicate_source)}`);
 		}
 	}
 
