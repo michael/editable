@@ -1113,7 +1113,10 @@ The database the conversion replaced moves to `data-backups/` as a regular backu
 
 A new, empty data folder starts with SQLite, or with files when `STORAGE=files` is set. For an existing folder, `STORAGE` must match the format it holds or be left unset. A folder holding both formats, which an interrupted conversion can leave behind, is refused until one of them is moved out.
 
-Each file is written atomically, but a save that touches several files is not one transaction. Backups, Litestream, and the other `pnpm data:*` commands work with SQLite only.
+Each file is written atomically, but a save that touches several files is not one transaction. Deployments always use SQLite, which a new volume starts with, and so do backups, Litestream, and the `pnpm data:*` commands. File storage suits demos and archiving locally:
+
+- `pnpm data:pull`, `data:pull-cloud`, `data:restore`, and `data:reset` install a SQLite database. A local site kept as files moves to `data-backups/` first, as a dated folder of its records.
+- `pnpm data:push`, `data:backup`, `data:verify`, and `data:translations` stop at a site kept as files and ask you to run `pnpm data:convert --to sqlite` first.
 
 ## Hosting several sites (experimental)
 
