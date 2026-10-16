@@ -113,4 +113,4 @@ export type StorageFormat = {
 };
 
 /** A store as its backend opens it, with the format to bring up to date before use. */
-export type OpenedStore = { store: SiteStore; format: StorageFormat };
+export type OpenedStore = { store: SiteStore; format: StorageFormat; close(): void };

@@ -18,6 +18,7 @@ export function open_sqlite(config: DatabaseConfig): OpenedStore {
 	const context: SqliteContext = { db };
 	return {
 		store: sqlite_store(db, with_transaction),
+		close: () => db.close(),
 		format: {
 			target: 'sqlite',
 			context,

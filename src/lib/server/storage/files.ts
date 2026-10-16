@@ -119,16 +119,17 @@ export function file_store(options: FileStoreOptions): SiteStore {
 
 /**
  * Open a site kept as files. The migrations it has applied are recorded in
- * format.json next to its records.
+ * _migrations.json next to its records, like SQLite's _migrations table.
  */
 export function open_files(options: FileStoreOptions): OpenedStore {
 	const store = file_store(options);
-	const path = join(options.dir, 'format.json');
+	const path = join(options.dir, '_migrations.json');
 	const applied = (): string[] =>
 		existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')).migrations : [];
 	const context: FilesContext = { dir: options.dir };
 	return {
 		store,
+		close: () => {},
 		format: {
 			target: 'files',
 			context,

@@ -76,7 +76,7 @@ it('upgrades a file folder written before settings became records', () => {
 	const home_page_id = first.store.settings.get('home_page_id')!.value;
 	// What a folder from before format tracking looks like.
 	const site = join(data_dir, 'site');
-	rmSync(join(site, 'format.json'));
+	rmSync(join(site, '_migrations.json'));
 	writeFileSync(join(site, 'settings.json'), JSON.stringify({ home_page_id }));
 
 	const reopened = open_file_folder(data_dir);
@@ -85,7 +85,7 @@ it('upgrades a file folder written before settings became records', () => {
 		key: 'home_page_id',
 		value: home_page_id
 	});
-	expect(JSON.parse(readFileSync(join(site, 'format.json'), 'utf8')).migrations).toContain(
+	expect(JSON.parse(readFileSync(join(site, '_migrations.json'), 'utf8')).migrations).toContain(
 		'20261016T120000000Z_editable_setting_records_files'
 	);
 });
@@ -98,7 +98,7 @@ it('refuses a backend that misses storage migrations, as a fork adding one would
 	expect(() => migrate_storage(atproto)).toThrow(
 		'20260803T131059242Z_editable_initial_schema_atproto'
 	);
-	expect(existsSync(join(dir, 'site', 'format.json'))).toBe(false);
+	expect(existsSync(join(dir, 'site', '_migrations.json'))).toBe(false);
 });
 
 it('refuses data migrated by a newer version', () => {

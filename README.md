@@ -1101,17 +1101,17 @@ When you've found the state you want live, restore production to it with `pnpm d
 
 Keep a site in plain files instead of a SQLite database: every document as an EDF file, every other record as JSON, so the folder can be read, diffed, and versioned like source code.
 
-```sh
-STORAGE=files DATA_DIR=data-files pnpm dev
-```
-
-With `STORAGE=files` the site lives in `DATA_DIR/site`: `documents/<id>.edf` for each page, banner, nav, and footer, `documents.json` with their types and timestamps, and one JSON file each for slugs, settings, translations, references, sessions, and MCP connections. `format.json` lists the file store's storage migrations that have run. Assets stay in `DATA_DIR/assets`, as with SQLite.
-
-Convert a data folder to the other format; the target folder must be empty, and assets are copied along:
+Convert your site in place, with the dev server stopped:
 
 ```sh
-pnpm data:convert data data-files
+pnpm data:convert --to files
 ```
+
+Editable reads the format from the data folder, so `pnpm dev` then opens the files. The site lives in `data/site`: `documents/<id>.edf` for each page, banner, nav, and footer, `documents.json` with their types and timestamps, and one JSON file each for slugs, settings, translations, references, sessions, and MCP connections. `_migrations.json` lists the file store's storage migrations that have run, like SQLite's `_migrations` table. Assets stay in `data/assets`, shared by both formats.
+
+The database the conversion replaced moves to `data-backups/` as a regular backup that `pnpm data:backups` lists. `pnpm data:convert --to sqlite` converts back the same way, keeping the files version in a dated folder in `data-backups/`.
+
+A new, empty data folder starts with SQLite, or with files when `STORAGE=files` is set. For an existing folder, `STORAGE` must match the format it holds or be left unset. A folder holding both formats, which an interrupted conversion can leave behind, is refused until one of them is moved out.
 
 Each file is written atomically, but a save that touches several files is not one transaction. Backups, Litestream, and the other `pnpm data:*` commands work with SQLite only.
 
@@ -1132,7 +1132,7 @@ event.locals.site = {
 - `origin` is the public origin, used for canonical URLs, the sitemap, and the canonical host redirect.
 - `base` is the path the site is served under, or `''` at the root. Stored links never include it: `/about` stays `/about` in the database, reaches the browser as `/alice/about` the way language prefixes do, and is stored without it again, so a site can move to another path or its own domain without changing content. Components render `node.href` as is; asset URLs and the editor's own navigation go through `resolve_href(href, site)`.
 - `languages` lists the site's languages, the main language first, or none.
-- `storage` holds the site's records and its asset files. `store` is a `SiteStore` (`src/lib/server/storage/store.ts`): a few collections of records with get, all, put, and delete each, plus a transaction wrapper. Open a site with `open_sqlite_folder(dir)` or `open_file_folder(dir)` from `src/app/storage.ts`, run `migrate` from `src/app/migrations.ts` on it, which brings its backend's format and then its content up to date and seeds a new site, and pass its `store`. Assets come from `create_asset_storage`. Editable reads and writes through the storage for the request and caches nothing; opening, caching, and closing site data is up to the host. Asset cleanup deletes files the site's records no longer reference, so a host that shares asset files between sites supplies asset functions that keep them.
+- `storage` holds the site's records and its asset files. `store` is a `SiteStore` (`src/lib/server/storage/store.ts`): a few collections of records with get, all, put, and delete each, plus a transaction wrapper. Open a site with `open_data_folder(dir)` from `src/app/storage.ts`, which uses the format the folder holds, run `migrate` from `src/app/migrations.ts` on it, which brings its backend's format and then its content up to date and seeds a new site, and pass its `store`. Assets come from `create_asset_storage`. Editable reads and writes through the storage for the request and caches nothing; opening, caching, and closing site data is up to the host. Asset cleanup deletes files the site's records no longer reference, so a host that shares asset files between sites supplies asset functions that keep them.
 - `auth` decides who may edit the site and how they sign in, replacing the admin password. It implements `is_admin(event)`, `log_in(event, credentials)`, and `log_out(event)` (types in `src/app/server_admin_auth.ts`). `log_in` receives whatever the login dialog sends to `login_admin`; Editable's own dialog sends `{ password }`. It either starts a session or returns `{ ok: true, redirect }` to continue elsewhere: to sign in with OAuth, have your own login dialog send a username, return the provider's authorization URL, and handle the callback in a route of your own that sets your session, which `is_admin` then reads. `event.url` in `log_in` is the page the login started from. Editable's own sessions use one cookie for the whole host, so a host serving several sites from one origin scopes its sessions to the site, for example with a cookie that names it.
 
 To replace the login dialog itself, for example to ask for a username, to offer several sign-in providers, or when embedding Editable in another environment, set your own component in place of `AuthDialog` as `auth_dialog` in `system_components` in `src/app/document_config.ts`. It opens in the same drawer and receives `onlogin_success`, to call after signing in on the page, and `onedit_for_fun`, for editing without saving (see `AuthDialogProps` in `src/app/components/AuthDialog.svelte`):

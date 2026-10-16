@@ -3,7 +3,7 @@ import { ASSET_ID_REGEX } from '#app/config.js';
 import { create_asset_storage } from '#lib/server/asset_storage.js';
 import type { SiteStore } from '#lib/server/storage/store.js';
 import { migrate } from '#app/migrations.js';
-import { open_file_folder, open_sqlite_folder } from '#app/storage.js';
+import { open_data_folder } from '#app/storage.js';
 import { site } from '#app/server_site.js';
 
 /** A site's records and asset files. */
@@ -16,7 +16,7 @@ let default_storage: SiteStorage | undefined;
 
 /**
  * The deployment's own storage in DATA_DIR, opened on first use and brought
- * up to date: a SQLite database, or with STORAGE=files a folder of EDF
+ * up to date, in the format the folder holds: a SQLite database, or a folder of EDF
  * documents and JSON records.
  */
 export function get_default_storage(): SiteStorage {
@@ -26,7 +26,7 @@ export function get_default_storage(): SiteStorage {
 			asset_grace_period_days: ASSET_GRACE_PERIOD_DAYS,
 			asset_id_regex: ASSET_ID_REGEX
 		});
-		const opened = STORAGE === 'files' ? open_file_folder(DATA_DIR) : open_sqlite_folder(DATA_DIR);
+		const opened = open_data_folder(DATA_DIR, STORAGE);
 		migrate(opened);
 		default_storage = { store: opened.store, assets };
 	}

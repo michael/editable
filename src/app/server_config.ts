@@ -4,8 +4,11 @@ export const DATA_DIR = process.env.DATA_DIR || 'data';
 export const DB_PATH = join(DATA_DIR, 'db.sqlite3');
 export const ASSET_PATH = join(DATA_DIR, 'assets');
 
-/** Where a site's records live: a SQLite database, or with 'files' a folder of EDF and JSON files. */
-export const STORAGE = process.env.STORAGE === 'files' ? 'files' : 'sqlite';
+/**
+ * The backend for a new data folder: 'sqlite' (the default) or 'files'. An
+ * existing folder keeps the format it holds; pnpm data:convert changes it.
+ */
+export const STORAGE = process.env.STORAGE ?? '';
 
 /**
  * How many days an unreferenced asset file is kept after losing its last

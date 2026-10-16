@@ -27,5 +27,3 @@ data-backups/
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-# Local file-store sites
-data-files/
