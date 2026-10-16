@@ -96,12 +96,12 @@ export type SiteStore = {
 };
 
 /**
- * A backend's own format, as opposed to the site's records: the migrations
- * for its target that it has applied, and what those migrations receive. It
- * is kept apart from the records because the store can only be read once its
- * format is current.
+ * A backend's own migration bookkeeping, as opposed to the site's records:
+ * which migrations for its target it has applied, how to record one, and
+ * what they receive. It is kept apart from the store because the store can
+ * only be read once these migrations have run.
  */
-export type StorageFormat = {
+export type StorageMigrations = {
 	/** The migration target this backend runs, such as 'sqlite' or 'files'. */
 	target: string;
 	/** What its migrations receive, such as the database handle. */
@@ -112,5 +112,5 @@ export type StorageFormat = {
 	transaction<T>(fn: () => T): T;
 };
 
-/** A store as its backend opens it, with the format to bring up to date before use. */
-export type OpenedStore = { store: SiteStore; format: StorageFormat; close(): void };
+/** A store as its backend opens it, with the migrations to run before using it. */
+export type OpenedStore = { store: SiteStore; migrations: StorageMigrations; close(): void };

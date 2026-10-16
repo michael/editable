@@ -27,8 +27,8 @@ it('seeds a new site and records every migration as applied, on files and on SQL
 		migrate(opened);
 		expect(opened.store.settings.get('home_page_id')).not.toBeNull();
 		expect(content_applied(opened)).toContain('20261009T120000000Z_editable_site_banner');
-		expect(opened.format.applied()).toContain(
-			`20261016T120000000Z_editable_setting_records_${opened.format.target}`
+		expect(opened.migrations.applied()).toContain(
+			`20261016T120000000Z_editable_setting_records_${opened.migrations.target}`
 		);
 		// Running again changes nothing.
 		const documents = opened.store.documents.all();
@@ -66,7 +66,7 @@ it('upgrades an old database that kept content progress with its SQLite migratio
 		'20261003T120000000Z_editable_code_blocks',
 		'20261009T120000000Z_editable_site_banner'
 	]);
-	expect(opened.format.applied()).toContain('20261010T180000000Z_editable_mcp_oauth');
+	expect(opened.migrations.applied()).toContain('20261010T180000000Z_editable_mcp_oauth');
 });
 
 it('upgrades a file folder written before settings became records', () => {
@@ -94,7 +94,10 @@ it('refuses a backend that misses storage migrations, as a fork adding one would
 	const dir = join(temp_dir(), 'fork');
 	mkdirSync(dir);
 	const opened = open_file_folder(dir);
-	const atproto: OpenedStore = { ...opened, format: { ...opened.format, target: 'atproto' } };
+	const atproto: OpenedStore = {
+		...opened,
+		migrations: { ...opened.migrations, target: 'atproto' }
+	};
 	expect(() => migrate_storage(atproto)).toThrow(
 		'20260803T131059242Z_editable_initial_schema_atproto'
 	);

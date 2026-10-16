@@ -19,7 +19,7 @@ export function open_sqlite(config: DatabaseConfig): OpenedStore {
 	return {
 		store: sqlite_store(db, with_transaction),
 		close: () => db.close(),
-		format: {
+		migrations: {
 			target: 'sqlite',
 			context,
 			applied: () =>

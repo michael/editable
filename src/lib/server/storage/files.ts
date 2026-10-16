@@ -130,7 +130,7 @@ export function open_files(options: FileStoreOptions): OpenedStore {
 	return {
 		store,
 		close: () => {},
-		format: {
+		migrations: {
 			target: 'files',
 			context,
 			applied,

@@ -25,14 +25,14 @@ it('reads the format from the folder and refuses one holding both', () => {
 });
 
 it('opens a new folder in the requested format, SQLite by default', () => {
-	expect(open_data_folder(temp_dir()).format.target).toBe('sqlite');
-	expect(open_data_folder(temp_dir(), 'files').format.target).toBe('files');
+	expect(open_data_folder(temp_dir()).migrations.target).toBe('sqlite');
+	expect(open_data_folder(temp_dir(), 'files').migrations.target).toBe('files');
 	expect(() => open_data_folder(temp_dir(), 'postgres')).toThrow('STORAGE must be sqlite or files');
 });
 
 it('keeps an existing folder in its format and refuses a conflicting request', () => {
 	const dir = temp_dir();
 	open_data_folder(dir, 'files').close();
-	expect(open_data_folder(dir).format.target).toBe('files');
+	expect(open_data_folder(dir).migrations.target).toBe('files');
 	expect(() => open_data_folder(dir, 'sqlite')).toThrow('pnpm data:convert --to sqlite');
 });

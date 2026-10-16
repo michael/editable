@@ -8,7 +8,7 @@ import { create_migration_helpers } from '#lib/server/migration_helpers.js';
 import type { OpenedStore } from '#lib/server/storage/store.js';
 import seed_initial_documents from './seed_initial_documents.js';
 
-const migrations = load_migrations(
+const all_migrations = load_migrations(
 	import.meta.glob('./migrations/*.ts', { eager: true, import: 'default' }) as Record<
 		string,
 		Migration
@@ -16,11 +16,15 @@ const migrations = load_migrations(
 );
 
 /** Bring a backend's own format up to date with the migrations for its target. */
-export function migrate_storage({ format }: OpenedStore) {
-	assert_complete(migrations, format.target);
-	format.transaction(() =>
-		run_migrations(migrations, format.target, new Set(format.applied()), format.context, (id) =>
-			format.record(id)
+export function migrate_storage({ migrations }: OpenedStore) {
+	assert_complete(all_migrations, migrations.target);
+	migrations.transaction(() =>
+		run_migrations(
+			all_migrations,
+			migrations.target,
+			new Set(migrations.applied()),
+			migrations.context,
+			(id) => migrations.record(id)
 		)
 	);
 }
@@ -31,8 +35,8 @@ export function migrate_storage({ format }: OpenedStore) {
  * current shape. Otherwise the content migrations it has not run are applied,
  * and their ids are kept in the store's 'migrations' setting.
  */
-export function migrate_content({ store, format }: OpenedStore) {
-	const content_ids = migrations
+export function migrate_content({ store, migrations }: OpenedStore) {
+	const content_ids = all_migrations
 		.filter((migration) => migration.target === 'content')
 		.map((migration) => migration.id);
 	store.transaction(() => {
@@ -47,9 +51,9 @@ export function migrate_content({ store, format }: OpenedStore) {
 		// SQLite databases from before kept content progress with their own migrations.
 		const applied: string[] = setting
 			? JSON.parse(setting.value)
-			: format.applied().filter((id) => content_ids.includes(id));
+			: migrations.applied().filter((id) => content_ids.includes(id));
 		run_migrations(
-			migrations,
+			all_migrations,
 			'content',
 			new Set(applied),
 			{ store, ...create_migration_helpers(store) },
