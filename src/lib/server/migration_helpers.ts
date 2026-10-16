@@ -6,7 +6,7 @@
 // `updated_at` is left untouched: a migration is not a content edit.
 
 import type { Document } from 'svedit';
-import type { SiteStore } from './store.js';
+import type { SiteStore } from './storage/store.js';
 
 type MigrationNode = Record<string, unknown>;
 

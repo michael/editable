@@ -1,55 +1,39 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { create_database, type DatabaseConfig } from './db.js';
-import { build_migrations, type MigrationModule } from './migration_registry.js';
-import { run_pending_migrations } from './migration_runner.js';
-import type { Collection, SiteStore } from './store.js';
+import { create_database, type DatabaseConfig } from '../db.js';
+import type { Collection, OpenedStore, SiteStore } from './store.js';
 
-/** A change to the SQLite schema, such as a new table; content migrations live with the app. */
-export type SchemaMigration = MigrationModule<{ db: DatabaseSync }>;
-
-const schema_migrations = build_migrations(
-	import.meta.glob('./sqlite_migrations/*.ts', { eager: true, import: 'default' }) as Record<
-		string,
-		SchemaMigration
-	>
-);
+/** What migrations with target 'sqlite' receive. */
+export type SqliteContext = { db: DatabaseSync };
 
 /**
- * Open a site's SQLite database and bring its schema up to date. Applied
- * schema migrations are tracked in _migrations. Databases from before content
- * and schema migrations were split also list content migrations there; those
- * move to the 'migrations' setting, where every backend keeps them.
+ * Open a site's SQLite database. The migrations it has applied are recorded
+ * in _migrations; databases from before content progress moved into the
+ * store list their content migrations there as well.
  */
-export function open_sqlite_store(config: DatabaseConfig): SiteStore {
+export function open_sqlite(config: DatabaseConfig): OpenedStore {
 	const { db, with_transaction } = create_database(config);
-	with_transaction(() => {
-		db.exec(
-			'CREATE TABLE IF NOT EXISTS _migrations (id TEXT PRIMARY KEY NOT NULL, timestamp TEXT NOT NULL)'
-		);
-		const recorded = (db.prepare('SELECT id FROM _migrations').all() as { id: string }[]).map(
-			(row) => row.id
-		);
-		const schema_ids = new Set(schema_migrations.map((migration) => migration.id));
-		const content_ids = recorded.filter((id) => !schema_ids.has(id));
-		if (content_ids.length) {
-			const row = db.prepare("SELECT value FROM site_settings WHERE key = 'migrations'").get() as
-				{ value: string } | undefined;
-			const applied = new Set([...(row ? JSON.parse(row.value) : []), ...content_ids]);
-			db.prepare("INSERT OR REPLACE INTO site_settings (key, value) VALUES ('migrations', ?)").run(
-				JSON.stringify([...applied])
-			);
-			const remove = db.prepare('DELETE FROM _migrations WHERE id = ?');
-			for (const id of content_ids) remove.run(id);
+	db.exec(
+		'CREATE TABLE IF NOT EXISTS _migrations (id TEXT PRIMARY KEY NOT NULL, timestamp TEXT NOT NULL)'
+	);
+	const context: SqliteContext = { db };
+	return {
+		store: sqlite_store(db, with_transaction),
+		format: {
+			target: 'sqlite',
+			context,
+			applied: () =>
+				(db.prepare('SELECT id FROM _migrations ORDER BY id').all() as { id: string }[]).map(
+					(row) => row.id
+				),
+			record: (id) => {
+				db.prepare('INSERT INTO _migrations (id, timestamp) VALUES (?, ?)').run(
+					id,
+					new Date().toISOString()
+				);
+			},
+			transaction: with_transaction
 		}
-		const insert = db.prepare('INSERT INTO _migrations (id, timestamp) VALUES (?, ?)');
-		run_pending_migrations(
-			schema_migrations,
-			new Set(recorded.filter((id) => schema_ids.has(id))),
-			{ db },
-			(id) => insert.run(id, new Date().toISOString())
-		);
-	});
-	return sqlite_store(db, with_transaction);
+	};
 }
 
 /**

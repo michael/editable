@@ -12,7 +12,7 @@ vi.mock('./services.js', async () => {
 	const { mkdtempSync } = await import('node:fs');
 	const { tmpdir } = await import('node:os');
 	const { join } = await import('node:path');
-	const { sqlite_store } = await import('#lib/server/sqlite_store.js');
+	const { sqlite_store } = await import('#lib/server/storage/sqlite.js');
 	const db = new DatabaseSync(':memory:');
 	const asset_dir = mkdtempSync(join(tmpdir(), 'editable-assets-'));
 	return {
@@ -35,8 +35,8 @@ const { asset_path, db, variant_path } = services as unknown as typeof services 
 	db: DatabaseSync;
 };
 import { webp_bytes } from './test_helpers/webp.js';
-import initial_schema from '#lib/server/sqlite_migrations/20260803T131059242Z_editable_initial_schema.js';
-import translations_schema from '#lib/server/sqlite_migrations/20260923T180000000Z_editable_translations.js';
+import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
+import translations_schema from '#app/migrations/20260923T180000000Z_editable_translations.js';
 import {
 	default_page_document,
 	default_banner_document,

@@ -1105,7 +1105,7 @@ Keep a site in plain files instead of a SQLite database: every document as an ED
 STORAGE=files DATA_DIR=data-files pnpm dev
 ```
 
-With `STORAGE=files` the site lives in `DATA_DIR/site`: `documents/<id>.edf` for each page, banner, nav, and footer, `documents.json` with their types and timestamps, and one JSON file each for slugs, settings, translations, references, sessions, and MCP connections. Assets stay in `DATA_DIR/assets`, as with SQLite.
+With `STORAGE=files` the site lives in `DATA_DIR/site`: `documents/<id>.edf` for each page, banner, nav, and footer, `documents.json` with their types and timestamps, and one JSON file each for slugs, settings, translations, references, sessions, and MCP connections. `format.json` lists the file store's storage migrations that have run. Assets stay in `DATA_DIR/assets`, as with SQLite.
 
 Convert a data folder to the other format; the target folder must be empty, and assets are copied along:
 
@@ -1132,7 +1132,7 @@ event.locals.site = {
 - `origin` is the public origin, used for canonical URLs, the sitemap, and the canonical host redirect.
 - `base` is the path the site is served under, or `''` at the root. Stored links never include it: `/about` stays `/about` in the database, reaches the browser as `/alice/about` the way language prefixes do, and is stored without it again, so a site can move to another path or its own domain without changing content. Components render `node.href` as is; asset URLs and the editor's own navigation go through `resolve_href(href, site)`.
 - `languages` lists the site's languages, the main language first, or none.
-- `storage` holds the site's records and its asset files. `store` is a `SiteStore` (`src/lib/server/store.ts`): a few collections of records with get, all, put, and delete each, plus a transaction wrapper. Open one with `open_sqlite_folder(dir)` or `open_file_folder(dir)` from `src/app/storage.ts`, or build your own over `sqlite_store` and `file_store`, then run `migrate(store)` from `src/app/migrations.ts`, which seeds a new site and applies the content migrations an existing one has not run. Assets come from `create_asset_storage`. Editable reads and writes through the storage for the request and caches nothing; opening, caching, and closing site data is up to the host. Asset cleanup deletes files the site's records no longer reference, so a host that shares asset files between sites supplies asset functions that keep them.
+- `storage` holds the site's records and its asset files. `store` is a `SiteStore` (`src/lib/server/storage/store.ts`): a few collections of records with get, all, put, and delete each, plus a transaction wrapper. Open a site with `open_sqlite_folder(dir)` or `open_file_folder(dir)` from `src/app/storage.ts`, run `migrate` from `src/app/migrations.ts` on it, which brings its backend's format and then its content up to date and seeds a new site, and pass its `store`. Assets come from `create_asset_storage`. Editable reads and writes through the storage for the request and caches nothing; opening, caching, and closing site data is up to the host. Asset cleanup deletes files the site's records no longer reference, so a host that shares asset files between sites supplies asset functions that keep them.
 - `auth` decides who may edit the site and how they sign in, replacing the admin password. It implements `is_admin(event)`, `log_in(event, credentials)`, and `log_out(event)` (types in `src/app/server_admin_auth.ts`). `log_in` receives whatever the login dialog sends to `login_admin`; Editable's own dialog sends `{ password }`. It either starts a session or returns `{ ok: true, redirect }` to continue elsewhere: to sign in with OAuth, have your own login dialog send a username, return the provider's authorization URL, and handle the callback in a route of your own that sets your session, which `is_admin` then reads. `event.url` in `log_in` is the page the login started from. Editable's own sessions use one cookie for the whole host, so a host serving several sites from one origin scopes its sessions to the site, for example with a cookie that names it.
 
 To replace the login dialog itself, for example to ask for a username, to offer several sign-in providers, or when embedding Editable in another environment, set your own component in place of `AuthDialog` as `auth_dialog` in `system_components` in `src/app/document_config.ts`. It opens in the same drawer and receives `onlogin_success`, to call after signing in on the page, and `onedit_for_fun`, for editing without saving (see `AuthDialogProps` in `src/app/components/AuthDialog.svelte`):
@@ -1179,7 +1179,14 @@ The app-specific Editable surface lives in `src/app`, while `src/routes` contain
 
 Keep stored content in step with changes to your site.
 
-Migration files in `src/app/migrations` are discovered when SvelteKit builds the server and run automatically when it boots, with SQLite and with [file storage](#file-storage-experimental) alike. Framework migrations use the `editable` namespace and project migrations use the `custom` namespace; their UTC timestamps determine the normal order. The ids of applied migrations are stored with the site; a new site starts with the current default content and never runs them. With SQLite, all pending migrations run in one transaction: either the complete upgrade succeeds or nothing changes.
+Every migration lives in `src/app/migrations`, is discovered when SvelteKit builds the server, and runs automatically when it boots. Framework migrations use the `editable` namespace and project migrations use the `custom` namespace. Migrations run in id order, and an id starts with its UTC timestamp, so a migration's date is its place in the chain.
+
+There are two kinds, with the same shape:
+
+- **Content migrations** change the site's documents. They have no `target`, run on every storage backend, and work through the store and the helpers below. Which ones have run is stored with the site, so it travels when you [convert a site](#file-storage-experimental) to another backend. A new site starts with the current default content and never runs them.
+- **Storage migrations** change one backend's own format, such as a SQLite table. They name their backend as `target: 'sqlite'` or `target: 'files'`, and which ones have run is kept by the backend itself.
+
+When a site opens, its backend's pending storage migrations run first, so content migrations always see the store in its current format. With SQLite, each kind runs in one transaction: either the complete upgrade succeeds or nothing changes.
 
 Create a project migration with:
 
@@ -1187,23 +1194,17 @@ Create a project migration with:
 pnpm migration:create add-project-metadata
 ```
 
-This creates a timestamped `custom` migration. Its filename is its permanent ID:
+This creates a timestamped `custom` content migration. Its filename is its permanent ID:
 
-```js
+```ts
+import type { ContentContext, Migration } from '#lib/server/migrations.js';
+
 export default {
-	up({
-		store,
-		ensure_document,
-		rename_property,
-		rename_type,
-		replace_value,
-		delete_property,
-		update
-	}) {
+	up({ store, rename_property, update }: ContentContext) {
 		// Transform content with the helpers, or records with `store`.
 		// rename_property('hero', 'image', 'media');
 	}
-};
+} satisfies Migration;
 ```
 
 Adding a custom content type usually needs no migration because documents are stored as they are. Write one when existing documents must be transformed.
@@ -1243,32 +1244,51 @@ They are deliberately tolerant: a node that never had the property is left alone
 
 `ensure_document` adds a whole document unless one with its id exists, such as a new shared document every page will refer to. Its type is its root node's, and it returns whether it added the document.
 
-`store` remains available for everything else: the site's records as collections with `get`, `all`, `put`, and `delete` (see `src/lib/server/store.ts`), such as settings or slugs the helpers don't cover. Migrations are synchronous and may only change the site's records; filesystem, network, and other external side effects cannot be rolled back. Migrations are forward-only: never rename, delete, or edit one that has been applied. Roll back an upgrade by restoring the backup made before deployment.
+`store` remains available for everything else: the site's records as collections with `get`, `all`, `put`, and `delete` (see `src/lib/server/storage/store.ts`), such as settings or slugs the helpers don't cover. Migrations are synchronous and may only change the site's records; filesystem, network, and other external side effects cannot be rolled back. Migrations are forward-only: never rename, delete, or edit one that has been applied. Roll back an upgrade by restoring the backup made before deployment.
 
-### SQLite schema
+### Storage migrations
 
-Changes to the SQLite schema itself, such as a new table, are not content migrations. They belong to the SQLite store, live in `src/lib/server/sqlite_migrations`, run when the database opens, and are tracked in its `_migrations` table. They receive the [node:sqlite](https://nodejs.org/api/sqlite.html) database handle as `db`:
-
-```js
-export default {
-	up({ db }) {
-		db.exec('CREATE TABLE redirects (path TEXT PRIMARY KEY, target TEXT NOT NULL)');
-	}
-};
-```
-
-A schema migration goes with a change to the store's collections, which every backend then implements in its own way.
-
-Editable's own migrations use the `editable` source name; `custom` migrations belong to your project. The timestamp-first filenames keep both sources in one chronological list without a central registry or sequence-number conflicts.
-
-Exceptionally, a project migration may need to prepare customized data before a pending Editable migration. Generate it with an explicit constraint:
+A change to how a backend stores records, such as a new table, needs a storage migration for every backend, so that none of them misses it. Generate the set with `--storage`:
 
 ```sh
-pnpm migration:create reconcile-heading \
-	--before 20260712T125641379Z_editable_add_page_metadata_fields
+pnpm migration:create redirects --storage
 ```
 
-The generated `before` array overrides timestamp order for that relationship only. The target must exist and still be pending; missing targets, already-applied targets, and dependency cycles abort the upgrade before any changes are committed. Prefer tolerant migrations that safely do nothing when their source shape is absent, and reserve `before` for genuine conflicts.
+This writes one file per backend, sharing the change's timestamp and name, with the backend as a suffix: `…_redirects_sqlite.ts` and `…_redirects_files.ts`. Each states its target and receives what its backend offers, the [node:sqlite](https://nodejs.org/api/sqlite.html) handle as `db` for SQLite and the site's folder as `dir` for files:
+
+```ts
+import type { Migration } from '#lib/server/migrations.js';
+import type { SqliteContext } from '#lib/server/storage/sqlite.js';
+
+export default {
+	target: 'sqlite',
+	up({ db }: SqliteContext) {
+		db.exec('CREATE TABLE IF NOT EXISTS redirects (path TEXT PRIMARY KEY, target TEXT NOT NULL)');
+	}
+} satisfies Migration;
+```
+
+Where a backend needs nothing, its file stays with an empty `up`; the file store, for example, creates a collection's file on first write. The files must stay: a storage change missing a file for any backend stops the site from starting, whatever the change's date, and so does the test suite. That makes a forgotten backend, a misspelled target, or a backend added without migrations an error instead of a silent gap.
+
+A new backend starts with a file for every storage change in the folder, and a fresh store of any backend replays all of them in order.
+
+### Placing a migration
+
+Migrations run in id order, so a migration's place in the chain is its timestamp. `--after <id>` dates a new migration one millisecond after another, for a fix-up that must run right after it:
+
+```sh
+pnpm migration:create reconcile-heading --after 20261009T120000000Z_editable_site_banner
+```
+
+A migration that must run before another is placed right after the one preceding that. This works because migrations that arrive together are all pending when a site upgrades. One dated before a migration a site already ran still runs, but later, and the log warns about it.
+
+When you maintain your own backend and update Editable, every new Editable storage change needs your backend's file too, and the site won't start until it has one. Add it to that change with `--join`, which reuses the change's timestamp and name:
+
+```sh
+pnpm migration:create --join 20261101T120000000Z_editable_redirects_sqlite --target atproto
+```
+
+Editable's own migrations use the `editable` source name; `custom` migrations belong to your project. The timestamp-first filenames keep both sources in one chronological list without a central registry or sequence-number conflicts. Because order across versions follows timestamps rather than when a migration arrived, prefer tolerant migrations, "create if missing" rather than "create", which safely do nothing when their source shape is absent.
 
 ## Translations (experimental)
 

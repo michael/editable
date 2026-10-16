@@ -94,3 +94,23 @@ export type SiteStore = {
 	oauth_grants: Collection<OAuthGrantRecord>;
 	oauth_tokens: Collection<OAuthTokenRecord>;
 };
+
+/**
+ * A backend's own format, as opposed to the site's records: the migrations
+ * for its target that it has applied, and what those migrations receive. It
+ * is kept apart from the records because the store can only be read once its
+ * format is current.
+ */
+export type StorageFormat = {
+	/** The migration target this backend runs, such as 'sqlite' or 'files'. */
+	target: string;
+	/** What its migrations receive, such as the database handle. */
+	context: unknown;
+	/** Ids of the migrations it has recorded as applied. */
+	applied(): string[];
+	record(id: string): void;
+	transaction<T>(fn: () => T): T;
+};
+
+/** A store as its backend opens it, with the format to bring up to date before use. */
+export type OpenedStore = { store: SiteStore; format: StorageFormat };

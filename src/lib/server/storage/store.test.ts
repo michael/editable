@@ -4,12 +4,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Document } from 'svedit';
-import { sqlite_store } from './sqlite_store.js';
-import { file_store } from './file_store.js';
+import { sqlite_store } from './sqlite.js';
+import { file_store } from './files.js';
 import { translation_key, type SiteStore } from './store.js';
-import initial_schema from './sqlite_migrations/20260803T131059242Z_editable_initial_schema.js';
-import translations_schema from './sqlite_migrations/20260923T180000000Z_editable_translations.js';
-import oauth_schema from './sqlite_migrations/20261010T180000000Z_editable_mcp_oauth.js';
+import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
+import translations_schema from '#app/migrations/20260923T180000000Z_editable_translations.js';
+import oauth_schema from '#app/migrations/20261010T180000000Z_editable_mcp_oauth.js';
 
 const dirs: string[] = [];
 afterEach(() => dirs.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })));

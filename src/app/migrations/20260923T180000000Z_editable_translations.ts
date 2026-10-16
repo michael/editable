@@ -1,7 +1,9 @@
-import type { SchemaMigration } from '../sqlite_store.js';
+import type { Migration } from '#lib/server/migrations.js';
+import type { SqliteContext } from '#lib/server/storage/sqlite.js';
 
 export default {
-	up({ db }) {
+	target: 'sqlite',
+	up({ db }: SqliteContext) {
 		db.exec(`
 			CREATE TABLE translations (
 				document_id TEXT NOT NULL,
@@ -13,4 +15,4 @@ export default {
 			);
 		`);
 	}
-} satisfies SchemaMigration;
+} satisfies Migration;

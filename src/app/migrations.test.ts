@@ -1,11 +1,12 @@
 import { afterEach, expect, it } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import initial_schema from '#lib/server/sqlite_migrations/20260803T131059242Z_editable_initial_schema.js';
-import translations_schema from '#lib/server/sqlite_migrations/20260923T180000000Z_editable_translations.js';
-import { migrate } from './migrations.js';
+import type { OpenedStore } from '#lib/server/storage/store.js';
+import initial_schema from './migrations/20260803T131059242Z_editable_initial_schema.js';
+import translations_schema from './migrations/20260923T180000000Z_editable_translations.js';
+import { migrate, migrate_storage } from './migrations.js';
 import { open_file_folder, open_sqlite_folder } from './storage.js';
 
 const dirs: string[] = [];
@@ -17,23 +18,27 @@ function temp_dir() {
 	return dir;
 }
 
-const applied = (store: ReturnType<typeof open_file_folder>) =>
+const content_applied = ({ store }: OpenedStore) =>
 	JSON.parse(store.settings.get('migrations')?.value ?? '[]') as string[];
 
-it('seeds a new store and records every content migration as applied', () => {
-	const store = open_file_folder(temp_dir());
-	migrate(store);
-	expect(store.settings.get('home_page_id')).not.toBeNull();
-	expect(applied(store)).toContain('20261009T120000000Z_editable_site_banner');
-	// Running again changes nothing.
-	const documents = store.documents.all();
-	migrate(store);
-	expect(store.documents.all()).toEqual(documents);
+it('seeds a new site and records every migration as applied, on files and on SQLite', () => {
+	for (const open of [open_file_folder, open_sqlite_folder]) {
+		const opened = open(temp_dir());
+		migrate(opened);
+		expect(opened.store.settings.get('home_page_id')).not.toBeNull();
+		expect(content_applied(opened)).toContain('20261009T120000000Z_editable_site_banner');
+		expect(opened.format.applied()).toContain(
+			`20261016T120000000Z_editable_setting_records_${opened.format.target}`
+		);
+		// Running again changes nothing.
+		const documents = opened.store.documents.all();
+		migrate(opened);
+		expect(opened.store.documents.all()).toEqual(documents);
+	}
 });
 
-it('moves content migrations out of an old database and applies the ones it missed', () => {
+it('upgrades an old database that kept content progress with its SQLite migrations', () => {
 	const data_dir = temp_dir();
-	// A database from before the split, upgraded up to the code block migration.
 	const db = new DatabaseSync(join(data_dir, 'db.sqlite3'));
 	initial_schema.up({ db });
 	translations_schema.up({ db });
@@ -51,29 +56,57 @@ it('moves content migrations out of an old database and applies the ones it miss
 	);
 	db.close();
 
-	const store = open_sqlite_folder(data_dir);
-	expect(applied(store)).toEqual([
-		'20260831T211746789Z_custom_rename_prose_grid_layouts',
-		'20261003T120000000Z_editable_code_blocks'
-	]);
-
-	migrate(store);
+	const opened = open_sqlite_folder(data_dir);
+	migrate(opened);
 	// The banner migration had not run: the site gets its banner, the page refers to it.
-	expect(store.documents.get('banner_1')?.type).toBe('banner');
-	expect(store.documents.get('p1')?.data.nodes.p1.banner).toBe('banner_1');
-	expect(applied(store)).toContain('20261009T120000000Z_editable_site_banner');
+	expect(opened.store.documents.get('banner_1')?.type).toBe('banner');
+	expect(opened.store.documents.get('p1')?.data.nodes.p1.banner).toBe('banner_1');
+	expect(content_applied(opened)).toEqual([
+		'20260831T211746789Z_custom_rename_prose_grid_layouts',
+		'20261003T120000000Z_editable_code_blocks',
+		'20261009T120000000Z_editable_site_banner'
+	]);
+	expect(opened.format.applied()).toContain('20261010T180000000Z_editable_mcp_oauth');
+});
 
-	// The database now only tracks its schema; reopening finds nothing to move or run.
-	const reopened = open_sqlite_folder(data_dir);
-	expect(applied(reopened)).toEqual(applied(store));
+it('upgrades a file folder written before settings became records', () => {
+	const data_dir = temp_dir();
+	const first = open_file_folder(data_dir);
+	migrate(first);
+	const home_page_id = first.store.settings.get('home_page_id')!.value;
+	// What a folder from before format tracking looks like.
+	const site = join(data_dir, 'site');
+	rmSync(join(site, 'format.json'));
+	writeFileSync(join(site, 'settings.json'), JSON.stringify({ home_page_id }));
+
+	const reopened = open_file_folder(data_dir);
+	migrate(reopened);
+	expect(reopened.store.settings.get('home_page_id')).toEqual({
+		key: 'home_page_id',
+		value: home_page_id
+	});
+	expect(JSON.parse(readFileSync(join(site, 'format.json'), 'utf8')).migrations).toContain(
+		'20261016T120000000Z_editable_setting_records_files'
+	);
+});
+
+it('refuses a backend that misses storage migrations, as a fork adding one would', () => {
+	const dir = join(temp_dir(), 'fork');
+	mkdirSync(dir);
+	const opened = open_file_folder(dir);
+	const atproto: OpenedStore = { ...opened, format: { ...opened.format, target: 'atproto' } };
+	expect(() => migrate_storage(atproto)).toThrow(
+		'20260803T131059242Z_editable_initial_schema_atproto'
+	);
+	expect(existsSync(join(dir, 'site', 'format.json'))).toBe(false);
 });
 
 it('refuses data migrated by a newer version', () => {
-	const store = open_file_folder(temp_dir());
-	migrate(store);
-	store.settings.put('migrations', {
+	const opened = open_file_folder(temp_dir());
+	migrate(opened);
+	opened.store.settings.put('migrations', {
 		key: 'migrations',
-		value: JSON.stringify([...applied(store), '29990101T000000000Z_editable_future'])
+		value: JSON.stringify([...content_applied(opened), '29990101T000000000Z_editable_future'])
 	});
-	expect(() => migrate(store)).toThrow('29990101T000000000Z_editable_future');
+	expect(() => migrate(opened)).toThrow('29990101T000000000Z_editable_future');
 });

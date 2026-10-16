@@ -1,42 +1,68 @@
-import { build_migrations, type MigrationModule } from '#lib/server/migration_registry.js';
-import { run_pending_migrations } from '#lib/server/migration_runner.js';
+import {
+	assert_complete,
+	load_migrations,
+	run_migrations,
+	type Migration
+} from '#lib/server/migrations.js';
 import { create_migration_helpers } from '#lib/server/migration_helpers.js';
-import type { SiteStore } from '#lib/server/store.js';
+import type { OpenedStore } from '#lib/server/storage/store.js';
 import seed_initial_documents from './seed_initial_documents.js';
 
-const migrations = build_migrations(
+const migrations = load_migrations(
 	import.meta.glob('./migrations/*.ts', { eager: true, import: 'default' }) as Record<
 		string,
-		MigrationModule
+		Migration
 	>
 );
 
-/**
- * Bring a site's content up to date on any backend. A store without documents
- * is new: it gets the default site, which already has every migration's shape.
- * Otherwise the content migrations it has not run yet are applied in order,
- * and their ids are kept in the 'migrations' setting.
- */
-export function migrate(store: SiteStore) {
-	store.transaction(() => {
-		const applied: string[] = JSON.parse(store.settings.get('migrations')?.value ?? '[]');
-		const record = () =>
-			store.settings.put('migrations', { key: 'migrations', value: JSON.stringify(applied) });
+/** Bring a backend's own format up to date with the migrations for its target. */
+export function migrate_storage({ format }: OpenedStore) {
+	assert_complete(migrations, format.target);
+	format.transaction(() =>
+		run_migrations(migrations, format.target, new Set(format.applied()), format.context, (id) =>
+			format.record(id)
+		)
+	);
+}
 
+/**
+ * Bring a site's content up to date, the same way on every backend. A store
+ * without documents is new: it gets the default site, which already has the
+ * current shape. Otherwise the content migrations it has not run are applied,
+ * and their ids are kept in the store's 'migrations' setting.
+ */
+export function migrate_content({ store, format }: OpenedStore) {
+	const content_ids = migrations
+		.filter((migration) => migration.target === 'content')
+		.map((migration) => migration.id);
+	store.transaction(() => {
+		const record = (applied: string[]) =>
+			store.settings.put('migrations', { key: 'migrations', value: JSON.stringify(applied) });
 		if (!store.documents.all().length) {
 			seed_initial_documents(store);
-			applied.splice(0, applied.length, ...migrations.map((migration) => migration.id));
-			record();
+			record(content_ids);
 			return;
 		}
-		run_pending_migrations(
+		const setting = store.settings.get('migrations');
+		// SQLite databases from before kept content progress with their own migrations.
+		const applied: string[] = setting
+			? JSON.parse(setting.value)
+			: format.applied().filter((id) => content_ids.includes(id));
+		run_migrations(
 			migrations,
+			'content',
 			new Set(applied),
 			{ store, ...create_migration_helpers(store) },
 			(id) => {
 				applied.push(id);
-				record();
+				record(applied);
 			}
 		);
 	});
+}
+
+/** Bring a site up to date: its backend's format first, then its content. */
+export function migrate(opened: OpenedStore) {
+	migrate_storage(opened);
+	migrate_content(opened);
 }

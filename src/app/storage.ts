@@ -1,18 +1,21 @@
 import { join } from 'node:path';
-import { open_sqlite_store } from '#lib/server/sqlite_store.js';
-import { file_store } from '#lib/server/file_store.js';
-import { translation_key, type SiteStore } from '#lib/server/store.js';
+import { open_sqlite } from '#lib/server/storage/sqlite.js';
+import { open_files } from '#lib/server/storage/files.js';
+import { translation_key, type OpenedStore, type SiteStore } from '#lib/server/storage/store.js';
 import { parse_edf, serialize_edf } from '#lib/edf.js';
 import { document_schema } from './document_schema.js';
 
-/** A site in data_dir/db.sqlite3, its schema brought up to date. */
-export function open_sqlite_folder(data_dir: string): SiteStore {
-	return open_sqlite_store({ data_dir, db_path: join(data_dir, 'db.sqlite3') });
+/** A site in data_dir/db.sqlite3; run migrate before using its store. */
+export function open_sqlite_folder(data_dir: string): OpenedStore {
+	return open_sqlite({ data_dir, db_path: join(data_dir, 'db.sqlite3') });
 }
 
-/** A site as files in data_dir/site: each document as EDF, every other collection as JSON. */
-export function open_file_folder(data_dir: string): SiteStore {
-	return file_store({
+/**
+ * A site as files in data_dir/site: each document as EDF, every other
+ * collection as JSON. Run migrate before using its store.
+ */
+export function open_file_folder(data_dir: string): OpenedStore {
+	return open_files({
 		dir: join(data_dir, 'site'),
 		serialize: (document) => serialize_edf(document, document_schema),
 		parse: (text) => parse_edf(text, document_schema),

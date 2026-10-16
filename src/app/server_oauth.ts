@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit';
 import { site } from './server_site.js';
 import { require_admin_session } from '#lib/server/auth.js';
 import { store } from './services.js';
-import type { OAuthGrantRecord } from '#lib/server/store.js';
+import type { OAuthGrantRecord } from '#lib/server/storage/store.js';
 
 // An approval grants MCP access for a fixed window; clients refresh short-lived
 // access tokens within it and must ask for approval again afterwards.

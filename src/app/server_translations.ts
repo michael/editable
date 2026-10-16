@@ -7,7 +7,7 @@ import { error } from '@sveltejs/kit';
 import { fill_document_defaults, validate_document, validate_node, type Document } from 'svedit';
 import { store, with_transaction, asset_exists } from './services.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
-import { translation_key } from '#lib/server/store.js';
+import { translation_key } from '#lib/server/storage/store.js';
 import { document_schema } from './document_schema.js';
 import { select_language } from './languages.js';
 import {

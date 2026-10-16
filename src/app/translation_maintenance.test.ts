@@ -12,8 +12,8 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import initial_schema from '#lib/server/sqlite_migrations/20260803T131059242Z_editable_initial_schema.js';
-import translations_schema from '#lib/server/sqlite_migrations/20260923T180000000Z_editable_translations.js';
+import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
+import translations_schema from '#app/migrations/20260923T180000000Z_editable_translations.js';
 import { list_translations, purge_translations } from '../../scripts/translation-maintenance.js';
 
 let db: DatabaseSync;

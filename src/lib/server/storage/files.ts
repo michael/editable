@@ -1,7 +1,6 @@
 import {
 	existsSync,
 	mkdirSync,
-	readdirSync,
 	readFileSync,
 	renameSync,
 	unlinkSync,
@@ -9,7 +8,16 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import type { Document } from 'svedit';
-import type { Collection, DocumentRecord, SiteStore } from './store.js';
+import type { Collection, DocumentRecord, OpenedStore, SiteStore } from './store.js';
+
+/** What migrations with target 'files' receive: the folder the site lives in. */
+export type FilesContext = { dir: string };
+
+/** Replace a file in one step, so a reader never sees it half written. */
+function write(path: string, text: string) {
+	writeFileSync(`${path}.tmp`, text);
+	renameSync(`${path}.tmp`, path);
+}
 
 export type FileStoreOptions = {
 	dir: string;
@@ -31,10 +39,6 @@ export function file_store(options: FileStoreOptions): SiteStore {
 	const { dir } = options;
 	mkdirSync(join(dir, 'documents'), { recursive: true });
 
-	function write(path: string, text: string) {
-		writeFileSync(`${path}.tmp`, text);
-		renameSync(`${path}.tmp`, path);
-	}
 	const read_json = <T>(path: string, fallback: T): T =>
 		existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : fallback;
 
@@ -113,10 +117,25 @@ export function file_store(options: FileStoreOptions): SiteStore {
 	};
 }
 
-/** Whether a directory holds a file store. */
-export function is_file_store(dir: string) {
-	return (
-		existsSync(join(dir, 'documents.json')) ||
-		readdirSync(dir, { withFileTypes: true }).length === 0
-	);
+/**
+ * Open a site kept as files. The migrations it has applied are recorded in
+ * format.json next to its records.
+ */
+export function open_files(options: FileStoreOptions): OpenedStore {
+	const store = file_store(options);
+	const path = join(options.dir, 'format.json');
+	const applied = (): string[] =>
+		existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')).migrations : [];
+	const context: FilesContext = { dir: options.dir };
+	return {
+		store,
+		format: {
+			target: 'files',
+			context,
+			applied,
+			record: (id) =>
+				write(path, JSON.stringify({ migrations: [...applied(), id] }, null, '\t') + '\n'),
+			transaction: (fn) => fn()
+		}
+	};
 }

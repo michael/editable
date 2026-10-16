@@ -12,7 +12,7 @@ vi.mock('$app/env/private', () => ({
 }));
 vi.mock('./services.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
-	const { sqlite_store } = await import('#lib/server/sqlite_store.js');
+	const { sqlite_store } = await import('#lib/server/storage/sqlite.js');
 	const db = new DatabaseSync(':memory:');
 	const with_transaction = <T>(callback: () => T): T => {
 		db.exec('BEGIN');
@@ -36,7 +36,7 @@ vi.mock('./services.js', async () => {
 import { default_site } from './server_site.js';
 import * as services from './services.js';
 const { db, asset_exists } = services as unknown as typeof services & { db: DatabaseSync };
-import migration from '#lib/server/sqlite_migrations/20260923T180000000Z_editable_translations.js';
+import migration from '#app/migrations/20260923T180000000Z_editable_translations.js';
 import {
 	default_page_document,
 	default_banner_document,

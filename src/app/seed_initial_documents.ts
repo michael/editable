@@ -5,7 +5,7 @@ import {
 	default_page_document
 } from '#app/default_site.js';
 import { MEDIA_DEFAULTS } from '#app/document_schema.js';
-import type { SiteStore } from '#lib/server/store.js';
+import type { SiteStore } from '#lib/server/storage/store.js';
 import type { Document } from 'svedit';
 
 /**

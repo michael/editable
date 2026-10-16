@@ -18,7 +18,7 @@ import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import slugify from 'slugify';
 import { store, with_transaction } from '#app/services.js';
-import { translation_key } from '#lib/server/store.js';
+import { translation_key } from '#lib/server/storage/store.js';
 import {
 	type DocumentData,
 	InvalidDocumentError,

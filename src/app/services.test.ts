@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { sqlite_store } from '#lib/server/sqlite_store.js';
+import { sqlite_store } from '#lib/server/storage/sqlite.js';
 
 const request = vi.hoisted(() => ({ locals: {} as Record<string, unknown> }));
 vi.mock('$app/env/private', () => ({ ORIGIN: 'https://example.com', LANGUAGES: '', VERCEL: '' }));

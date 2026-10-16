@@ -10,7 +10,7 @@ vi.mock('$app/env/private', () => ({
 }));
 vi.mock('./services.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
-	const { sqlite_store } = await import('#lib/server/sqlite_store.js');
+	const { sqlite_store } = await import('#lib/server/storage/sqlite.js');
 	const db = new DatabaseSync(':memory:');
 	return { db, store: sqlite_store(db, (fn) => fn()) };
 });
@@ -18,7 +18,7 @@ vi.mock('./services.js', async () => {
 import type { DatabaseSync } from 'node:sqlite';
 import * as services from './services.js';
 const { db } = services as unknown as { db: DatabaseSync };
-import migration from '#lib/server/sqlite_migrations/20261010T180000000Z_editable_mcp_oauth.js';
+import migration from '#app/migrations/20261010T180000000Z_editable_mcp_oauth.js';
 import {
 	approve_client,
 	assert_small_body,

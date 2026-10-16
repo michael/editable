@@ -9,8 +9,8 @@ import {
 	default_nav_document,
 	default_footer_document
 } from './default_site.js';
-import initial_schema from '#lib/server/sqlite_migrations/20260803T131059242Z_editable_initial_schema.js';
-import translations_schema from '#lib/server/sqlite_migrations/20260923T180000000Z_editable_translations.js';
+import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
+import translations_schema from '#app/migrations/20260923T180000000Z_editable_translations.js';
 
 vi.mock('$app/env/private', () => ({
 	LANGUAGES: 'en,de',
@@ -29,7 +29,7 @@ vi.mock('$app/server', () => ({
 vi.mock('#lib/server/db_snapshot.js', () => ({ snapshot_if_stale: vi.fn() }));
 vi.mock('./services.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
-	const { sqlite_store } = await import('#lib/server/sqlite_store.js');
+	const { sqlite_store } = await import('#lib/server/storage/sqlite.js');
 	const db = new DatabaseSync(':memory:');
 	const with_transaction = <T>(callback: () => T): T => {
 		db.exec('BEGIN');

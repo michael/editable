@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { SiteStore } from './store.js';
+import type { SiteStore } from './storage/store.js';
 import type { Cookies } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';
 import { ADMIN_PASSWORD, NODE_ENV } from '$app/env/private';

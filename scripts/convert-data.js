@@ -4,8 +4,8 @@
 //
 // A folder with db.sqlite3 becomes a folder of files (site/), and the other
 // way round. Every record is copied, including which content migrations have
-// run, and assets/ is copied as it is. The source's schema is brought up to
-// date first, as the app does when it starts; the target must be empty.
+// run, and assets/ is copied as it is. The source is brought up to date
+// first, as the app does when it starts; the target must be empty.
 
 import { cpSync, existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -33,8 +33,14 @@ const vite = await createServer({
 });
 try {
 	const storage = await vite.ssrLoadModule('/src/app/storage.ts');
+	const { migrate, migrate_storage } = await vite.ssrLoadModule('/src/app/migrations.ts');
 	const open = { sqlite: storage.open_sqlite_folder, files: storage.open_file_folder };
-	storage.copy_store(open[source](from), open[target](to));
+	const source_site = open[source](from);
+	migrate(source_site);
+	// The target gets its own format; content progress arrives with the records.
+	const target_site = open[target](to);
+	migrate_storage(target_site);
+	storage.copy_store(source_site.store, target_site.store);
 	if (existsSync(join(from, 'assets')))
 		cpSync(join(from, 'assets'), join(to, 'assets'), { recursive: true });
 	console.log(`Converted ${from} (${source}) to ${to} (${target}).`);

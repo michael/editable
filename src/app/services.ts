@@ -1,7 +1,7 @@
 import { DATA_DIR, ASSET_PATH, ASSET_GRACE_PERIOD_DAYS, STORAGE } from '#app/server_config.js';
 import { ASSET_ID_REGEX } from '#app/config.js';
 import { create_asset_storage } from '#lib/server/asset_storage.js';
-import type { SiteStore } from '#lib/server/store.js';
+import type { SiteStore } from '#lib/server/storage/store.js';
 import { migrate } from '#app/migrations.js';
 import { open_file_folder, open_sqlite_folder } from '#app/storage.js';
 import { site } from '#app/server_site.js';
@@ -26,9 +26,9 @@ export function get_default_storage(): SiteStorage {
 			asset_grace_period_days: ASSET_GRACE_PERIOD_DAYS,
 			asset_id_regex: ASSET_ID_REGEX
 		});
-		const store = STORAGE === 'files' ? open_file_folder(DATA_DIR) : open_sqlite_folder(DATA_DIR);
-		migrate(store);
-		default_storage = { store, assets };
+		const opened = STORAGE === 'files' ? open_file_folder(DATA_DIR) : open_sqlite_folder(DATA_DIR);
+		migrate(opened);
+		default_storage = { store: opened.store, assets };
 	}
 	return default_storage;
 }

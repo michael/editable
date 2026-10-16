@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
 import type { Document } from 'svedit';
 import { create_migration_helpers } from './migration_helpers.js';
-import { sqlite_store } from './sqlite_store.js';
-import type { SiteStore } from './store.js';
-import initial_schema from './sqlite_migrations/20260803T131059242Z_editable_initial_schema.js';
+import { sqlite_store } from './storage/sqlite.js';
+import type { SiteStore } from './storage/store.js';
+import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
 
 function create_store(documents: Record<string, unknown>) {
 	const db = new DatabaseSync(':memory:');
