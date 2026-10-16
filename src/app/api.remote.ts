@@ -279,6 +279,7 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
 				if (record.document_id === document_id) store.slugs.delete(record.slug);
 			if (existing_doc.nodes[document_id]?.type === 'page') store.documents.delete(document_id);
 			cleanup_translations(document_id);
+			store.asset_refs.delete(document_id);
 		})
 	);
 

@@ -78,6 +78,9 @@ export const store: SiteStore = {
 	get translations() {
 		return get_storage().store.translations;
 	},
+	get asset_refs() {
+		return get_storage().store.asset_refs;
+	},
 	get settings() {
 		return get_storage().store.settings;
 	},

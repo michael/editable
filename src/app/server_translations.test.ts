@@ -59,9 +59,13 @@ afterAll(() => (db as DatabaseSync).close());
 
 beforeEach(() => {
 	languages.splice(0, languages.length, 'en', 'de', 'fr');
-	db.exec('DROP TABLE IF EXISTS documents; DROP TABLE IF EXISTS translations');
+	db.exec(
+		'DROP TABLE IF EXISTS documents; DROP TABLE IF EXISTS asset_refs; DROP TABLE IF EXISTS translations'
+	);
 	vi.mocked(asset_exists).mockReturnValue(true);
-	db.exec('CREATE TABLE documents (document_id TEXT PRIMARY KEY, data TEXT)');
+	db.exec(
+		'CREATE TABLE documents (document_id TEXT PRIMARY KEY, data TEXT); CREATE TABLE asset_refs (asset_id TEXT, document_id TEXT, PRIMARY KEY (asset_id, document_id))'
+	);
 	migration.up({ db });
 	for (const doc of [
 		default_page_document,

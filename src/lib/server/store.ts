@@ -2,10 +2,10 @@ import type { Document } from 'svedit';
 
 /**
  * What a site stores, as a few collections of records with the same four
- * operations each. Everything Editable derives from documents, such as the
- * page tree, link references, and asset references, is computed from them
- * rather than stored, so a backend only has to keep records and hand them
- * back. Records carry their own timestamps; the store does not set them.
+ * operations each. A backend only keeps records and hands them back:
+ * Editable computes what it stores, including the asset references it
+ * keeps per document so cleanup can tell what is still in use without
+ * reading every document. Records carry their own timestamps.
  */
 export type Collection<Record> = {
 	get(key: string): Record | null;
@@ -37,6 +37,9 @@ export type TranslationRecord = {
 	value: string;
 	updated_at: string;
 };
+
+/** The assets a document and its translations refer to, kept up to date on every write. */
+export type AssetRefsRecord = { document_id: string; asset_ids: string[] };
 
 export type SessionRecord = { session_id: string; expires: number };
 
@@ -73,6 +76,7 @@ export type SiteStore = {
 	documents: Collection<DocumentRecord>;
 	slugs: Collection<SlugRecord>;
 	translations: Collection<TranslationRecord>;
+	asset_refs: Collection<AssetRefsRecord>;
 	settings: Collection<string>;
 	sessions: Collection<SessionRecord>;
 	oauth_clients: Collection<OAuthClientRecord>;

@@ -3,7 +3,7 @@ import slugify from 'slugify';
 import { validate_document } from 'svedit';
 import type { Attachment, DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
 import { store, with_transaction, delete_orphaned_assets, touch_asset } from '#app/services.js';
-import { collect_asset_ids, translation_payloads } from '#lib/asset_references.js';
+import { rebuild_asset_refs, referenced_asset_ids } from './server_asset_refs.js';
 import { document_schema } from '#app/document_schema.js';
 import { collect_node_ids_in_order } from '#lib/document_graph.js';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
@@ -210,16 +210,6 @@ export function get_combined_document(document_id: string): DocumentData {
 	return combine_page_document(get_doc_from_db(document_id));
 }
 
-/** Every asset any document or translation refers to. */
-function get_referenced_asset_ids(): Set<string> {
-	return collect_asset_ids([
-		...store.documents.all().map((record) => record.data),
-		...store.translations
-			.all()
-			.flatMap((record) => [...translation_payloads(JSON.parse(record.value))])
-	]);
-}
-
 /**
  * Run a write and then remove asset files no longer referenced by any
  * document. A cleanup failure must not fail the request.
@@ -229,11 +219,11 @@ function get_referenced_asset_ids(): Set<string> {
  * from upload.
  */
 export async function with_asset_cleanup<T>(write: () => T): Promise<T> {
-	const refs_before = get_referenced_asset_ids();
+	const refs_before = referenced_asset_ids();
 	const result = write();
 
 	try {
-		const refs_after = get_referenced_asset_ids();
+		const refs_after = referenced_asset_ids();
 
 		for (const asset_id of refs_before) {
 			if (!refs_after.has(asset_id)) {
@@ -413,6 +403,7 @@ export async function persist_document(
 					updated_at: now_iso
 				});
 				cleanup_translations(document_id);
+				rebuild_asset_refs(document_id);
 			}
 
 			on_write?.(doc);

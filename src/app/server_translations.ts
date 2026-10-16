@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { error } from '@sveltejs/kit';
 import { fill_document_defaults, validate_document, validate_node, type Document } from 'svedit';
 import { store, with_transaction, asset_exists } from './services.js';
+import { rebuild_asset_refs } from './server_asset_refs.js';
 import { translation_key } from '#lib/server/store.js';
 import { document_schema } from './document_schema.js';
 import { select_language } from './languages.js';
@@ -256,6 +257,7 @@ export function save_translated_document(input: {
 				map,
 				rows.find((row) => row.document_id === document_id)?.value
 			);
+		for (const record of records) rebuild_asset_refs(record.document_id);
 		return { ok: true };
 	});
 }

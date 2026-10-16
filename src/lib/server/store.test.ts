@@ -127,4 +127,16 @@ describe.each(backends)('%s store', (_name, open) => {
 		expect(store.oauth_tokens.get('h1')?.grant_id).toBe('g1');
 		expect(store.oauth_grants.all()).toHaveLength(1);
 	});
+
+	it('keeps the assets each document refers to', () => {
+		const store = open();
+		store.asset_refs.put('p1', { document_id: 'p1', asset_ids: ['a.webp', 'b.webp'] });
+		store.asset_refs.put('p2', { document_id: 'p2', asset_ids: ['b.webp'] });
+		expect(store.asset_refs.get('p1')?.asset_ids.sort()).toEqual(['a.webp', 'b.webp']);
+		store.asset_refs.put('p1', { document_id: 'p1', asset_ids: [] });
+		expect(store.asset_refs.get('p1')?.asset_ids ?? []).toEqual([]);
+		expect(store.asset_refs.all().flatMap((record) => record.asset_ids)).toEqual(['b.webp']);
+		store.asset_refs.delete('p2');
+		expect(store.asset_refs.all().flatMap((record) => record.asset_ids)).toEqual([]);
+	});
 });

@@ -77,6 +77,37 @@ export function sqlite_store(db: DatabaseSync, with_transaction: <T>(fn: () => T
 				);
 			}
 		},
+		// One row per asset and document, grouped into a record per document.
+		asset_refs: {
+			get(document_id) {
+				const rows = db
+					.prepare('SELECT asset_id FROM asset_refs WHERE document_id = ?')
+					.all(document_id) as { asset_id: string }[];
+				return rows.length ? { document_id, asset_ids: rows.map((row) => row.asset_id) } : null;
+			},
+			all() {
+				const by_document = new Map<string, string[]>();
+				const rows = db.prepare('SELECT asset_id, document_id FROM asset_refs').all() as {
+					asset_id: string;
+					document_id: string;
+				}[];
+				for (const row of rows) {
+					if (!by_document.has(row.document_id)) by_document.set(row.document_id, []);
+					by_document.get(row.document_id)!.push(row.asset_id);
+				}
+				return [...by_document].map(([document_id, asset_ids]) => ({ document_id, asset_ids }));
+			},
+			put(document_id, record) {
+				db.prepare('DELETE FROM asset_refs WHERE document_id = ?').run(document_id);
+				const insert = db.prepare(
+					'INSERT OR IGNORE INTO asset_refs (asset_id, document_id) VALUES (?, ?)'
+				);
+				for (const asset_id of record.asset_ids) insert.run(asset_id, document_id);
+			},
+			delete(document_id) {
+				db.prepare('DELETE FROM asset_refs WHERE document_id = ?').run(document_id);
+			}
+		},
 		settings: {
 			get(key) {
 				const row = db.prepare('SELECT value FROM site_settings WHERE key = ?').get(key) as
