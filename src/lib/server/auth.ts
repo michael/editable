@@ -39,15 +39,15 @@ function get_login_throttle_state(store: Store): {
 	failed_count: number;
 	locked_until: number;
 } {
-	const value = store.settings.get(LOGIN_THROTTLE_KEY);
-	return value ? JSON.parse(value) : { failed_count: 0, locked_until: 0 };
+	const setting = store.settings.get(LOGIN_THROTTLE_KEY);
+	return setting ? JSON.parse(setting.value) : { failed_count: 0, locked_until: 0 };
 }
 
 function set_login_throttle_state(
 	store: Store,
 	state: { failed_count: number; locked_until: number }
 ) {
-	store.settings.put(LOGIN_THROTTLE_KEY, JSON.stringify(state));
+	store.settings.put(LOGIN_THROTTLE_KEY, { key: LOGIN_THROTTLE_KEY, value: JSON.stringify(state) });
 }
 
 /**

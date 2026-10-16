@@ -38,5 +38,8 @@ export default function seed_initial_documents(store: SiteStore) {
 			updated_at: now
 		});
 	}
-	store.settings.put('home_page_id', default_page_document.document_id);
+	store.settings.put('home_page_id', {
+		key: 'home_page_id',
+		value: default_page_document.document_id
+	});
 }

@@ -75,7 +75,7 @@ export function get_doc_from_db(document_id: string): DocumentData {
 }
 
 export function get_home_page_id_from_db(): string | null {
-	return store.settings.get('home_page_id');
+	return store.settings.get('home_page_id')?.value ?? null;
 }
 
 export function is_home_page_document_id(document_id: string): boolean {
@@ -203,7 +203,11 @@ export function rebuild_document_refs(document_id: string) {
 		return;
 	}
 	const { nodes } = record.data;
-	const target_ids = collect_document_refs(nodes, collect_node_ids(document_id, nodes), document_id);
+	const target_ids = collect_document_refs(
+		nodes,
+		collect_node_ids(document_id, nodes),
+		document_id
+	);
 	store.document_refs.put(document_id, { document_id, target_ids });
 }
 

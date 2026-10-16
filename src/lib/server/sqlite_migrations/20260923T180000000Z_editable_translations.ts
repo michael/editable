@@ -1,3 +1,5 @@
+import type { SchemaMigration } from '../sqlite_store.js';
+
 export default {
 	up({ db }) {
 		db.exec(`
@@ -11,4 +13,4 @@ export default {
 			);
 		`);
 	}
-};
+} satisfies SchemaMigration;

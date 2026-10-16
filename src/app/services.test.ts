@@ -33,7 +33,9 @@ it('uses the storage a host sets for the request, and opens the deployment’s o
 			storage: { store: sqlite_store(hosted_db, (fn) => fn()), assets }
 		}
 	};
-	services.with_transaction(() => services.store.settings.put('greeting', 'hosted'));
+	services.with_transaction(() =>
+		services.store.settings.put('greeting', { key: 'greeting', value: 'hosted' })
+	);
 	expect(hosted_db.prepare('SELECT value FROM site_settings').all()).toEqual([{ value: 'hosted' }]);
 	expect(services.asset_exists('hosted.webp')).toBe(true);
 	expect(existsSync(data_dir)).toBe(false);
@@ -53,7 +55,7 @@ it('keeps a site in files instead of a database with STORAGE=files', async () =>
 	vi.stubEnv('STORAGE', 'files');
 	const services = await import('./services.js');
 
-	const home_page_id = services.store.settings.get('home_page_id');
+	const home_page_id = services.store.settings.get('home_page_id')?.value;
 	expect(home_page_id).not.toBeNull();
 	expect(existsSync(join(data_dir, 'db.sqlite3'))).toBe(false);
 	expect(existsSync(join(data_dir, 'site', 'documents', `${home_page_id}.edf`))).toBe(true);

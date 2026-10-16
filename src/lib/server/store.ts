@@ -70,6 +70,12 @@ export type OAuthTokenRecord = {
 	expires_at: number;
 };
 
+/**
+ * A site-wide value by name: the home page, the login throttle, and the
+ * content migrations applied so far, as a JSON list of ids under 'migrations'.
+ */
+export type SettingRecord = { key: string; value: string };
+
 /** Translations are keyed by document and language. */
 export const translation_key = (document_id: string, language: string) =>
 	`${document_id}:${language}`;
@@ -82,7 +88,7 @@ export type SiteStore = {
 	translations: Collection<TranslationRecord>;
 	document_refs: Collection<DocumentRefsRecord>;
 	asset_refs: Collection<AssetRefsRecord>;
-	settings: Collection<string>;
+	settings: Collection<SettingRecord>;
 	sessions: Collection<SessionRecord>;
 	oauth_clients: Collection<OAuthClientRecord>;
 	oauth_grants: Collection<OAuthGrantRecord>;

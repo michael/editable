@@ -40,7 +40,7 @@ const migration_dir = join(process.cwd(), 'src/app/migrations');
 const path = join(migration_dir, `${id}.ts`);
 const before_property =
 	before.length > 0 ? `\n\tbefore: [${before.map((target) => `'${target}'`).join(', ')}],` : '';
-const source = `export default {${before_property}\n\tup({ db, rename_property, rename_type, replace_value, delete_property, update }) {\n\t\t// Transform content with the helpers, or the database with \`db\`.\n\t\t// rename_property('hero', 'image', 'media');\n\t}\n};\n`;
+const source = `export default {${before_property}\n\tup({ store, ensure_document, rename_property, rename_type, replace_value, delete_property, update }) {\n\t\t// Transform content with the helpers, or records with \`store\`.\n\t\t// rename_property('hero', 'image', 'media');\n\t}\n};\n`;
 
 mkdirSync(migration_dir, { recursive: true });
 try {

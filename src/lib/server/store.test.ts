@@ -7,9 +7,9 @@ import type { Document } from 'svedit';
 import { sqlite_store } from './sqlite_store.js';
 import { file_store } from './file_store.js';
 import { translation_key, type SiteStore } from './store.js';
-import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
-import translations_schema from '#app/migrations/20260923T180000000Z_editable_translations.js';
-import oauth_schema from '#app/migrations/20261010T180000000Z_editable_mcp_oauth.js';
+import initial_schema from './sqlite_migrations/20260803T131059242Z_editable_initial_schema.js';
+import translations_schema from './sqlite_migrations/20260923T180000000Z_editable_translations.js';
+import oauth_schema from './sqlite_migrations/20261010T180000000Z_editable_mcp_oauth.js';
 
 const dirs: string[] = [];
 afterEach(() => dirs.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })));
@@ -81,8 +81,9 @@ describe.each(backends)('%s store', (_name, open) => {
 				.sort()
 		).toEqual(['about', 'old']);
 
-		store.settings.put('home_page_id', 'p1');
-		expect(store.settings.get('home_page_id')).toBe('p1');
+		store.settings.put('home_page_id', { key: 'home_page_id', value: 'p1' });
+		expect(store.settings.get('home_page_id')).toEqual({ key: 'home_page_id', value: 'p1' });
+		expect(store.settings.all()).toEqual([{ key: 'home_page_id', value: 'p1' }]);
 		expect(store.settings.get('missing')).toBeNull();
 
 		store.sessions.put('s1', { session_id: 's1', expires: 42 });

@@ -4,10 +4,10 @@ import type { Migration } from './migration_registry.js';
  * Order pending migrations by timestamp, with narrowly scoped `before`
  * constraints allowed to override that default order.
  */
-export function plan_pending_migrations(
-	migrations: Migration[],
+export function plan_pending_migrations<Context>(
+	migrations: Migration<Context>[],
 	applied: Set<string>
-): Migration[] {
+): Migration<Context>[] {
 	const by_id = new Map(migrations.map((migration) => [migration.id, migration]));
 
 	for (const migration of migrations) {
@@ -50,7 +50,7 @@ export function plan_pending_migrations(
 	const ready = pending
 		.filter((migration) => incoming_count.get(migration.id) === 0)
 		.sort(compare_migrations);
-	const ordered: Migration[] = [];
+	const ordered: Migration<Context>[] = [];
 
 	while (ready.length > 0) {
 		const migration = ready.shift();
@@ -77,6 +77,6 @@ export function plan_pending_migrations(
 	return ordered;
 }
 
-function compare_migrations(left: Migration, right: Migration) {
+function compare_migrations(left: { id: string }, right: { id: string }) {
 	return left.id.localeCompare(right.id);
 }

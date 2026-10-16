@@ -20,7 +20,7 @@ vi.mock('./services.js', async () => {
 import type { DatabaseSync } from 'node:sqlite';
 import * as services from './services.js';
 const { db } = services as unknown as { db: DatabaseSync };
-import initial_schema from './migrations/20260803T131059242Z_editable_initial_schema.js';
+import initial_schema from '#lib/server/sqlite_migrations/20260803T131059242Z_editable_initial_schema.js';
 import { get_admin_auth, password_auth, type AdminAuth } from './server_admin_auth.js';
 
 initial_schema.up({ db });

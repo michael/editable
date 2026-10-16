@@ -1,21 +1,9 @@
-import { join } from 'node:path';
-import {
-	DATA_DIR,
-	DB_PATH,
-	ASSET_PATH,
-	ASSET_GRACE_PERIOD_DAYS,
-	STORAGE
-} from '#app/server_config.js';
+import { DATA_DIR, ASSET_PATH, ASSET_GRACE_PERIOD_DAYS, STORAGE } from '#app/server_config.js';
 import { ASSET_ID_REGEX } from '#app/config.js';
-import { create_database } from '#lib/server/db.js';
 import { create_asset_storage } from '#lib/server/asset_storage.js';
-import { sqlite_store } from '#lib/server/sqlite_store.js';
-import { file_store } from '#lib/server/file_store.js';
 import type { SiteStore } from '#lib/server/store.js';
-import { parse_edf, serialize_edf } from '#lib/edf.js';
-import { document_schema } from '#app/document_schema.js';
 import { migrate } from '#app/migrations.js';
-import seed_initial_documents from '#app/seed_initial_documents.js';
+import { open_file_folder, open_sqlite_folder } from '#app/storage.js';
 import { site } from '#app/server_site.js';
 
 /** A site's records and asset files. */
@@ -27,9 +15,9 @@ export type SiteStorage = {
 let default_storage: SiteStorage | undefined;
 
 /**
- * The deployment's own storage in DATA_DIR, opened on first use: a SQLite
- * database brought up to date by the migrations, or with STORAGE=files a
- * folder of EDF documents and JSON records, seeded when empty.
+ * The deployment's own storage in DATA_DIR, opened on first use and brought
+ * up to date: a SQLite database, or with STORAGE=files a folder of EDF
+ * documents and JSON records.
  */
 export function get_default_storage(): SiteStorage {
 	if (!default_storage) {
@@ -38,20 +26,8 @@ export function get_default_storage(): SiteStorage {
 			asset_grace_period_days: ASSET_GRACE_PERIOD_DAYS,
 			asset_id_regex: ASSET_ID_REGEX
 		});
-		let store: SiteStore;
-		if (STORAGE === 'files') {
-			store = file_store({
-				dir: join(DATA_DIR, 'site'),
-				serialize: (document) => serialize_edf(document, document_schema),
-				parse: (text) => parse_edf(text, document_schema),
-				extension: 'edf'
-			});
-			if (!store.documents.all().length) seed_initial_documents(store);
-		} else {
-			const { db, with_transaction } = create_database({ data_dir: DATA_DIR, db_path: DB_PATH });
-			store = sqlite_store(db, with_transaction);
-			migrate(db, with_transaction, () => seed_initial_documents(store));
-		}
+		const store = STORAGE === 'files' ? open_file_folder(DATA_DIR) : open_sqlite_folder(DATA_DIR);
+		migrate(store);
 		default_storage = { store, assets };
 	}
 	return default_storage;

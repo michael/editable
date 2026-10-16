@@ -1,3 +1,5 @@
+import type { SchemaMigration } from '../sqlite_store.js';
+
 export default {
 	up({ db }) {
 		db.exec(`
@@ -44,4 +46,4 @@ export default {
 			WHERE is_active = 1;
 		`);
 	}
-};
+} satisfies SchemaMigration;

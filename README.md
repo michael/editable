@@ -1097,6 +1097,24 @@ pnpm dev                                            # inspect the restored state
 
 When you've found the state you want live, restore production to it with `pnpm data:restore-cloud --at <timestamp>`.
 
+## File storage (experimental)
+
+Keep a site in plain files instead of a SQLite database: every document as an EDF file, every other record as JSON, so the folder can be read, diffed, and versioned like source code.
+
+```sh
+STORAGE=files DATA_DIR=data-files pnpm dev
+```
+
+With `STORAGE=files` the site lives in `DATA_DIR/site`: `documents/<id>.edf` for each page, banner, nav, and footer, `documents.json` with their types and timestamps, and one JSON file each for slugs, settings, translations, references, sessions, and MCP connections. Assets stay in `DATA_DIR/assets`, as with SQLite.
+
+Convert a data folder to the other format; the target folder must be empty, and assets are copied along:
+
+```sh
+pnpm data:convert data data-files
+```
+
+Each file is written atomically, but a save that touches several files is not one transaction. Backups, Litestream, and the other `pnpm data:*` commands work with SQLite only.
+
 ## Hosting several sites (experimental)
 
 A deployment normally serves one site, configured by `ORIGIN` and `LANGUAGES`. A hosting service that serves several sites from one process can set the site per request instead: in its own `handle` hook, running before Editable's, it sets `event.locals.site`:
@@ -1114,7 +1132,7 @@ event.locals.site = {
 - `origin` is the public origin, used for canonical URLs, the sitemap, and the canonical host redirect.
 - `base` is the path the site is served under, or `''` at the root. Stored links never include it: `/about` stays `/about` in the database, reaches the browser as `/alice/about` the way language prefixes do, and is stored without it again, so a site can move to another path or its own domain without changing content. Components render `node.href` as is; asset URLs and the editor's own navigation go through `resolve_href(href, site)`.
 - `languages` lists the site's languages, the main language first, or none.
-- `storage` holds the site's records and its asset files. `store` is a `SiteStore` (`src/lib/server/store.ts`): a few collections of records with get, all, put, and delete each, plus a transaction wrapper. Editable ships two: `sqlite_store(db, with_transaction)` over a database from `create_database`, brought up to date with `migrate` from `src/app/migrations.ts`, and `file_store(options)` over a folder of EDF documents and JSON files. Assets come from `create_asset_storage`. Editable reads and writes through the storage for the request and caches nothing; opening, caching, and closing site data is up to the host. Asset cleanup deletes files the site's records no longer reference, so a host that shares asset files between sites supplies asset functions that keep them.
+- `storage` holds the site's records and its asset files. `store` is a `SiteStore` (`src/lib/server/store.ts`): a few collections of records with get, all, put, and delete each, plus a transaction wrapper. Open one with `open_sqlite_folder(dir)` or `open_file_folder(dir)` from `src/app/storage.ts`, or build your own over `sqlite_store` and `file_store`, then run `migrate(store)` from `src/app/migrations.ts`, which seeds a new site and applies the content migrations an existing one has not run. Assets come from `create_asset_storage`. Editable reads and writes through the storage for the request and caches nothing; opening, caching, and closing site data is up to the host. Asset cleanup deletes files the site's records no longer reference, so a host that shares asset files between sites supplies asset functions that keep them.
 - `auth` decides who may edit the site and how they sign in, replacing the admin password. It implements `is_admin(event)`, `log_in(event, credentials)`, and `log_out(event)` (types in `src/app/server_admin_auth.ts`). `log_in` receives whatever the login dialog sends to `login_admin`; Editable's own dialog sends `{ password }`. It either starts a session or returns `{ ok: true, redirect }` to continue elsewhere: to sign in with OAuth, have your own login dialog send a username, return the provider's authorization URL, and handle the callback in a route of your own that sets your session, which `is_admin` then reads. `event.url` in `log_in` is the page the login started from. Editable's own sessions use one cookie for the whole host, so a host serving several sites from one origin scopes its sessions to the site, for example with a cookie that names it.
 
 To replace the login dialog itself, for example to ask for a username, to offer several sign-in providers, or when embedding Editable in another environment, set your own component in place of `AuthDialog` as `auth_dialog` in `system_components` in `src/app/document_config.ts`. It opens in the same drawer and receives `onlogin_success`, to call after signing in on the page, and `onedit_for_fun`, for editing without saving (see `AuthDialogProps` in `src/app/components/AuthDialog.svelte`):
@@ -1128,7 +1146,7 @@ system_components: {
 
 Requests for `/alice/...` must reach Editable's routes, either through a proxy that strips the base or through a `reroute` hook that maps `/alice/about` to `/about`. When no site is set, Editable uses its own from the environment and opens its database in `DATA_DIR` on first use, so single-site deployments need no changes. Backups and the `pnpm data:*` commands work on `DATA_DIR` and are not used for host-provided storage.
 
-Commands sent by the editor carry the page's path, so `event.url` is the page URL and the host can read the site from it. Queries do not, so for them a path-based host can only find the site through the `Referer` header; a host that gives each site its own hostname has no such gap. Routes the host adds, such as a registration page, need adding to the reserved slugs in `src/app/server_documents.ts`, or a page of the root site could take their path.
+Commands sent by the editor carry the page's path, so `event.url` is the page URL and the host can read the site from it. Queries do not, so for them a path-based host can only find the site through the `Referer` header; a host that gives each site its own hostname has no such gap. Routes the host adds, such as a registration page, need adding to `RESERVED_ROUTE_SLUGS` in `src/app/config.ts`, or a page of the root site could take their path.
 
 Each site is its own MCP server and OAuth authorization server at its origin and base, with its clients and approvals in its own storage. For a site under a path, the discovery documents are expected at the host root with the site's path inserted, as in `/.well-known/oauth-authorization-server/alice` and `/.well-known/oauth-protected-resource/alice/mcp`, so the host's `reroute` maps those to Editable's discovery routes as well.
 
@@ -1157,11 +1175,11 @@ Merge conflicts can only occur in files you changed. If your customizations are 
 
 The app-specific Editable surface lives in `src/app`, while `src/routes` contains the SvelteKit route files. Customize the modules and components in `src/app` rather than the implementation modules in `src/lib` whenever possible. Keeping your schema, default site content, config, session setup, and components in `src/app` makes the intended extension points clear and reduces upgrade conflicts.
 
-## Database migrations
+## Migrations
 
-Keep stored content and database structure in step with changes to your site.
+Keep stored content in step with changes to your site.
 
-Migration files in `src/app/migrations` are discovered when SvelteKit builds the server and run automatically when it boots. Framework migrations use the `editable` namespace and project migrations use the `custom` namespace; their UTC timestamps determine the normal order. All pending migrations plus their tracking records run in one transaction: either the complete upgrade succeeds or nothing changes.
+Migration files in `src/app/migrations` are discovered when SvelteKit builds the server and run automatically when it boots, with SQLite and with [file storage](#file-storage-experimental) alike. Framework migrations use the `editable` namespace and project migrations use the `custom` namespace; their UTC timestamps determine the normal order. The ids of applied migrations are stored with the site; a new site starts with the current default content and never runs them. With SQLite, all pending migrations run in one transaction: either the complete upgrade succeeds or nothing changes.
 
 Create a project migration with:
 
@@ -1173,18 +1191,26 @@ This creates a timestamped `custom` migration. Its filename is its permanent ID:
 
 ```js
 export default {
-	up({ db, rename_property, rename_type, replace_value, delete_property, update }) {
-		// Transform content with the helpers, or the database with `db`.
+	up({
+		store,
+		ensure_document,
+		rename_property,
+		rename_type,
+		replace_value,
+		delete_property,
+		update
+	}) {
+		// Transform content with the helpers, or records with `store`.
 		// rename_property('hero', 'image', 'media');
 	}
 };
 ```
 
-Adding a custom content type usually needs no migration because documents are stored as JSON. Write one when existing documents or database structure must be transformed.
+Adding a custom content type usually needs no migration because documents are stored as they are. Write one when existing documents must be transformed.
 
 ### Content helpers
 
-Content lives as JSON inside the `documents` table, so changing a node type's shape means rewriting that JSON rather than altering a column. The helpers on the `up` context do that for you — each one scans every document (pages, banner, nav, and footer), applies the change to nodes of the given type, and returns how many nodes it changed. Every helper takes the node type first, and where a before and after are involved, the old value comes before the new one:
+Changing a node type's shape means rewriting stored documents rather than altering a column. The helpers on the `up` context do that for you — each one scans every document (pages, banner, nav, and footer), applies the change to nodes of the given type, and returns how many nodes it changed. Every helper takes the node type first, and where a before and after are involved, the old value comes before the new one:
 
 ```js
 export default {
@@ -1211,25 +1237,27 @@ export default {
 
 They are deliberately tolerant: a node that never had the property is left alone, so a migration written for one node type does nothing on sites that never used it. The exception is a rename onto a property that already exists — that is a real conflict and aborts the upgrade. Documents that end up unchanged are not rewritten, and `updated_at` is never touched, because a migration is not a content edit.
 
-`rename_type` also updates the `documents.type` column, which mirrors the type of each document's root node. For block types nothing matches there and only the nodes change.
+`rename_type` also updates the type each document record carries for its root node. For block types nothing matches there and only the nodes change.
 
 `delete_property` exists because stored content does not clean itself up. Saving a page drops nodes that are no longer reachable, but properties are written back exactly as they were loaded — so a property you removed from the schema stays in every document, and in every backup, until a migration removes it.
 
-`db` remains available for everything else — schema changes, `site_settings`, or content queries the helpers don't cover. It is the [node:sqlite](https://nodejs.org/api/sqlite.html) database handle, so `exec` runs statements and `prepare` gives you one to run with parameters. Adding a column and backfilling the rows that need it is the typical case:
+`ensure_document` adds a whole document unless one with its id exists, such as a new shared document every page will refer to. Its type is its root node's, and it returns whether it added the document.
+
+`store` remains available for everything else: the site's records as collections with `get`, `all`, `put`, and `delete` (see `src/lib/server/store.ts`), such as settings or slugs the helpers don't cover. Migrations are synchronous and may only change the site's records; filesystem, network, and other external side effects cannot be rolled back. Migrations are forward-only: never rename, delete, or edit one that has been applied. Roll back an upgrade by restoring the backup made before deployment.
+
+### SQLite schema
+
+Changes to the SQLite schema itself, such as a new table, are not content migrations. They belong to the SQLite store, live in `src/lib/server/sqlite_migrations`, run when the database opens, and are tracked in its `_migrations` table. They receive the [node:sqlite](https://nodejs.org/api/sqlite.html) database handle as `db`:
 
 ```js
 export default {
 	up({ db }) {
-		db.exec('ALTER TABLE documents ADD COLUMN locale TEXT');
-
-		const result = db.prepare('UPDATE documents SET locale = ? WHERE locale IS NULL').run('en');
-
-		console.log(`Backfilled locale on ${result.changes} documents`);
+		db.exec('CREATE TABLE redirects (path TEXT PRIMARY KEY, target TEXT NOT NULL)');
 	}
 };
 ```
 
-`run()` reports how many rows a statement touched, which is worth logging — a migration that reports `0` is usually a migration that matched nothing. Migrations are synchronous and may only change SQLite; filesystem, network, and other external side effects cannot be rolled back. Migrations are forward-only: never rename, delete, or edit one that has been applied. Roll back an upgrade by restoring the database snapshot made before deployment.
+A schema migration goes with a change to the store's collections, which every backend then implements in its own way.
 
 Editable's own migrations use the `editable` source name; `custom` migrations belong to your project. The timestamp-first filenames keep both sources in one chronological list without a central registry or sequence-number conflicts.
 

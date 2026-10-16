@@ -82,7 +82,6 @@ function summarize_page_document(page_doc: PageDocumentRecord): PageSummary {
 	};
 }
 
-
 /** Build the same page tree used by the Pages drawer. */
 export function build_page_browser_data(
 	pathname: string,

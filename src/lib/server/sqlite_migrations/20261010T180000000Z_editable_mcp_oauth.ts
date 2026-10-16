@@ -1,4 +1,4 @@
-import type { MigrationModule } from '#lib/server/migration_registry.js';
+import type { SchemaMigration } from '../sqlite_store.js';
 
 // OAuth for the MCP endpoint: registered clients, time-limited grants, and the
 // codes and tokens issued under them (stored as hashes only).
@@ -29,4 +29,4 @@ export default {
 			);
 		`);
 	}
-} satisfies MigrationModule;
+} satisfies SchemaMigration;

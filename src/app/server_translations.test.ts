@@ -36,7 +36,7 @@ vi.mock('./services.js', async () => {
 import { default_site } from './server_site.js';
 import * as services from './services.js';
 const { db, asset_exists } = services as unknown as typeof services & { db: DatabaseSync };
-import migration from './migrations/20260923T180000000Z_editable_translations.js';
+import migration from '#lib/server/sqlite_migrations/20260923T180000000Z_editable_translations.js';
 import {
 	default_page_document,
 	default_banner_document,
