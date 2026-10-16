@@ -34,6 +34,7 @@ import {
 	is_home_page_document_id,
 	is_reserved_route_slug,
 	persist_document,
+	rebuild_document_refs,
 	resolve_slug,
 	shared_document_types,
 	with_asset_cleanup
@@ -280,6 +281,13 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
 			if (existing_doc.nodes[document_id]?.type === 'page') store.documents.delete(document_id);
 			cleanup_translations(document_id);
 			store.asset_refs.delete(document_id);
+			store.document_refs.delete(document_id);
+			for (const refs of store.document_refs.all())
+				if (refs.target_ids.includes(document_id))
+					store.document_refs.put(refs.document_id, {
+						...refs,
+						target_ids: refs.target_ids.filter((id) => id !== document_id)
+					});
 		})
 	);
 
@@ -557,6 +565,7 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 			rewrite_internal_page_hrefs(doc.nodes, input.document_id, active_slug, link_languages);
 			if (JSON.stringify(doc) === JSON.stringify(record.data)) continue;
 			store.documents.put(record.document_id, { ...record, data: doc });
+			rebuild_document_refs(record.document_id);
 		}
 
 		for (const row of translations) {

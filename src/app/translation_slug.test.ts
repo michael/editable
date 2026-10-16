@@ -63,6 +63,7 @@ import {
 	get_sitemap_entries
 } from './api.remote.js';
 import { warn_about_language_slug_collisions } from './server_language_slugs.js';
+import { rebuild_document_refs } from './server_documents.js';
 import * as markdown_registry from './markdown/registry.js';
 
 // With no site set by a host, the code under test uses the deployment's own.
@@ -114,6 +115,7 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 		JSON.stringify(nav),
 		nav.document_id
 	);
+	rebuild_document_refs(nav.document_id);
 	insert_slug.run('old-about', 'about-page', 0, 'now');
 	for (const [document_id, language, date] of [
 		['about-page', 'de', '2026-10-03T00:00:00Z'],

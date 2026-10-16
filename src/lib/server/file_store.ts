@@ -103,6 +103,7 @@ export function file_store(options: FileStoreOptions): SiteStore {
 		documents,
 		slugs: json_collection('slugs'),
 		translations: json_collection('translations'),
+		document_refs: json_collection('document_refs'),
 		asset_refs: json_collection('asset_refs'),
 		settings: json_collection('settings'),
 		sessions: json_collection('sessions'),

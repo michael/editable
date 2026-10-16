@@ -195,6 +195,18 @@ export function collect_document_refs(
 	return refs;
 }
 
+/** Record the pages a document links to, in document order, atomically with saves. */
+export function rebuild_document_refs(document_id: string) {
+	const record = store.documents.get(document_id);
+	if (!record) {
+		store.document_refs.delete(document_id);
+		return;
+	}
+	const { nodes } = record.data;
+	const target_ids = collect_document_refs(nodes, collect_node_ids(document_id, nodes), document_id);
+	store.document_refs.put(document_id, { document_id, target_ids });
+}
+
 /** Stitch the shared documents (banner, nav, footer) into a page document. */
 export function combine_page_document(page_doc: DocumentData): DocumentData {
 	const page_node = page_doc.nodes[page_doc.document_id];
@@ -403,6 +415,7 @@ export async function persist_document(
 					updated_at: now_iso
 				});
 				cleanup_translations(document_id);
+				rebuild_document_refs(document_id);
 				rebuild_asset_refs(document_id);
 			}
 

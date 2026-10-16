@@ -128,6 +128,22 @@ describe.each(backends)('%s store', (_name, open) => {
 		expect(store.oauth_grants.all()).toHaveLength(1);
 	});
 
+	it('keeps the pages each document links to, in order', () => {
+		const store = open();
+		store.document_refs.put('nav', { document_id: 'nav', target_ids: ['p2', 'p1'] });
+		store.document_refs.put('p1', { document_id: 'p1', target_ids: ['p2'] });
+		expect(store.document_refs.get('nav')?.target_ids).toEqual(['p2', 'p1']);
+		store.document_refs.put('nav', { document_id: 'nav', target_ids: ['p1'] });
+		const by_id = (a: { document_id: string }, b: { document_id: string }) =>
+			a.document_id.localeCompare(b.document_id);
+		expect(store.document_refs.all().sort(by_id)).toEqual([
+			{ document_id: 'nav', target_ids: ['p1'] },
+			{ document_id: 'p1', target_ids: ['p2'] }
+		]);
+		store.document_refs.delete('p1');
+		expect(store.document_refs.get('p1')).toBeNull();
+	});
+
 	it('keeps the assets each document refers to', () => {
 		const store = open();
 		store.asset_refs.put('p1', { document_id: 'p1', asset_ids: ['a.webp', 'b.webp'] });

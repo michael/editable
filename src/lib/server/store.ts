@@ -3,9 +3,10 @@ import type { Document } from 'svedit';
 /**
  * What a site stores, as a few collections of records with the same four
  * operations each. A backend only keeps records and hands them back:
- * Editable computes what it stores, including the asset references it
- * keeps per document so cleanup can tell what is still in use without
- * reading every document. Records carry their own timestamps.
+ * Editable computes what it stores, including the references it keeps per
+ * document: the pages it links to, so the page browser knows what is linked
+ * from where, and the assets it uses, so cleanup knows what is still in use.
+ * Records carry their own timestamps.
  */
 export type Collection<Record> = {
 	get(key: string): Record | null;
@@ -37,6 +38,9 @@ export type TranslationRecord = {
 	value: string;
 	updated_at: string;
 };
+
+/** The pages a document links to, in document order, kept up to date on every write. */
+export type DocumentRefsRecord = { document_id: string; target_ids: string[] };
 
 /** The assets a document and its translations refer to, kept up to date on every write. */
 export type AssetRefsRecord = { document_id: string; asset_ids: string[] };
@@ -76,6 +80,7 @@ export type SiteStore = {
 	documents: Collection<DocumentRecord>;
 	slugs: Collection<SlugRecord>;
 	translations: Collection<TranslationRecord>;
+	document_refs: Collection<DocumentRefsRecord>;
 	asset_refs: Collection<AssetRefsRecord>;
 	settings: Collection<string>;
 	sessions: Collection<SessionRecord>;

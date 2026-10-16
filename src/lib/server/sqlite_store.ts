@@ -77,6 +77,43 @@ export function sqlite_store(db: DatabaseSync, with_transaction: <T>(fn: () => T
 				);
 			}
 		},
+		// One row per link, grouped into a record per source document in link order.
+		document_refs: {
+			get(document_id) {
+				const rows = db
+					.prepare(
+						'SELECT target_document_id FROM document_refs WHERE source_document_id = ? ORDER BY ref_order'
+					)
+					.all(document_id) as { target_document_id: string }[];
+				return rows.length
+					? { document_id, target_ids: rows.map((row) => row.target_document_id) }
+					: null;
+			},
+			all() {
+				const by_source = new Map<string, string[]>();
+				const rows = db
+					.prepare(
+						'SELECT target_document_id, source_document_id FROM document_refs ORDER BY ref_order'
+					)
+					.all() as { target_document_id: string; source_document_id: string }[];
+				for (const row of rows) {
+					if (!by_source.has(row.source_document_id)) by_source.set(row.source_document_id, []);
+					by_source.get(row.source_document_id)!.push(row.target_document_id);
+				}
+				return [...by_source].map(([document_id, target_ids]) => ({ document_id, target_ids }));
+			},
+			put(document_id, record) {
+				db.prepare('DELETE FROM document_refs WHERE source_document_id = ?').run(document_id);
+				const insert = db.prepare(
+					'INSERT OR REPLACE INTO document_refs (target_document_id, source_document_id, ref_order) VALUES (?, ?, ?)'
+				);
+				for (const [ref_order, target_id] of record.target_ids.entries())
+					insert.run(target_id, document_id, ref_order);
+			},
+			delete(document_id) {
+				db.prepare('DELETE FROM document_refs WHERE source_document_id = ?').run(document_id);
+			}
+		},
 		// One row per asset and document, grouped into a record per document.
 		asset_refs: {
 			get(document_id) {
