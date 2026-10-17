@@ -1,4 +1,4 @@
-import { store } from './services.js';
+import { db } from './services.js';
 import { default_site } from './server_site.js';
 import { is_reserved_language_slug } from './languages.js';
 import { get_markdown_page_pathnames } from './markdown/registry.js';
@@ -9,12 +9,12 @@ export function warn_about_language_slug_collisions() {
 	const { languages } = default_site;
 	if (!languages.length) return;
 	const pages = new Set(
-		store.documents
+		db.documents
 			.all()
 			.filter((record) => record.type === 'page')
 			.map((record) => record.document_id)
 	);
-	const rows = store.slugs.all().filter((record) => pages.has(record.document_id));
+	const rows = db.slugs.all().filter((record) => pages.has(record.document_id));
 	for (const row of rows) {
 		if (!is_reserved_language_slug(row.slug, languages)) continue;
 		console.warn(

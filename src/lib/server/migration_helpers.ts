@@ -6,7 +6,7 @@
 // `updated_at` is left untouched: a migration is not a content edit.
 
 import type { Document } from 'svedit';
-import type { SiteStore } from './storage/store.js';
+import type { Database } from './storage/database.js';
 
 type MigrationNode = Record<string, unknown>;
 
@@ -22,7 +22,7 @@ export type MigrationHelpers = {
 /**
  * Build the helpers spread into every content migration's `up` context.
  */
-export function create_migration_helpers(store: SiteStore): MigrationHelpers {
+export function create_migration_helpers(db: Database): MigrationHelpers {
 	/**
 	 * Apply `transform` to every node of `type` in every document. The transform
 	 * mutates the node it is given; returns the number of nodes it changed.
@@ -30,7 +30,7 @@ export function create_migration_helpers(store: SiteStore): MigrationHelpers {
 	function update(type: string, transform: (node: MigrationNode) => void): number {
 		let changed_nodes = 0;
 
-		for (const record of store.documents.all()) {
+		for (const record of db.documents.all()) {
 			const data = structuredClone(record.data);
 			let changed_in_document = 0;
 
@@ -45,7 +45,7 @@ export function create_migration_helpers(store: SiteStore): MigrationHelpers {
 			}
 
 			if (changed_in_document > 0) {
-				store.documents.put(record.document_id, { ...record, data });
+				db.documents.put({ ...record, data });
 				changed_nodes += changed_in_document;
 			}
 		}
@@ -83,8 +83,8 @@ export function create_migration_helpers(store: SiteStore): MigrationHelpers {
 		const changed_nodes = update(from, (node) => {
 			node.type = to;
 		});
-		for (const record of store.documents.all()) {
-			if (record.type === from) store.documents.put(record.document_id, { ...record, type: to });
+		for (const record of db.documents.all()) {
+			if (record.type === from) db.documents.put({ ...record, type: to });
 		}
 		return changed_nodes;
 	}
@@ -117,9 +117,9 @@ export function create_migration_helpers(store: SiteStore): MigrationHelpers {
 	 * whether it was added.
 	 */
 	function ensure_document(document: Document): boolean {
-		if (store.documents.get(document.document_id)) return false;
+		if (db.documents.get(document.document_id)) return false;
 		const now = new Date().toISOString();
-		store.documents.put(document.document_id, {
+		db.documents.put({
 			document_id: document.document_id,
 			type: document.nodes[document.document_id].type,
 			data: document,

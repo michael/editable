@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { sqlite_store } from '#lib/server/storage/sqlite.js';
+import { sqlite_database } from '#lib/server/storage/backends/sqlite_database.js';
 
 const request = vi.hoisted(() => ({ locals: {} as Record<string, unknown> }));
 vi.mock('$app/env/private', () => ({ ORIGIN: 'https://example.com', LANGUAGES: '', VERCEL: '' }));
@@ -30,20 +30,21 @@ it('uses the storage a host sets for the request, and opens the deployment’s o
 			origin: 'https://host.example',
 			base: '/alice',
 			languages: [],
-			storage: { store: sqlite_store(hosted_db, (fn) => fn()), assets }
+			storage: {
+				db: sqlite_database(hosted_db),
+				assets
+			}
 		}
 	};
-	services.with_transaction(() =>
-		services.store.settings.put('greeting', { key: 'greeting', value: 'hosted' })
-	);
+	services.with_transaction(() => services.db.settings.put({ key: 'greeting', value: 'hosted' }));
 	expect(hosted_db.prepare('SELECT value FROM site_settings').all()).toEqual([{ value: 'hosted' }]);
 	expect(services.asset_exists('hosted.webp')).toBe(true);
 	expect(existsSync(data_dir)).toBe(false);
 
 	// Without a host's storage, the deployment's own opens on first use, migrated and seeded.
 	request.locals = {};
-	expect(services.store.settings.get('greeting')).toBeNull();
-	expect(services.store.settings.get('home_page_id')).not.toBeNull();
+	expect(services.db.settings.get('greeting')).toBeNull();
+	expect(services.db.settings.get('home_page_id')).not.toBeNull();
 	expect(existsSync(join(data_dir, 'db.sqlite3'))).toBe(true);
 	expect(services.get_storage()).toBe(services.get_default_storage());
 	expect(services.asset_exists('hosted.webp')).toBe(false);
@@ -55,16 +56,16 @@ it('keeps a site in files instead of a database with STORAGE=files', async () =>
 	vi.stubEnv('STORAGE', 'files');
 	const services = await import('./services.js');
 
-	const home_page_id = services.store.settings.get('home_page_id')?.value;
+	const home_page_id = services.db.settings.get('home_page_id')?.value;
 	expect(home_page_id).not.toBeNull();
 	expect(existsSync(join(data_dir, 'db.sqlite3'))).toBe(false);
 	expect(existsSync(join(data_dir, 'site', 'documents', `${home_page_id}.edf`))).toBe(true);
 
-	const home = services.store.documents.get(home_page_id!)!;
+	const home = services.db.documents.get(home_page_id!)!;
 	expect(home.type).toBe('page');
 	expect(home.data.document_id).toBe(home_page_id);
 	expect(
-		services.store.documents
+		services.db.documents
 			.all()
 			.map((record) => record.type)
 			.sort()

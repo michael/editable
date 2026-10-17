@@ -1,11 +1,11 @@
 import crypto from 'node:crypto';
-import type { SiteStore } from './storage/store.js';
+import type { Database } from './storage/database.js';
 import type { Cookies } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';
 import { ADMIN_PASSWORD, NODE_ENV } from '$app/env/private';
 
 /** The records auth keeps: sessions, and the login throttle among the settings. */
-type Store = Pick<SiteStore, 'sessions' | 'settings'>;
+type AuthDatabase = Pick<Database, 'sessions' | 'settings'>;
 
 export const admin_session_cookie_name = 'ew_admin_session';
 export const session_duration_seconds = 14 * 24 * 60 * 60;
@@ -35,31 +35,31 @@ export function passwords_match(a: string, b: string): boolean {
 	return crypto.timingSafeEqual(digest(a), digest(b));
 }
 
-function get_login_throttle_state(store: Store): {
+function get_login_throttle_state(db: AuthDatabase): {
 	failed_count: number;
 	locked_until: number;
 } {
-	const setting = store.settings.get(LOGIN_THROTTLE_KEY);
+	const setting = db.settings.get(LOGIN_THROTTLE_KEY);
 	return setting ? JSON.parse(setting.value) : { failed_count: 0, locked_until: 0 };
 }
 
 function set_login_throttle_state(
-	store: Store,
+	db: AuthDatabase,
 	state: { failed_count: number; locked_until: number }
 ) {
-	store.settings.put(LOGIN_THROTTLE_KEY, { key: LOGIN_THROTTLE_KEY, value: JSON.stringify(state) });
+	db.settings.put({ key: LOGIN_THROTTLE_KEY, value: JSON.stringify(state) });
 }
 
 /**
  * Seconds until login attempts are accepted again (0 when unlocked).
  */
-export function get_login_lockout_seconds(store: Store): number {
-	const { locked_until } = get_login_throttle_state(store);
+export function get_login_lockout_seconds(db: AuthDatabase): number {
+	const { locked_until } = get_login_throttle_state(db);
 	return Math.max(locked_until - Math.floor(Date.now() / 1000), 0);
 }
 
-export function register_failed_login(store: Store) {
-	const state = get_login_throttle_state(store);
+export function register_failed_login(db: AuthDatabase) {
+	const state = get_login_throttle_state(db);
 	state.failed_count += 1;
 
 	const throttled_failures = state.failed_count - LOGIN_THROTTLE.free_attempts;
@@ -71,11 +71,11 @@ export function register_failed_login(store: Store) {
 		state.locked_until = Math.floor(Date.now() / 1000) + lockout_seconds;
 	}
 
-	set_login_throttle_state(store, state);
+	set_login_throttle_state(db, state);
 }
 
-export function reset_login_throttle(store: Store) {
-	set_login_throttle_state(store, { failed_count: 0, locked_until: 0 });
+export function reset_login_throttle(db: AuthDatabase) {
+	set_login_throttle_state(db, { failed_count: 0, locked_until: 0 });
 }
 
 export function get_required_admin_password(): string {
@@ -111,8 +111,8 @@ export function set_admin_session_cookie(cookies: Cookies, session_id: string) {
 	});
 }
 
-export async function delete_session(session_id: string, store: Store) {
-	store.sessions.delete(session_id);
+export async function delete_session(session_id: string, db: AuthDatabase) {
+	db.sessions.delete(session_id);
 }
 
 export function require_admin_session(locals: { is_admin?: boolean }) {
@@ -129,11 +129,11 @@ function format_lockout_duration(seconds: number): string {
 
 /** Start an admin session for a correct password, subject to the login throttle. */
 export function log_in_admin(
-	store: Store,
+	db: AuthDatabase,
 	cookies: Cookies,
 	password: string
 ): { ok: true } | { ok: false; code: string; message: string } {
-	const lockout_seconds = get_login_lockout_seconds(store);
+	const lockout_seconds = get_login_lockout_seconds(db);
 	if (lockout_seconds > 0) {
 		return {
 			ok: false,
@@ -143,14 +143,14 @@ export function log_in_admin(
 	}
 
 	if (!passwords_match(password, get_required_admin_password())) {
-		register_failed_login(store);
+		register_failed_login(db);
 		return { ok: false, code: 'invalid_password', message: 'Incorrect admin password.' };
 	}
 
-	reset_login_throttle(store);
+	reset_login_throttle(db);
 
 	const session_id = crypto.randomUUID();
-	store.sessions.put(session_id, { session_id, expires: get_session_expires_at() });
+	db.sessions.put({ session_id, expires: get_session_expires_at() });
 	set_admin_session_cookie(cookies, session_id);
 	return { ok: true };
 }

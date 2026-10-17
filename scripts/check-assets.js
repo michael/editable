@@ -39,7 +39,7 @@ if (list_entries) {
 	// variants are not stored as separate database references: the application
 	// derives their URLs and storage directory from the referenced original's
 	// hash. Include that directory when it exists, following the same storage
-	// convention as asset_storage.js.
+	// convention as src/lib/server/storage/backends/file_assets.ts.
 	const entries = new Set(referenced);
 	for (const asset_id of referenced) {
 		const ext = extname(asset_id);

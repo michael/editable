@@ -3,7 +3,7 @@
 // Kept out of registry.js so that module stays database-free — the markdown
 // route imports it at module load, including in static/Vercel mode.
 
-import { store } from '#app/services.js';
+import { db } from '#app/services.js';
 import { is_reserved_markdown_slug } from './registry.js';
 
 export type ShadowedPage = {
@@ -14,12 +14,12 @@ export type ShadowedPage = {
 /** Pages that exist in the database but whose URL a markdown page serves. */
 export function find_shadowed_pages(): ShadowedPage[] {
 	const pages = new Set(
-		store.documents
+		db.documents
 			.all()
 			.filter((record) => record.type === 'page')
 			.map((record) => record.document_id)
 	);
-	const rows = store.slugs
+	const rows = db.slugs
 		.all()
 		.filter((record) => record.is_active && pages.has(record.document_id))
 		.map(({ slug, document_id }) => ({ slug, document_id }));

@@ -1107,7 +1107,7 @@ Convert your site in place, with the dev server stopped:
 pnpm data:convert --to files
 ```
 
-Editable reads the format from the data folder, so `pnpm dev` then opens the files. The site lives in `data/site`: `documents/<id>.edf` for each page, banner, nav, and footer, `documents.json` with their types and timestamps, and one JSON file each for slugs, settings, translations, references, sessions, and MCP connections. `_migrations.json` lists the file store's storage migrations that have run, like SQLite's `_migrations` table. Assets stay in `data/assets`, shared by both formats.
+Editable reads the format from the data folder, so `pnpm dev` then opens the files. The site lives in `data/site`: `documents/<id>.edf` for each page, banner, nav, and footer, `documents.json` with their types and timestamps, and one JSON file each for slugs, settings, translations, references, sessions, and MCP connections. `_migrations.json` lists the file database's storage migrations that have run, like SQLite's `_migrations` table. Assets stay in `data/assets`, shared by both formats.
 
 The database the conversion replaced moves to `data-backups/` as a regular backup that `pnpm data:backups` lists. `pnpm data:convert --to sqlite` converts back the same way, keeping the files version in a dated folder in `data-backups/`.
 
@@ -1127,7 +1127,7 @@ event.locals.site = {
 	origin: 'https://host.example',
 	base: '/alice',
 	languages: [],
-	storage: { store, assets },
+	storage: storage_for(dir),
 	auth
 };
 ```
@@ -1135,7 +1135,7 @@ event.locals.site = {
 - `origin` is the public origin, used for canonical URLs, the sitemap, and the canonical host redirect.
 - `base` is the path the site is served under, or `''` at the root. Stored links never include it: `/about` stays `/about` in the database, reaches the browser as `/alice/about` the way language prefixes do, and is stored without it again, so a site can move to another path or its own domain without changing content. Components render `node.href` as is; asset URLs and the editor's own navigation go through `resolve_href(href, site)`.
 - `languages` lists the site's languages, the main language first, or none.
-- `storage` holds the site's records and its asset files. `store` is a `SiteStore` (`src/lib/server/storage/store.ts`): a few collections of records with get, all, put, and delete each, plus a transaction wrapper. Open a site with `open_data_folder(dir)` from `src/app/storage.ts`, which uses the format the folder holds, run `migrate` from `src/app/migrations.ts` on it, which brings its backend's format and then its content up to date and seeds a new site, and pass its `store`. Assets come from `create_asset_storage`. Editable reads and writes through the storage for the request and caches nothing; opening, caching, and closing site data is up to the host. Asset cleanup deletes files the site's records no longer reference, so a host that shares asset files between sites supplies asset functions that keep them.
+- `storage` is the site's `Storage` (`src/lib/server/storage/storage.ts`): its `db`, holding documents, settings, and every other record, and its `assets`, the uploaded files. The `Database` interface is a few collections of records with get, all, put, and delete each, plus a transaction wrapper, the backend's own migrations, and `close`; the `Assets` interface reads and writes files. Their backends live in `src/lib/server/storage/backends/`: `sqlite_database`, `file_database`, and `file_assets`. `storage_for(dir)` from `src/app/storage.ts` gives a data folder's storage, with the database in the format the folder holds and the assets in its `assets` folder. Run `migrate` from `src/app/migrations.ts` on its `db` before use, which brings its backend's format and then its content up to date and seeds a new site. Editable reads and writes through the storage for the request and caches nothing; opening, caching, and closing site data is up to the host. Asset cleanup deletes files the site's records no longer reference, so a host that shares asset files between sites supplies asset functions that keep them.
 - `auth` decides who may edit the site and how they sign in, replacing the admin password. It implements `is_admin(event)`, `log_in(event, credentials)`, and `log_out(event)` (types in `src/app/server_admin_auth.ts`). `log_in` receives whatever the login dialog sends to `login_admin`; Editable's own dialog sends `{ password }`. It either starts a session or returns `{ ok: true, redirect }` to continue elsewhere: to sign in with OAuth, have your own login dialog send a username, return the provider's authorization URL, and handle the callback in a route of your own that sets your session, which `is_admin` then reads. `event.url` in `log_in` is the page the login started from. Editable's own sessions use one cookie for the whole host, so a host serving several sites from one origin scopes its sessions to the site, for example with a cookie that names it.
 
 To replace the login dialog itself, for example to ask for a username, to offer several sign-in providers, or when embedding Editable in another environment, set your own component in place of `AuthDialog` as `auth_dialog` in `system_components` in `src/app/document_config.ts`. It opens in the same drawer and receives `onlogin_success`, to call after signing in on the page, and `onedit_for_fun`, for editing without saving (see `AuthDialogProps` in `src/app/components/AuthDialog.svelte`):
@@ -1186,10 +1186,10 @@ Every migration lives in `src/app/migrations`, is discovered when SvelteKit buil
 
 There are two kinds, with the same shape:
 
-- **Content migrations** change the site's documents. They have no `target`, run on every storage backend, and work through the store and the helpers below. Which ones have run is stored with the site, so it travels when you [convert a site](#file-storage-experimental) to another backend. A new site starts with the current default content and never runs them.
+- **Content migrations** change the site's documents. They have no `target`, run on every storage backend, and work through the database and the helpers below. Which ones have run is stored with the site, so it travels when you [convert a site](#file-storage-experimental) to another backend. A new site starts with the current default content and never runs them.
 - **Storage migrations** change one backend's own format, such as a SQLite table. They name their backend as `target: 'sqlite'` or `target: 'files'`, and which ones have run is kept by the backend itself.
 
-When a site opens, its backend's pending storage migrations run first, so content migrations always see the store in its current format. With SQLite, each kind runs in one transaction: either the complete upgrade succeeds or nothing changes.
+When a site opens, its backend's pending storage migrations run first, so content migrations always see the database in its current format. With SQLite, each kind runs in one transaction: either the complete upgrade succeeds or nothing changes.
 
 Create a project migration with:
 
@@ -1203,8 +1203,8 @@ This creates a timestamped `custom` content migration. Its filename is its perma
 import type { ContentContext, Migration } from '#lib/server/migrations.js';
 
 export default {
-	up({ store, rename_property, update }: ContentContext) {
-		// Transform content with the helpers, or records with `store`.
+	up({ db, rename_property, update }: ContentContext) {
+		// Transform content with the helpers, or records with `db`.
 		// rename_property('hero', 'image', 'media');
 	}
 } satisfies Migration;
@@ -1247,7 +1247,7 @@ They are deliberately tolerant: a node that never had the property is left alone
 
 `ensure_document` adds a whole document unless one with its id exists, such as a new shared document every page will refer to. Its type is its root node's, and it returns whether it added the document.
 
-`store` remains available for everything else: the site's records as collections with `get`, `all`, `put`, and `delete` (see `src/lib/server/storage/store.ts`), such as settings or slugs the helpers don't cover. Migrations are synchronous and may only change the site's records; filesystem, network, and other external side effects cannot be rolled back. Migrations are forward-only: never rename, delete, or edit one that has been applied. Roll back an upgrade by restoring the backup made before deployment.
+`db` remains available for everything else: the site's records as collections with `get`, `all`, `put`, and `delete` (see `src/lib/server/storage/database.ts`), such as settings or slugs the helpers don't cover. Migrations are synchronous and may only change the site's records; filesystem, network, and other external side effects cannot be rolled back. Migrations are forward-only: never rename, delete, or edit one that has been applied. Roll back an upgrade by restoring the backup made before deployment.
 
 ### Storage migrations
 
@@ -1261,7 +1261,7 @@ This writes one file per backend, sharing the change's timestamp and name, with 
 
 ```ts
 import type { Migration } from '#lib/server/migrations.js';
-import type { SqliteContext } from '#lib/server/storage/sqlite.js';
+import type { SqliteContext } from '#lib/server/storage/backends/sqlite_database.js';
 
 export default {
 	target: 'sqlite',
@@ -1271,9 +1271,9 @@ export default {
 } satisfies Migration;
 ```
 
-Where a backend needs nothing, its file stays with an empty `up`; the file store, for example, creates a collection's file on first write. The files must stay: a storage change missing a file for any backend stops the site from starting, whatever the change's date, and so does the test suite. That makes a forgotten backend, a misspelled target, or a backend added without migrations an error instead of a silent gap.
+Where a backend needs nothing, its file stays with an empty `up`; the file database, for example, creates a collection's file on first write. The files must stay: a storage change missing a file for any backend stops the site from starting, whatever the change's date, and so does the test suite. That makes a forgotten backend, a misspelled target, or a backend added without migrations an error instead of a silent gap.
 
-A new backend starts with a file for every storage change in the folder, and a fresh store of any backend replays all of them in order.
+A new backend starts with a file for every storage change in the folder, and a fresh database of any backend replays all of them in order.
 
 ### Placing a migration
 

@@ -5,7 +5,7 @@ import {
 	type Migration
 } from '#lib/server/migrations.js';
 import { create_migration_helpers } from '#lib/server/migration_helpers.js';
-import type { OpenedStore } from '#lib/server/storage/store.js';
+import type { Database } from '#lib/server/storage/database.js';
 import seed_initial_documents from './seed_initial_documents.js';
 
 const all_migrations = load_migrations(
@@ -16,9 +16,10 @@ const all_migrations = load_migrations(
 );
 
 /** Bring a backend's own format up to date with the migrations for its target. */
-export function migrate_storage({ migrations }: OpenedStore) {
+export function migrate_storage(db: Database) {
+	const { migrations } = db;
 	assert_complete(all_migrations, migrations.target);
-	migrations.transaction(() =>
+	db.transaction(() =>
 		run_migrations(
 			all_migrations,
 			migrations.target,
@@ -30,33 +31,33 @@ export function migrate_storage({ migrations }: OpenedStore) {
 }
 
 /**
- * Bring a site's content up to date, the same way on every backend. A store
+ * Bring a site's content up to date, the same way on every backend. A database
  * without documents is new: it gets the default site, which already has the
  * current shape. Otherwise the content migrations it has not run are applied,
- * and their ids are kept in the store's 'migrations' setting.
+ * and their ids are kept in the database's 'migrations' setting.
  */
-export function migrate_content({ store, migrations }: OpenedStore) {
+export function migrate_content(db: Database) {
 	const content_ids = all_migrations
 		.filter((migration) => migration.target === 'content')
 		.map((migration) => migration.id);
-	store.transaction(() => {
+	db.transaction(() => {
 		const record = (applied: string[]) =>
-			store.settings.put('migrations', { key: 'migrations', value: JSON.stringify(applied) });
-		if (!store.documents.all().length) {
-			seed_initial_documents(store);
+			db.settings.put({ key: 'migrations', value: JSON.stringify(applied) });
+		if (!db.documents.all().length) {
+			seed_initial_documents(db);
 			record(content_ids);
 			return;
 		}
-		const setting = store.settings.get('migrations');
+		const setting = db.settings.get('migrations');
 		// SQLite databases from before kept content progress with their own migrations.
 		const applied: string[] = setting
 			? JSON.parse(setting.value)
-			: migrations.applied().filter((id) => content_ids.includes(id));
+			: db.migrations.applied().filter((id) => content_ids.includes(id));
 		run_migrations(
 			all_migrations,
 			'content',
 			new Set(applied),
-			{ store, ...create_migration_helpers(store) },
+			{ db, ...create_migration_helpers(db) },
 			(id) => {
 				applied.push(id);
 				record(applied);
@@ -66,7 +67,7 @@ export function migrate_content({ store, migrations }: OpenedStore) {
 }
 
 /** Bring a site up to date: its backend's format first, then its content. */
-export function migrate(opened: OpenedStore) {
-	migrate_storage(opened);
-	migrate_content(opened);
+export function migrate(db: Database) {
+	migrate_storage(db);
+	migrate_content(db);
 }

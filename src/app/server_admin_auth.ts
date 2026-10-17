@@ -1,5 +1,5 @@
 import type { RequestEvent } from '@sveltejs/kit';
-import { store } from './services.js';
+import { db } from './services.js';
 import { site } from './server_site.js';
 import {
 	admin_session_cookie_name,
@@ -41,7 +41,7 @@ export const password_auth: AdminAuth = {
 		const session_id = cookies.get(admin_session_cookie_name);
 		if (!session_id) return false;
 
-		const row = store.sessions.get(session_id);
+		const row = db.sessions.get(session_id);
 		const now = Math.floor(Date.now() / 1000);
 
 		if (!row) {
@@ -49,26 +49,26 @@ export const password_auth: AdminAuth = {
 			return false;
 		}
 		if (row.expires <= now) {
-			store.sessions.delete(session_id);
+			db.sessions.delete(session_id);
 			clear_admin_session_cookie(cookies);
 			return false;
 		}
 		// Sliding renewal, at most once per renewal interval
 		const last_renewed_at = row.expires - session_duration_seconds;
 		if (now - last_renewed_at >= session_renewal_interval_seconds) {
-			store.sessions.put(session_id, { session_id, expires: get_session_expires_at() });
+			db.sessions.put({ session_id, expires: get_session_expires_at() });
 			set_admin_session_cookie(cookies, session_id);
 		}
 		return true;
 	},
 
 	log_in({ cookies }, { password = '' }) {
-		return log_in_admin(store, cookies, password);
+		return log_in_admin(db, cookies, password);
 	},
 
 	async log_out({ cookies }) {
 		const session_id = cookies.get(admin_session_cookie_name);
-		if (session_id) await delete_session(session_id, store);
+		if (session_id) await delete_session(session_id, db);
 		clear_admin_session_cookie(cookies);
 	}
 };

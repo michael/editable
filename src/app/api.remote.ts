@@ -17,8 +17,7 @@ import {
 import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import slugify from 'slugify';
-import { store, with_transaction } from '#app/services.js';
-import { translation_key } from '#lib/server/storage/store.js';
+import { db, with_transaction } from '#app/services.js';
 import {
 	type DocumentData,
 	InvalidDocumentError,
@@ -210,7 +209,7 @@ export const get_page_browser_data = query(v.string(), async (href) => {
 export const get_sitemap_entries = query(async () => {
 	const { languages } = site;
 	const { page_forest } = build_page_browser_data('/', true);
-	const records = store.documents.all().map((record) => {
+	const records = db.documents.all().map((record) => {
 		const root = record.data.nodes[record.document_id];
 		return {
 			document_id: record.document_id,
@@ -221,7 +220,7 @@ export const get_sitemap_entries = query(async () => {
 		};
 	});
 	const records_by_id = new Map(records.map((record) => [record.document_id, record]));
-	const translations = store.translations.all();
+	const translations = db.translations.all();
 	const modified_by_language = new Map(
 		translations.map((row) => [JSON.stringify([row.document_id, row.language]), row.updated_at])
 	);
@@ -276,15 +275,15 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
 
 	await with_asset_cleanup(() =>
 		with_transaction(() => {
-			for (const record of store.slugs.all())
-				if (record.document_id === document_id) store.slugs.delete(record.slug);
-			if (existing_doc.nodes[document_id]?.type === 'page') store.documents.delete(document_id);
+			for (const record of db.slugs.all())
+				if (record.document_id === document_id) db.slugs.delete(record.slug);
+			if (existing_doc.nodes[document_id]?.type === 'page') db.documents.delete(document_id);
 			cleanup_translations(document_id);
-			store.asset_refs.delete(document_id);
-			store.document_refs.delete(document_id);
-			for (const refs of store.document_refs.all())
+			db.asset_refs.delete(document_id);
+			db.document_refs.delete(document_id);
+			for (const refs of db.document_refs.all())
 				if (refs.target_ids.includes(document_id))
-					store.document_refs.put(refs.document_id, {
+					db.document_refs.put({
 						...refs,
 						target_ids: refs.target_ids.filter((id) => id !== document_id)
 					});
@@ -311,7 +310,7 @@ export const get_internal_link_preview = query(v.string(), async (href) => {
 		return null;
 	}
 
-	const record = store.documents.get(resolved.document_id);
+	const record = db.documents.get(resolved.document_id);
 	if (!record || record.type !== 'page') {
 		return null;
 	}
@@ -392,10 +391,10 @@ function rewrite_internal_page_hrefs(
 /** Make a slug the page's active one; its previous active slug stays as a redirect. */
 function assign_active_slug(document_id: string, slug: string) {
 	const created_at = new Date().toISOString();
-	for (const record of store.slugs.all())
+	for (const record of db.slugs.all())
 		if (record.document_id === document_id && record.is_active)
-			store.slugs.put(record.slug, { ...record, is_active: false });
-	store.slugs.put(slug, { slug, document_id, is_active: true, created_at });
+			db.slugs.put({ ...record, is_active: false });
+	db.slugs.put({ slug, document_id, is_active: true, created_at });
 }
 
 export const get_translated_document = query(
@@ -538,7 +537,7 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		};
 	}
 
-	const existing_slug = store.slugs.get(normalized_slug);
+	const existing_slug = db.slugs.get(normalized_slug);
 	if (existing_slug && existing_slug.document_id !== input.document_id && existing_slug.is_active) {
 		return create_page_url_error_result(
 			'page_url_used_by_other_page',
@@ -553,18 +552,18 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 			throw new Error('Failed to assign new active slug');
 		}
 
-		const translations = store.translations.all();
+		const translations = db.translations.all();
 		const link_languages = [
 			...new Set([...site.languages, ...translations.map((row) => row.language)])
 		];
 
 		// Rewritten links still point at the same page, so this is not a content
 		// change and leaves updated_at alone.
-		for (const record of store.documents.all()) {
+		for (const record of db.documents.all()) {
 			const doc = structuredClone(record.data);
 			rewrite_internal_page_hrefs(doc.nodes, input.document_id, active_slug, link_languages);
 			if (JSON.stringify(doc) === JSON.stringify(record.data)) continue;
-			store.documents.put(record.document_id, { ...record, data: doc });
+			db.documents.put({ ...record, data: doc });
 			rebuild_document_refs(record.document_id);
 		}
 
@@ -578,8 +577,7 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 					link_languages
 				);
 			const value = JSON.stringify(map);
-			if (value !== row.value)
-				store.translations.put(translation_key(row.document_id, row.language), { ...row, value });
+			if (value !== row.value) db.translations.put({ ...row, value });
 		}
 		return active_slug;
 	});

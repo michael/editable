@@ -1,5 +1,5 @@
 import type { Migration } from '#lib/server/migrations.js';
-import type { SqliteContext } from '#lib/server/storage/sqlite.js';
+import type { SqliteContext } from '#lib/server/storage/backends/sqlite_database.js';
 
 // OAuth for the MCP endpoint: registered clients, time-limited grants, and the
 // codes and tokens issued under them (stored as hashes only).

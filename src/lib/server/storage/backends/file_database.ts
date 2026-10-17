@@ -8,7 +8,12 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import type { Document } from 'svedit';
-import type { Collection, DocumentRecord, OpenedStore, SiteStore } from './store.js';
+import {
+	translation_key,
+	type Collection,
+	type DocumentRecord,
+	type Database
+} from '../database.js';
 
 /** What migrations with target 'files' receive: the folder the site lives in. */
 export type FilesContext = { dir: string };
@@ -19,23 +24,23 @@ function write(path: string, text: string) {
 	renameSync(`${path}.tmp`, path);
 }
 
-export type FileStoreOptions = {
-	dir: string;
-	/** How documents are written to disk, as EDF when the schema is at hand. */
-	serialize: (document: Document) => string;
-	parse: (text: string) => Document;
-	extension: string;
-};
-
 /**
- * A site store that keeps every record in files under one directory: each
+ * The database in files: it keeps every record in files under one directory: each
  * document in its own file, with its type and timestamps in documents.json,
  * and every other collection as one JSON file of records. Files are read on
  * every access and replaced atomically on every write, so the folder is the
  * whole truth and can be edited or versioned by hand. There are no
- * transactions: writes are applied as they come.
+ * transactions: writes are applied as they come. The migrations it has
+ * applied are recorded in _migrations.json, like SQLite's _migrations table.
+ * Documents are written with serialize and read with parse, as EDF when the
+ * schema is at hand.
  */
-export function file_store(options: FileStoreOptions): SiteStore {
+export function file_database(options: {
+	dir: string;
+	serialize: (document: Document) => string;
+	parse: (text: string) => Document;
+	extension: string;
+}): Database {
 	const { dir } = options;
 	mkdirSync(join(dir, 'documents'), { recursive: true });
 
@@ -43,7 +48,10 @@ export function file_store(options: FileStoreOptions): SiteStore {
 		existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : fallback;
 
 	/** A collection kept as one JSON object of records by key. */
-	function json_collection<Record>(name: string): Collection<Record> {
+	function json_collection<Record>(
+		name: string,
+		key_of: (record: Record) => string
+	): Collection<Record> {
 		const path = join(dir, `${name}.json`);
 		const load = () => read_json<{ [key: string]: Record }>(path, {});
 		const save = (records: { [key: string]: Record }) =>
@@ -51,9 +59,9 @@ export function file_store(options: FileStoreOptions): SiteStore {
 		return {
 			get: (key) => load()[key] ?? null,
 			all: () => Object.values(load()),
-			put(key, record) {
+			put(record) {
 				const records = load();
-				records[key] = record;
+				records[key_of(record)] = record;
 				save(records);
 			},
 			delete(key) {
@@ -84,7 +92,8 @@ export function file_store(options: FileStoreOptions): SiteStore {
 				.filter(([id]) => existsSync(document_path(id)))
 				.map(([id, meta]) => read_document(id, meta));
 		},
-		put(id, record) {
+		put(record) {
+			const id = record.document_id;
 			const meta = load_meta();
 			meta[id] = {
 				type: record.type,
@@ -102,41 +111,34 @@ export function file_store(options: FileStoreOptions): SiteStore {
 		}
 	};
 
+	const migrations_path = join(dir, '_migrations.json');
+	const applied = (): string[] => read_json(migrations_path, { migrations: [] }).migrations;
+	const context: FilesContext = { dir };
+
 	return {
 		transaction: (fn) => fn(),
 		documents,
-		slugs: json_collection('slugs'),
-		translations: json_collection('translations'),
-		document_refs: json_collection('document_refs'),
-		asset_refs: json_collection('asset_refs'),
-		settings: json_collection('settings'),
-		sessions: json_collection('sessions'),
-		oauth_clients: json_collection('oauth_clients'),
-		oauth_grants: json_collection('oauth_grants'),
-		oauth_tokens: json_collection('oauth_tokens')
-	};
-}
-
-/**
- * Open a site kept as files. The migrations it has applied are recorded in
- * _migrations.json next to its records, like SQLite's _migrations table.
- */
-export function open_files(options: FileStoreOptions): OpenedStore {
-	const store = file_store(options);
-	const path = join(options.dir, '_migrations.json');
-	const applied = (): string[] =>
-		existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')).migrations : [];
-	const context: FilesContext = { dir: options.dir };
-	return {
-		store,
-		close: () => {},
+		slugs: json_collection('slugs', (record) => record.slug),
+		translations: json_collection('translations', (record) =>
+			translation_key(record.document_id, record.language)
+		),
+		document_refs: json_collection('document_refs', (record) => record.document_id),
+		asset_refs: json_collection('asset_refs', (record) => record.document_id),
+		settings: json_collection('settings', (record) => record.key),
+		sessions: json_collection('sessions', (record) => record.session_id),
+		oauth_clients: json_collection('oauth_clients', (record) => record.client_id),
+		oauth_grants: json_collection('oauth_grants', (record) => record.grant_id),
+		oauth_tokens: json_collection('oauth_tokens', (record) => record.token_hash),
 		migrations: {
 			target: 'files',
 			context,
 			applied,
 			record: (id) =>
-				write(path, JSON.stringify({ migrations: [...applied(), id] }, null, '\t') + '\n'),
-			transaction: (fn) => fn()
-		}
+				write(
+					migrations_path,
+					JSON.stringify({ migrations: [...applied(), id] }, null, '\t') + '\n'
+				)
+		},
+		close: () => {}
 	};
 }

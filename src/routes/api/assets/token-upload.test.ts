@@ -17,8 +17,8 @@ vi.mock('#app/services.js', async () => {
 	const { mkdtempSync } = await import('node:fs');
 	const { tmpdir } = await import('node:os');
 	const { join } = await import('node:path');
-	const { create_asset_storage } = await import('#lib/server/asset_storage.js');
-	return create_asset_storage({
+	const { file_assets } = await import('#lib/server/storage/backends/file_assets.js');
+	return file_assets({
 		asset_path: mkdtempSync(join(tmpdir(), 'editable-assets-')),
 		asset_grace_period_days: 1,
 		asset_id_regex: /^[a-f0-9]{64}\.[a-z0-9]+$/

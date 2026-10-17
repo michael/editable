@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { referenced_assets } from '../../scripts/asset-references.js';
-import { create_asset_storage } from '#lib/server/asset_storage.js';
+import { file_assets } from '#lib/server/storage/backends/file_assets.js';
 import { ASSET_ID_REGEX } from './config.js';
 
 vi.mock('#lib/server/s3.js', () => ({ mirror_file: vi.fn() }));
@@ -42,7 +42,7 @@ it('verification finds translation-only assets and cleanup respects references a
 		await writeFile(join(variants, 'w320.webp'), 'variant');
 		const old = new Date(Date.now() - 3 * 86400000);
 		await utimes(file, old, old);
-		const storage = create_asset_storage({
+		const storage = file_assets({
 			asset_path: dir,
 			asset_grace_period_days: 1,
 			asset_id_regex: ASSET_ID_REGEX

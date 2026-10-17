@@ -12,12 +12,12 @@ vi.mock('./services.js', async () => {
 	const { mkdtempSync } = await import('node:fs');
 	const { tmpdir } = await import('node:os');
 	const { join } = await import('node:path');
-	const { sqlite_store } = await import('#lib/server/storage/sqlite.js');
-	const db = new DatabaseSync(':memory:');
+	const { sqlite_database } = await import('#lib/server/storage/backends/sqlite_database.js');
+	const sqlite = new DatabaseSync(':memory:');
 	const asset_dir = mkdtempSync(join(tmpdir(), 'editable-assets-'));
 	return {
-		db,
-		store: sqlite_store(db, (fn) => fn()),
+		sqlite,
+		db: sqlite_database(sqlite),
 		asset_exists: () => true,
 		asset_path: (asset_id: string) => join(asset_dir, asset_id),
 		variant_path: (asset_id: string, width: number) =>
@@ -31,8 +31,8 @@ vi.mock('./services.js', async () => {
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import * as services from './services.js';
-const { asset_path, db, variant_path } = services as unknown as typeof services & {
-	db: DatabaseSync;
+const { asset_path, sqlite, variant_path } = services as unknown as typeof services & {
+	sqlite: DatabaseSync;
 };
 import { webp_bytes } from './test_helpers/webp.js';
 import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
@@ -51,28 +51,24 @@ const banner_id = default_banner_document.document_id;
 const nav_id = default_nav_document.document_id;
 const footer_id = default_footer_document.document_id;
 
-afterAll(() => (db as DatabaseSync).close());
+afterAll(() => (sqlite as DatabaseSync).close());
 
 beforeEach(() => {
-	db.exec(
+	sqlite.exec(
 		'DROP TABLE IF EXISTS documents; DROP TABLE IF EXISTS site_settings; DROP TABLE IF EXISTS document_refs; DROP TABLE IF EXISTS asset_refs; DROP TABLE IF EXISTS document_slugs; DROP TABLE IF EXISTS sessions; DROP TABLE IF EXISTS translations'
 	);
-	initial_schema.up({ db });
-	translations_schema.up({ db });
-	db.prepare("INSERT INTO site_settings VALUES ('home_page_id', ?)").run(page_id);
+	initial_schema.up({ db: sqlite });
+	translations_schema.up({ db: sqlite });
+	sqlite.prepare("INSERT INTO site_settings VALUES ('home_page_id', ?)").run(page_id);
 	for (const [type, doc] of [
 		['page', default_page_document],
 		['banner', default_banner_document],
 		['nav', default_nav_document],
 		['footer', default_footer_document]
 	] as const) {
-		db.prepare('INSERT INTO documents VALUES (?, ?, ?, ?, ?)').run(
-			doc.document_id,
-			type,
-			JSON.stringify(doc),
-			'v0',
-			'v0'
-		);
+		sqlite
+			.prepare('INSERT INTO documents VALUES (?, ?, ?, ?, ?)')
+			.run(doc.document_id, type, JSON.stringify(doc), 'v0', 'v0');
 	}
 });
 
@@ -84,7 +80,7 @@ function save(edf: string, expected_version = read().version!) {
 
 function updated_at(document_id: string) {
 	return (
-		db.prepare('SELECT updated_at FROM documents WHERE document_id = ?').get(document_id) as {
+		sqlite.prepare('SELECT updated_at FROM documents WHERE document_id = ?').get(document_id) as {
 			updated_at: string;
 		}
 	).updated_at;
@@ -277,7 +273,7 @@ it('creates pages linked to the shared documents with a slug from the title', as
 
 it('resolves documents by path, URL, language prefix, old slug, and id', async () => {
 	await create('about');
-	db.prepare("INSERT INTO document_slugs VALUES ('old-about', 'about', 0, 'v0')").run();
+	sqlite.prepare("INSERT INTO document_slugs VALUES ('old-about', 'about', 0, 'v0')").run();
 
 	for (const page of [
 		'/about-us',
@@ -313,7 +309,7 @@ it('reads and saves translations without structural changes', async () => {
 
 	// Text equal to the main language removes the translation.
 	await translate(set_title(read('/de/about-us').edf, 'About us'), saved.version);
-	expect(db.prepare('SELECT value FROM translations').all()).toEqual([]);
+	expect(sqlite.prepare('SELECT value FROM translations').all()).toEqual([]);
 });
 
 it('requires new images to match their file and have every variant', async () => {

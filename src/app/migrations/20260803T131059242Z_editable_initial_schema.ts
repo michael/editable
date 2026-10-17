@@ -1,5 +1,5 @@
 import type { Migration } from '#lib/server/migrations.js';
-import type { SqliteContext } from '#lib/server/storage/sqlite.js';
+import type { SqliteContext } from '#lib/server/storage/backends/sqlite_database.js';
 
 export default {
 	target: 'sqlite',

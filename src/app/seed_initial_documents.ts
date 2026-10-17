@@ -5,7 +5,7 @@ import {
 	default_page_document
 } from '#app/default_site.js';
 import { MEDIA_DEFAULTS } from '#app/document_schema.js';
-import type { SiteStore } from '#lib/server/storage/store.js';
+import type { Database } from '#lib/server/storage/database.js';
 import type { Document } from 'svedit';
 
 /**
@@ -20,8 +20,8 @@ function reset_media_nodes(doc: Document): Document {
 	return cloned;
 }
 
-/** Seed the default site content into an empty store. */
-export default function seed_initial_documents(store: SiteStore) {
+/** Seed the default site content into an empty database. */
+export default function seed_initial_documents(db: Database) {
 	const now = new Date().toISOString();
 	const documents = [
 		['banner', default_banner_document],
@@ -30,7 +30,7 @@ export default function seed_initial_documents(store: SiteStore) {
 		['page', default_page_document]
 	] as const;
 	for (const [type, document] of documents) {
-		store.documents.put(document.document_id, {
+		db.documents.put({
 			document_id: document.document_id,
 			type,
 			data: reset_media_nodes(document),
@@ -38,7 +38,7 @@ export default function seed_initial_documents(store: SiteStore) {
 			updated_at: now
 		});
 	}
-	store.settings.put('home_page_id', {
+	db.settings.put({
 		key: 'home_page_id',
 		value: default_page_document.document_id
 	});

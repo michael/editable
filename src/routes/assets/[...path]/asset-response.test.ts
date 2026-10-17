@@ -1,7 +1,7 @@
 import { Readable } from 'node:stream';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const asset_storage = vi.hoisted(() => ({
+const assets = vi.hoisted(() => ({
 	asset_exists: vi.fn(),
 	asset_size: vi.fn(),
 	create_asset_read_stream: vi.fn(),
@@ -9,7 +9,7 @@ const asset_storage = vi.hoisted(() => ({
 	variant_path: vi.fn()
 }));
 
-vi.mock('#app/services.js', () => asset_storage);
+vi.mock('#app/services.js', () => assets);
 
 import { GET } from './+server.js';
 
@@ -25,9 +25,9 @@ async function get_asset(extension: string): Promise<Response> {
 
 describe('asset response security headers', () => {
 	beforeEach(() => {
-		asset_storage.asset_exists.mockReturnValue(true);
-		asset_storage.asset_size.mockResolvedValue(4);
-		asset_storage.create_asset_read_stream.mockReturnValue(Readable.from([Buffer.from('data')]));
+		assets.asset_exists.mockReturnValue(true);
+		assets.asset_size.mockResolvedValue(4);
+		assets.create_asset_read_stream.mockReturnValue(Readable.from([Buffer.from('data')]));
 	});
 
 	it('does not sandbox video responses so browsers can make playback range requests', async () => {

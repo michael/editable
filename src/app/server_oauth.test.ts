@@ -10,14 +10,14 @@ vi.mock('$app/env/private', () => ({
 }));
 vi.mock('./services.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
-	const { sqlite_store } = await import('#lib/server/storage/sqlite.js');
-	const db = new DatabaseSync(':memory:');
-	return { db, store: sqlite_store(db, (fn) => fn()) };
+	const { sqlite_database } = await import('#lib/server/storage/backends/sqlite_database.js');
+	const sqlite = new DatabaseSync(':memory:');
+	return { sqlite, db: sqlite_database(sqlite) };
 });
 
 import type { DatabaseSync } from 'node:sqlite';
 import * as services from './services.js';
-const { db } = services as unknown as { db: DatabaseSync };
+const { sqlite } = services as unknown as { sqlite: DatabaseSync };
 import migration from '#app/migrations/20261010T180000000Z_editable_mcp_oauth.js';
 import {
 	approve_client,
@@ -37,10 +37,10 @@ const verifier = 'a'.repeat(43);
 const code_challenge = createHash('sha256').update(verifier).digest('base64url');
 
 beforeEach(() => {
-	db.exec(
+	sqlite.exec(
 		'DROP TABLE IF EXISTS oauth_clients; DROP TABLE IF EXISTS oauth_grants; DROP TABLE IF EXISTS oauth_tokens'
 	);
-	migration.up({ db } as any);
+	migration.up({ db: sqlite } as any);
 });
 
 afterEach(() => vi.useRealTimers());
@@ -156,16 +156,18 @@ it('keeps approved clients registered but evicts stale pending registrations', a
 	const { client_id: pending_id } = register_client({ redirect_uris: [redirect_uri] });
 	expect(find_client(client_id)).not.toBeNull();
 	expect(verify_access_token(connect(client_id).access_token)).toMatchObject({ client_id });
-	expect(db.prepare('SELECT COUNT(*) AS count FROM oauth_grants').get()).toEqual({ count: 1 });
+	expect(sqlite.prepare('SELECT COUNT(*) AS count FROM oauth_grants').get()).toEqual({ count: 1 });
 
 	// A flood of registrations makes room instead of blocking new clients.
 	for (let i = 0; i < 100; i++) register_client({ redirect_uris: [redirect_uri] });
 	expect(find_client(pending_id)).toBeNull();
 	expect(find_client(client_id)).not.toBeNull();
-	expect(db.prepare('SELECT COUNT(*) AS count FROM oauth_clients').get()).toEqual({ count: 101 });
+	expect(sqlite.prepare('SELECT COUNT(*) AS count FROM oauth_clients').get()).toEqual({
+		count: 101
+	});
 
 	// Pending registrations expire after a day.
 	vi.setSystemTime(new Date('2026-10-22T12:00:00Z'));
 	register_client({ redirect_uris: [redirect_uri] });
-	expect(db.prepare('SELECT COUNT(*) AS count FROM oauth_clients').get()).toEqual({ count: 2 });
+	expect(sqlite.prepare('SELECT COUNT(*) AS count FROM oauth_clients').get()).toEqual({ count: 2 });
 });

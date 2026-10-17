@@ -1,5 +1,5 @@
 import type { DocumentNode } from 'svedit';
-import { store } from '#app/services.js';
+import { db } from '#app/services.js';
 import {
 	get_active_slug_for_document_id,
 	get_home_page_id_from_db,
@@ -48,7 +48,7 @@ export type PageTreeNode = {
 };
 
 function list_page_documents(): PageDocumentRecord[] {
-	return store.documents
+	return db.documents
 		.all()
 		.filter((record) => record.type === 'page')
 		.sort((a, b) => a.document_id.localeCompare(b.document_id))
@@ -100,7 +100,7 @@ export function build_page_browser_data(
 	const summaries_by_id = new Map(summaries.map((summary) => [summary.document_id, summary]));
 	// What every document links to, as recorded on its last save.
 	const refs_by_document_id = new Map(
-		store.document_refs.all().map((refs) => [refs.document_id, refs.target_ids])
+		db.document_refs.all().map((refs) => [refs.document_id, refs.target_ids])
 	);
 	const refs_by_page_id = new Map(
 		page_docs.map((page_doc) => [

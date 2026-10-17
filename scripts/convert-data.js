@@ -39,13 +39,12 @@ try {
 		process.exit(0);
 	}
 
-	const open = { sqlite: storage.open_sqlite_folder, files: storage.open_file_folder };
-	const source = open[from](dir);
+	const source = storage.database_for(dir, from);
 	migrate(source);
 	// The new format gets its own storage migrations; content progress arrives with the records.
-	const target = open[to](dir);
+	const target = storage.database_for(dir, to);
 	migrate_storage(target);
-	storage.copy_store(source.store, target.store);
+	storage.copy_database(source, target);
 	source.close();
 	target.close();
 

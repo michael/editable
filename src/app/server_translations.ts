@@ -5,9 +5,9 @@ import { assert_safe_hrefs, normalize_hrefs, resolve_hrefs } from './document_li
 import { createHash } from 'node:crypto';
 import { error } from '@sveltejs/kit';
 import { fill_document_defaults, validate_document, validate_node, type Document } from 'svedit';
-import { store, with_transaction, asset_exists } from './services.js';
+import { db, with_transaction, asset_exists } from './services.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
-import { translation_key } from '#lib/server/storage/store.js';
+import { translation_key } from '#lib/server/storage/database.js';
 import { document_schema } from './document_schema.js';
 import { select_language } from './languages.js';
 import {
@@ -29,7 +29,7 @@ type TranslationRow = {
 
 function load_records(document_id: string) {
 	const read = (id: string): Document => {
-		const record = store.documents.get(id);
+		const record = db.documents.get(id);
 		if (!record) error(404, 'Document not found');
 		return record.data;
 	};
@@ -45,7 +45,7 @@ function load_records(document_id: string) {
 
 function read_rows(records: Document[], language: string): TranslationRow[] {
 	const ids = new Set(records.map((doc) => doc.document_id));
-	return store.translations
+	return db.translations
 		.all()
 		.filter((row) => row.language === language && ids.has(row.document_id))
 		.sort((a, b) => a.document_id.localeCompare(b.document_id));
@@ -155,7 +155,7 @@ function normalized_map(map: TranslationMap) {
 
 function write_map(document_id: string, language: string, map: TranslationMap, previous?: string) {
 	if (!Object.keys(map).length) {
-		store.translations.delete(translation_key(document_id, language));
+		db.translations.delete(translation_key(document_id, language));
 		return;
 	}
 	if (previous) {
@@ -165,7 +165,7 @@ function write_map(document_id: string, language: string, map: TranslationMap, p
 			// Saving or cleanup replaces malformed stored overrides.
 		}
 	}
-	store.translations.put(translation_key(document_id, language), {
+	db.translations.put({
 		document_id,
 		language,
 		value: JSON.stringify(map),
@@ -263,10 +263,10 @@ export function save_translated_document(input: {
 }
 
 export function cleanup_translations(document_id: string) {
-	const rows = store.translations.all().filter((row) => row.document_id === document_id);
-	const record = store.documents.get(document_id);
+	const rows = db.translations.all().filter((row) => row.document_id === document_id);
+	const record = db.documents.get(document_id);
 	if (!record) {
-		for (const row of rows) store.translations.delete(translation_key(document_id, row.language));
+		for (const row of rows) db.translations.delete(translation_key(document_id, row.language));
 		return;
 	}
 	const doc = fill_document_defaults(record.data, document_schema);
@@ -275,7 +275,7 @@ export function cleanup_translations(document_id: string) {
 		try {
 			map = parse_map(entry.value);
 		} catch {
-			store.translations.delete(translation_key(document_id, entry.language));
+			db.translations.delete(translation_key(document_id, entry.language));
 			continue;
 		}
 		for (const [node_id, properties] of Object.entries(map)) {

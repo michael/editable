@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Migration } from '#lib/server/migrations.js';
-import type { FilesContext } from '#lib/server/storage/files.js';
+import type { FilesContext } from '#lib/server/storage/backends/file_database.js';
 
 // Settings became { key, value } records like every other collection; folders
 // written before kept each setting as a plain string.

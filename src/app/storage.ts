@@ -1,8 +1,12 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { open_sqlite } from '#lib/server/storage/sqlite.js';
-import { open_files } from '#lib/server/storage/files.js';
-import { translation_key, type OpenedStore, type SiteStore } from '#lib/server/storage/store.js';
+import { open_sqlite, sqlite_database } from '#lib/server/storage/backends/sqlite_database.js';
+import { file_database } from '#lib/server/storage/backends/file_database.js';
+import { file_assets } from '#lib/server/storage/backends/file_assets.js';
+import type { Collection, Database } from '#lib/server/storage/database.js';
+import type { Storage } from '#lib/server/storage/storage.js';
+import { ASSET_GRACE_PERIOD_DAYS } from './server_config.js';
+import { ASSET_ID_REGEX } from './config.js';
 import { parse_edf, serialize_edf } from '#lib/edf.js';
 import { document_schema } from './document_schema.js';
 
@@ -24,11 +28,13 @@ export function data_format(data_dir: string): DataFormat | null {
 }
 
 /**
- * Open a data folder in the format it holds. A new folder gets the requested
- * format, SQLite by default; requesting another format than an existing
- * folder holds is refused rather than silently ignored.
+ * The storage of a data folder: its database in the format the folder holds,
+ * and its assets in data_dir/assets. A new folder gets the requested format,
+ * SQLite by default; requesting another format than an existing folder holds
+ * is refused rather than silently ignored. Run migrate on its db before using
+ * it.
  */
-export function open_data_folder(data_dir: string, requested = ''): OpenedStore {
+export function storage_for(data_dir: string, requested = ''): Storage {
 	if (requested && requested !== 'sqlite' && requested !== 'files')
 		throw new Error(`STORAGE must be sqlite or files, not "${requested}".`);
 	const held = data_format(data_dir);
@@ -36,22 +42,24 @@ export function open_data_folder(data_dir: string, requested = ''): OpenedStore 
 		throw new Error(
 			`${data_dir} holds a ${held} site, but STORAGE is ${requested}. Convert it with pnpm data:convert --to ${requested}, or leave STORAGE unset.`
 		);
-	return (held ?? (requested || 'sqlite')) === 'files'
-		? open_file_folder(data_dir)
-		: open_sqlite_folder(data_dir);
-}
-
-/** A site in data_dir/db.sqlite3; run migrate before using its store. */
-export function open_sqlite_folder(data_dir: string): OpenedStore {
-	return open_sqlite({ data_dir, db_path: join(data_dir, 'db.sqlite3') });
+	return {
+		db: database_for(data_dir, held ?? ((requested || 'sqlite') as DataFormat)),
+		assets: file_assets({
+			asset_path: join(data_dir, 'assets'),
+			asset_grace_period_days: ASSET_GRACE_PERIOD_DAYS,
+			asset_id_regex: ASSET_ID_REGEX
+		})
+	};
 }
 
 /**
- * A site as files in data_dir/site: each document as EDF, every other
- * collection as JSON. Run migrate before using its store.
+ * A data folder's database in the given format: SQLite in
+ * data_dir/db.sqlite3, or files in data_dir/site, with each document as EDF
+ * and every other collection as JSON. Run migrate before using it.
  */
-export function open_file_folder(data_dir: string): OpenedStore {
-	return open_files({
+export function database_for(data_dir: string, format: DataFormat): Database {
+	if (format === 'sqlite') return sqlite_database(open_sqlite(join(data_dir, 'db.sqlite3')));
+	return file_database({
 		dir: join(data_dir, 'site'),
 		serialize: (document) => serialize_edf(document, document_schema),
 		parse: (text) => parse_edf(text, document_schema),
@@ -59,30 +67,23 @@ export function open_file_folder(data_dir: string): OpenedStore {
 	});
 }
 
-type Collections = Omit<SiteStore, 'transaction'>;
-type RecordOf<K extends keyof Collections> = ReturnType<Collections[K]['all']>[number];
+const collections = [
+	'documents',
+	'slugs',
+	'translations',
+	'document_refs',
+	'asset_refs',
+	'settings',
+	'sessions',
+	'oauth_clients',
+	'oauth_grants',
+	'oauth_tokens'
+] satisfies (keyof Database)[];
 
-/** How each collection keys its records. */
-const record_keys: { [K in keyof Collections]: (record: RecordOf<K>) => string } = {
-	documents: (record) => record.document_id,
-	slugs: (record) => record.slug,
-	translations: (record) => translation_key(record.document_id, record.language),
-	document_refs: (record) => record.document_id,
-	asset_refs: (record) => record.document_id,
-	settings: (record) => record.key,
-	sessions: (record) => record.session_id,
-	oauth_clients: (record) => record.client_id,
-	oauth_grants: (record) => record.grant_id,
-	oauth_tokens: (record) => record.token_hash
-};
-
-/** Copy every record of one store into another, for example to change backends. */
-export function copy_store(from: SiteStore, to: SiteStore) {
+/** Copy every record of one database into another, for example to change backends. */
+export function copy_database(from: Database, to: Database) {
 	to.transaction(() => {
-		for (const name of Object.keys(record_keys) as (keyof Collections)[]) {
-			const key_of = record_keys[name] as (record: unknown) => string;
-			const collection = to[name] as { put: (key: string, record: unknown) => void };
-			for (const record of from[name].all()) collection.put(key_of(record), record);
-		}
+		for (const name of collections)
+			for (const record of from[name].all()) (to[name] as Collection<unknown>).put(record);
 	});
 }

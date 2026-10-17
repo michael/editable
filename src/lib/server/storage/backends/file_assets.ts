@@ -6,15 +6,14 @@ import { join, extname } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Readable, Transform } from 'node:stream';
 import { mkdirSync } from 'node:fs';
-import { mirror_file } from './s3.js';
+import { mirror_file } from '../../s3.js';
+import type { AssetData, Assets } from '../assets.js';
 
-export type AssetStorageConfig = {
-	asset_path: string;
-	asset_grace_period_days: number;
-	asset_id_regex: RegExp;
-};
-
-export function create_asset_storage(config: AssetStorageConfig) {
+/**
+ * The assets in a folder: each original under its id, its variants and
+ * poster in a folder named after it. Writes are mirrored to S3 when configured.
+ */
+export function file_assets(config: { asset_path: string; asset_grace_period_days: number; asset_id_regex: RegExp }): Assets {
 	const { asset_path: root_path, asset_grace_period_days, asset_id_regex } = config;
 	const orphan_grace_period_ms = asset_grace_period_days * 24 * 60 * 60 * 1000;
 	mkdirSync(root_path, { recursive: true });
@@ -31,7 +30,7 @@ export function create_asset_storage(config: AssetStorageConfig) {
 	function poster_path(asset_id: string): string {
 		return join(variant_dir(asset_id), 'poster.webp');
 	}
-	async function stream_to_file(file_path: string, data: ReadableStream | Buffer | Uint8Array) {
+	async function stream_to_file(file_path: string, data: AssetData) {
 		let source: Readable;
 		if (Buffer.isBuffer(data) || data instanceof Uint8Array) source = Readable.from([data]);
 		else source = Readable.fromWeb(data as import('node:stream/web').ReadableStream);
@@ -47,19 +46,19 @@ export function create_asset_storage(config: AssetStorageConfig) {
 		await pipeline(source, counter, createWriteStream(file_path));
 		return { bytes_written, sha256: hash.digest('hex') };
 	}
-	async function write_asset(asset_id: string, data: ReadableStream | Buffer | Uint8Array) {
+	async function write_asset(asset_id: string, data: AssetData) {
 		const result = await stream_to_file(asset_path(asset_id), data);
 		mirror_file(`assets/${asset_id}`, asset_path(asset_id));
 		return result;
 	}
-	async function write_variant(asset_id: string, width: number, data: ReadableStream | Buffer | Uint8Array) {
+	async function write_variant(asset_id: string, width: number, data: AssetData) {
 		const dir = variant_dir(asset_id);
 		await mkdir(dir, { recursive: true });
 		const result = await stream_to_file(variant_path(asset_id, width), data);
 		mirror_file(`assets/${stem(asset_id)}/w${width}.webp`, variant_path(asset_id, width));
 		return result;
 	}
-	async function write_poster(asset_id: string, data: ReadableStream | Buffer | Uint8Array) {
+	async function write_poster(asset_id: string, data: AssetData) {
 		const dir = variant_dir(asset_id);
 		await mkdir(dir, { recursive: true });
 		const result = await stream_to_file(poster_path(asset_id), data);

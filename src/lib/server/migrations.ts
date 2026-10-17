@@ -1,5 +1,5 @@
 import type { MigrationHelpers } from './migration_helpers.js';
-import type { SiteStore } from './storage/store.js';
+import type { Database } from './storage/database.js';
 
 /**
  * A migration file. Without a target it changes content and runs on every
@@ -10,7 +10,7 @@ import type { SiteStore } from './storage/store.js';
 export type Migration = { target?: string; up: (context: any) => unknown };
 
 /** What a content migration receives. */
-export type ContentContext = { store: SiteStore } & MigrationHelpers;
+export type ContentContext = { db: Database } & MigrationHelpers;
 
 export type LoadedMigration = { id: string; target: string; up: (context: unknown) => unknown };
 

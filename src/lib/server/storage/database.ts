@@ -1,8 +1,8 @@
 import type { Document } from 'svedit';
 
 /**
- * What a site stores, as a few collections of records with the same four
- * operations each. A backend only keeps records and hands them back:
+ * A collection of records in the database, with the same four operations
+ * for each. A backend only keeps records and hands them back:
  * Editable computes what it stores, including the references it keeps per
  * document: the pages it links to, so the page browser knows what is linked
  * from where, and the assets it uses, so cleanup knows what is still in use.
@@ -11,8 +11,8 @@ import type { Document } from 'svedit';
 export type Collection<Record> = {
 	get(key: string): Record | null;
 	all(): Record[];
-	/** Insert or replace the record stored under the key. */
-	put(key: string, record: Record): void;
+	/** Insert or replace the record, under the key it carries. */
+	put(record: Record): void;
 	delete(key: string): void;
 };
 
@@ -80,7 +80,13 @@ export type SettingRecord = { key: string; value: string };
 export const translation_key = (document_id: string, language: string) =>
 	`${document_id}:${language}`;
 
-export type SiteStore = {
+/**
+ * A site's database: its records, kept by a backend. Each collection keys its records by a
+ * field: documents by document_id, slugs by slug, translations by
+ * translation_key, the references by document_id, settings by key, sessions by
+ * session_id, and the OAuth records by their ids.
+ */
+export type Database = {
 	/** Run writes as one unit; a backend without transactions runs them in sequence. */
 	transaction<T>(fn: () => T): T;
 	documents: Collection<DocumentRecord>;
@@ -93,15 +99,18 @@ export type SiteStore = {
 	oauth_clients: Collection<OAuthClientRecord>;
 	oauth_grants: Collection<OAuthGrantRecord>;
 	oauth_tokens: Collection<OAuthTokenRecord>;
+	/** The backend's own migrations, which run before the collections are used. */
+	migrations: DatabaseMigrations;
+	/** Release what the backend holds open, such as a database connection. */
+	close(): void;
 };
 
 /**
- * A backend's own migration bookkeeping, as opposed to the site's records:
- * which migrations for its target it has applied, how to record one, and
- * what they receive. It is kept apart from the store because the store can
- * only be read once these migrations have run.
+ * A backend's migration bookkeeping, as opposed to the site's records: which
+ * migrations for its target it has applied, how to record one, and what they
+ * receive.
  */
-export type StorageMigrations = {
+export type DatabaseMigrations = {
 	/** The migration target this backend runs, such as 'sqlite' or 'files'. */
 	target: string;
 	/** What its migrations receive, such as the database handle. */
@@ -109,8 +118,4 @@ export type StorageMigrations = {
 	/** Ids of the migrations it has recorded as applied. */
 	applied(): string[];
 	record(id: string): void;
-	transaction<T>(fn: () => T): T;
 };
-
-/** A store as its backend opens it, with the migrations to run before using it. */
-export type OpenedStore = { store: SiteStore; migrations: StorageMigrations; close(): void };

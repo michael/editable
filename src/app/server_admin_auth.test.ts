@@ -12,18 +12,18 @@ vi.mock('$app/env/private', () => ({
 vi.mock('$app/server', () => ({ getRequestEvent: () => ({ locals: request.locals }) }));
 vi.mock('./services.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
-	const { sqlite_store } = await import('#lib/server/storage/sqlite.js');
-	const db = new DatabaseSync(':memory:');
-	return { db, store: sqlite_store(db, (fn) => fn()) };
+	const { sqlite_database } = await import('#lib/server/storage/backends/sqlite_database.js');
+	const sqlite = new DatabaseSync(':memory:');
+	return { sqlite, db: sqlite_database(sqlite) };
 });
 
 import type { DatabaseSync } from 'node:sqlite';
 import * as services from './services.js';
-const { db } = services as unknown as { db: DatabaseSync };
+const { sqlite } = services as unknown as { sqlite: DatabaseSync };
 import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
 import { get_admin_auth, password_auth, type AdminAuth } from './server_admin_auth.js';
 
-initial_schema.up({ db });
+initial_schema.up({ db: sqlite });
 
 /** A request with a cookie jar, enough for the auth functions. */
 function event_with_cookies(jar = new Map<string, string>()) {
@@ -49,7 +49,7 @@ it('signs in with the admin password by default', async () => {
 
 	await password_auth.log_out(event);
 	expect(password_auth.is_admin(event)).toBe(false);
-	expect(db.prepare('SELECT count(*) AS n FROM sessions').get()).toEqual({ n: 0 });
+	expect(sqlite.prepare('SELECT count(*) AS n FROM sessions').get()).toEqual({ n: 0 });
 });
 
 it('uses the admin auth a host sets for the request', async () => {

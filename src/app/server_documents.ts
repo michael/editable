@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import slugify from 'slugify';
 import { validate_document } from 'svedit';
 import type { Attachment, DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
-import { store, with_transaction, delete_orphaned_assets, touch_asset } from '#app/services.js';
+import { db, with_transaction, delete_orphaned_assets, touch_asset } from '#app/services.js';
 import { rebuild_asset_refs, referenced_asset_ids } from './server_asset_refs.js';
 import { document_schema } from '#app/document_schema.js';
 import { collect_node_ids_in_order } from '#lib/document_graph.js';
@@ -63,7 +63,7 @@ export function extract_document(
 }
 
 export function get_optional_doc_from_db(document_id: string): DocumentData | null {
-	return store.documents.get(document_id)?.data ?? null;
+	return db.documents.get(document_id)?.data ?? null;
 }
 
 export function get_doc_from_db(document_id: string): DocumentData {
@@ -75,7 +75,7 @@ export function get_doc_from_db(document_id: string): DocumentData {
 }
 
 export function get_home_page_id_from_db(): string | null {
-	return store.settings.get('home_page_id')?.value ?? null;
+	return db.settings.get('home_page_id')?.value ?? null;
 }
 
 export function is_home_page_document_id(document_id: string): boolean {
@@ -84,8 +84,8 @@ export function is_home_page_document_id(document_id: string): boolean {
 
 export function get_active_slug_for_document_id(document_id: string): string | null {
 	return (
-		store.slugs.all().find((record) => record.document_id === document_id && record.is_active)
-			?.slug ?? null
+		db.slugs.all().find((record) => record.document_id === document_id && record.is_active)?.slug ??
+		null
 	);
 }
 
@@ -93,7 +93,7 @@ export function get_active_slug_for_document_id(document_id: string): string | n
 export function resolve_slug(
 	slug: string
 ): { document_id: string; is_active: boolean; active_slug: string } | null {
-	const row = store.slugs.get(slug);
+	const row = db.slugs.get(slug);
 	if (!row) return null;
 
 	const active_slug = get_active_slug_for_document_id(row.document_id);
@@ -122,7 +122,7 @@ export function create_page_slug(document_id: string, base: string): string {
 	let slug = base_slug;
 	let suffix = 2;
 	while (
-		store.slugs.get(slug) ||
+		db.slugs.get(slug) ||
 		is_reserved_route_slug(slug) ||
 		is_reserved_markdown_slug(slug) ||
 		is_reserved_language_slug(slug, site.languages)
@@ -131,7 +131,7 @@ export function create_page_slug(document_id: string, base: string): string {
 		suffix += 1;
 	}
 
-	store.slugs.put(slug, {
+	db.slugs.put({
 		slug,
 		document_id,
 		is_active: true,
@@ -197,9 +197,9 @@ export function collect_document_refs(
 
 /** Record the pages a document links to, in document order, atomically with saves. */
 export function rebuild_document_refs(document_id: string) {
-	const record = store.documents.get(document_id);
+	const record = db.documents.get(document_id);
 	if (!record) {
-		store.document_refs.delete(document_id);
+		db.document_refs.delete(document_id);
 		return;
 	}
 	const { nodes } = record.data;
@@ -208,7 +208,7 @@ export function rebuild_document_refs(document_id: string) {
 		collect_node_ids(document_id, nodes),
 		document_id
 	);
-	store.document_refs.put(document_id, { document_id, target_ids });
+	db.document_refs.put({ document_id, target_ids });
 }
 
 /** Stitch the shared documents (banner, nav, footer) into a page document. */
@@ -326,14 +326,14 @@ function has_same_nodes(a: DocumentData, b: DocumentData): boolean {
  * however it was written.
  */
 export function get_document_version(document_id: string): string | null {
-	const page = store.documents.get(document_id);
+	const page = db.documents.get(document_id);
 	if (!page) return null;
 
 	const page_node = page.data.nodes[document_id];
 	const hash = createHash('sha256').update(JSON.stringify(page.data));
 	for (const type of shared_document_types) {
 		const shared_id = page_node?.[type];
-		const record = typeof shared_id === 'string' ? store.documents.get(shared_id) : null;
+		const record = typeof shared_id === 'string' ? db.documents.get(shared_id) : null;
 		hash.update('\0').update(record ? JSON.stringify(record.data) : '');
 	}
 	return hash.digest('hex');
@@ -395,7 +395,7 @@ export async function persist_document(
 	}
 
 	const changed_documents = documents.filter(({ document_id, type, doc }) => {
-		const record = store.documents.get(document_id);
+		const record = db.documents.get(document_id);
 		if (record && record.type !== type) {
 			throw new InvalidDocumentError(`Document ${document_id} is a ${record.type}, not a ${type}.`);
 		}
@@ -410,8 +410,8 @@ export async function persist_document(
 
 			for (const { document_id, type, doc } of changed_documents) {
 				// A document keeps its created_at; only new ones get stamped now.
-				const created_at = store.documents.get(document_id)?.created_at ?? now_iso;
-				store.documents.put(document_id, {
+				const created_at = db.documents.get(document_id)?.created_at ?? now_iso;
+				db.documents.put({
 					document_id,
 					type,
 					data: doc,

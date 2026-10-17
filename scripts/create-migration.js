@@ -78,11 +78,11 @@ if (!targets.length) fail('No storage backends have migrations yet; use --target
 
 const templates = {
 	content:
-		"import type { ContentContext, Migration } from '#lib/server/migrations.js';\n\nexport default {\n\tup({ store, ensure_document, rename_property, rename_type, replace_value, delete_property, update }: ContentContext) {\n\t\t// Transform content with the helpers, or records with `store`.\n\t\t// rename_property('hero', 'image', 'media');\n\t}\n} satisfies Migration;\n",
+		"import type { ContentContext, Migration } from '#lib/server/migrations.js';\n\nexport default {\n\tup({ db, ensure_document, rename_property, rename_type, replace_value, delete_property, update }: ContentContext) {\n\t\t// Transform content with the helpers, or records with `db`.\n\t\t// rename_property('hero', 'image', 'media');\n\t}\n} satisfies Migration;\n",
 	sqlite:
-		"import type { Migration } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: 'sqlite',\n\tup() {\n\t\t// Leave empty if SQLite needs nothing for this change. Otherwise take its\n\t\t// context: up({ db }: SqliteContext), from '#lib/server/storage/sqlite.js'.\n\t}\n} satisfies Migration;\n",
+		"import type { Migration } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: 'sqlite',\n\tup() {\n\t\t// Leave empty if SQLite needs nothing for this change. Otherwise take its\n\t\t// context: up({ db }: SqliteContext), from '#lib/server/storage/backends/sqlite_database.js'.\n\t}\n} satisfies Migration;\n",
 	files:
-		"import type { Migration } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: 'files',\n\tup() {\n\t\t// Leave empty if the file store needs nothing for this change. Otherwise\n\t\t// take its context: up({ dir }: FilesContext), from '#lib/server/storage/files.js'.\n\t}\n} satisfies Migration;\n"
+		"import type { Migration } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: 'files',\n\tup() {\n\t\t// Leave empty if the file database needs nothing for this change. Otherwise\n\t\t// take its context: up({ dir }: FilesContext), from '#lib/server/storage/backends/file_database.js'.\n\t}\n} satisfies Migration;\n"
 };
 const template_for = (t) =>
 	templates[t] ??

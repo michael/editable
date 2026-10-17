@@ -1,85 +1,75 @@
-import { DATA_DIR, ASSET_PATH, ASSET_GRACE_PERIOD_DAYS, STORAGE } from '#app/server_config.js';
-import { ASSET_ID_REGEX } from '#app/config.js';
-import { create_asset_storage } from '#lib/server/asset_storage.js';
-import type { SiteStore } from '#lib/server/storage/store.js';
+import { DATA_DIR, STORAGE } from '#app/server_config.js';
+import type { Assets } from '#lib/server/storage/assets.js';
+import type { Database } from '#lib/server/storage/database.js';
+import type { Storage } from '#lib/server/storage/storage.js';
 import { migrate } from '#app/migrations.js';
-import { open_data_folder } from '#app/storage.js';
+import { storage_for } from '#app/storage.js';
 import { site } from '#app/server_site.js';
 
-/** A site's records and asset files. */
-export type SiteStorage = {
-	store: SiteStore;
-	assets: ReturnType<typeof create_asset_storage>;
-};
-
-let default_storage: SiteStorage | undefined;
+let default_storage: Storage | undefined;
 
 /**
  * The deployment's own storage in DATA_DIR, opened on first use and brought
- * up to date, in the format the folder holds: a SQLite database, or a folder of EDF
- * documents and JSON records.
+ * up to date, in the format the folder holds: a SQLite database, or a folder
+ * of EDF documents and JSON records.
  */
-export function get_default_storage(): SiteStorage {
+export function get_default_storage(): Storage {
 	if (!default_storage) {
-		const assets = create_asset_storage({
-			asset_path: ASSET_PATH,
-			asset_grace_period_days: ASSET_GRACE_PERIOD_DAYS,
-			asset_id_regex: ASSET_ID_REGEX
-		});
-		const opened = open_data_folder(DATA_DIR, STORAGE);
-		migrate(opened);
-		default_storage = { store: opened.store, assets };
+		default_storage = storage_for(DATA_DIR, STORAGE);
+		migrate(default_storage.db);
 	}
 	return default_storage;
 }
 
 /** The storage of the current request's site. */
-export function get_storage(): SiteStorage {
+export function get_storage(): Storage {
 	return site.storage ?? get_default_storage();
 }
 
 /**
- * The current site's records. Each access goes to the storage of the request
- * it runs in, so code imports store once and uses it inside functions; never
+ * The current site's database. Each access goes to the storage of the request
+ * it runs in, so code imports db once and uses it inside functions; never
  * capture a collection at module level.
  */
-export const store: SiteStore = {
-	transaction: (fn) => get_storage().store.transaction(fn),
+export const db: Database = {
+	transaction: (fn) => get_storage().db.transaction(fn),
 	get documents() {
-		return get_storage().store.documents;
+		return get_storage().db.documents;
 	},
 	get slugs() {
-		return get_storage().store.slugs;
+		return get_storage().db.slugs;
 	},
 	get translations() {
-		return get_storage().store.translations;
+		return get_storage().db.translations;
 	},
 	get document_refs() {
-		return get_storage().store.document_refs;
+		return get_storage().db.document_refs;
 	},
 	get asset_refs() {
-		return get_storage().store.asset_refs;
+		return get_storage().db.asset_refs;
 	},
 	get settings() {
-		return get_storage().store.settings;
+		return get_storage().db.settings;
 	},
 	get sessions() {
-		return get_storage().store.sessions;
+		return get_storage().db.sessions;
 	},
 	get oauth_clients() {
-		return get_storage().store.oauth_clients;
+		return get_storage().db.oauth_clients;
 	},
 	get oauth_grants() {
-		return get_storage().store.oauth_grants;
+		return get_storage().db.oauth_grants;
 	},
 	get oauth_tokens() {
-		return get_storage().store.oauth_tokens;
-	}
+		return get_storage().db.oauth_tokens;
+	},
+	get migrations() {
+		return get_storage().db.migrations;
+	},
+	close: () => get_storage().db.close()
 };
 
-export const with_transaction = <T>(fn: () => T): T => store.transaction(fn);
-
-type Assets = SiteStorage['assets'];
+export const with_transaction = <T>(fn: () => T): T => db.transaction(fn);
 
 /** One of the current site's asset functions. */
 function asset_function<K extends keyof Assets>(name: K): Assets[K] {
