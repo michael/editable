@@ -19,13 +19,23 @@ export type LogInResult =
 	{ ok: true; redirect?: string } | { ok: false; code: string; message: string };
 
 /**
- * Who may edit a site, and how they sign in. Editable's default checks the
- * admin password. A host sets its own on event.locals.site, for example one
- * that takes a username from its own login dialog and continues with OAuth.
+ * Whoever is signed in, as event.locals.user; signed-in users may edit the
+ * site. Its shape is up to the auth that signs them in, and it reaches the
+ * browser as page data, so keep secrets out of it.
  */
-export type AdminAuth = {
-	/** Whether the request comes from an admin of its site. */
-	is_admin(event: RequestEvent): boolean | Promise<boolean>;
+export type User = Record<string, unknown>;
+
+/** The user Editable's admin password signs in. */
+export const admin_user: User = { username: 'admin', name: 'Admin' };
+
+/**
+ * Who is signed in to a site, and how they sign in. Editable's default checks
+ * the admin password. A host sets its own on event.locals.site, for example
+ * one that takes a username from its own login dialog and continues with OAuth.
+ */
+export type Auth = {
+	/** The user the request comes from, or null when nobody is signed in. */
+	get_user(event: RequestEvent): User | null | Promise<User | null>;
 	/**
 	 * Sign in with what the login dialog sent. Return a redirect to continue
 	 * elsewhere, such as an OAuth authorization page; event.url is the page
@@ -36,22 +46,22 @@ export type AdminAuth = {
 };
 
 /** The admin password from ADMIN_PASSWORD, with sliding sessions in the site's database. */
-export const password_auth: AdminAuth = {
-	async is_admin({ cookies }) {
+export const password_auth: Auth = {
+	async get_user({ cookies }) {
 		const session_id = cookies.get(admin_session_cookie_name);
-		if (!session_id) return false;
+		if (!session_id) return null;
 
 		const row = await backend.sessions.get(session_id);
 		const now = Math.floor(Date.now() / 1000);
 
 		if (!row) {
 			clear_admin_session_cookie(cookies);
-			return false;
+			return null;
 		}
 		if (row.expires <= now) {
 			await backend.sessions.delete(session_id);
 			clear_admin_session_cookie(cookies);
-			return false;
+			return null;
 		}
 		// Sliding renewal, at most once per renewal interval
 		const last_renewed_at = row.expires - session_duration_seconds;
@@ -59,7 +69,7 @@ export const password_auth: AdminAuth = {
 			await backend.sessions.put({ session_id, expires: get_session_expires_at() });
 			set_admin_session_cookie(cookies, session_id);
 		}
-		return true;
+		return admin_user;
 	},
 
 	log_in({ cookies }, { password = '' }) {
@@ -73,7 +83,7 @@ export const password_auth: AdminAuth = {
 	}
 };
 
-/** The current request's site's admin auth; the admin password by default. */
-export function get_admin_auth(): AdminAuth {
+/** The current request's site's auth; the admin password by default. */
+export function get_auth(): Auth {
 	return site.auth ?? password_auth;
 }

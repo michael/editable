@@ -80,7 +80,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		languages: site.languages,
 		language,
 		has_backend,
-		is_admin: !!locals.is_admin,
+		user: locals.user,
 		origin: site.origin,
 		site_base: site.base,
 		favicon: site_metadata.favicon,

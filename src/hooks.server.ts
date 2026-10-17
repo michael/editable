@@ -47,10 +47,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 		if (canonical_url) redirect(301, canonical_url, { external: [canonical_origin.origin] });
 	}
 
-	event.locals.is_admin = false;
+	event.locals.user = null;
 	if (!VERCEL) {
-		const { get_admin_auth } = await import('#app/server_admin_auth.js');
-		event.locals.is_admin = await get_admin_auth().is_admin(event);
+		const { get_auth } = await import('#app/server_auth.js');
+		event.locals.user = await get_auth().get_user(event);
 	}
 
 	const language = request_language(event.url) || 'en';

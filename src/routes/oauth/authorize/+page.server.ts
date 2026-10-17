@@ -28,7 +28,7 @@ async function validate_request(params: URLSearchParams) {
 
 export const load: PageServerLoad = async ({ url, locals }) => {
 	if (VERCEL) error(404, 'Not found');
-	if (!locals.is_admin) return { step: 'login' as const };
+	if (!locals.user) return { step: 'login' as const };
 
 	const request = await validate_request(url.searchParams);
 	if ('error' in request) return { step: 'error' as const, message: request.error };
@@ -47,7 +47,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 export const actions: Actions = {
 	// The decision is posted to the page URL, so the OAuth parameters stay with it.
 	default: async ({ request, url, locals }) => {
-		if (!locals.is_admin) return fail(401, { message: 'Log in to review the request.' });
+		if (!locals.user) return fail(401, { message: 'Log in to review the request.' });
 		const validated = await validate_request(url.searchParams);
 		if ('error' in validated) return fail(400, { message: validated.error });
 

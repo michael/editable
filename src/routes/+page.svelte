@@ -4,7 +4,7 @@
 	const props: {
 		data: {
 			has_backend?: boolean;
-			is_admin?: boolean;
+			user?: Record<string, unknown> | null;
 			origin?: string | null;
 			document: any;
 			slug: string | null;

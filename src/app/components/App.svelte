@@ -33,7 +33,7 @@
 		slug = null,
 		has_backend = false,
 		is_new = false,
-		is_admin: server_is_admin = false,
+		user = null,
 		can_edit = true,
 		origin = null,
 		document_title = null,
@@ -48,7 +48,7 @@
 		slug?: string | null;
 		has_backend?: boolean;
 		is_new?: boolean;
-		is_admin?: boolean;
+		user?: Record<string, unknown> | null;
 		can_edit?: boolean;
 		origin?: string | null;
 		document_title?: string | null;
@@ -76,7 +76,8 @@
 		language: string;
 		doc_json: string;
 	} | null>(null);
-	let is_admin = $derived(server_is_admin);
+	// Whoever is signed in may edit.
+	let is_admin = $derived(!!user);
 	let is_admin_mode = $derived(editable && is_admin);
 	const is_demo_mode = DEMO_MODE;
 

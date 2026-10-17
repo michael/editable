@@ -1,11 +1,11 @@
 import { error } from '@sveltejs/kit';
 import { ASSET_ID_REGEX } from '#app/config.js';
 import { asset_exists, backend } from '#app/services.js';
-import { require_admin_session } from '#lib/server/auth.js';
+import { require_user } from '#lib/server/auth.js';
 import type { RequestHandler } from './$types';
 
 export const DELETE: RequestHandler = async ({ params, locals }) => {
-	require_admin_session(locals);
+	require_user(locals);
 
 	const { asset_id } = params;
 

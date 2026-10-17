@@ -25,7 +25,7 @@ import * as services from './services.js';
 const { sqlite } = services as unknown as { sqlite: DatabaseSync };
 import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
 import throttle_schema from '#app/migrations/20261017T120000000Z_editable_login_throttle_sqlite.js';
-import { get_admin_auth, password_auth, type AdminAuth } from './server_admin_auth.js';
+import { get_auth, password_auth, type Auth } from './server_auth.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 initial_schema.up({ db: sqlite } as SqliteStorage);
@@ -43,24 +43,25 @@ function event_with_cookies(jar = new Map<string, string>()) {
 
 it('signs in with the admin password by default', async () => {
 	const event = event_with_cookies();
-	expect(get_admin_auth()).toBe(password_auth);
-	expect(await get_admin_auth().is_admin(event)).toBe(false);
+	expect(get_auth()).toBe(password_auth);
+	expect(await get_auth().get_user(event)).toBeNull();
 
 	expect(await password_auth.log_in(event, { password: 'wrong' })).toMatchObject({
 		ok: false,
 		code: 'invalid_password'
 	});
 	expect(await password_auth.log_in(event, { password: 'secret' })).toEqual({ ok: true });
-	expect(await password_auth.is_admin(event)).toBe(true);
+	expect(await password_auth.get_user(event)).toEqual({ username: 'admin', name: 'Admin' });
 
 	await password_auth.log_out(event);
-	expect(await password_auth.is_admin(event)).toBe(false);
+	expect(await password_auth.get_user(event)).toBeNull();
 	expect(sqlite.prepare('SELECT count(*) AS n FROM sessions').get()).toEqual({ n: 0 });
 });
 
-it('uses the admin auth a host sets for the request', async () => {
-	const host_auth: AdminAuth = {
-		is_admin: () => true,
+it('uses the auth a host sets for the request, with users of its own shape', async () => {
+	const alice = { did: 'did:plc:alice', handle: 'alice.example' };
+	const host_auth: Auth = {
+		get_user: () => alice,
 		log_in: (event, { username }) => ({
 			ok: true,
 			redirect: `https://auth.example/authorize?login_hint=${username}&from=${event.url.pathname}`
@@ -68,8 +69,9 @@ it('uses the admin auth a host sets for the request', async () => {
 		log_out: () => {}
 	};
 	request.locals = { site: { origin: '', base: '', languages: [], auth: host_auth } };
-	const auth = get_admin_auth();
+	const auth = get_auth();
 	expect(auth).toBe(host_auth);
+	expect(await auth.get_user(event_with_cookies())).toBe(alice);
 	expect(await auth.log_in(event_with_cookies(), { username: 'alice.example' })).toEqual({
 		ok: true,
 		redirect: 'https://auth.example/authorize?login_hint=alice.example&from=/about'

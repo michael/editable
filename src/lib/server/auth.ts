@@ -105,10 +105,10 @@ export async function delete_session(session_id: string, records: AuthRecords) {
 	await records.sessions.delete(session_id);
 }
 
-export function require_admin_session(locals: { is_admin?: boolean }) {
-	if (!locals.is_admin) {
-		error(401, 'Unauthorized');
-	}
+/** The signed-in user, or a 401 when nobody is signed in. */
+export function require_user<User>(locals: { user?: User | null }): User {
+	if (!locals.user) error(401, 'Unauthorized');
+	return locals.user;
 }
 
 function format_lockout_duration(seconds: number): string {

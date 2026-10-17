@@ -14,7 +14,7 @@
 <App
 	document={page.data.not_found_document}
 	has_backend={page.data.has_backend}
-	is_admin={page.data.is_admin}
+	user={page.data.user}
 	origin={page.data.origin}
 	languages={page.data.languages}
 	language={page.data.language}

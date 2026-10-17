@@ -7,7 +7,8 @@ declare global {
 		// an interface.
 		// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 		interface Locals {
-			is_admin: boolean;
+			/** Whoever is signed in, or null; signed-in users may edit the site. */
+			user: import('#app/server_auth.js').User | null;
 			/** Set by a host serving several sites; otherwise the deployment's own site is used. */
 			site?: import('#app/server_site.js').Site;
 		}
