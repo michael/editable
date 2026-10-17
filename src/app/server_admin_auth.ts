@@ -1,5 +1,5 @@
 import type { RequestEvent } from '@sveltejs/kit';
-import { db } from './services.js';
+import { store } from './services.js';
 import { site } from './server_site.js';
 import {
 	admin_session_cookie_name,
@@ -41,8 +41,7 @@ export const password_auth: AdminAuth = {
 		const session_id = cookies.get(admin_session_cookie_name);
 		if (!session_id) return false;
 
-		const row = db.prepare('SELECT expires FROM sessions WHERE session_id = ?').get(session_id) as
-			{ expires: number } | undefined;
+		const row = store.sessions.get(session_id);
 		const now = Math.floor(Date.now() / 1000);
 
 		if (!row) {
@@ -50,29 +49,26 @@ export const password_auth: AdminAuth = {
 			return false;
 		}
 		if (row.expires <= now) {
-			db.prepare('DELETE FROM sessions WHERE session_id = ?').run(session_id);
+			store.sessions.delete(session_id);
 			clear_admin_session_cookie(cookies);
 			return false;
 		}
 		// Sliding renewal, at most once per renewal interval
 		const last_renewed_at = row.expires - session_duration_seconds;
 		if (now - last_renewed_at >= session_renewal_interval_seconds) {
-			db.prepare('UPDATE sessions SET expires = ? WHERE session_id = ?').run(
-				get_session_expires_at(),
-				session_id
-			);
+			store.sessions.put(session_id, { session_id, expires: get_session_expires_at() });
 			set_admin_session_cookie(cookies, session_id);
 		}
 		return true;
 	},
 
 	log_in({ cookies }, { password = '' }) {
-		return log_in_admin(db, cookies, password);
+		return log_in_admin(store, cookies, password);
 	},
 
 	async log_out({ cookies }) {
 		const session_id = cookies.get(admin_session_cookie_name);
-		if (session_id) await delete_session(session_id, db);
+		if (session_id) await delete_session(session_id, store);
 		clear_admin_session_cookie(cookies);
 	}
 };

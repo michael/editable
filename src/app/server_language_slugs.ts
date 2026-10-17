@@ -1,23 +1,20 @@
-import { db } from './services.js';
+import { store } from './services.js';
 import { default_site } from './server_site.js';
 import { is_reserved_language_slug } from './languages.js';
 import { get_markdown_page_pathnames } from './markdown/registry.js';
-
-type SlugRow = { slug: string; document_id: string; is_active: number };
 
 /** Detect existing pages and redirects hidden by newly configured languages. */
 export function warn_about_language_slug_collisions() {
 	// Runs at startup, for the deployment's own site.
 	const { languages } = default_site;
 	if (!languages.length) return;
-	const rows = db
-		.prepare(
-			`SELECT s.slug, s.document_id, s.is_active
-			 FROM document_slugs s
-			 JOIN documents d ON d.document_id = s.document_id
-			 WHERE d.type = 'page'`
-		)
-		.all() as SlugRow[];
+	const pages = new Set(
+		store.documents
+			.all()
+			.filter((record) => record.type === 'page')
+			.map((record) => record.document_id)
+	);
+	const rows = store.slugs.all().filter((record) => pages.has(record.document_id));
 	for (const row of rows) {
 		if (!is_reserved_language_slug(row.slug, languages)) continue;
 		console.warn(

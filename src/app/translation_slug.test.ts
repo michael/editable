@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, expect, it, vi } from 'vitest';
 import type { DatabaseSync } from 'node:sqlite';
-import { fill_document_defaults } from 'svedit';
+import { fill_document_defaults, type Document } from 'svedit';
 import { document_schema } from './document_schema.js';
 import {
 	default_page_document,
@@ -9,8 +9,8 @@ import {
 	default_nav_document,
 	default_footer_document
 } from './default_site.js';
-import initial_schema from './migrations/20260803T131059242Z_editable_initial_schema.js';
-import translations_schema from './migrations/20260923T180000000Z_editable_translations.js';
+import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
+import translations_schema from '#app/migrations/20260923T180000000Z_editable_translations.js';
 
 vi.mock('$app/env/private', () => ({
 	LANGUAGES: 'en,de',
@@ -29,27 +29,31 @@ vi.mock('$app/server', () => ({
 vi.mock('#lib/server/db_snapshot.js', () => ({ snapshot_if_stale: vi.fn() }));
 vi.mock('./services.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
+	const { sqlite_store } = await import('#lib/server/storage/sqlite.js');
 	const db = new DatabaseSync(':memory:');
+	const with_transaction = <T>(callback: () => T): T => {
+		db.exec('BEGIN');
+		try {
+			const result = callback();
+			db.exec('COMMIT');
+			return result;
+		} catch (err) {
+			db.exec('ROLLBACK');
+			throw err;
+		}
+	};
 	return {
 		db,
-		with_transaction: (callback: () => unknown) => {
-			db.exec('BEGIN');
-			try {
-				const result = callback();
-				db.exec('COMMIT');
-				return result;
-			} catch (err) {
-				db.exec('ROLLBACK');
-				throw err;
-			}
-		},
+		store: sqlite_store(db, with_transaction),
+		with_transaction,
 		asset_exists: vi.fn(() => true),
 		delete_orphaned_assets: vi.fn(),
 		touch_asset: vi.fn()
 	};
 });
 
-import { db } from './services.js';
+import * as services from './services.js';
+const { db } = services as unknown as { db: DatabaseSync };
 import { default_site } from './server_site.js';
 import {
 	update_page_slug,
@@ -59,6 +63,7 @@ import {
 	get_sitemap_entries
 } from './api.remote.js';
 import { warn_about_language_slug_collisions } from './server_language_slugs.js';
+import { rebuild_document_refs } from './server_documents.js';
 import * as markdown_registry from './markdown/registry.js';
 
 // With no site set by a host, the code under test uses the deployment's own.
@@ -89,6 +94,9 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 		default_nav_document.document_id
 	);
 	const insert_slug = db.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)');
+	// The nav links to every listed page; references are read from its content.
+	const nav = structuredClone(default_nav_document) as Document;
+	const nav_links = Object.values(nav.nodes).filter((node) => node.type === 'nav_link');
 	for (const slug of ['about', 'de', 'manual', 'unlisted']) {
 		const doc = structuredClone(default_page_document);
 		const root = doc.nodes[doc.document_id];
@@ -101,13 +109,13 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 		};
 		insert_doc.run(doc.document_id, 'page', JSON.stringify(doc), '2026-10-01T00:00:00Z');
 		insert_slug.run(slug, doc.document_id, 1, 'now');
-		if (slug !== 'unlisted')
-			db.prepare('INSERT INTO document_refs VALUES (?, ?, ?)').run(
-				doc.document_id,
-				default_nav_document.document_id,
-				0
-			);
+		if (slug !== 'unlisted') nav_links.shift()!.href = `/${slug}`;
 	}
+	db.prepare('UPDATE documents SET data = ? WHERE document_id = ?').run(
+		JSON.stringify(nav),
+		nav.document_id
+	);
+	rebuild_document_refs(nav.document_id);
 	insert_slug.run('old-about', 'about-page', 0, 'now');
 	for (const [document_id, language, date] of [
 		['about-page', 'de', '2026-10-03T00:00:00Z'],

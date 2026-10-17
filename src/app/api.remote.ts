@@ -17,14 +17,12 @@ import {
 import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import slugify from 'slugify';
-import { db, with_transaction } from '#app/services.js';
+import { store, with_transaction } from '#app/services.js';
+import { translation_key } from '#lib/server/storage/store.js';
 import {
 	type DocumentData,
-	type DocumentRow,
 	InvalidDocumentError,
 	VersionConflictError,
-	collect_document_refs,
-	collect_node_ids,
 	create_page_slug,
 	get_active_slug_for_document_id,
 	get_attached_ranges,
@@ -36,9 +34,9 @@ import {
 	is_home_page_document_id,
 	is_reserved_route_slug,
 	persist_document,
+	rebuild_document_refs,
 	resolve_slug,
 	shared_document_types,
-	update_document_refs,
 	with_asset_cleanup
 } from '#app/server_documents.js';
 
@@ -53,7 +51,6 @@ import { is_reserved_markdown_slug, get_markdown_page_pathnames } from '#app/mar
 import { extract_page_metadata, extract_site_metadata } from '#app/page_metadata.js';
 import type { PreviewMediaNode } from '#app/page_metadata.js';
 import type { DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
-import type { StatementSync } from 'node:sqlite';
 import { require_admin_session } from '#lib/server/auth.js';
 import { get_admin_auth } from './server_admin_auth.js';
 import { revoke_all_grants } from '#app/server_oauth.js';
@@ -213,25 +210,18 @@ export const get_page_browser_data = query(v.string(), async (href) => {
 export const get_sitemap_entries = query(async () => {
 	const { languages } = site;
 	const { page_forest } = build_page_browser_data('/', true);
-	const records = db
-		.prepare(
-			`SELECT document_id, COALESCE(updated_at, created_at) AS modified,
-		 json_extract(data, '$.nodes."' || document_id || '".banner') AS banner,
-		 json_extract(data, '$.nodes."' || document_id || '".nav') AS nav,
-		 json_extract(data, '$.nodes."' || document_id || '".footer') AS footer
-		 FROM documents WHERE type IN ('page', 'banner', 'nav', 'footer')`
-		)
-		.all() as {
-		document_id: string;
-		modified: string | null;
-		banner: string | null;
-		nav: string | null;
-		footer: string | null;
-	}[];
+	const records = store.documents.all().map((record) => {
+		const root = record.data.nodes[record.document_id];
+		return {
+			document_id: record.document_id,
+			modified: record.updated_at ?? record.created_at ?? null,
+			banner: (root?.banner as string | null) ?? null,
+			nav: (root?.nav as string | null) ?? null,
+			footer: (root?.footer as string | null) ?? null
+		};
+	});
 	const records_by_id = new Map(records.map((record) => [record.document_id, record]));
-	const translations = db
-		.prepare('SELECT document_id, language, updated_at FROM translations')
-		.all() as { document_id: string; language: string; updated_at: string }[];
+	const translations = store.translations.all();
 	const modified_by_language = new Map(
 		translations.map((row) => [JSON.stringify([row.document_id, row.language]), row.updated_at])
 	);
@@ -284,24 +274,20 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
 		error(404, `Document not found: ${document_id}`);
 	}
 
-	const delete_document = db.prepare('DELETE FROM documents WHERE document_id = ? AND type = ?');
-	const delete_asset_refs = db.prepare('DELETE FROM asset_refs WHERE document_id = ?');
-	const delete_outgoing_document_refs = db.prepare(
-		'DELETE FROM document_refs WHERE source_document_id = ?'
-	);
-	const delete_incoming_document_refs = db.prepare(
-		'DELETE FROM document_refs WHERE target_document_id = ?'
-	);
-	const delete_document_slugs = db.prepare('DELETE FROM document_slugs WHERE document_id = ?');
-
 	await with_asset_cleanup(() =>
 		with_transaction(() => {
-			delete_asset_refs.run(document_id);
-			delete_outgoing_document_refs.run(document_id);
-			delete_incoming_document_refs.run(document_id);
-			delete_document_slugs.run(document_id);
-			delete_document.run(document_id, 'page');
+			for (const record of store.slugs.all())
+				if (record.document_id === document_id) store.slugs.delete(record.slug);
+			if (existing_doc.nodes[document_id]?.type === 'page') store.documents.delete(document_id);
 			cleanup_translations(document_id);
+			store.asset_refs.delete(document_id);
+			store.document_refs.delete(document_id);
+			for (const refs of store.document_refs.all())
+				if (refs.target_ids.includes(document_id))
+					store.document_refs.put(refs.document_id, {
+						...refs,
+						target_ids: refs.target_ids.filter((id) => id !== document_id)
+					});
 		})
 	);
 
@@ -325,15 +311,12 @@ export const get_internal_link_preview = query(v.string(), async (href) => {
 		return null;
 	}
 
-	const doc_row = db
-		.prepare('SELECT type, data FROM documents WHERE document_id = ?')
-		.get(resolved.document_id) as unknown as DocumentRow | undefined;
-	if (!doc_row || doc_row.type !== 'page') {
+	const record = store.documents.get(resolved.document_id);
+	if (!record || record.type !== 'page') {
 		return null;
 	}
 
-	const page_doc = JSON.parse(doc_row.data) as DocumentData;
-	const metadata = extract_page_metadata(page_doc);
+	const metadata = extract_page_metadata(record.data);
 
 	const preview: InternalLinkPreview = {
 		document_id: resolved.document_id,
@@ -406,40 +389,13 @@ function rewrite_internal_page_hrefs(
 	}
 }
 
-function insert_active_slug(
-	document_id: string,
-	slug: string,
-	insert_slug_stmt: StatementSync,
-	deactivate_slug_stmt: StatementSync
-) {
-	deactivate_slug_stmt.run(document_id);
-	insert_slug_stmt.run(slug, document_id, 1, new Date().toISOString());
-}
-
-function move_active_slug_to_history(
-	document_id: string,
-	insert_slug_stmt: StatementSync,
-	deactivate_slug_stmt: StatementSync,
-	delete_slug_stmt: StatementSync
-) {
-	const current_slug = get_active_slug_for_document_id(document_id);
-	if (!current_slug) return null;
-
-	delete_slug_stmt.run(current_slug);
-	insert_slug_stmt.run(current_slug, document_id, 0, new Date().toISOString());
-	deactivate_slug_stmt.run(document_id);
-	return current_slug;
-}
-
-function assign_active_slug(
-	document_id: string,
-	slug: string,
-	insert_slug_stmt: StatementSync,
-	deactivate_slug_stmt: StatementSync,
-	delete_slug_stmt: StatementSync
-) {
-	delete_slug_stmt.run(slug);
-	insert_active_slug(document_id, slug, insert_slug_stmt, deactivate_slug_stmt);
+/** Make a slug the page's active one; its previous active slug stays as a redirect. */
+function assign_active_slug(document_id: string, slug: string) {
+	const created_at = new Date().toISOString();
+	for (const record of store.slugs.all())
+		if (record.document_id === document_id && record.is_active)
+			store.slugs.put(record.slug, { ...record, is_active: false });
+	store.slugs.put(slug, { slug, document_id, is_active: true, created_at });
 }
 
 export const get_translated_document = query(
@@ -582,87 +538,34 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		};
 	}
 
-	const existing_slug = db
-		.prepare('SELECT document_id, is_active FROM document_slugs WHERE slug = ?')
-		.get(normalized_slug) as unknown as { document_id: string; is_active: number } | undefined;
-
-	if (
-		existing_slug &&
-		existing_slug.document_id !== input.document_id &&
-		existing_slug.is_active === 1
-	) {
+	const existing_slug = store.slugs.get(normalized_slug);
+	if (existing_slug && existing_slug.document_id !== input.document_id && existing_slug.is_active) {
 		return create_page_url_error_result(
 			'page_url_used_by_other_page',
 			'That Page URL is already in use by another page. Rename that page first.'
 		);
 	}
 
-	const delete_slug = db.prepare('DELETE FROM document_slugs WHERE slug = ?');
-	const deactivate_active_slug = db.prepare(
-		'UPDATE document_slugs SET is_active = 0 WHERE document_id = ? AND is_active = 1'
-	);
-	const insert_slug = db.prepare(
-		'INSERT INTO document_slugs (slug, document_id, is_active, created_at) VALUES (?, ?, ?, ?)'
-	);
-
 	const new_active_slug = with_transaction(() => {
-		move_active_slug_to_history(
-			input.document_id,
-			insert_slug,
-			deactivate_active_slug,
-			delete_slug
-		);
-		assign_active_slug(
-			input.document_id,
-			normalized_slug,
-			insert_slug,
-			deactivate_active_slug,
-			delete_slug
-		);
-
+		assign_active_slug(input.document_id, normalized_slug);
 		const active_slug = get_active_slug_for_document_id(input.document_id);
 		if (!active_slug) {
 			throw new Error('Failed to assign new active slug');
 		}
 
-		const page_rows = db
-			.prepare('SELECT * FROM documents WHERE type IN (?, ?, ?, ?) ORDER BY document_id')
-			.all('page', 'banner', 'nav', 'footer') as unknown as DocumentRow[];
-
-		// Rewritten links still point at the same page, so this is not a content
-		// change and leaves updated_at alone.
-		const update_data = db.prepare('UPDATE documents SET data = ? WHERE document_id = ?');
-		const delete_document_refs = db.prepare(
-			'DELETE FROM document_refs WHERE source_document_id = ?'
-		);
-		const insert_document_ref = db.prepare(
-			'INSERT OR REPLACE INTO document_refs (target_document_id, source_document_id, ref_order) VALUES (?, ?, ?)'
-		);
-
-		const translations = db.prepare('SELECT rowid, language, value FROM translations').all() as {
-			rowid: number;
-			language: string;
-			value: string;
-		}[];
+		const translations = store.translations.all();
 		const link_languages = [
 			...new Set([...site.languages, ...translations.map((row) => row.language)])
 		];
 
-		for (const row of page_rows) {
-			const doc = JSON.parse(row.data);
+		// Rewritten links still point at the same page, so this is not a content
+		// change and leaves updated_at alone.
+		for (const record of store.documents.all()) {
+			const doc = structuredClone(record.data);
 			rewrite_internal_page_hrefs(doc.nodes, input.document_id, active_slug, link_languages);
-			const data = JSON.stringify(doc);
-			if (data === row.data) continue;
-			update_data.run(data, row.document_id);
-
-			const root_id = row.document_id;
-			const node_ids = collect_node_ids(root_id, doc.nodes);
-			update_document_refs(
-				root_id,
-				collect_document_refs(doc.nodes, node_ids, root_id),
-				delete_document_refs,
-				insert_document_ref
-			);
+			if (JSON.stringify(doc) === JSON.stringify(record.data)) continue;
+			store.documents.put(record.document_id, { ...record, data: doc });
+			rebuild_document_refs(record.document_id);
 		}
 
 		for (const row of translations) {
@@ -676,7 +579,7 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 				);
 			const value = JSON.stringify(map);
 			if (value !== row.value)
-				db.prepare('UPDATE translations SET value = ? WHERE rowid = ?').run(value, row.rowid);
+				store.translations.put(translation_key(row.document_id, row.language), { ...row, value });
 		}
 		return active_slug;
 	});

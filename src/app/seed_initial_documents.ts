@@ -5,12 +5,12 @@ import {
 	default_page_document
 } from '#app/default_site.js';
 import { MEDIA_DEFAULTS } from '#app/document_schema.js';
-import type { DatabaseSync } from 'node:sqlite';
+import type { SiteStore } from '#lib/server/storage/store.js';
 import type { Document } from 'svedit';
 
 /**
  * Deep clone a document and reset all image/video nodes, since a fresh
- * database has no uploaded assets yet.
+ * site has no uploaded assets yet.
  */
 function reset_media_nodes(doc: Document): Document {
 	const cloned = structuredClone(doc);
@@ -20,37 +20,26 @@ function reset_media_nodes(doc: Document): Document {
 	return cloned;
 }
 
-/** Seed the default site content after a fresh database reaches the current schema. */
-export default function seed_initial_documents({ db }: { db: DatabaseSync }) {
+/** Seed the default site content into an empty store. */
+export default function seed_initial_documents(store: SiteStore) {
 	const now = new Date().toISOString();
-	const insert_doc = db.prepare(
-		'INSERT INTO documents (document_id, type, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
-	);
-	insert_doc.run(
-		'banner_1',
-		'banner',
-		JSON.stringify(reset_media_nodes(default_banner_document)),
-		now,
-		now
-	);
-	insert_doc.run('nav_1', 'nav', JSON.stringify(reset_media_nodes(default_nav_document)), now, now);
-	insert_doc.run(
-		'footer_1',
-		'footer',
-		JSON.stringify(reset_media_nodes(default_footer_document)),
-		now,
-		now
-	);
-	insert_doc.run(
-		default_page_document.document_id,
-		'page',
-		JSON.stringify(reset_media_nodes(default_page_document)),
-		now,
-		now
-	);
-
-	db.prepare('INSERT INTO site_settings (key, value) VALUES (?, ?)').run(
-			'home_page_id',
-			default_page_document.document_id
-		);
+	const documents = [
+		['banner', default_banner_document],
+		['nav', default_nav_document],
+		['footer', default_footer_document],
+		['page', default_page_document]
+	] as const;
+	for (const [type, document] of documents) {
+		store.documents.put(document.document_id, {
+			document_id: document.document_id,
+			type,
+			data: reset_media_nodes(document),
+			created_at: now,
+			updated_at: now
+		});
+	}
+	store.settings.put('home_page_id', {
+		key: 'home_page_id',
+		value: default_page_document.document_id
+	});
 }

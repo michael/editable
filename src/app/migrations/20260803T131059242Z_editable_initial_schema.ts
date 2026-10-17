@@ -1,5 +1,9 @@
+import type { Migration } from '#lib/server/migrations.js';
+import type { SqliteContext } from '#lib/server/storage/sqlite.js';
+
 export default {
-	up({ db }) {
+	target: 'sqlite',
+	up({ db }: SqliteContext) {
 		db.exec(`
 			CREATE TABLE documents (
 				document_id TEXT NOT NULL PRIMARY KEY,
@@ -44,4 +48,4 @@ export default {
 			WHERE is_active = 1;
 		`);
 	}
-};
+} satisfies Migration;

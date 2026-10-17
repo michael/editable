@@ -2,7 +2,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { error } from '@sveltejs/kit';
 import { site } from './server_site.js';
 import { require_admin_session } from '#lib/server/auth.js';
-import { db } from './services.js';
+import { store } from './services.js';
+import type { OAuthGrantRecord } from '#lib/server/storage/store.js';
 
 // An approval grants MCP access for a fixed window; clients refresh short-lived
 // access tokens within it and must ask for approval again afterwards.
@@ -16,13 +17,7 @@ const PENDING_CLIENT_TTL_SECONDS = 24 * 60 * 60;
 const MAX_PENDING_CLIENTS = 100;
 
 type TokenKind = 'code' | 'access' | 'refresh' | 'upload';
-type Grant = {
-	grant_id: string;
-	client_id: string;
-	redirect_uri: string;
-	code_challenge: string;
-	expires_at: number;
-};
+type Grant = OAuthGrantRecord;
 export type OAuthClient = { client_id: string; client_name: string; redirect_uris: string[] };
 
 export class OAuthError extends Error {
@@ -104,13 +99,17 @@ export function register_client(input: { client_name?: unknown; redirect_uris?: 
 
 	// Registration is unauthenticated: pending registrations expire, and when
 	// too many pile up the oldest make room rather than blocking new clients.
-	const pending = 'client_id NOT IN (SELECT client_id FROM oauth_grants)';
-	db.prepare(`DELETE FROM oauth_clients WHERE created_at < ? AND ${pending}`).run(
-		now() - PENDING_CLIENT_TTL_SECONDS
-	);
-	db.prepare(
-		`DELETE FROM oauth_clients WHERE client_id IN (SELECT client_id FROM oauth_clients WHERE ${pending} ORDER BY created_at DESC, rowid DESC LIMIT -1 OFFSET ?)`
-	).run(MAX_PENDING_CLIENTS - 1);
+	const approved = new Set(store.oauth_grants.all().map((grant) => grant.client_id));
+	// Newest first; among equal times the later registration counts as newer.
+	const pending = store.oauth_clients
+		.all()
+		.filter((client) => !approved.has(client.client_id))
+		.reverse()
+		.sort((a, b) => b.created_at - a.created_at);
+	for (const [index, client] of pending.entries()) {
+		if (index >= MAX_PENDING_CLIENTS - 1 || client.created_at < now() - PENDING_CLIENT_TTL_SECONDS)
+			store.oauth_clients.delete(client.client_id);
+	}
 
 	const client: OAuthClient = {
 		client_id: new_secret(),
@@ -120,40 +119,30 @@ export function register_client(input: { client_name?: unknown; redirect_uris?: 
 				: 'Unnamed MCP client',
 		redirect_uris
 	};
-	db.prepare(
-		'INSERT INTO oauth_clients (client_id, client_name, redirect_uris, created_at) VALUES (?, ?, ?, ?)'
-	).run(client.client_id, client.client_name, JSON.stringify(redirect_uris), now());
+	store.oauth_clients.put(client.client_id, { ...client, created_at: now() });
 	return client;
 }
 
 export function find_client(client_id: string): OAuthClient | null {
-	const row = db
-		.prepare('SELECT client_id, client_name, redirect_uris FROM oauth_clients WHERE client_id = ?')
-		.get(client_id) as
-		{ client_id: string; client_name: string; redirect_uris: string } | undefined;
-	return row ? { ...row, redirect_uris: JSON.parse(row.redirect_uris) } : null;
+	const record = store.oauth_clients.get(client_id);
+	if (!record) return null;
+	const { client_name, redirect_uris } = record;
+	return { client_id, client_name, redirect_uris };
 }
 
 function insert_token(grant_id: string, kind: TokenKind, expires_at: number) {
 	const token = new_secret();
-	db.prepare(
-		'INSERT INTO oauth_tokens (token_hash, grant_id, kind, expires_at) VALUES (?, ?, ?, ?)'
-	).run(hash(token), grant_id, kind, expires_at);
+	store.oauth_tokens.put(hash(token), { token_hash: hash(token), grant_id, kind, expires_at });
 	return token;
 }
 
 /** The unexpired grant a token of the given kind belongs to. */
 function find_grant(token: string, kind: TokenKind): Grant | null {
 	const time = now();
-	return (
-		(db
-			.prepare(
-				`SELECT g.grant_id, g.client_id, g.redirect_uri, g.code_challenge, g.expires_at
-				FROM oauth_tokens t JOIN oauth_grants g ON g.grant_id = t.grant_id
-				WHERE t.token_hash = ? AND t.kind = ? AND t.expires_at > ? AND g.expires_at > ?`
-			)
-			.get(hash(token), kind, time, time) as Grant | undefined) ?? null
-	);
+	const record = store.oauth_tokens.get(hash(token));
+	if (!record || record.kind !== kind || record.expires_at <= time) return null;
+	const grant = store.oauth_grants.get(record.grant_id);
+	return grant && grant.expires_at > time ? grant : null;
 }
 
 /** Record an admin's approval and return the authorization code for the client. */
@@ -163,23 +152,19 @@ export function approve_client(input: {
 	code_challenge: string;
 }) {
 	const time = now();
-	db.prepare('DELETE FROM oauth_tokens WHERE expires_at <= ?').run(time);
+	for (const token of store.oauth_tokens.all())
+		if (token.expires_at <= time) store.oauth_tokens.delete(token.token_hash);
 	// A client's latest grant stays as its approval record; older ended ones go.
-	db.prepare('DELETE FROM oauth_grants WHERE client_id = ? AND expires_at <= ?').run(
-		input.client_id,
-		time
-	);
+	for (const grant of store.oauth_grants.all())
+		if (grant.client_id === input.client_id && grant.expires_at <= time)
+			store.oauth_grants.delete(grant.grant_id);
 	const grant_id = new_secret();
-	db.prepare(
-		'INSERT INTO oauth_grants (grant_id, client_id, redirect_uri, code_challenge, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)'
-	).run(
+	store.oauth_grants.put(grant_id, {
 		grant_id,
-		input.client_id,
-		input.redirect_uri,
-		input.code_challenge,
-		time,
-		time + GRANT_TTL_SECONDS
-	);
+		...input,
+		created_at: time,
+		expires_at: time + GRANT_TTL_SECONDS
+	});
 	return insert_token(grant_id, 'code', time + CODE_TTL_SECONDS);
 }
 
@@ -207,7 +192,7 @@ export function exchange_token(params: URLSearchParams) {
 		const code = params.get('code') ?? '';
 		const grant = find_grant(code, 'code');
 		// Codes are single use, whether or not the exchange succeeds.
-		db.prepare('DELETE FROM oauth_tokens WHERE token_hash = ?').run(hash(code));
+		store.oauth_tokens.delete(hash(code));
 		if (
 			!grant ||
 			grant.client_id !== client_id ||
@@ -226,7 +211,7 @@ export function exchange_token(params: URLSearchParams) {
 				'invalid_grant',
 				'The refresh token is invalid or the 48-hour approval has ended. Connect again.'
 			);
-		db.prepare('DELETE FROM oauth_tokens WHERE token_hash = ?').run(hash(refresh_token));
+		store.oauth_tokens.delete(hash(refresh_token));
 		return issue_tokens(grant);
 	}
 
@@ -243,18 +228,19 @@ export function verify_access_token(token: string) {
 
 export function create_upload_token(grant_id: string) {
 	const time = now();
-	const grant = db
-		.prepare('SELECT expires_at FROM oauth_grants WHERE grant_id = ? AND expires_at > ?')
-		.get(grant_id, time) as { expires_at: number } | undefined;
-	if (!grant) throw new Error('The MCP connection has ended. Connect again.');
+	const grant = store.oauth_grants.get(grant_id);
+	if (!grant || grant.expires_at <= time)
+		throw new Error('The MCP connection has ended. Connect again.');
 	const expires_at = Math.min(time + UPLOAD_TOKEN_TTL_SECONDS, grant.expires_at);
 	return { upload_token: insert_token(grant_id, 'upload', expires_at), expires_at };
 }
 
 /** End every MCP connection, e.g. when the admin logs out. Clients stay registered. */
 export function revoke_all_grants() {
-	db.prepare('DELETE FROM oauth_tokens').run();
-	db.prepare('UPDATE oauth_grants SET expires_at = ? WHERE expires_at > ?').run(now(), now());
+	for (const token of store.oauth_tokens.all()) store.oauth_tokens.delete(token.token_hash);
+	for (const grant of store.oauth_grants.all())
+		if (grant.expires_at > now())
+			store.oauth_grants.put(grant.grant_id, { ...grant, expires_at: now() });
 }
 
 /**

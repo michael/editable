@@ -1,15 +1,14 @@
-// Content helpers for migrations, so the common transformations do not have to
-// be written as SQL against the stored document JSON.
+// Content helpers for migrations, so the common transformations work the same
+// on every backend and do not have to be written against stored records.
 //
 // Every helper scans all documents (pages, banner, nav, footer), applies the change to
 // matching nodes, and writes back only the documents that actually changed.
 // `updated_at` is left untouched: a migration is not a content edit.
 
-import type { DatabaseSync } from 'node:sqlite';
+import type { Document } from 'svedit';
+import type { SiteStore } from './storage/store.js';
 
 type MigrationNode = Record<string, unknown>;
-type MigrationDocument = { nodes?: Record<string, MigrationNode> };
-type DocumentRow = { document_id: string; data: string | null };
 
 export type MigrationHelpers = {
 	update: (type: string, transform: (node: MigrationNode) => void) => number;
@@ -17,31 +16,25 @@ export type MigrationHelpers = {
 	rename_type: (from: string, to: string) => number;
 	replace_value: (type: string, property: string, from: unknown, to: unknown) => number;
 	delete_property: (type: string, property: string) => number;
+	ensure_document: (document: Document) => boolean;
 };
 
 /**
- * Build the helpers spread into every migration's `up` context.
+ * Build the helpers spread into every content migration's `up` context.
  */
-export function create_migration_helpers(db: DatabaseSync): MigrationHelpers {
+export function create_migration_helpers(store: SiteStore): MigrationHelpers {
 	/**
 	 * Apply `transform` to every node of `type` in every document. The transform
 	 * mutates the node it is given; returns the number of nodes it changed.
 	 */
 	function update(type: string, transform: (node: MigrationNode) => void): number {
-		const rows = db
-			.prepare('SELECT document_id, data FROM documents')
-			.all() as unknown as DocumentRow[];
-		const update_data = db.prepare('UPDATE documents SET data = ? WHERE document_id = ?');
-
 		let changed_nodes = 0;
 
-		for (const row of rows) {
-			if (!row.data) continue;
-
-			const document = JSON.parse(row.data) as MigrationDocument;
+		for (const record of store.documents.all()) {
+			const data = structuredClone(record.data);
 			let changed_in_document = 0;
 
-			for (const node of Object.values(document.nodes ?? {})) {
+			for (const node of Object.values(data.nodes ?? {}) as MigrationNode[]) {
 				if (!node || node.type !== type) continue;
 
 				// Comparing serialized nodes keeps the transform a plain mutation
@@ -52,7 +45,7 @@ export function create_migration_helpers(db: DatabaseSync): MigrationHelpers {
 			}
 
 			if (changed_in_document > 0) {
-				update_data.run(JSON.stringify(document), row.document_id);
+				store.documents.put(record.document_id, { ...record, data });
 				changed_nodes += changed_in_document;
 			}
 		}
@@ -83,14 +76,16 @@ export function create_migration_helpers(db: DatabaseSync): MigrationHelpers {
 	}
 
 	/**
-	 * Rename a node type on every node that has it. Document root nodes also
-	 * carry their type in the `documents.type` column, which is kept in step.
+	 * Rename a node type on every node that has it. Document records also
+	 * carry the type of their root node, which is kept in step.
 	 */
 	function rename_type(from: string, to: string): number {
 		const changed_nodes = update(from, (node) => {
 			node.type = to;
 		});
-		db.prepare('UPDATE documents SET type = ? WHERE type = ?').run(to, from);
+		for (const record of store.documents.all()) {
+			if (record.type === from) store.documents.put(record.document_id, { ...record, type: to });
+		}
 		return changed_nodes;
 	}
 
@@ -108,7 +103,7 @@ export function create_migration_helpers(db: DatabaseSync): MigrationHelpers {
 	/**
 	 * Drop a property from all nodes of one type. Stale properties are not
 	 * removed by saving — nodes are stored as they are loaded — so this is how
-	 * a property retired from the schema leaves the database.
+	 * a property retired from the schema leaves stored content.
 	 */
 	function delete_property(type: string, property: string): number {
 		return update(type, (node) => {
@@ -116,5 +111,23 @@ export function create_migration_helpers(db: DatabaseSync): MigrationHelpers {
 		});
 	}
 
-	return { update, rename_property, rename_type, replace_value, delete_property };
+	/**
+	 * Add a document unless one with its id exists, for example a new shared
+	 * document every page refers to. Its type is its root node's. Returns
+	 * whether it was added.
+	 */
+	function ensure_document(document: Document): boolean {
+		if (store.documents.get(document.document_id)) return false;
+		const now = new Date().toISOString();
+		store.documents.put(document.document_id, {
+			document_id: document.document_id,
+			type: document.nodes[document.document_id].type,
+			data: document,
+			created_at: now,
+			updated_at: now
+		});
+		return true;
+	}
+
+	return { update, rename_property, rename_type, replace_value, delete_property, ensure_document };
 }

@@ -1,12 +1,13 @@
 import { site } from '#app/server_site.js';
 import { is_media_property } from './media.js';
-import { rebuild_asset_refs } from './server_asset_refs.js';
 import { ASSET_ID_REGEX } from './config.js';
 import { assert_safe_hrefs, normalize_hrefs, resolve_hrefs } from './document_links.js';
 import { createHash } from 'node:crypto';
 import { error } from '@sveltejs/kit';
 import { fill_document_defaults, validate_document, validate_node, type Document } from 'svedit';
-import { db, with_transaction, asset_exists } from './services.js';
+import { store, with_transaction, asset_exists } from './services.js';
+import { rebuild_asset_refs } from './server_asset_refs.js';
+import { translation_key } from '#lib/server/storage/store.js';
 import { document_schema } from './document_schema.js';
 import { select_language } from './languages.js';
 import {
@@ -28,10 +29,9 @@ type TranslationRow = {
 
 function load_records(document_id: string) {
 	const read = (id: string): Document => {
-		const row = db.prepare('SELECT data FROM documents WHERE document_id = ?').get(id) as
-			{ data: string } | undefined;
-		if (!row) error(404, 'Document not found');
-		return JSON.parse(row.data);
+		const record = store.documents.get(id);
+		if (!record) error(404, 'Document not found');
+		return record.data;
 	};
 	const page = read(document_id);
 	const root = page.nodes[document_id];
@@ -44,11 +44,11 @@ function load_records(document_id: string) {
 }
 
 function read_rows(records: Document[], language: string): TranslationRow[] {
-	return db
-		.prepare(
-			`SELECT * FROM translations WHERE language = ? AND document_id IN (${records.map(() => '?').join(',')}) ORDER BY document_id`
-		)
-		.all(language, ...records.map((doc) => doc.document_id)) as TranslationRow[];
+	const ids = new Set(records.map((doc) => doc.document_id));
+	return store.translations
+		.all()
+		.filter((row) => row.language === language && ids.has(row.document_id))
+		.sort((a, b) => a.document_id.localeCompare(b.document_id));
 }
 
 function revision(records: Document[], rows: TranslationRow[]) {
@@ -155,10 +155,7 @@ function normalized_map(map: TranslationMap) {
 
 function write_map(document_id: string, language: string, map: TranslationMap, previous?: string) {
 	if (!Object.keys(map).length) {
-		db.prepare('DELETE FROM translations WHERE document_id = ? AND language = ?').run(
-			document_id,
-			language
-		);
+		store.translations.delete(translation_key(document_id, language));
 		return;
 	}
 	if (previous) {
@@ -168,9 +165,12 @@ function write_map(document_id: string, language: string, map: TranslationMap, p
 			// Saving or cleanup replaces malformed stored overrides.
 		}
 	}
-	db.prepare(
-		'INSERT INTO translations (document_id, language, value, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(document_id, language) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at'
-	).run(document_id, language, JSON.stringify(map), new Date().toISOString());
+	store.translations.put(translation_key(document_id, language), {
+		document_id,
+		language,
+		value: JSON.stringify(map),
+		updated_at: new Date().toISOString()
+	});
 }
 
 export function translate_shared_document(source: Document, requested: string) {
@@ -263,25 +263,19 @@ export function save_translated_document(input: {
 }
 
 export function cleanup_translations(document_id: string) {
-	const row = db.prepare('SELECT data FROM documents WHERE document_id = ?').get(document_id) as
-		{ data: string } | undefined;
-	if (!row) {
-		db.prepare('DELETE FROM translations WHERE document_id = ?').run(document_id);
+	const rows = store.translations.all().filter((row) => row.document_id === document_id);
+	const record = store.documents.get(document_id);
+	if (!record) {
+		for (const row of rows) store.translations.delete(translation_key(document_id, row.language));
 		return;
 	}
-	const doc = fill_document_defaults(JSON.parse(row.data), document_schema);
-	const rows = db
-		.prepare('SELECT * FROM translations WHERE document_id = ?')
-		.all(document_id) as TranslationRow[];
+	const doc = fill_document_defaults(record.data, document_schema);
 	for (const entry of rows) {
 		let map: TranslationMap;
 		try {
 			map = parse_map(entry.value);
 		} catch {
-			db.prepare('DELETE FROM translations WHERE document_id = ? AND language = ?').run(
-				document_id,
-				entry.language
-			);
+			store.translations.delete(translation_key(document_id, entry.language));
 			continue;
 		}
 		for (const [node_id, properties] of Object.entries(map)) {

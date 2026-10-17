@@ -1,11 +1,11 @@
 import crypto from 'node:crypto';
-import type { DatabaseSync } from 'node:sqlite';
+import type { SiteStore } from './storage/store.js';
 import type { Cookies } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';
 import { ADMIN_PASSWORD, NODE_ENV } from '$app/env/private';
 
-/** The database calls auth needs: a DatabaseSync or a facade over the current site's. */
-type Database = Pick<DatabaseSync, 'prepare'>;
+/** The records auth keeps: sessions, and the login throttle among the settings. */
+type Store = Pick<SiteStore, 'sessions' | 'settings'>;
 
 export const admin_session_cookie_name = 'ew_admin_session';
 export const session_duration_seconds = 14 * 24 * 60 * 60;
@@ -35,37 +35,31 @@ export function passwords_match(a: string, b: string): boolean {
 	return crypto.timingSafeEqual(digest(a), digest(b));
 }
 
-function get_login_throttle_state(db: Database): {
+function get_login_throttle_state(store: Store): {
 	failed_count: number;
 	locked_until: number;
 } {
-	const row = db
-		.prepare('SELECT value FROM site_settings WHERE key = ?')
-		.get(LOGIN_THROTTLE_KEY) as { value: string } | undefined;
-
-	return row ? JSON.parse(row.value) : { failed_count: 0, locked_until: 0 };
+	const setting = store.settings.get(LOGIN_THROTTLE_KEY);
+	return setting ? JSON.parse(setting.value) : { failed_count: 0, locked_until: 0 };
 }
 
 function set_login_throttle_state(
-	db: Database,
+	store: Store,
 	state: { failed_count: number; locked_until: number }
 ) {
-	db.prepare('INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)').run(
-		LOGIN_THROTTLE_KEY,
-		JSON.stringify(state)
-	);
+	store.settings.put(LOGIN_THROTTLE_KEY, { key: LOGIN_THROTTLE_KEY, value: JSON.stringify(state) });
 }
 
 /**
  * Seconds until login attempts are accepted again (0 when unlocked).
  */
-export function get_login_lockout_seconds(db: Database): number {
-	const { locked_until } = get_login_throttle_state(db);
+export function get_login_lockout_seconds(store: Store): number {
+	const { locked_until } = get_login_throttle_state(store);
 	return Math.max(locked_until - Math.floor(Date.now() / 1000), 0);
 }
 
-export function register_failed_login(db: Database) {
-	const state = get_login_throttle_state(db);
+export function register_failed_login(store: Store) {
+	const state = get_login_throttle_state(store);
 	state.failed_count += 1;
 
 	const throttled_failures = state.failed_count - LOGIN_THROTTLE.free_attempts;
@@ -77,11 +71,11 @@ export function register_failed_login(db: Database) {
 		state.locked_until = Math.floor(Date.now() / 1000) + lockout_seconds;
 	}
 
-	set_login_throttle_state(db, state);
+	set_login_throttle_state(store, state);
 }
 
-export function reset_login_throttle(db: Database) {
-	set_login_throttle_state(db, { failed_count: 0, locked_until: 0 });
+export function reset_login_throttle(store: Store) {
+	set_login_throttle_state(store, { failed_count: 0, locked_until: 0 });
 }
 
 export function get_required_admin_password(): string {
@@ -117,8 +111,8 @@ export function set_admin_session_cookie(cookies: Cookies, session_id: string) {
 	});
 }
 
-export async function delete_session(session_id: string, db: Database) {
-	db.prepare('DELETE FROM sessions WHERE session_id = ?').run(session_id);
+export async function delete_session(session_id: string, store: Store) {
+	store.sessions.delete(session_id);
 }
 
 export function require_admin_session(locals: { is_admin?: boolean }) {
@@ -135,11 +129,11 @@ function format_lockout_duration(seconds: number): string {
 
 /** Start an admin session for a correct password, subject to the login throttle. */
 export function log_in_admin(
-	db: Database,
+	store: Store,
 	cookies: Cookies,
 	password: string
 ): { ok: true } | { ok: false; code: string; message: string } {
-	const lockout_seconds = get_login_lockout_seconds(db);
+	const lockout_seconds = get_login_lockout_seconds(store);
 	if (lockout_seconds > 0) {
 		return {
 			ok: false,
@@ -149,17 +143,14 @@ export function log_in_admin(
 	}
 
 	if (!passwords_match(password, get_required_admin_password())) {
-		register_failed_login(db);
+		register_failed_login(store);
 		return { ok: false, code: 'invalid_password', message: 'Incorrect admin password.' };
 	}
 
-	reset_login_throttle(db);
+	reset_login_throttle(store);
 
 	const session_id = crypto.randomUUID();
-	db.prepare('INSERT INTO sessions (session_id, expires) VALUES (?, ?)').run(
-		session_id,
-		get_session_expires_at()
-	);
+	store.sessions.put(session_id, { session_id, expires: get_session_expires_at() });
 	set_admin_session_cookie(cookies, session_id);
 	return { ok: true };
 }

@@ -43,6 +43,7 @@
 		"data:purge-translations": "./scripts/data.sh purge-translations",
 		"data:verify": "./scripts/data.sh verify",
 		"data:reset": "./scripts/data.sh reset",
+		"data:convert": "node scripts/convert-data.js",
 		"vps:deploy": "./scripts/vps-deploy.sh",
 		"vps:env": "./scripts/vps-deploy.sh env",
 		"vps:status": "./scripts/vps-deploy.sh status",
