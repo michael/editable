@@ -17,12 +17,18 @@ vi.mock('#app/services.js', async () => {
 	const { mkdtempSync } = await import('node:fs');
 	const { tmpdir } = await import('node:os');
 	const { join } = await import('node:path');
-	const { file_assets } = await import('#lib/server/storage/backends/file_assets.js');
-	return file_assets({
-		asset_path: mkdtempSync(join(tmpdir(), 'editable-assets-')),
-		asset_grace_period_days: 1,
-		asset_id_regex: /^[a-f0-9]{64}\.[a-z0-9]+$/
-	});
+	const { asset_files } = await import('#lib/server/backends/asset_files.js');
+	const { webp_dimensions } = await import('#lib/server/webp.js');
+	const backend = asset_files(mkdtempSync(join(tmpdir(), 'editable-assets-')));
+	return {
+		backend,
+		asset_exists: async (asset_id: string, variant?: string) =>
+			(await backend.asset_size(asset_id, variant)) !== null,
+		asset_webp_dimensions: async (asset_id: string, variant?: string) => {
+			const stream = await backend.read_asset(asset_id, { variant });
+			return stream && webp_dimensions(new Uint8Array(await new Response(stream).arrayBuffer()));
+		}
+	};
 });
 
 import { POST as upload_original } from './+server.js';

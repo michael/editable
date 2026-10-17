@@ -5,7 +5,7 @@ import {
 	default_page_document
 } from '#app/default_site.js';
 import { MEDIA_DEFAULTS } from '#app/document_schema.js';
-import type { Database } from '#lib/server/storage/database.js';
+import type { Backend } from '#lib/server/backend.js';
 import type { Document } from 'svedit';
 
 /**
@@ -20,8 +20,8 @@ function reset_media_nodes(doc: Document): Document {
 	return cloned;
 }
 
-/** Seed the default site content into an empty database. */
-export default function seed_initial_documents(db: Database) {
+/** Seed the default site content into an empty backend. */
+export default async function seed_initial_documents(backend: Backend) {
 	const now = new Date().toISOString();
 	const documents = [
 		['banner', default_banner_document],
@@ -30,7 +30,7 @@ export default function seed_initial_documents(db: Database) {
 		['page', default_page_document]
 	] as const;
 	for (const [type, document] of documents) {
-		db.documents.put({
+		await backend.documents.put({
 			document_id: document.document_id,
 			type,
 			data: reset_media_nodes(document),
@@ -38,7 +38,7 @@ export default function seed_initial_documents(db: Database) {
 			updated_at: now
 		});
 	}
-	db.settings.put({
+	await backend.settings.put({
 		key: 'home_page_id',
 		value: default_page_document.document_id
 	});

@@ -29,26 +29,15 @@ vi.mock('$app/server', () => ({
 vi.mock('#lib/server/db_snapshot.js', () => ({ snapshot_if_stale: vi.fn() }));
 vi.mock('./services.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
-	const { sqlite_database } = await import('#lib/server/storage/backends/sqlite_database.js');
+	const { mkdtempSync } = await import('node:fs');
+	const { tmpdir } = await import('node:os');
+	const { sqlite_backend } = await import('#lib/server/backends/sqlite_backend.js');
 	const sqlite = new DatabaseSync(':memory:');
-	const with_transaction = <T>(callback: () => T): T => {
-		sqlite.exec('BEGIN');
-		try {
-			const result = callback();
-			sqlite.exec('COMMIT');
-			return result;
-		} catch (err) {
-			sqlite.exec('ROLLBACK');
-			throw err;
-		}
-	};
+	const asset_dir = mkdtempSync(`${tmpdir()}/editable-assets-`);
 	return {
 		sqlite,
-		db: sqlite_database(sqlite),
-		with_transaction,
-		asset_exists: vi.fn(() => true),
-		delete_orphaned_assets: vi.fn(),
-		touch_asset: vi.fn()
+		backend: sqlite_backend({ db: sqlite, asset_dir }),
+		asset_exists: vi.fn(async () => true)
 	};
 });
 
@@ -65,6 +54,7 @@ import {
 import { warn_about_language_slug_collisions } from './server_language_slugs.js';
 import { rebuild_document_refs } from './server_documents.js';
 import * as markdown_registry from './markdown/registry.js';
+import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 // With no site set by a host, the code under test uses the deployment's own.
 const { languages } = default_site;
@@ -112,7 +102,7 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 	sqlite
 		.prepare('UPDATE documents SET data = ? WHERE document_id = ?')
 		.run(JSON.stringify(nav), nav.document_id);
-	rebuild_document_refs(nav.document_id);
+	await rebuild_document_refs(nav.document_id);
 	insert_slug.run('old-about', 'about-page', 0, 'now');
 	for (const [document_id, language, date] of [
 		['about-page', 'de', '2026-10-03T00:00:00Z'],
@@ -163,8 +153,8 @@ beforeEach(() => {
 		'translations'
 	])
 		sqlite.exec(`DROP TABLE IF EXISTS ${table}`);
-	initial_schema.up({ db: sqlite });
-	translations_schema.up({ db: sqlite });
+	initial_schema.up({ db: sqlite } as SqliteStorage);
+	translations_schema.up({ db: sqlite } as SqliteStorage);
 });
 
 it('rejects a language homepage slug without changing the page or its links', async () => {
@@ -276,7 +266,7 @@ it.each([
 	}
 );
 
-it('warns about active pages, historical redirects, and markdown language collisions at startup', () => {
+it('warns about active pages, historical redirects, and markdown language collisions at startup', async () => {
 	const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 	vi.spyOn(markdown_registry, 'get_markdown_page_pathnames').mockReturnValue(['/de', '/manual']);
 	sqlite
@@ -287,7 +277,7 @@ it('warns about active pages, historical redirects, and markdown language collis
 	insert.run('es', 'page', 0, 'now');
 	insert.run('en', 'page', 0, 'now');
 	languages.push('es');
-	warn_about_language_slug_collisions();
+	await warn_about_language_slug_collisions();
 	expect(warn.mock.calls.map(([message]) => message)).toEqual([
 		expect.stringContaining('Page "/de" (page)'),
 		expect.stringContaining('Historical redirect "/es" (page)'),
@@ -295,7 +285,7 @@ it('warns about active pages, historical redirects, and markdown language collis
 	]);
 	warn.mockClear();
 	languages.splice(0);
-	warn_about_language_slug_collisions();
+	await warn_about_language_slug_collisions();
 	expect(warn).not.toHaveBeenCalled();
 	expect(sqlite.prepare('SELECT slug FROM document_slugs').all()).toHaveLength(3);
 });

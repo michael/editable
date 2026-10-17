@@ -14,7 +14,7 @@ async function validate_request(params: URLSearchParams) {
 	if (!oauth.is_own_resource(params.get('resource')))
 		return { error: `Access can only be granted to ${oauth.mcp_resource()}.` } as const;
 
-	const client = oauth.find_client(params.get('client_id') ?? '');
+	const client = await oauth.find_client(params.get('client_id') ?? '');
 	if (!client)
 		return {
 			error: 'The app could not be identified. Start connecting again from the app.'
@@ -54,7 +54,7 @@ export const actions: Actions = {
 		const target = new URL(validated.redirect_uri);
 		if ((await request.formData()).get('decision') === 'allow') {
 			const { approve_client, issuer } = await import('#app/server_oauth.js');
-			const code = approve_client({
+			const code = await approve_client({
 				client_id: validated.client.client_id,
 				redirect_uri: validated.redirect_uri,
 				code_challenge: validated.code_challenge

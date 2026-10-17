@@ -1,7 +1,6 @@
-import { unlink } from 'node:fs/promises';
 import { error } from '@sveltejs/kit';
 import { ASSET_ID_REGEX } from '#app/config.js';
-import { asset_exists, poster_path, write_poster } from '#app/services.js';
+import { asset_exists, backend } from '#app/services.js';
 import { require_admin_session } from '#lib/server/auth.js';
 import type { RequestHandler } from './$types';
 
@@ -15,7 +14,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	if (!asset_id.endsWith('.mp4') && !asset_id.endsWith('.webm')) {
 		error(400, 'Posters are only supported for videos');
 	}
-	if (!asset_exists(asset_id)) {
+	if (!(await asset_exists(asset_id))) {
 		error(404, 'Asset not found');
 	}
 
@@ -32,14 +31,14 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	let write_result;
 	try {
-		write_result = await write_poster(asset_id, request.body);
+		write_result = await backend.write_asset(asset_id, request.body, 'poster.webp');
 	} catch (err) {
-		await unlink(poster_path(asset_id)).catch(() => {});
-		console.error('Failed to write video poster to disk:', err);
+		await backend.delete_asset(asset_id, 'poster.webp').catch(() => {});
+		console.error('Failed to store video poster:', err);
 		error(500, 'Failed to store video poster');
 	}
 	if (write_result.bytes_written === 0) {
-		await unlink(poster_path(asset_id)).catch(() => {});
+		await backend.delete_asset(asset_id, 'poster.webp').catch(() => {});
 		error(400, 'Empty poster data');
 	}
 

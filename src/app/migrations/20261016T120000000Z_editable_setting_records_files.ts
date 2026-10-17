@@ -1,13 +1,13 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Migration } from '#lib/server/migrations.js';
-import type { FilesContext } from '#lib/server/storage/backends/file_database.js';
+import type { FilesStorage } from '#lib/server/backends/files_backend.js';
 
 // Settings became { key, value } records like every other collection; folders
 // written before kept each setting as a plain string.
 export default {
 	target: 'files',
-	up({ dir }: FilesContext) {
+	up({ dir }: FilesStorage) {
 		const path = join(dir, 'settings.json');
 		if (!existsSync(path)) return;
 		const settings: Record<string, unknown> = JSON.parse(readFileSync(path, 'utf8'));

@@ -1,7 +1,6 @@
 import type { DocumentNode } from 'svedit';
-import { db } from '#app/services.js';
+import { backend } from '#app/services.js';
 import {
-	get_active_slug_for_document_id,
 	get_home_page_id_from_db,
 	resolve_slug,
 	shared_document_types
@@ -47,9 +46,8 @@ export type PageTreeNode = {
 	children: PageTreeNode[];
 };
 
-function list_page_documents(): PageDocumentRecord[] {
-	return db.documents
-		.all()
+async function list_page_documents(): Promise<PageDocumentRecord[]> {
+	return (await backend.documents.all())
 		.filter((record) => record.type === 'page')
 		.sort((a, b) => a.document_id.localeCompare(b.document_id))
 		.map((record) => ({
@@ -60,12 +58,14 @@ function list_page_documents(): PageDocumentRecord[] {
 		}));
 }
 
-function summarize_page_document(page_doc: PageDocumentRecord): PageSummary {
+function summarize_page_document(
+	page_doc: PageDocumentRecord,
+	active_slug: string | null
+): PageSummary {
 	const metadata = extract_page_metadata({
 		document_id: page_doc.document_id,
 		nodes: page_doc.nodes
 	});
-	const active_slug = get_active_slug_for_document_id(page_doc.document_id);
 	return {
 		document_id: page_doc.document_id,
 		title: metadata.title || 'Untitled page',
@@ -83,24 +83,33 @@ function summarize_page_document(page_doc: PageDocumentRecord): PageSummary {
 }
 
 /** Build the same page tree used by the Pages drawer. */
-export function build_page_browser_data(
+export async function build_page_browser_data(
 	pathname: string,
 	home_only = false
-): {
+): Promise<{
 	home_page_id: string | null;
 	current_document_id: string | null;
 	page_forest: PageTreeNode[];
-} {
-	const home_page_id = get_home_page_id_from_db();
+}> {
+	const home_page_id = await get_home_page_id_from_db();
 	const current_document_id =
-		pathname === '/' ? home_page_id : (resolve_slug(pathname.slice(1))?.document_id ?? null);
-	const page_docs = list_page_documents();
+		pathname === '/'
+			? home_page_id
+			: ((await resolve_slug(pathname.slice(1)))?.document_id ?? null);
+	const page_docs = await list_page_documents();
 	const page_docs_by_id = new Map(page_docs.map((page_doc) => [page_doc.document_id, page_doc]));
-	const summaries = page_docs.map(summarize_page_document);
+	const active_slugs = new Map(
+		(await backend.slugs.all())
+			.filter((record) => record.is_active)
+			.map((record) => [record.document_id, record.slug])
+	);
+	const summaries = page_docs.map((page_doc) =>
+		summarize_page_document(page_doc, active_slugs.get(page_doc.document_id) ?? null)
+	);
 	const summaries_by_id = new Map(summaries.map((summary) => [summary.document_id, summary]));
 	// What every document links to, as recorded on its last save.
 	const refs_by_document_id = new Map(
-		db.document_refs.all().map((refs) => [refs.document_id, refs.target_ids])
+		(await backend.document_refs.all()).map((refs) => [refs.document_id, refs.target_ids])
 	);
 	const refs_by_page_id = new Map(
 		page_docs.map((page_doc) => [

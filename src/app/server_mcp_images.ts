@@ -1,8 +1,6 @@
-import { existsSync } from 'node:fs';
 import type { DocumentNode } from 'svedit';
-import { read_webp_dimensions } from '#lib/server/webp.js';
 import { ASSET_ID_REGEX, MAX_IMAGE_WIDTH, VARIANT_WIDTHS } from './config.js';
-import { asset_exists, asset_path, variant_path } from './services.js';
+import { asset_exists, asset_webp_dimensions } from './services.js';
 import { create_upload_token } from './server_oauth.js';
 
 /**
@@ -10,8 +8,8 @@ import { create_upload_token } from './server_oauth.js';
  * Image bytes cannot travel through tool calls, so agents prepare the same
  * files the editor produces in the browser and upload them directly.
  */
-export function prepare_image_upload(origin: string, grant_id: string) {
-	const { upload_token, expires_at } = create_upload_token(grant_id);
+export async function prepare_image_upload(origin: string, grant_id: string) {
+	const { upload_token, expires_at } = await create_upload_token(grant_id);
 	const authorization = `Bearer ${upload_token}`;
 	return {
 		upload_token,
@@ -35,23 +33,24 @@ export function prepare_image_upload(origin: string, grant_id: string) {
  * New or changed media must reference uploaded assets. WebP images must also
  * match their file's dimensions and have every variant their srcset requests.
  */
-export function assert_uploaded_images(nodes: DocumentNode[]) {
+export async function assert_uploaded_images(nodes: DocumentNode[]) {
 	for (const node of nodes) {
 		if ((node.type !== 'image' && node.type !== 'video') || !node.src) continue;
-		if (!ASSET_ID_REGEX.test(node.src) || !asset_exists(node.src))
+		if (!ASSET_ID_REGEX.test(node.src) || !(await asset_exists(node.src)))
 			throw new Error(
 				`${node.type} ${node.id}: ${node.src} is not an uploaded asset. Use prepare_image_upload to add new images.`
 			);
 		if (node.type !== 'image' || !node.src.endsWith('.webp')) continue;
 
-		const actual = read_webp_dimensions(asset_path(node.src));
+		const actual = await asset_webp_dimensions(node.src);
 		if (actual && (actual.width !== node.width || actual.height !== node.height))
 			throw new Error(
 				`image ${node.id}: width and height (${node.width}×${node.height}) do not match ${node.src} (${actual.width}×${actual.height}).`
 			);
-		const missing = VARIANT_WIDTHS.filter(
-			(width) => width < node.width && !existsSync(variant_path(node.src, width))
-		);
+		const missing = [];
+		for (const width of VARIANT_WIDTHS)
+			if (width < node.width && !(await asset_exists(node.src, `w${width}.webp`)))
+				missing.push(width);
 		if (missing.length)
 			throw new Error(
 				`image ${node.id}: ${node.src} is missing variants ${missing.join(', ')}. Upload them before saving.`

@@ -1,17 +1,7 @@
 import { error } from '@sveltejs/kit';
-import { Readable } from 'node:stream';
-import { existsSync } from 'node:fs';
 import { extname } from 'node:path';
 import { EXT_TO_MIME } from '#app/config.js';
-import {
-	asset_exists,
-	asset_size,
-	create_asset_read_stream,
-	create_poster_read_stream,
-	create_variant_read_stream,
-	poster_path,
-	variant_path
-} from '#app/services.js';
+import { asset_exists, backend } from '#app/services.js';
 import type { RequestHandler } from './$types';
 
 // Served assets are user-uploaded content. `nosniff` prevents a payload from
@@ -32,13 +22,6 @@ const INERT_CONTENT_HEADERS = {
 /** Extensions a variant's original can have (variants exist only for images). */
 const IMAGE_EXTS = Object.keys(EXT_TO_MIME).filter((ext) => EXT_TO_MIME[ext].startsWith('image/'));
 const VIDEO_EXTS = Object.keys(EXT_TO_MIME).filter((ext) => EXT_TO_MIME[ext].startsWith('video/'));
-
-/**
- * Convert a Node.js Readable stream to a Web ReadableStream.
- */
-function to_web_stream(node_stream: Readable): ReadableStream<Uint8Array> {
-	return Readable.toWeb(node_stream) as ReadableStream<Uint8Array>;
-}
 
 /**
  * Extract the first 8 hex characters from an asset id for Content-Disposition filename.
@@ -98,16 +81,17 @@ export const GET: RequestHandler = async ({ params, request }) => {
 		const asset_stem = poster_match[1];
 		let video_id: string | null = null;
 		for (const ext of VIDEO_EXTS) {
-			if (asset_exists(`${asset_stem}.${ext}`)) {
+			if (await asset_exists(`${asset_stem}.${ext}`)) {
 				video_id = `${asset_stem}.${ext}`;
 				break;
 			}
 		}
-		if (!video_id || !existsSync(poster_path(video_id))) {
+		const poster = video_id && (await backend.read_asset(video_id, { variant: 'poster.webp' }));
+		if (!poster) {
 			error(404, 'Video poster not found');
 		}
 
-		return new Response(to_web_stream(create_poster_read_stream(video_id)), {
+		return new Response(poster, {
 			headers: {
 				...INERT_CONTENT_HEADERS,
 				'Content-Type': 'image/webp',
@@ -126,7 +110,7 @@ export const GET: RequestHandler = async ({ params, request }) => {
 		// Find the original asset id by checking known image extensions
 		let original_id: string | null = null;
 		for (const ext of IMAGE_EXTS) {
-			if (asset_exists(`${asset_stem}.${ext}`)) {
+			if (await asset_exists(`${asset_stem}.${ext}`)) {
 				original_id = `${asset_stem}.${ext}`;
 				break;
 			}
@@ -136,13 +120,12 @@ export const GET: RequestHandler = async ({ params, request }) => {
 			error(404, 'Asset not found');
 		}
 
-		const vp = variant_path(original_id, width);
-		if (!existsSync(vp)) {
+		const stream = await backend.read_asset(original_id, { variant: `w${width}.webp` });
+		if (!stream) {
 			error(404, 'Variant not found');
 		}
 
-		const stream = create_variant_read_stream(original_id, width);
-		return new Response(to_web_stream(stream), {
+		return new Response(stream, {
 			headers: {
 				...INERT_CONTENT_HEADERS,
 				'Content-Type': 'image/webp',
@@ -160,13 +143,13 @@ export const GET: RequestHandler = async ({ params, request }) => {
 
 	const asset_id = original_match[1];
 
-	if (!asset_exists(asset_id)) {
+	const size = await backend.asset_size(asset_id);
+	if (size === null) {
 		error(404, 'Asset not found');
 	}
 
 	const ext = extname(asset_id);
 	const mime_type = EXT_TO_MIME[ext.slice(1)] || 'application/octet-stream';
-	const size = await asset_size(asset_id);
 	const range_header = request.headers.get('range');
 	const is_video = mime_type.startsWith('video/');
 	const byte_range = is_video ? parse_byte_range(range_header, size) : null;
@@ -195,10 +178,10 @@ export const GET: RequestHandler = async ({ params, request }) => {
 		}
 
 		const { start, end } = byte_range;
-		const stream = create_asset_read_stream(asset_id, { start, end });
+		const stream = await backend.read_asset(asset_id, { range: { start, end } });
 		const partial_size = end - start + 1;
 
-		return new Response(to_web_stream(stream), {
+		return new Response(stream, {
 			status: 206,
 			headers: {
 				...headers,
@@ -208,8 +191,8 @@ export const GET: RequestHandler = async ({ params, request }) => {
 		});
 	}
 
-	const stream = create_asset_read_stream(asset_id);
-	return new Response(to_web_stream(stream), {
+	const stream = await backend.read_asset(asset_id);
+	return new Response(stream, {
 		headers: {
 			...headers,
 			'Content-Length': String(size)

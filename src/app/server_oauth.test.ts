@@ -10,9 +10,12 @@ vi.mock('$app/env/private', () => ({
 }));
 vi.mock('./services.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
-	const { sqlite_database } = await import('#lib/server/storage/backends/sqlite_database.js');
+	const { mkdtempSync } = await import('node:fs');
+	const { tmpdir } = await import('node:os');
+	const { sqlite_backend } = await import('#lib/server/backends/sqlite_backend.js');
 	const sqlite = new DatabaseSync(':memory:');
-	return { sqlite, db: sqlite_database(sqlite) };
+	const asset_dir = mkdtempSync(`${tmpdir()}/editable-assets-`);
+	return { sqlite, backend: sqlite_backend({ db: sqlite, asset_dir }) };
 });
 
 import type { DatabaseSync } from 'node:sqlite';
@@ -31,6 +34,7 @@ import {
 	revoke_all_grants,
 	verify_access_token
 } from './server_oauth.js';
+import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 const redirect_uri = 'http://localhost:3000/callback';
 const verifier = 'a'.repeat(43);
@@ -40,13 +44,13 @@ beforeEach(() => {
 	sqlite.exec(
 		'DROP TABLE IF EXISTS oauth_clients; DROP TABLE IF EXISTS oauth_grants; DROP TABLE IF EXISTS oauth_tokens'
 	);
-	migration.up({ db: sqlite } as any);
+	migration.up({ db: sqlite } as SqliteStorage);
 });
 
 afterEach(() => vi.useRealTimers());
 
-function connect(client_id: string) {
-	const code = approve_client({ client_id, redirect_uri, code_challenge });
+async function connect(client_id: string) {
+	const code = await approve_client({ client_id, redirect_uri, code_challenge });
 	return exchange_token(
 		new URLSearchParams({
 			grant_type: 'authorization_code',
@@ -66,50 +70,71 @@ function refresh(client_id: string, refresh_token: string) {
 }
 
 it('issues tokens for approved clients with PKCE and rotates refresh tokens', async () => {
-	const { client_id } = register_client({
+	const { client_id } = await register_client({
 		client_name: 'Claude Code',
 		redirect_uris: [redirect_uri]
 	});
-	expect(find_client(client_id)).toMatchObject({ client_name: 'Claude Code' });
+	expect(await find_client(client_id)).toMatchObject({ client_name: 'Claude Code' });
 
-	const code = approve_client({ client_id, redirect_uri, code_challenge });
+	const code = await approve_client({ client_id, redirect_uri, code_challenge });
 	const params = { grant_type: 'authorization_code', code, client_id, redirect_uri };
-	expect(() => exchange_token(new URLSearchParams({ ...params, code_verifier: 'wrong' }))).toThrow(
-		'invalid or expired'
-	);
+	await expect(
+		exchange_token(new URLSearchParams({ ...params, code_verifier: 'wrong' }))
+	).rejects.toThrow('invalid or expired');
 	// Codes are single use, even after a failed exchange.
-	expect(() => exchange_token(new URLSearchParams({ ...params, code_verifier: verifier }))).toThrow(
-		'invalid or expired'
-	);
+	await expect(
+		exchange_token(new URLSearchParams({ ...params, code_verifier: verifier }))
+	).rejects.toThrow('invalid or expired');
 
-	const tokens = connect(client_id);
-	expect(verify_access_token(tokens.access_token)).toMatchObject({ client_id });
-	const refreshed = refresh(client_id, tokens.refresh_token);
-	expect(verify_access_token(refreshed.access_token)).toMatchObject({ client_id });
-	expect(() => refresh(client_id, tokens.refresh_token)).toThrow('Connect again');
-	expect(() => refresh('another-client', refreshed.refresh_token)).toThrow('Connect again');
-	expect(() =>
+	const tokens = await connect(client_id);
+	expect(await verify_access_token(tokens.access_token)).toMatchObject({ client_id });
+	const refreshed = await refresh(client_id, tokens.refresh_token);
+	expect(await verify_access_token(refreshed.access_token)).toMatchObject({ client_id });
+	await expect(refresh(client_id, tokens.refresh_token)).rejects.toThrow('Connect again');
+	await expect(refresh('another-client', refreshed.refresh_token)).rejects.toThrow('Connect again');
+	await expect(
 		exchange_token(new URLSearchParams({ ...params, resource: 'https://evil.example/mcp' }))
-	).toThrow('only issued for https://example.com/mcp');
+	).rejects.toThrow('only issued for https://example.com/mcp');
 });
 
-it('ends access after 48 hours or when the admin logs out', () => {
+it('redeems a code only once, even when two exchanges race', async () => {
+	const { client_id } = await register_client({ redirect_uris: [redirect_uri] });
+	const code = await approve_client({ client_id, redirect_uri, code_challenge });
+	const exchange = () =>
+		exchange_token(
+			new URLSearchParams({
+				grant_type: 'authorization_code',
+				code,
+				client_id,
+				redirect_uri,
+				code_verifier: verifier
+			})
+		);
+	const results = await Promise.allSettled([exchange(), exchange()]);
+	expect(results.map((result) => result.status).sort()).toEqual(['fulfilled', 'rejected']);
+});
+
+it('ends access after 48 hours or when the admin logs out', async () => {
 	vi.useFakeTimers({ now: new Date('2026-10-10T12:00:00Z') });
-	const { client_id } = register_client({ redirect_uris: [redirect_uri] });
-	const tokens = connect(client_id);
-	const { grant_id } = verify_access_token(tokens.access_token)!;
+	const { client_id } = await register_client({ redirect_uris: [redirect_uri] });
+	const tokens = await connect(client_id);
+	const { grant_id } = (await verify_access_token(tokens.access_token))!;
 
 	vi.setSystemTime(new Date('2026-10-12T11:00:00Z'));
-	const late = refresh(client_id, tokens.refresh_token);
+	const late = await refresh(client_id, tokens.refresh_token);
 	expect(late.expires_in).toBe(3600);
 
 	vi.setSystemTime(new Date('2026-10-12T12:00:01Z'));
-	expect(verify_access_token(late.access_token)).toBeNull();
-	expect(() => refresh(client_id, late.refresh_token)).toThrow('48-hour approval has ended');
+	expect(await verify_access_token(late.access_token)).toBeNull();
+	await expect(refresh(client_id, late.refresh_token)).rejects.toThrow(
+		'48-hour approval has ended'
+	);
 
 	vi.useRealTimers();
-	const fresh = connect(client_id);
-	const { upload_token } = create_upload_token(verify_access_token(fresh.access_token)!.grant_id);
+	const fresh = await connect(client_id);
+	const { upload_token } = await create_upload_token(
+		(await verify_access_token(fresh.access_token))!.grant_id
+	);
 	const upload = (token: string) =>
 		authorize_asset_upload(
 			new Request('https://example.com/api/assets', {
@@ -117,12 +142,12 @@ it('ends access after 48 hours or when the admin logs out', () => {
 			}),
 			{}
 		);
-	expect(upload(upload_token)).toBe('upload_token');
+	expect(await upload(upload_token)).toBe('upload_token');
 
-	revoke_all_grants();
-	expect(verify_access_token(fresh.access_token)).toBeNull();
-	expect(() => upload(upload_token)).toThrow();
-	expect(() => create_upload_token(grant_id)).toThrow('has ended');
+	await revoke_all_grants();
+	expect(await verify_access_token(fresh.access_token)).toBeNull();
+	await expect(upload(upload_token)).rejects.toThrow();
+	await expect(create_upload_token(grant_id)).rejects.toThrow('has ended');
 });
 
 it('refuses oversized bodies before reading them', () => {
@@ -135,39 +160,40 @@ it('refuses oversized bodies before reading them', () => {
 	expect(() => assert_small_body(request(1024 * 1024))).toThrow('too large');
 });
 
-it('only accepts redirects to this computer or HTTPS', () => {
+it('only accepts redirects to this computer or HTTPS', async () => {
 	expect(is_allowed_redirect_uri('http://127.0.0.1:8123/callback')).toBe(true);
 	expect(is_allowed_redirect_uri('https://claude.ai/api/mcp/auth_callback')).toBe(true);
 	expect(is_allowed_redirect_uri('http://evil.example/callback')).toBe(false);
 	expect(is_allowed_redirect_uri('https://example.com/callback#fragment')).toBe(false);
-	expect(() => register_client({ redirect_uris: ['http://evil.example/callback'] })).toThrow(
-		'localhost or HTTPS'
-	);
+	await expect(
+		register_client({ redirect_uris: ['http://evil.example/callback'] })
+	).rejects.toThrow('localhost or HTTPS');
 });
 
 it('keeps approved clients registered but evicts stale pending registrations', async () => {
 	vi.useFakeTimers({ now: new Date('2026-10-10T12:00:00Z') });
-	const { client_id } = register_client({ redirect_uris: [redirect_uri] });
-	connect(client_id);
-	revoke_all_grants();
+	const { client_id } = await register_client({ redirect_uris: [redirect_uri] });
+	await connect(client_id);
+	await revoke_all_grants();
 
 	// Reconnecting after a logout or after 48 hours reuses the stored client_id.
 	vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
-	const { client_id: pending_id } = register_client({ redirect_uris: [redirect_uri] });
-	expect(find_client(client_id)).not.toBeNull();
-	expect(verify_access_token(connect(client_id).access_token)).toMatchObject({ client_id });
+	const { client_id: pending_id } = await register_client({ redirect_uris: [redirect_uri] });
+	expect(await find_client(client_id)).not.toBeNull();
+	const reconnected = await connect(client_id);
+	expect(await verify_access_token(reconnected.access_token)).toMatchObject({ client_id });
 	expect(sqlite.prepare('SELECT COUNT(*) AS count FROM oauth_grants').get()).toEqual({ count: 1 });
 
 	// A flood of registrations makes room instead of blocking new clients.
-	for (let i = 0; i < 100; i++) register_client({ redirect_uris: [redirect_uri] });
-	expect(find_client(pending_id)).toBeNull();
-	expect(find_client(client_id)).not.toBeNull();
+	for (let i = 0; i < 100; i++) await register_client({ redirect_uris: [redirect_uri] });
+	expect(await find_client(pending_id)).toBeNull();
+	expect(await find_client(client_id)).not.toBeNull();
 	expect(sqlite.prepare('SELECT COUNT(*) AS count FROM oauth_clients').get()).toEqual({
 		count: 101
 	});
 
 	// Pending registrations expire after a day.
 	vi.setSystemTime(new Date('2026-10-22T12:00:00Z'));
-	register_client({ redirect_uris: [redirect_uri] });
+	await register_client({ redirect_uris: [redirect_uri] });
 	expect(sqlite.prepare('SELECT COUNT(*) AS count FROM oauth_clients').get()).toEqual({ count: 2 });
 });

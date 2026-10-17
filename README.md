@@ -1097,6 +1097,198 @@ pnpm dev                                            # inspect the restored state
 
 When you've found the state you want live, restore production to it with `pnpm data:restore-cloud --at <timestamp>`.
 
+## Backends (experimental)
+
+Store a site wherever you want: in SQLite, in plain files, or in a system of your own.
+
+Editable reaches its data in three layers:
+
+- **The API** is what Editable does: save a document, load a page, upload an asset, sign in. It is Editable's server code in `src/app`, such as `server_documents.ts` for documents and slugs, `server_translations.ts`, and `server_oauth.ts`, and remote functions, MCP tools, asset routes, and your own server code call it. It validates content, computes which pages and assets a document refers to, keeps slugs and translations in step, and cleans up unused assets. It is written once and is the same for every site, and it reaches the current site's backend as `backend` from `#app/services.js`.
+- **The backend** is where the API's data goes. Every backend implements the same `Backend` interface (`src/lib/server/backend.ts`): collections of records, transactions, asset files, and the bookkeeping for its own migrations. It stores what the API hands it and returns it unchanged; it makes no decisions about content.
+- **The storage** is whatever a backend is built on: a SQLite handle, a folder, a remote service with a local database next to it. It is free-form: each backend defines its own and exposes it as `backend.storage`, and only that backend and its storage migrations look inside.
+
+Saving a page shows the split. The editor calls the `save_document` remote function, which checks that the user may edit and calls the API:
+
+```ts
+await persist_document(document_id, nodes, { expected_version });
+```
+
+The API validates the document and works out its links and assets, then writes through the site's backend in one transaction:
+
+```ts
+await backend.transaction(async (tx) => {
+	await tx.documents.put({ ...record, data: document, updated_at });
+	await tx.document_refs.put({ document_id, target_ids });
+	await tx.asset_refs.put({ document_id, asset_ids });
+});
+```
+
+What happens next is up to the backend. `sqlite_backend` replaces three rows inside a SQLite transaction. `files_backend` rewrites the document's EDF file and two JSON files. A backend for the AT Protocol, as in the example below, sends the document to a repository and the references to Postgres.
+
+Editable comes with two backends:
+
+| Backend          | Records                            | Assets                  | Use                                                                                                |
+| ---------------- | ---------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------- |
+| `sqlite_backend` | SQLite, in `data/db.sqlite3`       | Files, in `data/assets` | The default, and what deployments, backups, and the `pnpm data:*` commands use                     |
+| `files_backend`  | EDF and JSON files, in `data/site` | Files, in `data/assets` | Sites you want to read, diff, and version as files; see [File storage](#file-storage-experimental) |
+
+The backend for the deployment's own site comes from `create_backend` in `src/app/server_backend.ts`, which picks one of the two by what the data folder holds. A host serving several sites passes one per site as `backend` in `event.locals.site` (see [Hosting several sites](#hosting-several-sites-experimental)).
+
+### The backend interface
+
+All of a backend's methods are asynchronous, so it can sit on a network service as easily as on a local file:
+
+```ts
+export type Backend = {
+	/** Storage migrations with this name as their target run on this backend. */
+	name: string;
+	/** What the backend is built on; its storage migrations receive it. */
+	storage: unknown;
+
+	// Records, each collection keyed by a field of its records
+	documents: Collection<DocumentRecord>;
+	slugs: Collection<SlugRecord>;
+	translations: Collection<TranslationRecord>;
+	settings: Collection<SettingRecord>;
+	document_refs: Collection<DocumentRefsRecord>;
+	asset_refs: Collection<AssetRefsRecord>;
+	// …and the private ones: sessions, login_throttle, oauth_clients, oauth_grants, oauth_tokens
+
+	/** Run work whose writes belong together; called on a tx, it runs within it. */
+	transaction<T>(fn: (tx: Backend) => Promise<T>): Promise<T>;
+
+	// Asset files: originals by content-addressed id, and files made from them
+	// under a variant name, such as 'w640.webp' for an image width or 'poster.webp'
+	write_asset(asset_id: string, data: AssetData, variant?: string): Promise<AssetWritten>;
+	read_asset(
+		asset_id: string,
+		options?: { variant?: string; range?: ByteRange }
+	): Promise<ReadableStream<Uint8Array> | null>;
+	asset_size(asset_id: string, variant?: string): Promise<number | null>;
+	delete_asset(asset_id: string, variant?: string): Promise<void>;
+	touch_asset(asset_id: string): Promise<void>;
+	list_assets(): Promise<{ asset_id: string; last_used: number }[]>;
+
+	// The storage migrations it has applied
+	applied_migrations(): Promise<string[]>;
+	record_migration(id: string): Promise<void>;
+
+	close(): Promise<void>;
+};
+
+export type Collection<Record> = {
+	get(key: string): Promise<Record | null>;
+	all(): Promise<Record[]>;
+	/** Insert or replace the record, under the key it carries. */
+	put(record: Record): Promise<void>;
+	delete(key: string): Promise<void>;
+};
+```
+
+A backend keeps these promises:
+
+- **Records come back as they were put.** The backend stores what it gets, including the references the API computes. A backend may also keep the references only in memory and rebuild them from the documents, since they are derived.
+- **Transactions don't interleave.** Within one process, a transaction runs to its end before another starts, and reads inside it see its own writes. Its writes land together wherever the storage allows: in one SQLite transaction, or in one batch for a service that accepts batches. Where they span places that cannot commit together, the backend documents what can be left half done. When the storage changed underneath, such as a repository moving on, throw a `ConflictError`; a save then reports a version conflict and the editor asks to reload.
+- **Collections are the unit.** A backend may keep each collection anywhere, but a collection is kept as a whole, so Editable keeps anything that may need to live apart in a collection of its own. That is why the login throttle is a collection rather than a setting.
+- **Private collections stay private.** Sessions, the login throttle, and the OAuth clients, grants, and token hashes let people into the site. Never store them where others can read them.
+- **Asset files are opaque.** The backend writes, reads, and lists them by id; deciding which assets are still in use, and when an unused one may go, is the API's job.
+
+The two built-in backends run their record operations one at a time on a single connection, through `one_at_a_time` in `src/lib/server/backends/`. A backend over a connection pool, such as Postgres, gives each transaction its own connection instead.
+
+### Write your own backend
+
+As an example, a backend that publishes a site's content to the AT Protocol: pages, slugs, translations, and settings become records in the site owner's repository, uploaded files become blobs there, and everything private, plus the references, lives in Postgres next to the server.
+
+Start with its storage, the things it is built on:
+
+```ts
+import type { Agent } from '@atproto/api';
+import type { Sql } from 'postgres';
+
+export type AtprotoStorage = {
+	/** Signed in as the account that owns the site's repository. */
+	agent: Agent;
+	/** The repository the site is published to. */
+	did: string;
+	/** Private records, references, and asset bookkeeping. */
+	sql: Sql;
+};
+```
+
+Then implement the interface over it. A sketch, with the small helpers left out:
+
+```ts
+import type { Backend } from '#lib/server/backend.js';
+
+export function atproto_backend(storage: AtprotoStorage): Backend {
+	return {
+		name: 'atproto',
+		storage,
+		// Public: one record per document under its id, written with putRecord
+		documents: repo_collection(storage, 'com.example.editable.document', (r) => r.document_id),
+		slugs: repo_collection(storage, 'com.example.editable.slug', (r) => r.slug),
+		translations: repo_collection(storage, 'com.example.editable.translation', (r) =>
+			translation_key(r.document_id, r.language)
+		),
+		settings: repo_collection(storage, 'com.example.editable.setting', (r) => r.key),
+		// Private: one Postgres table each
+		document_refs: table(storage, 'document_refs', 'document_id'),
+		asset_refs: table(storage, 'asset_refs', 'document_id'),
+		sessions: table(storage, 'sessions', 'session_id'),
+		// …login_throttle and the OAuth tables the same way
+
+		// Buffer repository writes and send them as one applyWrites call with
+		// swapCommit, throwing a ConflictError if the repository moved on, then
+		// commit the Postgres writes in one SQL transaction.
+		transaction: (fn) => atproto_transaction(storage, fn),
+
+		// Upload as a blob, and keep a record that refers to it so the
+		// repository keeps it; Postgres tracks when it was last used.
+		write_asset: (asset_id, data) => upload_blob(storage, asset_id, data),
+		read_asset: (asset_id, options) => read_blob(storage, asset_id, options),
+		// …
+
+		applied_migrations: async () =>
+			(await storage.sql`SELECT id FROM _migrations ORDER BY id`).map((row) => row.id),
+		record_migration: async (id) => {
+			await storage.sql`INSERT INTO _migrations (id) VALUES (${id})`;
+		},
+		close: () => storage.sql.end()
+	};
+}
+```
+
+Here a save is atomic in the repository and in Postgres, but not across the two: a crash in between can leave a document's references behind its content. The references are computed, so the API can rebuild them.
+
+How a backend meets the interface is its own business. Reading every record from a repository on each request is slow, so a real one would cache, or load the site into a working copy and write the changes back after each save. Credentials can be per site, too: a host serving many sites creates a backend per site with its owner's session and passes it as `backend` in `event.locals.site`.
+
+Use it by returning it from `create_backend` in `src/app/server_backend.ts`:
+
+```ts
+export function create_backend(): Backend {
+	return atproto_backend({ agent, did: SITE_DID, sql: postgres(DATABASE_URL) });
+}
+```
+
+The backend's storage migrations target its name and receive its storage. Its first one creates the Postgres tables:
+
+```ts
+import type { Migration } from '#lib/server/migrations.js';
+import type { AtprotoStorage } from '../backends/atproto_backend.js';
+
+export default {
+	target: 'atproto',
+	async up({ sql }: AtprotoStorage) {
+		await sql`CREATE TABLE IF NOT EXISTS sessions (session_id TEXT PRIMARY KEY, expires BIGINT NOT NULL)`;
+		// …the other private tables
+	}
+} satisfies Migration;
+```
+
+Every storage change in `src/app/migrations` needs a file for every backend in use, so an Editable release that adds a table to SQLite stops your site from starting until your backend has its own file for that change, even an empty one. Add it with `--join` (see [Placing a migration](#placing-a-migration)). Content migrations need nothing from you: they go through the interface and run on every backend.
+
+The `pnpm data:*` commands, backups, and Litestream work on `sqlite_backend`'s data folder. A backend of your own brings its own way to back up its storage.
+
 ## File storage (experimental)
 
 Keep a site in plain files instead of a SQLite database: every document as an EDF file, every other record as JSON, so the folder can be read, diffed, and versioned like source code.
@@ -1107,7 +1299,7 @@ Convert your site in place, with the dev server stopped:
 pnpm data:convert --to files
 ```
 
-Editable reads the format from the data folder, so `pnpm dev` then opens the files. The site lives in `data/site`: `documents/<id>.edf` for each page, banner, nav, and footer, `documents.json` with their types and timestamps, and one JSON file each for slugs, settings, translations, references, sessions, and MCP connections. `_migrations.json` lists the file database's storage migrations that have run, like SQLite's `_migrations` table. Assets stay in `data/assets`, shared by both formats.
+Editable reads the format from the data folder, so `pnpm dev` then opens the files. The site lives in `data/site`: `documents/<id>.edf` for each page, banner, nav, and footer, `documents.json` with their types and timestamps, and one JSON file each for slugs, settings, translations, references, sessions, the login throttle, and MCP connections. `_migrations.json` lists the files backend's storage migrations that have run, like SQLite's `_migrations` table. Assets stay in `data/assets`, shared by both formats.
 
 The database the conversion replaced moves to `data-backups/` as a regular backup that `pnpm data:backups` lists. `pnpm data:convert --to sqlite` converts back the same way, keeping the files version in a dated folder in `data-backups/`.
 
@@ -1127,7 +1319,7 @@ event.locals.site = {
 	origin: 'https://host.example',
 	base: '/alice',
 	languages: [],
-	storage: storage_for(dir),
+	backend,
 	auth
 };
 ```
@@ -1135,7 +1327,7 @@ event.locals.site = {
 - `origin` is the public origin, used for canonical URLs, the sitemap, and the canonical host redirect.
 - `base` is the path the site is served under, or `''` at the root. Stored links never include it: `/about` stays `/about` in the database, reaches the browser as `/alice/about` the way language prefixes do, and is stored without it again, so a site can move to another path or its own domain without changing content. Components render `node.href` as is; asset URLs and the editor's own navigation go through `resolve_href(href, site)`.
 - `languages` lists the site's languages, the main language first, or none.
-- `storage` is the site's `Storage` (`src/lib/server/storage/storage.ts`): its `db`, holding documents, settings, and every other record, and its `assets`, the uploaded files. The `Database` interface is a few collections of records with get, all, put, and delete each, plus a transaction wrapper, the backend's own migrations, and `close`; the `Assets` interface reads and writes files. Their backends live in `src/lib/server/storage/backends/`: `sqlite_database`, `file_database`, and `file_assets`. `storage_for(dir)` from `src/app/storage.ts` gives a data folder's storage, with the database in the format the folder holds and the assets in its `assets` folder. Run `migrate` from `src/app/migrations.ts` on its `db` before use, which brings its backend's format and then its content up to date and seeds a new site. Editable reads and writes through the storage for the request and caches nothing; opening, caching, and closing site data is up to the host. Asset cleanup deletes files the site's records no longer reference, so a host that shares asset files between sites supplies asset functions that keep them.
+- `backend` is where the site's records and asset files go (see [Backends](#backends-experimental)). `backend_for(dir)` from `src/app/server_backend.ts` gives a data folder's backend in the format the folder holds. Run `migrate` from `src/app/migrations.ts` on it before use, which brings its storage and then its content up to date and seeds a new site. Editable reads and writes through the backend for the request and caches nothing; opening, caching, and closing site data is up to the host. Asset cleanup deletes files the site's records no longer reference, so a host that shares asset files between sites gives each a backend whose `delete_asset` keeps them.
 - `auth` decides who may edit the site and how they sign in, replacing the admin password. It implements `is_admin(event)`, `log_in(event, credentials)`, and `log_out(event)` (types in `src/app/server_admin_auth.ts`). `log_in` receives whatever the login dialog sends to `login_admin`; Editable's own dialog sends `{ password }`. It either starts a session or returns `{ ok: true, redirect }` to continue elsewhere: to sign in with OAuth, have your own login dialog send a username, return the provider's authorization URL, and handle the callback in a route of your own that sets your session, which `is_admin` then reads. `event.url` in `log_in` is the page the login started from. Editable's own sessions use one cookie for the whole host, so a host serving several sites from one origin scopes its sessions to the site, for example with a cookie that names it.
 
 To replace the login dialog itself, for example to ask for a username, to offer several sign-in providers, or when embedding Editable in another environment, set your own component in place of `AuthDialog` as `auth_dialog` in `system_components` in `src/app/document_config.ts`. It opens in the same drawer and receives `onlogin_success`, to call after signing in on the page, and `onedit_for_fun`, for editing without saving (see `AuthDialogProps` in `src/app/components/AuthDialog.svelte`):
@@ -1147,11 +1339,11 @@ system_components: {
 },
 ```
 
-Requests for `/alice/...` must reach Editable's routes, either through a proxy that strips the base or through a `reroute` hook that maps `/alice/about` to `/about`. When no site is set, Editable uses its own from the environment and opens its database in `DATA_DIR` on first use, so single-site deployments need no changes. Backups and the `pnpm data:*` commands work on `DATA_DIR` and are not used for host-provided storage.
+Requests for `/alice/...` must reach Editable's routes, either through a proxy that strips the base or through a `reroute` hook that maps `/alice/about` to `/about`. When no site is set, Editable uses its own from the environment and opens its backend from `create_backend` on first use, so single-site deployments need no changes. Backups and the `pnpm data:*` commands work on `DATA_DIR` and are not used for host-provided backends.
 
 Commands sent by the editor carry the page's path, so `event.url` is the page URL and the host can read the site from it. Queries do not, so for them a path-based host can only find the site through the `Referer` header; a host that gives each site its own hostname has no such gap. Routes the host adds, such as a registration page, need adding to `RESERVED_ROUTE_SLUGS` in `src/app/config.ts`, or a page of the root site could take their path.
 
-Each site is its own MCP server and OAuth authorization server at its origin and base, with its clients and approvals in its own storage. For a site under a path, the discovery documents are expected at the host root with the site's path inserted, as in `/.well-known/oauth-authorization-server/alice` and `/.well-known/oauth-protected-resource/alice/mcp`, so the host's `reroute` maps those to Editable's discovery routes as well.
+Each site is its own MCP server and OAuth authorization server at its origin and base, with its clients and approvals in its own backend. For a site under a path, the discovery documents are expected at the host root with the site's path inserted, as in `/.well-known/oauth-authorization-server/alice` and `/.well-known/oauth-protected-resource/alice/mcp`, so the host's `reroute` maps those to Editable's discovery routes as well.
 
 ## Upgrading
 
@@ -1186,10 +1378,10 @@ Every migration lives in `src/app/migrations`, is discovered when SvelteKit buil
 
 There are two kinds, with the same shape:
 
-- **Content migrations** change the site's documents. They have no `target`, run on every storage backend, and work through the database and the helpers below. Which ones have run is stored with the site, so it travels when you [convert a site](#file-storage-experimental) to another backend. A new site starts with the current default content and never runs them.
-- **Storage migrations** change one backend's own format, such as a SQLite table. They name their backend as `target: 'sqlite'` or `target: 'files'`, and which ones have run is kept by the backend itself.
+- **Content migrations** change the site's documents. They have no `target`, run on every backend, and work through the backend's collections and the helpers below. Which ones have run is stored with the site, so it travels when you [convert a site](#file-storage-experimental) to another backend. A new site starts with the current default content and never runs them.
+- **Storage migrations** change how one backend keeps its data, such as a SQLite table. They name their backend as `target: 'sqlite'` or `target: 'files'`, receive its storage, and which ones have run is kept by the backend itself.
 
-When a site opens, its backend's pending storage migrations run first, so content migrations always see the database in its current format. With SQLite, each kind runs in one transaction: either the complete upgrade succeeds or nothing changes.
+When a site opens, its backend's pending storage migrations run first, so content migrations always see the backend in its current shape. With SQLite, each kind runs in one transaction: either the complete upgrade succeeds or nothing changes.
 
 Create a project migration with:
 
@@ -1203,9 +1395,9 @@ This creates a timestamped `custom` content migration. Its filename is its perma
 import type { ContentContext, Migration } from '#lib/server/migrations.js';
 
 export default {
-	up({ db, rename_property, update }: ContentContext) {
-		// Transform content with the helpers, or records with `db`.
-		// rename_property('hero', 'image', 'media');
+	async up({ backend, rename_property, update }: ContentContext) {
+		// Transform content with the helpers, or records through `backend`.
+		// await rename_property('hero', 'image', 'media');
 	}
 } satisfies Migration;
 ```
@@ -1214,25 +1406,25 @@ Adding a custom content type usually needs no migration because documents are st
 
 ### Content helpers
 
-Changing a node type's shape means rewriting stored documents rather than altering a column. The helpers on the `up` context do that for you — each one scans every document (pages, banner, nav, and footer), applies the change to nodes of the given type, and returns how many nodes it changed. Every helper takes the node type first, and where a before and after are involved, the old value comes before the new one:
+Changing a node type's shape means rewriting stored documents rather than altering a column. The helpers on the `up` context do that for you — each one scans every document (pages, banner, nav, and footer), applies the change to nodes of the given type, and resolves to how many nodes it changed. Every helper takes the node type first, and where a before and after are involved, the old value comes before the new one:
 
 ```js
 export default {
-	up({ rename_property, rename_type, replace_value, delete_property, update }) {
+	async up({ rename_property, rename_type, replace_value, delete_property, update }) {
 		// Rename a property, keeping its value
-		rename_property('hero', 'image', 'media');
+		await rename_property('hero', 'image', 'media');
 
 		// Rename a node type
-		rename_type('teaser', 'card');
+		await rename_type('teaser', 'card');
 
 		// Replace one value with another
-		replace_value('feature', 'layout', 'left_right_split', 'two_columns');
+		await replace_value('feature', 'layout', 'left_right_split', 'two_columns');
 
 		// Drop a property you removed from the schema
-		delete_property('hero', 'subtitle');
+		await delete_property('hero', 'subtitle');
 
 		// Anything else: mutate each matching node directly
-		update('hero', (node) => {
+		await update('hero', (node) => {
 			node.title = { ...node.title, content: node.title.content.trim() };
 		});
 	}
@@ -1245,9 +1437,9 @@ They are deliberately tolerant: a node that never had the property is left alone
 
 `delete_property` exists because stored content does not clean itself up. Saving a page drops nodes that are no longer reachable, but properties are written back exactly as they were loaded — so a property you removed from the schema stays in every document, and in every backup, until a migration removes it.
 
-`ensure_document` adds a whole document unless one with its id exists, such as a new shared document every page will refer to. Its type is its root node's, and it returns whether it added the document.
+`ensure_document` adds a whole document unless one with its id exists, such as a new shared document every page will refer to. Its type is its root node's, and it resolves to whether it added the document.
 
-`db` remains available for everything else: the site's records as collections with `get`, `all`, `put`, and `delete` (see `src/lib/server/storage/database.ts`), such as settings or slugs the helpers don't cover. Migrations are synchronous and may only change the site's records; filesystem, network, and other external side effects cannot be rolled back. Migrations are forward-only: never rename, delete, or edit one that has been applied. Roll back an upgrade by restoring the backup made before deployment.
+`backend` remains available for everything else: the site's records as collections with `get`, `all`, `put`, and `delete` (see `src/lib/server/backend.ts`), such as settings or slugs the helpers don't cover. Migrations are asynchronous, so await every helper and collection call, and may only change the site's records; filesystem, network, and other external side effects cannot be rolled back. Migrations are forward-only: never rename, delete, or edit one that has been applied. Roll back an upgrade by restoring the backup made before deployment.
 
 ### Storage migrations
 
@@ -1257,23 +1449,23 @@ A change to how a backend stores records, such as a new table, needs a storage m
 pnpm migration:create redirects --storage
 ```
 
-This writes one file per backend, sharing the change's timestamp and name, with the backend as a suffix: `…_redirects_sqlite.ts` and `…_redirects_files.ts`. Each states its target and receives what its backend offers, the [node:sqlite](https://nodejs.org/api/sqlite.html) handle as `db` for SQLite and the site's folder as `dir` for files:
+This writes one file per backend, sharing the change's timestamp and name, with the backend as a suffix: `…_redirects_sqlite.ts` and `…_redirects_files.ts`. Each states its target and receives its backend's storage: for SQLite the [node:sqlite](https://nodejs.org/api/sqlite.html) handle as `db`, for files the site's folder as `dir`:
 
 ```ts
 import type { Migration } from '#lib/server/migrations.js';
-import type { SqliteContext } from '#lib/server/storage/backends/sqlite_database.js';
+import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 export default {
 	target: 'sqlite',
-	up({ db }: SqliteContext) {
+	up({ db }: SqliteStorage) {
 		db.exec('CREATE TABLE IF NOT EXISTS redirects (path TEXT PRIMARY KEY, target TEXT NOT NULL)');
 	}
 } satisfies Migration;
 ```
 
-Where a backend needs nothing, its file stays with an empty `up`; the file database, for example, creates a collection's file on first write. The files must stay: a storage change missing a file for any backend stops the site from starting, whatever the change's date, and so does the test suite. That makes a forgotten backend, a misspelled target, or a backend added without migrations an error instead of a silent gap.
+Where a backend needs nothing, its file stays with an empty `up`; the files backend, for example, creates a collection's file on first write. The files must stay: a storage change missing a file for any backend stops the site from starting, whatever the change's date, and so does the test suite. That makes a forgotten backend, a misspelled target, or a backend added without migrations an error instead of a silent gap.
 
-A new backend starts with a file for every storage change in the folder, and a fresh database of any backend replays all of them in order.
+A new backend starts with a file for every storage change in the folder, and a fresh backend of any kind replays all of them in order.
 
 ### Placing a migration
 

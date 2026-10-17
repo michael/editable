@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
 import translations_schema from '#app/migrations/20260923T180000000Z_editable_translations.js';
+import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 const project_dir = resolve('.');
 const script_path = join(project_dir, 'scripts/data.sh');
@@ -18,8 +19,8 @@ function seed(data_dir: string, title: string) {
 	writeFileSync(join(data_dir, 'assets', 'asset.webp'), 'test asset');
 	const db = new DatabaseSync(join(data_dir, 'db.sqlite3'));
 	try {
-		initial_schema.up({ db });
-		translations_schema.up({ db });
+		initial_schema.up({ db } as SqliteStorage);
+		translations_schema.up({ db } as SqliteStorage);
 		db.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)').run(
 			'page',
 			'page',

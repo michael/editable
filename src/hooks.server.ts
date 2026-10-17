@@ -27,14 +27,14 @@ function get_canonical_redirect(url: URL, canonical_origin: URL, site: Site): st
 
 export const init: ServerInit = async () => {
 	if (!VERCEL) {
-		const { get_default_storage } = await import('#app/services.js');
-		get_default_storage();
+		const { get_default_backend } = await import('#app/services.js');
+		await get_default_backend();
 
 		const { warn_about_shadowed_pages } = await import('#app/markdown/shadowed.js');
-		warn_about_shadowed_pages();
+		await warn_about_shadowed_pages();
 
 		const { warn_about_language_slug_collisions } = await import('#app/server_language_slugs.js');
-		warn_about_language_slug_collisions();
+		await warn_about_language_slug_collisions();
 	}
 };
 

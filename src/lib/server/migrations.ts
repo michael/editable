@@ -1,5 +1,5 @@
 import type { MigrationHelpers } from './migration_helpers.js';
-import type { Database } from './storage/database.js';
+import type { Backend } from './backend.js';
 
 /**
  * A migration file. Without a target it changes content and runs on every
@@ -10,9 +10,9 @@ import type { Database } from './storage/database.js';
 export type Migration = { target?: string; up: (context: any) => unknown };
 
 /** What a content migration receives. */
-export type ContentContext = { db: Database } & MigrationHelpers;
+export type ContentContext = { backend: Backend } & MigrationHelpers;
 
-export type LoadedMigration = { id: string; target: string; up: (context: unknown) => unknown };
+export type LoadedMigration = { id: string; target: string; up: (context: any) => unknown };
 
 const FILENAME = /^\d{8}T\d{9}Z_[a-z][a-z0-9-]*_[a-z0-9]+(?:_[a-z0-9]+)*\.ts$/;
 
@@ -34,7 +34,6 @@ export function load_migrations(modules: Record<string, Migration>): LoadedMigra
 			if (migration.target !== undefined && !/^[a-z][a-z0-9]*$/.test(migration.target))
 				throw fail(`has an invalid target "${migration.target}".`);
 			if (typeof migration.up !== 'function') throw fail('must have an up function.');
-			if (migration.up.constructor.name === 'AsyncFunction') throw fail('must be synchronous.');
 			return {
 				id: filename.slice(0, -'.ts'.length),
 				target: migration.target ?? 'content',
@@ -78,12 +77,12 @@ export function assert_complete(migrations: LoadedMigration[], opened_target: st
  * code does not know. Warns when a migration runs behind a later one already
  * applied, which happens when migrations arrive out of order.
  */
-export function run_migrations(
+export async function run_migrations(
 	migrations: LoadedMigration[],
 	target: string,
 	applied: Set<string>,
 	context: unknown,
-	record: (id: string) => void
+	record: (id: string) => Promise<void>
 ) {
 	const known = new Set(migrations.map((migration) => migration.id));
 	const unknown = [...applied].filter((id) => !known.has(id));
@@ -105,14 +104,10 @@ export function run_migrations(
 			console.warn(`Running migration ${migration.id} after ${latest}, which was applied first.`);
 		console.log('Running migration... ', migration.id);
 		try {
-			const result = migration.up(context);
-			if (result && typeof (result as Promise<unknown>).then === 'function') {
-				(result as Promise<unknown>).catch(() => {});
-				throw new Error('up returned a Promise; migrations must be synchronous.');
-			}
+			await migration.up(context);
 		} catch (error) {
 			throw new Error(`Migration "${migration.id}" failed.`, { cause: error });
 		}
-		record(migration.id);
+		await record(migration.id);
 	}
 }

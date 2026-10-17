@@ -12,28 +12,28 @@ vi.mock('./services.js', async () => {
 	const { mkdtempSync } = await import('node:fs');
 	const { tmpdir } = await import('node:os');
 	const { join } = await import('node:path');
-	const { sqlite_database } = await import('#lib/server/storage/backends/sqlite_database.js');
+	const { sqlite_backend } = await import('#lib/server/backends/sqlite_backend.js');
+	const { webp_dimensions } = await import('#lib/server/webp.js');
 	const sqlite = new DatabaseSync(':memory:');
-	const asset_dir = mkdtempSync(join(tmpdir(), 'editable-assets-'));
+	const backend = sqlite_backend({
+		db: sqlite,
+		asset_dir: mkdtempSync(join(tmpdir(), 'editable-assets-'))
+	});
 	return {
 		sqlite,
-		db: sqlite_database(sqlite),
-		asset_exists: () => true,
-		asset_path: (asset_id: string) => join(asset_dir, asset_id),
-		variant_path: (asset_id: string, width: number) =>
-			join(asset_dir, asset_id.replace(/\.[^.]+$/, ''), `w${width}.webp`),
-		touch_asset: vi.fn(),
-		delete_orphaned_assets: vi.fn(),
-		with_transaction: <T>(callback: () => T) => callback()
+		backend,
+		// Originals count as uploaded; variants must exist.
+		asset_exists: async (asset_id: string, variant?: string) =>
+			!variant || (await backend.asset_size(asset_id, variant)) !== null,
+		asset_webp_dimensions: async (asset_id: string) => {
+			const stream = await backend.read_asset(asset_id);
+			return stream && webp_dimensions(new Uint8Array(await new Response(stream).arrayBuffer()));
+		}
 	};
 });
 
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
 import * as services from './services.js';
-const { asset_path, sqlite, variant_path } = services as unknown as typeof services & {
-	sqlite: DatabaseSync;
-};
+const { backend, sqlite } = services as unknown as typeof services & { sqlite: DatabaseSync };
 import { webp_bytes } from './test_helpers/webp.js';
 import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
 import translations_schema from '#app/migrations/20260923T180000000Z_editable_translations.js';
@@ -45,6 +45,7 @@ import {
 } from './default_site.js';
 import { combine_page_document, get_doc_from_db } from './server_documents.js';
 import { create_mcp_page, read_mcp_document, write_mcp_document } from './server_mcp_documents.js';
+import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 const page_id = default_page_document.document_id;
 const banner_id = default_banner_document.document_id;
@@ -57,8 +58,8 @@ beforeEach(() => {
 	sqlite.exec(
 		'DROP TABLE IF EXISTS documents; DROP TABLE IF EXISTS site_settings; DROP TABLE IF EXISTS document_refs; DROP TABLE IF EXISTS asset_refs; DROP TABLE IF EXISTS document_slugs; DROP TABLE IF EXISTS sessions; DROP TABLE IF EXISTS translations'
 	);
-	initial_schema.up({ db: sqlite });
-	translations_schema.up({ db: sqlite });
+	initial_schema.up({ db: sqlite } as SqliteStorage);
+	translations_schema.up({ db: sqlite } as SqliteStorage);
 	sqlite.prepare("INSERT INTO site_settings VALUES ('home_page_id', ?)").run(page_id);
 	for (const [type, doc] of [
 		['page', default_page_document],
@@ -74,7 +75,8 @@ beforeEach(() => {
 
 const read = (document = '/', language?: string) => read_mcp_document(document, language);
 
-function save(edf: string, expected_version = read().version!) {
+async function save(edf: string, expected_version?: string) {
+	expected_version ??= (await await read()).version!;
 	return write_mcp_document({ edf, expected_version });
 }
 
@@ -86,7 +88,7 @@ function updated_at(document_id: string) {
 	).updated_at;
 }
 
-const page_json = () => combine_page_document(get_doc_from_db(page_id));
+const page_json = async () => combine_page_document(await get_doc_from_db(page_id));
 
 /** Set the page title, which the default page leaves empty. */
 function set_title(edf: string, title: string) {
@@ -112,7 +114,7 @@ function create(
 }
 
 it('writes only changed documents, versions the result, and skips saves without edits', async () => {
-	const { edf, version } = read();
+	const { edf, version } = await read();
 	expect(edf).toMatch(
 		new RegExp(
 			`^<page id="${page_id}" banner="${banner_id}" nav="${nav_id}" footer="${footer_id}">`
@@ -124,24 +126,24 @@ it('writes only changed documents, versions the result, and skips saves without 
 
 	const result = await save(set_title(edf, 'New &amp; improved'), version!);
 	expect(result.version).not.toBe(version);
-	expect(read()).toMatchObject({ version: result.version });
-	expect(page_json().nodes[page_id].title.content).toBe('New & improved');
+	expect(await read()).toMatchObject({ version: result.version });
+	expect((await page_json()).nodes[page_id].title.content).toBe('New & improved');
 	expect(updated_at(page_id)).not.toBe('v0');
 	for (const id of [banner_id, nav_id, footer_id]) expect(updated_at(id)).toBe('v0');
 
 	// The returned version continues editing; the version it replaced is stale.
-	await save(read().edf, result.version);
+	await save((await read()).edf, result.version);
 	await expect(save(edf, version!)).rejects.toThrow('The document changed since it was read');
 });
 
 it('fills defaults and assigns ids to new nodes and marks', async () => {
 	await save(
 		append_blocks(
-			read().edf,
+			(await read()).edf,
 			'\t\t<prose><body><paragraph>Hi <strong>there</strong></paragraph></body></prose>'
 		)
 	);
-	const { nodes } = page_json();
+	const { nodes } = await page_json();
 	const paragraph = Object.values(nodes).find((node) => node.content?.content === 'Hi there')!;
 	expect(paragraph).toMatchObject({ type: 'paragraph', layout: 'regular' });
 	expect(paragraph.id).toMatch(/^[A-Za-z]{23}$/);
@@ -155,22 +157,22 @@ it('fills defaults and assigns ids to new nodes and marks', async () => {
 });
 
 it('drops nodes left out of the document', async () => {
-	const { nodes } = page_json();
+	const { nodes } = await page_json();
 	const removed_id = nodes[page_id].body.nodes.at(-1)!;
 	const type = nodes[removed_id].type;
 	const element = new RegExp(
 		`\\n\\t*<${type} id="${removed_id}"(?:[^>]*/>|[^>]*>[\\s\\S]*?\\n\\t*</${type}>)`
 	);
-	const { edf } = read();
+	const { edf } = await read();
 	expect(edf).toMatch(element);
 	await save(edf.replace(element, ''));
-	expect(page_json().nodes[removed_id]).toBeUndefined();
-	expect(page_json().nodes[page_id].body.nodes).not.toContain(removed_id);
+	expect((await page_json()).nodes[removed_id]).toBeUndefined();
+	expect((await page_json()).nodes[page_id].body.nodes).not.toContain(removed_id);
 });
 
 it('rejects duplicate ids, unsafe links, misplaced marks, and shared reference changes', async () => {
-	const { edf, version } = read();
-	const first_block = page_json().nodes[page_id].body.nodes[0];
+	const { edf, version } = await read();
+	const first_block = (await page_json()).nodes[page_id].body.nodes[0];
 	const duplicated = append_blocks(
 		edf,
 		`\t\t<prose id="${first_block}"><body><paragraph>x</paragraph></body></prose>`
@@ -193,7 +195,7 @@ it('rejects duplicate ids, unsafe links, misplaced marks, and shared reference c
 	await expect(save(dropped_nav, version!)).rejects.toThrow(`Keep nav="${nav_id}" on the page`);
 
 	// A node property as an attribute refers to another document, never to a left-out node.
-	const image_id = page_json().nodes[page_id].image;
+	const image_id = (await page_json()).nodes[page_id].image;
 	const referenced_image = edf
 		.replace(/\t<image>\n[^\n]*\n\t<\/image>\n/, '')
 		.replace(`<page id="${page_id}"`, `<page id="${page_id}" image="${image_id}"`);
@@ -201,57 +203,57 @@ it('rejects duplicate ids, unsafe links, misplaced marks, and shared reference c
 	await expect(save(referenced_image, version!)).rejects.toThrow(
 		`${page_id}.image refers to ${image_id}, which is not in this document`
 	);
-	expect(read().version).toBe(version);
+	expect((await read()).version).toBe(version);
 });
 
 it('reads and writes shared documents on their own, never inside a page', async () => {
-	const nav = read(nav_id);
+	const nav = await read(nav_id);
 	expect(nav).toMatchObject({ document_id: nav_id, page_href: null });
 	expect(nav.edf).toMatch(new RegExp(`^<nav id="${nav_id}">`));
 	expect((await save(nav.edf, nav.version!)).version).toBe(nav.version);
 	expect(updated_at(nav_id)).toBe('v0');
 
 	// Filling in a nav link changes the nav document, not the page.
-	const page_version = read().version;
+	const page_version = (await read()).version;
 	const edited = nav.edf.replace(
 		/<nav_link id="(\w+)" href="" target="_self">(\s*)<label><\/label>/,
 		'<nav_link id="$1" href="/about" target="_self">$2<label>Renamed</label>'
 	);
 	expect(edited).not.toBe(nav.edf);
 	const written = await save(edited, nav.version!);
-	expect(written).toEqual({ ok: true, document_id: nav_id, version: read(nav_id).version });
+	expect(written).toEqual({ ok: true, document_id: nav_id, version: (await read(nav_id)).version });
 	expect(updated_at(nav_id)).not.toBe('v0');
 	expect(updated_at(page_id)).toBe('v0');
-	expect(JSON.stringify(get_doc_from_db(nav_id))).toContain('Renamed');
+	expect(JSON.stringify(await get_doc_from_db(nav_id))).toContain('Renamed');
 	// A page's version covers its shared documents, so pages read before the edit are stale.
-	expect(read().version).not.toBe(page_version);
+	expect((await read()).version).not.toBe(page_version);
 
 	// The nav cannot be written as part of a page or as another type.
-	const { edf, version } = read();
+	const { edf, version } = await read();
 	const nav_inside = edf
 		.replace(` nav="${nav_id}"`, '')
-		.replace('\t<body>', `\t<nav>\n${read(nav_id).edf}\t</nav>\n\t<body>`);
+		.replace('\t<body>', `\t<nav>\n${(await read(nav_id)).edf}\t</nav>\n\t<body>`);
 	await expect(save(nav_inside, version!)).rejects.toThrow(`read_document ${nav_id}`);
 	await expect(
-		save(`<footer id="${nav_id}"><body></body></footer>`, read(nav_id).version!)
+		save(`<footer id="${nav_id}"><body></body></footer>`, (await read(nav_id)).version!)
 	).rejects.toThrow(`${nav_id} is a nav`);
 
 	// Shared documents are translated on their own too.
-	const de = read(nav_id, 'de');
+	const de = await read(nav_id, 'de');
 	const translated = await write_mcp_document({
 		edf: de.edf.replace('<label>Renamed</label>', '<label>Umbenannt</label>'),
 		expected_version: de.version!,
 		language: 'de'
 	});
 	expect(translated).toMatchObject({ ok: true, document_id: nav_id, language: 'de' });
-	expect(read(nav_id, 'de').edf).toContain('<label>Umbenannt</label>');
-	expect(read(nav_id).edf).toContain('<label>Renamed</label>');
+	expect((await read(nav_id, 'de')).edf).toContain('<label>Umbenannt</label>');
+	expect((await read(nav_id)).edf).toContain('<label>Renamed</label>');
 });
 
 it('creates pages linked to the shared documents with a slug from the title', async () => {
 	const result = await create('about');
 	expect(result).toMatchObject({ page_href: '/about-us', title: 'About us' });
-	const { edf, version } = read('/about-us');
+	const { edf, version } = await read('/about-us');
 	expect(version).toBe(result.version);
 	expect(edf).toContain(`nav="${nav_id}"`);
 	// The empty preview image states every value, defaults included.
@@ -281,52 +283,54 @@ it('resolves documents by path, URL, language prefix, old slug, and id', async (
 		'https://www.example.com/about-us?ref=1#top',
 		'/old-about/'
 	])
-		expect(read_mcp_document(page).page_href).toBe('/about-us');
+		expect((await read_mcp_document(page)).page_href).toBe('/about-us');
 	// A language prefix reads that language's version.
-	expect(read_mcp_document('/de/old-about').page_href).toBe('/de/about-us');
-	expect(read_mcp_document('https://example.com/de').page_href).toBe('/de');
-	expect(() => read_mcp_document('/missing')).toThrow('Document not found: /missing');
+	expect((await read_mcp_document('/de/old-about')).page_href).toBe('/de/about-us');
+	expect((await read_mcp_document('https://example.com/de')).page_href).toBe('/de');
+	await expect(read_mcp_document('/missing')).rejects.toThrow('Document not found: /missing');
 });
 
 it('reads and saves translations without structural changes', async () => {
 	await create('about');
-	const de = read('/de/about-us');
+	const de = await read('/de/about-us');
 	expect(de).toMatchObject({ page_href: '/de/about-us', language: 'de', languages: ['en', 'de'] });
 	const translate = (edf: string, expected_version: string) =>
 		write_mcp_document({ edf, expected_version, language: 'de' });
 
 	const saved = await translate(set_title(de.edf, 'Über uns'), de.version!);
 	expect(saved).toMatchObject({ page_href: '/de/about-us', title: 'Über uns' });
-	expect(read('about', 'de')).toMatchObject({ version: saved.version });
-	expect(read('/about-us').edf).toContain('<title>About us</title>');
-	expect(read('/de/about-us').edf).toContain('<title>Über uns</title>');
+	expect(await read('about', 'de')).toMatchObject({ version: saved.version });
+	expect((await read('/about-us')).edf).toContain('<title>About us</title>');
+	expect((await read('/de/about-us')).edf).toContain('<title>Über uns</title>');
 
-	const restructured = read('/de/about-us').edf.replace(/<body>[\s\S]*<\/body>/, '<body></body>');
+	const restructured = (await read('/de/about-us')).edf.replace(
+		/<body>[\s\S]*<\/body>/,
+		'<body></body>'
+	);
 	await expect(translate(restructured, saved.version)).rejects.toThrow(
 		'Translations can save text, inline formatting, and media only'
 	);
-	expect(() => read('/about-us', 'fr')).toThrow('Language fr is not enabled');
+	await expect(read('/about-us', 'fr')).rejects.toThrow('Language fr is not enabled');
 
 	// Text equal to the main language removes the translation.
-	await translate(set_title(read('/de/about-us').edf, 'About us'), saved.version);
+	await translate(set_title((await read('/de/about-us')).edf, 'About us'), saved.version);
 	expect(sqlite.prepare('SELECT value FROM translations').all()).toEqual([]);
 });
 
 it('requires new images to match their file and have every variant', async () => {
 	const asset_id = `${'a'.repeat(64)}.webp`;
-	writeFileSync(asset_path(asset_id), webp_bytes(1000, 500));
+	await backend.write_asset(asset_id, webp_bytes(1000, 500));
 	const figure = (width: number) =>
 		`\t\t<figure id="figure"><media><image id="figure_image" src="${asset_id}" mime_type="image/webp" width="${width}" height="500"/></media></figure>`;
-	const { edf, version } = read();
+	const { edf, version } = await read();
 
 	await expect(save(append_blocks(edf, figure(1000)), version!)).rejects.toThrow(
 		'is missing variants 320, 640'
 	);
 	for (const width of [320, 640]) {
-		mkdirSync(dirname(variant_path(asset_id, width)), { recursive: true });
-		writeFileSync(variant_path(asset_id, width), webp_bytes(width, width / 2));
+		await backend.write_asset(asset_id, webp_bytes(width, width / 2), `w${width}.webp`);
 	}
 	await expect(save(append_blocks(edf, figure(1200)), version!)).rejects.toThrow('do not match');
 	await save(append_blocks(edf, figure(1000)), version!);
-	expect(read().edf).toContain(`<image id="figure_image" src="${asset_id}"`);
+	expect((await read()).edf).toContain(`<image id="figure_image" src="${asset_id}"`);
 });

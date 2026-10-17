@@ -1,9 +1,9 @@
 import type { Migration } from '#lib/server/migrations.js';
-import type { SqliteContext } from '#lib/server/storage/backends/sqlite_database.js';
+import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 export default {
 	target: 'sqlite',
-	up({ db }: SqliteContext) {
+	up({ db }: SqliteStorage) {
 		db.exec(`
 			CREATE TABLE documents (
 				document_id TEXT NOT NULL PRIMARY KEY,

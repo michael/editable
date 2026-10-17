@@ -1,11 +1,11 @@
 import type { Migration } from '#lib/server/migrations.js';
-import type { SqliteContext } from '#lib/server/storage/backends/sqlite_database.js';
+import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 // OAuth for the MCP endpoint: registered clients, time-limited grants, and the
 // codes and tokens issued under them (stored as hashes only).
 export default {
 	target: 'sqlite',
-	up({ db }: SqliteContext) {
+	up({ db }: SqliteStorage) {
 		db.exec(`
 			CREATE TABLE oauth_clients (
 				client_id TEXT NOT NULL PRIMARY KEY,

@@ -271,7 +271,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	// Access tokens come from the OAuth flow; the 401 challenge points clients to its metadata.
 	const { resource_metadata_url, verify_access_token } = await import('#app/server_oauth.js');
 	const token = /^Bearer (\S+)$/i.exec(request.headers.get('authorization') ?? '')?.[1];
-	const grant = token ? verify_access_token(token) : null;
+	const grant = token ? await verify_access_token(token) : null;
 	if (!grant) {
 		const invalid = token ? ', error="invalid_token"' : '';
 		return new Response('Unauthorized', {

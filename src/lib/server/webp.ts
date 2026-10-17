@@ -1,6 +1,5 @@
-import { closeSync, openSync, readSync } from 'node:fs';
-
-const HEADER_BYTES = 30;
+/** How many bytes from the start of a file webp_dimensions needs. */
+export const WEBP_HEADER_BYTES = 30;
 
 function read_uint24(bytes: Uint8Array, offset: number) {
 	return bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16);
@@ -9,7 +8,8 @@ function read_uint24(bytes: Uint8Array, offset: number) {
 /** Read pixel dimensions from a WebP header, or null if the bytes are not a WebP image. */
 export function webp_dimensions(bytes: Uint8Array): { width: number; height: number } | null {
 	const ascii = (start: number, end: number) => String.fromCharCode(...bytes.subarray(start, end));
-	if (bytes.length < HEADER_BYTES || ascii(0, 4) !== 'RIFF' || ascii(8, 12) !== 'WEBP') return null;
+	if (bytes.length < WEBP_HEADER_BYTES || ascii(0, 4) !== 'RIFF' || ascii(8, 12) !== 'WEBP')
+		return null;
 
 	const chunk = ascii(12, 16);
 	// Extended format: 24-bit canvas width and height minus one.
@@ -29,15 +29,4 @@ export function webp_dimensions(bytes: Uint8Array): { width: number; height: num
 		};
 	}
 	return null;
-}
-
-export function read_webp_dimensions(file_path: string) {
-	const bytes = new Uint8Array(HEADER_BYTES);
-	const fd = openSync(file_path, 'r');
-	try {
-		readSync(fd, bytes, 0, HEADER_BYTES, 0);
-	} finally {
-		closeSync(fd);
-	}
-	return webp_dimensions(bytes);
 }

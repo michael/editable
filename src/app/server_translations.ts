@@ -5,9 +5,9 @@ import { assert_safe_hrefs, normalize_hrefs, resolve_hrefs } from './document_li
 import { createHash } from 'node:crypto';
 import { error } from '@sveltejs/kit';
 import { fill_document_defaults, validate_document, validate_node, type Document } from 'svedit';
-import { db, with_transaction, asset_exists } from './services.js';
+import { backend, asset_exists } from './services.js';
 import { rebuild_asset_refs } from './server_asset_refs.js';
-import { translation_key } from '#lib/server/storage/database.js';
+import { translation_key } from '#lib/server/backend.js';
 import { document_schema } from './document_schema.js';
 import { select_language } from './languages.js';
 import {
@@ -27,26 +27,23 @@ type TranslationRow = {
 	value: string;
 };
 
-function load_records(document_id: string) {
-	const read = (id: string): Document => {
-		const record = db.documents.get(id);
+async function load_records(document_id: string) {
+	const read = async (id: string): Promise<Document> => {
+		const record = await backend.documents.get(id);
 		if (!record) error(404, 'Document not found');
 		return record.data;
 	};
-	const page = read(document_id);
+	const page = await read(document_id);
 	const root = page.nodes[document_id];
-	return [
-		page,
-		...[root.banner, root.nav, root.footer]
-			.filter((id): id is string => typeof id === 'string')
-			.map(read)
-	];
+	const shared = [root.banner, root.nav, root.footer].filter(
+		(id): id is string => typeof id === 'string'
+	);
+	return [page, ...(await Promise.all(shared.map(read)))];
 }
 
-function read_rows(records: Document[], language: string): TranslationRow[] {
+async function read_rows(records: Document[], language: string): Promise<TranslationRow[]> {
 	const ids = new Set(records.map((doc) => doc.document_id));
-	return db.translations
-		.all()
+	return (await backend.translations.all())
 		.filter((row) => row.language === language && ids.has(row.document_id))
 		.sort((a, b) => a.document_id.localeCompare(b.document_id));
 }
@@ -65,11 +62,11 @@ function compose(records: Document[]): Document {
 	);
 }
 
-export function translated_document(document_id: string, requested?: string) {
+export async function translated_document(document_id: string, requested?: string) {
 	const { languages } = site;
 	const language = select_language(languages, requested);
-	const records = load_records(document_id);
-	const rows = language && language !== languages[0] ? read_rows(records, language) : [];
+	const records = await load_records(document_id);
+	const rows = language && language !== languages[0] ? await read_rows(records, language) : [];
 	const document = overlay_document(compose(records), records, rows);
 	return { document, language, languages, translation_revision: revision(records, rows) };
 }
@@ -153,9 +150,14 @@ function normalized_map(map: TranslationMap) {
 	);
 }
 
-function write_map(document_id: string, language: string, map: TranslationMap, previous?: string) {
+async function write_map(
+	document_id: string,
+	language: string,
+	map: TranslationMap,
+	previous?: string
+) {
 	if (!Object.keys(map).length) {
-		db.translations.delete(translation_key(document_id, language));
+		await backend.translations.delete(translation_key(document_id, language));
 		return;
 	}
 	if (previous) {
@@ -165,7 +167,7 @@ function write_map(document_id: string, language: string, map: TranslationMap, p
 			// Saving or cleanup replaces malformed stored overrides.
 		}
 	}
-	db.translations.put({
+	await backend.translations.put({
 		document_id,
 		language,
 		value: JSON.stringify(map),
@@ -173,21 +175,21 @@ function write_map(document_id: string, language: string, map: TranslationMap, p
 	});
 }
 
-export function translate_shared_document(source: Document, requested: string) {
+export async function translate_shared_document(source: Document, requested: string) {
 	const language = select_language(site.languages, requested);
 	if (!language || language === site.languages[0]) return source;
 	return resolve_hrefs(
 		overlay_document(
 			fill_document_defaults(source, document_schema),
 			[source],
-			read_rows([source], language)
+			await read_rows([source], language)
 		),
 		site,
 		language
 	);
 }
 
-export function save_translated_document(input: {
+export async function save_translated_document(input: {
 	document_id: string;
 	nodes: Document['nodes'];
 	language: string;
@@ -196,9 +198,9 @@ export function save_translated_document(input: {
 	const { languages } = site;
 	if (!languages.includes(input.language) || input.language === languages[0])
 		error(400, 'Translation language is not enabled');
-	return with_transaction(() => {
-		const records = load_records(input.document_id);
-		const rows = read_rows(records, input.language);
+	return backend.transaction(async () => {
+		const records = await load_records(input.document_id);
+		const rows = await read_rows(records, input.language);
 		if (revision(records, rows) !== input.translation_revision)
 			error(
 				409,
@@ -244,29 +246,30 @@ export function save_translated_document(input: {
 				continue;
 			if ('node_id' in payload) {
 				const media = payload.nodes[payload.node_id];
-				if (media.src && (!ASSET_ID_REGEX.test(media.src) || !asset_exists(media.src)))
+				if (media.src && (!ASSET_ID_REGEX.test(media.src) || !(await asset_exists(media.src))))
 					error(400, 'Upload translated media before saving. Your draft is still open.');
 			}
 			const map = maps.get(owner_id)!;
 			(map[node_id] ??= {})[property_id] = payload;
 		}
 		for (const [document_id, map] of maps)
-			write_map(
+			await write_map(
 				document_id,
 				input.language,
 				map,
 				rows.find((row) => row.document_id === document_id)?.value
 			);
-		for (const record of records) rebuild_asset_refs(record.document_id);
+		for (const record of records) await rebuild_asset_refs(record.document_id);
 		return { ok: true };
 	});
 }
 
-export function cleanup_translations(document_id: string) {
-	const rows = db.translations.all().filter((row) => row.document_id === document_id);
-	const record = db.documents.get(document_id);
+export async function cleanup_translations(document_id: string) {
+	const rows = (await backend.translations.all()).filter((row) => row.document_id === document_id);
+	const record = await backend.documents.get(document_id);
 	if (!record) {
-		for (const row of rows) db.translations.delete(translation_key(document_id, row.language));
+		for (const row of rows)
+			await backend.translations.delete(translation_key(document_id, row.language));
 		return;
 	}
 	const doc = fill_document_defaults(record.data, document_schema);
@@ -275,7 +278,7 @@ export function cleanup_translations(document_id: string) {
 		try {
 			map = parse_map(entry.value);
 		} catch {
-			db.translations.delete(translation_key(document_id, entry.language));
+			await backend.translations.delete(translation_key(document_id, entry.language));
 			continue;
 		}
 		for (const [node_id, properties] of Object.entries(map)) {
@@ -303,6 +306,6 @@ export function cleanup_translations(document_id: string) {
 			}
 			if (!Object.keys(properties).length) delete map[node_id];
 		}
-		write_map(document_id, entry.language, map, entry.value);
+		await write_map(document_id, entry.language, map, entry.value);
 	}
 }

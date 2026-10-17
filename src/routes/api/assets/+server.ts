@@ -1,12 +1,11 @@
 import { error } from '@sveltejs/kit';
 import { MAX_IMAGE_WIDTH, UPLOAD_MIME_TO_EXT } from '#app/config.js';
-import { asset_exists, asset_path, write_asset, delete_asset } from '#app/services.js';
+import { asset_exists, asset_webp_dimensions, backend } from '#app/services.js';
 import { authorize_asset_upload } from '#app/server_oauth.js';
-import { read_webp_dimensions } from '#lib/server/webp.js';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-	const authorized_by = authorize_asset_upload(request, locals);
+	const authorized_by = await authorize_asset_upload(request, locals);
 
 	const content_type_raw = request.headers.get('content-type') ?? '';
 	const content_type = content_type_raw.split(';')[0].trim().toLowerCase();
@@ -38,7 +37,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const asset_id = `${hash}.${ext}`;
 
 	// Deduplication: if the file already exists, skip the upload
-	if (asset_exists(asset_id)) {
+	if (await asset_exists(asset_id)) {
 		// Drain the request body without buffering
 		if (request.body) {
 			const reader = request.body.getReader();
@@ -54,29 +53,29 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		error(400, 'Empty request body');
 	}
 
-	// Stream the request body directly to disk
+	// Stream the request body directly to the backend
 	let write_result;
 	try {
-		write_result = await write_asset(asset_id, request.body);
+		write_result = await backend.write_asset(asset_id, request.body);
 	} catch (err) {
-		await delete_asset(asset_id).catch(() => {});
-		console.error('Failed to write asset to disk:', err);
+		await backend.delete_asset(asset_id).catch(() => {});
+		console.error('Failed to store asset:', err);
 		error(500, 'Failed to store asset');
 	}
 
 	if (write_result.bytes_written === 0) {
-		await delete_asset(asset_id).catch(() => {});
+		await backend.delete_asset(asset_id).catch(() => {});
 		error(400, 'Empty file');
 	}
 
 	// Enforce content-addressing: the stored bytes must hash to the claimed id.
 	if (write_result.sha256 !== hash) {
-		await delete_asset(asset_id).catch(() => {});
+		await backend.delete_asset(asset_id).catch(() => {});
 		error(400, 'Content does not match X-Content-Hash');
 	}
 
 	if (authorized_by === 'upload_token') {
-		const actual = read_webp_dimensions(asset_path(asset_id));
+		const actual = await asset_webp_dimensions(asset_id);
 		const problem = !actual
 			? 'The file is not a valid WebP image.'
 			: actual.width !== width || actual.height !== height
@@ -85,7 +84,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					? `Images may be at most ${MAX_IMAGE_WIDTH}px wide. Resize the original before uploading.`
 					: null;
 		if (problem) {
-			await delete_asset(asset_id).catch(() => {});
+			await backend.delete_asset(asset_id).catch(() => {});
 			error(400, problem);
 		}
 	}

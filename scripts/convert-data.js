@@ -30,7 +30,7 @@ const vite = await createServer({
 	logLevel: 'error'
 });
 try {
-	const storage = await vite.ssrLoadModule('/src/app/storage.ts');
+	const storage = await vite.ssrLoadModule('/src/app/server_backend.ts');
 	const { migrate, migrate_storage } = await vite.ssrLoadModule('/src/app/migrations.ts');
 	const from = storage.data_format(dir);
 	if (!from) fail(`${dir} holds no site.`);
@@ -39,14 +39,14 @@ try {
 		process.exit(0);
 	}
 
-	const source = storage.database_for(dir, from);
-	migrate(source);
+	const source = storage.backend_in(dir, from);
+	await migrate(source);
 	// The new format gets its own storage migrations; content progress arrives with the records.
-	const target = storage.database_for(dir, to);
-	migrate_storage(target);
-	storage.copy_database(source, target);
-	source.close();
-	target.close();
+	const target = storage.backend_in(dir, to);
+	await migrate_storage(target);
+	await storage.copy_records(source, target);
+	await source.close();
+	await target.close();
 
 	const backups = resolve('data-backups');
 	mkdirSync(backups, { recursive: true });

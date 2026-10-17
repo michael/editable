@@ -21,7 +21,7 @@ describe('load_migrations', () => {
 		]);
 	});
 
-	it('refuses before, unknown properties, bad targets, bad names, and async up', () => {
+	it('refuses before, unknown properties, bad targets, and bad names', () => {
 		const one =
 			(migration: Migration, name = '20260101T000000000Z_custom_x') =>
 			() =>
@@ -30,7 +30,6 @@ describe('load_migrations', () => {
 		expect(one({ up, after: 'x' } as Migration)).toThrow('unknown export properties: after');
 		expect(one({ target: 'SQLite', up })).toThrow('invalid target');
 		expect(one({ up }, 'add-things')).toThrow('Invalid migration filename');
-		expect(one({ up: async () => {} })).toThrow('must be synchronous');
 	});
 });
 
@@ -77,33 +76,35 @@ describe('run_migrations', () => {
 		'20260103T000000000Z_editable_c': { up: () => ran.push('c') }
 	});
 
-	it('runs the pending migrations of one target in id order and records each', () => {
+	it('runs the pending migrations of one target in id order and records each', async () => {
 		ran.length = 0;
 		const recorded: string[] = [];
-		run_migrations(migrations, 'content', new Set(), {}, (id) => recorded.push(id));
+		await run_migrations(migrations, 'content', new Set(), {}, async (id) => {
+			recorded.push(id);
+		});
 		expect(ran).toEqual(['a', 'c']);
 		expect(recorded).toEqual(['20260101T000000000Z_editable_a', '20260103T000000000Z_editable_c']);
 	});
 
-	it('warns when a migration runs behind a later one already applied', () => {
+	it('warns when a migration runs behind a later one already applied', async () => {
 		ran.length = 0;
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 		vi.spyOn(console, 'log').mockImplementation(() => {});
-		run_migrations(
+		await run_migrations(
 			migrations,
 			'content',
 			new Set(['20260103T000000000Z_editable_c']),
 			{},
-			() => {}
+			async () => {}
 		);
 		expect(ran).toEqual(['a']);
 		expect(warn.mock.calls[0][0]).toContain('after 20260103T000000000Z_editable_c');
 	});
 
-	it('refuses unknown applied ids and reports a failing migration', () => {
-		expect(() => run_migrations(migrations, 'content', new Set(['x']), {}, () => {})).toThrow(
-			'not present in this application: x'
-		);
+	it('refuses unknown applied ids and reports a failing migration', async () => {
+		await expect(
+			run_migrations(migrations, 'content', new Set(['x']), {}, async () => {})
+		).rejects.toThrow('not present in this application: x');
 		const failing = load({
 			'20260101T000000000Z_editable_bad': {
 				up: () => {
@@ -112,8 +113,22 @@ describe('run_migrations', () => {
 			}
 		});
 		vi.spyOn(console, 'log').mockImplementation(() => {});
-		expect(() => run_migrations(failing, 'content', new Set(), {}, () => {})).toThrow(
+		await expect(run_migrations(failing, 'content', new Set(), {}, async () => {})).rejects.toThrow(
 			'Migration "20260101T000000000Z_editable_bad" failed.'
 		);
+		// Asynchronous migrations are awaited.
+		const waited: string[] = [];
+		const async_migration = load({
+			'20260101T000000000Z_editable_later': {
+				up: async () => {
+					await new Promise((resolve) => setTimeout(resolve, 1));
+					waited.push('done');
+				}
+			}
+		});
+		await run_migrations(async_migration, 'content', new Set(), {}, async () => {
+			waited.push('recorded');
+		});
+		expect(waited).toEqual(['done', 'recorded']);
 	});
 });

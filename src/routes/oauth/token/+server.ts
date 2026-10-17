@@ -8,7 +8,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	try {
 		oauth.assert_small_body(request);
 		const params = new URLSearchParams(await request.text());
-		return oauth.oauth_json(oauth.exchange_token(params));
+		return oauth.oauth_json(await oauth.exchange_token(params));
 	} catch (err) {
 		return oauth.oauth_error_response(err);
 	}
