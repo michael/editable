@@ -6,8 +6,8 @@ import type { FilesStorage } from '#lib/server/backends/files_backend.js';
 // The login throttle moves out of the settings into a private collection of its own.
 export default {
 	target: 'files',
-	up({ dir }: FilesStorage) {
-		const path = join(dir, 'settings.json');
+	up({ db_dir }: FilesStorage) {
+		const path = join(db_dir, 'settings.json');
 		if (!existsSync(path)) return;
 		const settings = JSON.parse(readFileSync(path, 'utf8'));
 		if (!settings.login_throttle) return;
@@ -16,7 +16,7 @@ export default {
 			writeFileSync(`${file}.tmp`, JSON.stringify(value, null, '\t') + '\n');
 			renameSync(`${file}.tmp`, file);
 		};
-		write(join(dir, 'login_throttle.json'), {
+		write(join(db_dir, 'login_throttle.json'), {
 			admin: { key: 'admin', failed_count, locked_until }
 		});
 		delete settings.login_throttle;

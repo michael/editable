@@ -151,8 +151,7 @@ export async function approve_client(input: {
 	code_challenge: string;
 }) {
 	const time = now();
-	for (const token of await backend.oauth_tokens.all())
-		if (token.expires_at <= time) await backend.oauth_tokens.delete(token.token_hash);
+	await backend.delete_expired(time);
 	// A client's latest grant stays as its approval record; older ended ones go.
 	for (const grant of await backend.oauth_grants.all())
 		if (grant.client_id === input.client_id && grant.expires_at <= time)

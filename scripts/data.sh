@@ -299,9 +299,9 @@ snapshot_local_db() {
 		"$dest" "$DATA_DIR_LOCAL/assets" || die "Local snapshot references missing assets"
 }
 
-# A data folder holds a SQLite database or a site kept as files in site/
+# A data folder holds a SQLite database or a site kept as files in db/
 # (README → File storage). The data commands work with SQLite.
-local_holds_files() { [ -d "$DATA_DIR_LOCAL/site" ]; }
+local_holds_files() { [ -d "$DATA_DIR_LOCAL/db" ]; }
 
 # Commands that read the local database stop at a site kept as files.
 refuse_files() {
@@ -318,7 +318,7 @@ set_aside_files() {
 	local dest
 	dest="$BACKUP_DIR_LOCAL/local-$(date -u +%Y%m%dT%H%M%SZ)-$(printf '%04x' "$RANDOM")-files"
 	[ ! -e "$dest" ] || die "$dest already exists"
-	mv "$DATA_DIR_LOCAL/site" "$dest"
+	mv "$DATA_DIR_LOCAL/db" "$dest"
 	info "Moved the site kept as files to $dest (restart the dev server if it is running)"
 }
 

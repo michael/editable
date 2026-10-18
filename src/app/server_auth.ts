@@ -2,12 +2,12 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { backend } from './services.js';
 import { site } from './server_site.js';
 import {
-	admin_session_cookie_name,
 	clear_admin_session_cookie,
 	delete_session,
 	get_session_expires_at,
 	log_in_admin,
 	session_duration_seconds,
+	session_cookie_name,
 	session_renewal_interval_seconds,
 	set_admin_session_cookie
 } from '#lib/server/auth.js';
@@ -45,41 +45,44 @@ export type Auth = {
 	log_out(event: RequestEvent): void | Promise<void>;
 };
 
-/** The admin password from ADMIN_PASSWORD, with sliding sessions in the site's database. */
+/** The current site's session cookie. */
+const cookie_name = () => session_cookie_name(site.base);
+
+/** The admin password from ADMIN_PASSWORD, with sliding sessions in the site's backend. */
 export const password_auth: Auth = {
 	async get_user({ cookies }) {
-		const session_id = cookies.get(admin_session_cookie_name);
+		const session_id = cookies.get(cookie_name());
 		if (!session_id) return null;
 
 		const row = await backend.sessions.get(session_id);
 		const now = Math.floor(Date.now() / 1000);
 
 		if (!row) {
-			clear_admin_session_cookie(cookies);
+			clear_admin_session_cookie(cookies, cookie_name());
 			return null;
 		}
 		if (row.expires <= now) {
 			await backend.sessions.delete(session_id);
-			clear_admin_session_cookie(cookies);
+			clear_admin_session_cookie(cookies, cookie_name());
 			return null;
 		}
 		// Sliding renewal, at most once per renewal interval
 		const last_renewed_at = row.expires - session_duration_seconds;
 		if (now - last_renewed_at >= session_renewal_interval_seconds) {
 			await backend.sessions.put({ session_id, expires: get_session_expires_at() });
-			set_admin_session_cookie(cookies, session_id);
+			set_admin_session_cookie(cookies, cookie_name(), session_id);
 		}
 		return admin_user;
 	},
 
 	log_in({ cookies }, { password = '' }) {
-		return log_in_admin(backend, cookies, password);
+		return log_in_admin(backend, cookies, cookie_name(), password);
 	},
 
 	async log_out({ cookies }) {
-		const session_id = cookies.get(admin_session_cookie_name);
+		const session_id = cookies.get(cookie_name());
 		if (session_id) await delete_session(session_id, backend);
-		clear_admin_session_cookie(cookies);
+		clear_admin_session_cookie(cookies, cookie_name());
 	}
 };
 

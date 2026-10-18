@@ -52,7 +52,11 @@ const change_of = ({ id, target }: LoadedMigration) =>
  * backend can never miss a change. The targets are those the migrations
  * name, plus the one being opened.
  */
-export function assert_complete(migrations: LoadedMigration[], opened_target: string) {
+export function assert_complete(
+	migrations: LoadedMigration[],
+	opened_target: string,
+	{ allow_missing = false } = {}
+) {
 	const storage = migrations.filter((migration) => migration.target !== 'content');
 	const targets = new Set(storage.map((migration) => migration.target));
 	if (opened_target !== 'content') targets.add(opened_target);
@@ -65,10 +69,11 @@ export function assert_complete(migrations: LoadedMigration[], opened_target: st
 	const missing = [...covered].flatMap(([change, has]) =>
 		[...targets].filter((target) => !has.has(target)).map((target) => `${change}_${target}`)
 	);
-	if (missing.length)
-		throw new Error(
-			`Storage migrations are missing: ${missing.join(', ')}. Every storage change needs a migration for every backend, an empty one where it needs nothing.`
-		);
+	if (!missing.length) return;
+	const message = `Storage migrations are missing: ${missing.join(', ')}. Every storage change needs a migration for every backend, an empty one where it needs nothing.`;
+	if (!allow_missing)
+		throw new Error(`${message} To start anyway, skipping them, pass --allow-missing-migrations.`);
+	console.warn(`${message} Starting anyway, skipping them, because of --allow-missing-migrations.`);
 }
 
 /**

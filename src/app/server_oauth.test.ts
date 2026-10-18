@@ -22,6 +22,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import * as services from './services.js';
 const { sqlite } = services as unknown as { sqlite: DatabaseSync };
 import migration from '#app/migrations/20261010T180000000Z_editable_mcp_oauth.js';
+import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
 import {
 	approve_client,
 	assert_small_body,
@@ -39,6 +40,8 @@ import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 const redirect_uri = 'http://localhost:3000/callback';
 const verifier = 'a'.repeat(43);
 const code_challenge = createHash('sha256').update(verifier).digest('base64url');
+
+initial_schema.up({ db: sqlite } as SqliteStorage);
 
 beforeEach(() => {
 	sqlite.exec(

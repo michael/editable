@@ -1127,10 +1127,10 @@ What happens next is up to the backend. `sqlite_backend` replaces three rows ins
 
 Editable comes with two backends:
 
-| Backend          | Records                            | Assets                  | Use                                                                                                |
-| ---------------- | ---------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------- |
-| `sqlite_backend` | SQLite, in `data/db.sqlite3`       | Files, in `data/assets` | The default, and what deployments, backups, and the `pnpm data:*` commands use                     |
-| `files_backend`  | EDF and JSON files, in `data/site` | Files, in `data/assets` | Sites you want to read, diff, and version as files; see [File storage](#file-storage-experimental) |
+| Backend          | Records                          | Assets                  | Use                                                                                                |
+| ---------------- | -------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------- |
+| `sqlite_backend` | SQLite, in `data/db.sqlite3`     | Files, in `data/assets` | The default, and what deployments, backups, and the `pnpm data:*` commands use                     |
+| `files_backend`  | EDF and JSON files, in `data/db` | Files, in `data/assets` | Sites you want to read, diff, and version as files; see [File storage](#file-storage-experimental) |
 
 The backend for the deployment's own site comes from `create_backend` in `src/app/server_backend.ts`, which picks one of the two by what the data folder holds. A host serving several sites passes one per site as `backend` in `event.locals.site` (see [Hosting several sites](#hosting-several-sites-experimental)).
 
@@ -1169,6 +1169,9 @@ export type Backend = {
 	touch_asset(asset_id: string): Promise<void>;
 	list_assets(): Promise<{ asset_id: string; last_used: number }[]>;
 
+	/** Delete the sessions and OAuth tokens that expired at or before now, in seconds. */
+	delete_expired(now: number): Promise<void>;
+
 	// The storage migrations it has applied
 	applied_migrations(): Promise<string[]>;
 	record_migration(id: string): Promise<void>;
@@ -1190,7 +1193,8 @@ A backend keeps these promises:
 - **Records come back as they were put.** The backend stores what it gets, including the references the API computes. A backend may also keep the references only in memory and rebuild them from the documents, since they are derived.
 - **Transactions don't interleave.** Within one process, a transaction runs to its end before another starts, and reads inside it see its own writes. Its writes land together wherever the storage allows: in one SQLite transaction, or in one batch for a service that accepts batches. Where they span places that cannot commit together, the backend documents what can be left half done. When the storage changed underneath, such as a repository moving on, throw a `ConflictError`; a save then reports a version conflict and the editor asks to reload.
 - **Collections are the unit.** A backend may keep each collection anywhere, but a collection is kept as a whole, so Editable keeps anything that may need to live apart in a collection of its own. That is why the login throttle is a collection rather than a setting.
-- **Private collections stay private.** Sessions, the login throttle, and the OAuth clients, grants, and token hashes let people into the site. Never store them where others can read them.
+- **Private collections stay private, and per site.** Sessions, the login throttle, and the OAuth clients, grants, and token hashes let people into the site. Never store them where others can read them, and never let one site see another's: a session or an MCP access token found in a shared table would open every site in it. See [Keep each site's private records apart](#keep-each-sites-private-records-apart).
+- **Expired entries go without a scan.** Sessions and OAuth tokens carry their expiry, `expires` and `expires_at`, in seconds since the epoch. `delete_expired(now)` removes those that expired at or before `now` in one step, such as one `DELETE … WHERE expires_at <= $1` per table, so a backend over a large or remote store never reads them all. Editable calls it whenever someone signs in with the admin password and whenever an MCP client is approved. A backend may also expire entries on its own, such as with a database's time-to-live, and make `delete_expired` do nothing.
 - **Asset files are opaque.** The backend writes, reads, and lists them by id; deciding which assets are still in use, and when an unused one may go, is the API's job.
 
 The two built-in backends run their record operations one at a time on a single connection, through `one_at_a_time` in `src/lib/server/backends/`. A backend over a connection pool, such as Postgres, gives each transaction its own connection instead.
@@ -1285,7 +1289,7 @@ export default {
 } satisfies Migration;
 ```
 
-Every storage change in `src/app/migrations` needs a file for every backend in use, so an Editable release that adds a table to SQLite stops your site from starting until your backend has its own file for that change, even an empty one. Add it with `--join` (see [Placing a migration](#placing-a-migration)). Content migrations need nothing from you: they go through the interface and run on every backend.
+Every storage change in `src/app/migrations` needs a file for every backend in use, so an Editable release that adds a table to SQLite stops your site from starting until your backend has its own file for that change, even an empty one. Add it with `--join` (see [Placing a migration](#placing-a-migration)), or start with `--allow-missing-migrations` while you catch up (see [Storage migrations](#storage-migrations)). Content migrations need nothing from you: they go through the interface and run on every backend.
 
 The `pnpm data:*` commands, backups, and Litestream work on `sqlite_backend`'s data folder. A backend of your own brings its own way to back up its storage.
 
@@ -1299,7 +1303,7 @@ Convert your site in place, with the dev server stopped:
 pnpm data:convert --to files
 ```
 
-Editable reads the format from the data folder, so `pnpm dev` then opens the files. The site lives in `data/site`: `documents/<id>.edf` for each page, banner, nav, and footer, `documents.json` with their types and timestamps, and one JSON file each for slugs, settings, translations, references, sessions, the login throttle, and MCP connections. `_migrations.json` lists the files backend's storage migrations that have run, like SQLite's `_migrations` table. Assets stay in `data/assets`, shared by both formats.
+Editable reads the format from the data folder, so `pnpm dev` then opens the files. The site lives in `data/db`: `documents/<id>.edf` for each page, banner, nav, and footer, `documents.json` with their types and timestamps, and one JSON file each for slugs, settings, translations, references, sessions, the login throttle, and MCP connections. `_migrations.json` lists the files backend's storage migrations that have run, like SQLite's `_migrations` table. Assets stay in `data/assets`, shared by both formats.
 
 The database the conversion replaced moves to `data-backups/` as a regular backup that `pnpm data:backups` lists. `pnpm data:convert --to sqlite` converts back the same way, keeping the files version in a dated folder in `data-backups/`.
 
@@ -1328,7 +1332,7 @@ event.locals.site = {
 - `base` is the path the site is served under, or `''` at the root. Stored links never include it: `/about` stays `/about` in the database, reaches the browser as `/alice/about` the way language prefixes do, and is stored without it again, so a site can move to another path or its own domain without changing content. Components render `node.href` as is; asset URLs and the editor's own navigation go through `resolve_href(href, site)`.
 - `languages` lists the site's languages, the main language first, or none.
 - `backend` is where the site's records and asset files go (see [Backends](#backends-experimental)). `backend_for(dir)` from `src/app/server_backend.ts` gives a data folder's backend in the format the folder holds. Run `migrate` from `src/app/migrations.ts` on it before use, which brings its storage and then its content up to date and seeds a new site. Editable reads and writes through the backend for the request and caches nothing; opening, caching, and closing site data is up to the host. Asset cleanup deletes files the site's records no longer reference, so a host that shares asset files between sites gives each a backend whose `delete_asset` keeps them.
-- `auth` decides who is signed in and how they sign in, replacing the admin password. It implements `get_user(event)`, `log_in(event, credentials)`, and `log_out(event)` (types in `src/app/server_auth.ts`). `get_user` returns the signed-in user, or `null`, and Editable puts it on `event.locals.user`; whoever is signed in may edit. The user is an object of your own shape: Editable's admin password signs in `{ username: 'admin', name: 'Admin' }`, and an OAuth host might use `{ did, handle }`. It reaches the browser as page data, so keep secrets out of it. `log_in` receives whatever the login dialog sends to `login_admin`; Editable's own dialog sends `{ password }`. It either starts a session or returns `{ ok: true, redirect }` to continue elsewhere: to sign in with OAuth, have your own login dialog send a username, return the provider's authorization URL, and handle the callback in a route of your own that sets your session, which `get_user` then reads. `event.url` in `log_in` is the page the login started from. Editable's own sessions use one cookie for the whole host, so a host serving several sites from one origin scopes its sessions to the site, for example with a cookie that names it.
+- `auth` decides who is signed in and how they sign in, replacing the admin password. It implements `get_user(event)`, `log_in(event, credentials)`, and `log_out(event)` (types in `src/app/server_auth.ts`). `get_user` returns the signed-in user, or `null`, and Editable puts it on `event.locals.user`; whoever is signed in may edit. The user is an object of your own shape: Editable's admin password signs in `{ username: 'admin', name: 'Admin' }`, and an OAuth host might use `{ did, handle }`. It reaches the browser as page data, so keep secrets out of it. `log_in` receives whatever the login dialog sends to `login_admin`; Editable's own dialog sends `{ password }`. It either starts a session or returns `{ ok: true, redirect }` to continue elsewhere: to sign in with OAuth, have your own login dialog send a username, return the provider's authorization URL, and handle the callback in a route of your own that sets your session, which `get_user` then reads. `event.url` in `log_in` is the page the login started from. Editable's own password sign-in names its session cookie after the site's base, `ew_admin_session` at the root and `ew_admin_session_alice` under `/alice`, so sites sharing an origin keep their sign-ins apart; an auth of your own scopes its cookies the same way.
 
 To replace the login dialog itself, for example to ask for a username, to offer several sign-in providers, or when embedding Editable in another environment, set your own component in place of `AuthDialog` as `auth_dialog` in `system_components` in `src/app/document_config.ts`. It opens in the same drawer and receives `onlogin_success`, to call after signing in on the page, and `onedit_for_fun`, for editing without saving (see `AuthDialogProps` in `src/app/components/AuthDialog.svelte`):
 
@@ -1344,6 +1348,31 @@ Requests for `/alice/...` must reach Editable's routes, either through a proxy t
 Commands sent by the editor carry the page's path, so `event.url` is the page URL and the host can read the site from it. Queries do not, so for them a path-based host can only find the site through the `Referer` header; a host that gives each site its own hostname has no such gap. Routes the host adds, such as a registration page, need adding to `RESERVED_ROUTE_SLUGS` in `src/app/config.ts`, or a page of the root site could take their path.
 
 Each site is its own MCP server and OAuth authorization server at its origin and base, with its clients and approvals in its own backend. For a site under a path, the discovery documents are expected at the host root with the site's path inserted, as in `/.well-known/oauth-authorization-server/alice` and `/.well-known/oauth-protected-resource/alice/mcp`, so the host's `reroute` maps those to Editable's discovery routes as well.
+
+### Keep each site's private records apart
+
+Each site's backend must only ever see that site's records. That matters most for the private collections: sessions, the login throttle, and the OAuth clients, grants, and tokens. Editable looks a session up by its cookie and an MCP access token by its hash, so if two sites shared one table, a session or token from one site would sign its holder in to the other, and failed sign-ins on one site would lock out the other.
+
+A backend per site keeps this by construction:
+
+- **One store per site.** `backend_for(dir)` with a data folder per site gives every site its own database, sessions included.
+- **One shared store, scoped by site.** A host that keeps every site's private records in one Postgres database creates each site's backend with the site's id, and that backend reads and writes only the rows carrying it: a `site_id` column in every private table, part of each primary key and of every query, `delete_expired` included.
+
+```ts
+export function hosted_backend(site_id: string, storage: HostStorage): Backend {
+	return {
+		// …
+		sessions: table(storage.sql, 'sessions', 'session_id', { site_id }),
+		oauth_tokens: table(storage.sql, 'oauth_tokens', 'token_hash', { site_id }),
+		delete_expired: async (now) => {
+			await storage.sql`DELETE FROM sessions WHERE site_id = ${site_id} AND expires <= ${now}`;
+			await storage.sql`DELETE FROM oauth_tokens WHERE site_id = ${site_id} AND expires_at <= ${now}`;
+		}
+	};
+}
+```
+
+Editable keeps everything else per site already: it reads the backend from `event.locals.site` on every call and caches nothing between requests, the login throttle lives in that backend, and its own session cookie is named after the site's base. Session ids and token hashes are random, so they never collide across sites; what a shared table must prevent is a lookup that finds another site's row.
 
 ## Upgrading
 
@@ -1449,7 +1478,7 @@ A change to how a backend stores records, such as a new table, needs a storage m
 pnpm migration:create redirects --storage
 ```
 
-This writes one file per backend, sharing the change's timestamp and name, with the backend as a suffix: `…_redirects_sqlite.ts` and `…_redirects_files.ts`. Each states its target and receives its backend's storage: for SQLite the [node:sqlite](https://nodejs.org/api/sqlite.html) handle as `db`, for files the site's folder as `dir`:
+This writes one file per backend, sharing the change's timestamp and name, with the backend as a suffix: `…_redirects_sqlite.ts` and `…_redirects_files.ts`. Each states its target and receives its backend's storage: for SQLite the [node:sqlite](https://nodejs.org/api/sqlite.html) handle as `db`, for files the folder of its records as `db_dir`:
 
 ```ts
 import type { Migration } from '#lib/server/migrations.js';
@@ -1465,6 +1494,16 @@ export default {
 
 Where a backend needs nothing, its file stays with an empty `up`; the files backend, for example, creates a collection's file on first write. The files must stay: a storage change missing a file for any backend stops the site from starting, whatever the change's date, and so does the test suite. That makes a forgotten backend, a misspelled target, or a backend added without migrations an error instead of a silent gap.
 
+Failing early is the default, and skipping the check takes an explicit command-line flag. With `--allow-missing-migrations`, the site starts anyway: the log lists every missing file, and the changes without a file for the site's backend are skipped for it. Use it while a backend of your own catches up with an Editable release, then add the files and drop the flag:
+
+```sh
+pnpm dev -- --allow-missing-migrations                 # in development, after the -- that passes it on from Vite
+node build --allow-missing-migrations                  # a built server
+pnpm data:convert --to files --allow-missing-migrations
+```
+
+On a deployment, append it to the start command, such as the `CMD` in the `Dockerfile`. A host that runs `migrate` itself passes `{ allow_missing_migrations: true }` instead. The test suite checks the migrations folder regardless.
+
 A new backend starts with a file for every storage change in the folder, and a fresh backend of any kind replays all of them in order.
 
 ### Placing a migration
@@ -1477,7 +1516,7 @@ pnpm migration:create reconcile-heading --after 20261009T120000000Z_editable_sit
 
 A migration that must run before another is placed right after the one preceding that. This works because migrations that arrive together are all pending when a site upgrades. One dated before a migration a site already ran still runs, but later, and the log warns about it.
 
-When you maintain your own backend and update Editable, every new Editable storage change needs your backend's file too, and the site won't start until it has one. Add it to that change with `--join`, which reuses the change's timestamp and name:
+When you maintain your own backend and update Editable, every new Editable storage change needs your backend's file too, and the site won't start until it has one, unless you pass `--allow-missing-migrations`. Add it to that change with `--join`, which reuses the change's timestamp and name:
 
 ```sh
 pnpm migration:create --join 20261101T120000000Z_editable_redirects_sqlite --target atproto

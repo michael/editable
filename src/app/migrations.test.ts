@@ -1,4 +1,4 @@
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -11,7 +11,10 @@ import { backend_in } from './server_backend.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 const dirs: string[] = [];
-afterEach(() => dirs.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })));
+afterEach(() => {
+	vi.restoreAllMocks();
+	dirs.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true }));
+});
 
 function temp_dir() {
 	const dir = mkdtempSync(join(tmpdir(), 'editable-migrations-'));
@@ -86,9 +89,9 @@ it('upgrades a file folder written before settings became records', async () => 
 	await migrate(first);
 	const home_page_id = (await first.settings.get('home_page_id'))!.value;
 	// What a folder from before format tracking looks like.
-	const site = join(data_dir, 'site');
-	rmSync(join(site, '_migrations.json'));
-	writeFileSync(join(site, 'settings.json'), JSON.stringify({ home_page_id }));
+	const db_dir = join(data_dir, 'db');
+	rmSync(join(db_dir, '_migrations.json'));
+	writeFileSync(join(db_dir, 'settings.json'), JSON.stringify({ home_page_id }));
 
 	const reopened = backend_in(data_dir, 'files');
 	await migrate(reopened);
@@ -96,7 +99,7 @@ it('upgrades a file folder written before settings became records', async () => 
 		key: 'home_page_id',
 		value: home_page_id
 	});
-	expect(JSON.parse(readFileSync(join(site, '_migrations.json'), 'utf8')).migrations).toContain(
+	expect(JSON.parse(readFileSync(join(db_dir, '_migrations.json'), 'utf8')).migrations).toContain(
 		'20261016T120000000Z_editable_setting_records_files'
 	);
 });
@@ -108,7 +111,15 @@ it('refuses a backend that misses storage migrations, as a fork adding one would
 	await expect(migrate_storage(atproto)).rejects.toThrow(
 		'20260803T131059242Z_editable_initial_schema_atproto'
 	);
-	expect(existsSync(join(dir, 'site', '_migrations.json'))).toBe(false);
+	expect(existsSync(join(dir, 'db', '_migrations.json'))).toBe(false);
+});
+
+it('starts a backend despite missing storage migrations when allowed', async () => {
+	vi.spyOn(console, 'warn').mockImplementation(() => {});
+	const atproto: Backend = { ...backend_in(temp_dir(), 'files'), name: 'atproto' };
+	await migrate(atproto, { allow_missing_migrations: true });
+	expect(await atproto.settings.get('home_page_id')).not.toBeNull();
+	expect(await atproto.applied_migrations()).toEqual([]);
 });
 
 it('refuses data migrated by a newer version', async () => {

@@ -14,8 +14,8 @@ import { one_at_a_time } from './one_at_a_time.js';
 
 /** What files_backend is built on, and what its storage migrations receive. */
 export type FilesStorage = {
-	/** The folder the site's records are kept in. */
-	dir: string;
+	/** The folder the site's records are kept in, its database as files. */
+	db_dir: string;
 	/** The folder asset files are kept in. */
 	asset_dir: string;
 };
@@ -45,7 +45,7 @@ export function files_backend(
 		extension: string;
 	}
 ): Backend {
-	const { dir } = storage;
+	const dir = storage.db_dir;
 	mkdirSync(join(dir, 'documents'), { recursive: true });
 
 	const read_json = <T>(path: string, fallback: T): T =>
@@ -74,6 +74,15 @@ export function files_backend(
 				save(records);
 			}
 		};
+	}
+
+	/** Drop the records of a JSON collection whose expiry field is at or before now. */
+	function delete_expired_records(name: string, field: string, now: number) {
+		const path = join(dir, `${name}.json`);
+		const records = read_json<{ [key: string]: { [field: string]: unknown } }>(path, {});
+		const kept = Object.entries(records).filter(([, record]) => Number(record[field]) > now);
+		if (kept.length < Object.keys(records).length)
+			write(path, JSON.stringify(Object.fromEntries(kept), null, '\t') + '\n');
 	}
 
 	type Meta = { type: string; created_at: string; updated_at: string };
@@ -137,6 +146,10 @@ export function files_backend(
 			oauth_grants: json_collection('oauth_grants', (record) => record.grant_id),
 			oauth_tokens: json_collection('oauth_tokens', (record) => record.token_hash),
 			...asset_files(storage.asset_dir),
+			delete_expired: async (now) => {
+				delete_expired_records('sessions', 'expires', now);
+				delete_expired_records('oauth_tokens', 'expires_at', now);
+			},
 			applied_migrations: async () => applied(),
 			record_migration: async (id) =>
 				write(

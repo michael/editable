@@ -15,9 +15,11 @@ import { join, resolve } from 'node:path';
 import { createServer } from 'vite';
 
 const args = process.argv.slice(2);
-const to = args[0] === '--to' ? args[1] : null;
-if (args.length !== 2 || (to !== 'files' && to !== 'sqlite'))
-	fail('Usage: pnpm data:convert --to files|sqlite');
+const allow_missing_migrations = args.includes('--allow-missing-migrations');
+const rest = args.filter((arg) => arg !== '--allow-missing-migrations');
+const to = rest[0] === '--to' ? rest[1] : null;
+if (rest.length !== 2 || (to !== 'files' && to !== 'sqlite'))
+	fail('Usage: pnpm data:convert --to files|sqlite [--allow-missing-migrations]');
 const dir = resolve(process.env.DATA_DIR || 'data');
 const database = join(dir, 'db.sqlite3');
 if (spawnSync('lsof', [database]).status === 0)
@@ -40,10 +42,10 @@ try {
 	}
 
 	const source = storage.backend_in(dir, from);
-	await migrate(source);
+	await migrate(source, { allow_missing_migrations });
 	// The new format gets its own storage migrations; content progress arrives with the records.
 	const target = storage.backend_in(dir, to);
-	await migrate_storage(target);
+	await migrate_storage(target, { allow_missing_migrations });
 	await storage.copy_records(source, target);
 	await source.close();
 	await target.close();
@@ -63,7 +65,7 @@ try {
 		renameSync(database, kept);
 		for (const suffix of ['-wal', '-shm']) rmSync(database + suffix, { force: true });
 	} else {
-		renameSync(join(dir, 'site'), kept);
+		renameSync(join(dir, 'db'), kept);
 	}
 	console.log(`Converted ${dir} to ${to}. The ${from} version is kept in ${kept}.`);
 } catch (error) {

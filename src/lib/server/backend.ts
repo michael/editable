@@ -27,6 +27,14 @@ export type Backend = {
 	oauth_tokens: Collection<OAuthTokenRecord>;
 
 	/**
+	 * Delete the sessions and OAuth tokens that expired at or before now, in
+	 * seconds since the epoch, without reading them first. Editable calls it
+	 * when it signs someone in or approves an MCP client, so expired entries
+	 * do not pile up; a backend may also expire them on its own.
+	 */
+	delete_expired(now: number): Promise<void>;
+
+	/**
 	 * Run work whose writes belong together, through tx; called on a tx, it
 	 * runs within that transaction. Transactions in one
 	 * process never interleave, reads see the transaction's own writes, and

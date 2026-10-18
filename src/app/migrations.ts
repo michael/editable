@@ -15,9 +15,17 @@ const all_migrations = load_migrations(
 	>
 );
 
+/** What a migration run may tolerate. */
+export type MigrateOptions = {
+	/** Warn about storage changes without a file for this backend instead of refusing them. */
+	allow_missing_migrations?: boolean;
+};
+
 /** Bring a backend's storage up to date with the storage migrations for its name. */
-export async function migrate_storage(backend: Backend) {
-	assert_complete(all_migrations, backend.name);
+export async function migrate_storage(backend: Backend, options: MigrateOptions = {}) {
+	assert_complete(all_migrations, backend.name, {
+		allow_missing: options.allow_missing_migrations
+	});
 	await backend.transaction(async (tx) =>
 		run_migrations(
 			all_migrations,
@@ -66,7 +74,7 @@ export async function migrate_content(backend: Backend) {
 }
 
 /** Bring a site up to date: its backend's storage first, then its content. */
-export async function migrate(backend: Backend) {
-	await migrate_storage(backend);
+export async function migrate(backend: Backend, options: MigrateOptions = {}) {
+	await migrate_storage(backend, options);
 	await migrate_content(backend);
 }

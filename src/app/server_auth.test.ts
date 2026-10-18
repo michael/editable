@@ -25,11 +25,13 @@ import * as services from './services.js';
 const { sqlite } = services as unknown as { sqlite: DatabaseSync };
 import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
 import throttle_schema from '#app/migrations/20261017T120000000Z_editable_login_throttle_sqlite.js';
+import oauth_schema from '#app/migrations/20261010T180000000Z_editable_mcp_oauth.js';
 import { get_auth, password_auth, type Auth } from './server_auth.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 initial_schema.up({ db: sqlite } as SqliteStorage);
 throttle_schema.up({ db: sqlite } as SqliteStorage);
+oauth_schema.up({ db: sqlite } as SqliteStorage);
 
 /** A request with a cookie jar, enough for the auth functions. */
 function event_with_cookies(jar = new Map<string, string>()) {
@@ -56,6 +58,21 @@ it('signs in with the admin password by default', async () => {
 	await password_auth.log_out(event);
 	expect(await password_auth.get_user(event)).toBeNull();
 	expect(sqlite.prepare('SELECT count(*) AS n FROM sessions').get()).toEqual({ n: 0 });
+});
+
+it('keeps the sign-ins of sites under different paths on one origin apart', async () => {
+	const jar = new Map<string, string>();
+	const event = event_with_cookies(jar);
+	await password_auth.log_in(event, { password: 'secret' });
+	expect([...jar.keys()]).toEqual(['ew_admin_session']);
+
+	// Another site under a path neither sees nor clears the root site's session.
+	request.locals = { site: { origin: '', base: '/alice', languages: [] } };
+	expect(await password_auth.get_user(event)).toBeNull();
+	await password_auth.log_in(event, { password: 'secret' });
+	expect([...jar.keys()].sort()).toEqual(['ew_admin_session', 'ew_admin_session_alice']);
+	request.locals = {};
+	expect(await password_auth.get_user(event)).toEqual({ username: 'admin', name: 'Admin' });
 });
 
 it('uses the auth a host sets for the request, with users of its own shape', async () => {

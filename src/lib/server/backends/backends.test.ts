@@ -34,7 +34,7 @@ const backends: [string, () => Backend][] = [
 		() => {
 			const dir = temp_dir();
 			return files_backend(
-				{ dir: join(dir, 'site'), asset_dir: join(dir, 'assets') },
+				{ db_dir: join(dir, 'db'), asset_dir: join(dir, 'assets') },
 				{
 					serialize: (document) => JSON.stringify(document),
 					parse: (text) => JSON.parse(text),
@@ -140,6 +140,27 @@ describe.each(backends)('%s backend', (_name, create) => {
 		});
 		expect((await backend.oauth_tokens.get('h1'))?.grant_id).toBe('g1');
 		expect(await backend.oauth_grants.all()).toHaveLength(1);
+	});
+
+	it('deletes expired sessions and OAuth tokens, keeping current ones', async () => {
+		const backend = await open();
+		await backend.sessions.put({ session_id: 'old', expires: 10 });
+		await backend.sessions.put({ session_id: 'new', expires: 30 });
+		await backend.oauth_tokens.put({
+			token_hash: 'old',
+			grant_id: 'g',
+			kind: 'access',
+			expires_at: 20
+		});
+		await backend.oauth_tokens.put({
+			token_hash: 'new',
+			grant_id: 'g',
+			kind: 'access',
+			expires_at: 21
+		});
+		await backend.delete_expired(20);
+		expect((await backend.sessions.all()).map((record) => record.session_id)).toEqual(['new']);
+		expect((await backend.oauth_tokens.all()).map((record) => record.token_hash)).toEqual(['new']);
 	});
 
 	it('keeps the pages each document links to, in order', async () => {

@@ -42,6 +42,7 @@ export function one_at_a_time(
 		) as Pick<Backend, (typeof collection_names)[number]>;
 		return {
 			...wrapped,
+			delete_expired: (now: number) => run(() => backend.delete_expired(now)),
 			applied_migrations: () => run(() => backend.applied_migrations()),
 			record_migration: (id: string) => run(() => backend.record_migration(id))
 		};

@@ -56,6 +56,13 @@ describe('assert_complete', () => {
 		expect(() => assert_complete(gap, 'sqlite')).toThrow('20250101T000000000Z_editable_old_files');
 	});
 
+	it('warns instead of refusing gaps when allowed', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		expect(() => assert_complete(migrations, 'atproto')).toThrow('--allow-missing-migrations');
+		expect(() => assert_complete(migrations, 'atproto', { allow_missing: true })).not.toThrow();
+		expect(warn.mock.calls[0][0]).toContain('20260101T000000000Z_editable_schema_atproto');
+	});
+
 	it('catches a misspelled target and a backend without migrations', () => {
 		const typo = [
 			...migrations,

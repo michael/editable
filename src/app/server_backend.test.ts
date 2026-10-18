@@ -18,7 +18,7 @@ it('reads the format from the folder and refuses one holding both', async () => 
 	expect(data_format(dir)).toBeNull();
 	writeFileSync(join(dir, 'db.sqlite3'), '');
 	expect(data_format(dir)).toBe('sqlite');
-	mkdirSync(join(dir, 'site'));
+	mkdirSync(join(dir, 'db'));
 	expect(() => data_format(dir)).toThrow('conversion stops halfway');
 	rmSync(join(dir, 'db.sqlite3'));
 	expect(data_format(dir)).toBe('files');

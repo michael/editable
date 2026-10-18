@@ -213,6 +213,10 @@ export function sqlite_backend(storage: SqliteStorage): Backend {
 				(r) => r as any
 			),
 			...asset_files(storage.asset_dir),
+			delete_expired: async (now) => {
+				db.prepare('DELETE FROM sessions WHERE expires <= ?').run(now);
+				db.prepare('DELETE FROM oauth_tokens WHERE expires_at <= ?').run(now);
+			},
 			applied_migrations: async () =>
 				(db.prepare('SELECT id FROM _migrations ORDER BY id').all() as { id: string }[]).map(
 					(row) => row.id

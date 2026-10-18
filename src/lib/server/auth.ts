@@ -5,9 +5,16 @@ import { error } from '@sveltejs/kit';
 import { ADMIN_PASSWORD, NODE_ENV } from '$app/env/private';
 
 /** The records auth keeps: sessions and the login throttle. */
-type AuthRecords = Pick<Backend, 'sessions' | 'login_throttle'>;
+type AuthRecords = Pick<Backend, 'sessions' | 'login_throttle' | 'delete_expired'>;
 
-export const admin_session_cookie_name = 'ew_admin_session';
+/**
+ * The session cookie of the site served under base: ew_admin_session at the
+ * root, with the base appended under a path, so sites sharing an origin keep
+ * their sign-ins apart.
+ */
+export function session_cookie_name(base: string) {
+	return base ? `ew_admin_session_${base.slice(1).replace(/[^\w-]/g, '_')}` : 'ew_admin_session';
+}
 export const session_duration_seconds = 14 * 24 * 60 * 60;
 
 // Sliding sessions are renewed at most once per interval, not on every
@@ -81,8 +88,8 @@ export function get_session_expires_at(): number {
 	return Math.floor(Date.now() / 1000) + session_duration_seconds;
 }
 
-export function clear_admin_session_cookie(cookies: Cookies) {
-	cookies.set(admin_session_cookie_name, '', {
+export function clear_admin_session_cookie(cookies: Cookies, name: string) {
+	cookies.set(name, '', {
 		path: '/',
 		httpOnly: true,
 		sameSite: 'lax',
@@ -91,8 +98,8 @@ export function clear_admin_session_cookie(cookies: Cookies) {
 	});
 }
 
-export function set_admin_session_cookie(cookies: Cookies, session_id: string) {
-	cookies.set(admin_session_cookie_name, session_id, {
+export function set_admin_session_cookie(cookies: Cookies, name: string, session_id: string) {
+	cookies.set(name, session_id, {
 		path: '/',
 		httpOnly: true,
 		sameSite: 'lax',
@@ -121,6 +128,7 @@ function format_lockout_duration(seconds: number): string {
 export async function log_in_admin(
 	records: AuthRecords,
 	cookies: Cookies,
+	cookie_name: string,
 	password: string
 ): Promise<{ ok: true } | { ok: false; code: string; message: string }> {
 	const lockout_seconds = await get_login_lockout_seconds(records);
@@ -138,9 +146,10 @@ export async function log_in_admin(
 	}
 
 	await reset_login_throttle(records);
+	await records.delete_expired(Math.floor(Date.now() / 1000));
 
 	const session_id = crypto.randomUUID();
 	await records.sessions.put({ session_id, expires: get_session_expires_at() });
-	set_admin_session_cookie(cookies, session_id);
+	set_admin_session_cookie(cookies, cookie_name, session_id);
 	return { ok: true };
 }

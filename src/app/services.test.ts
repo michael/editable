@@ -57,7 +57,7 @@ it('keeps a site in files instead of a database with STORAGE=files', async () =>
 	const home_page_id = (await backend.settings.get('home_page_id'))?.value;
 	expect(home_page_id).not.toBeNull();
 	expect(existsSync(join(data_dir, 'db.sqlite3'))).toBe(false);
-	expect(existsSync(join(data_dir, 'site', 'documents', `${home_page_id}.edf`))).toBe(true);
+	expect(existsSync(join(data_dir, 'db', 'documents', `${home_page_id}.edf`))).toBe(true);
 
 	const home = (await backend.documents.get(home_page_id!))!;
 	expect(home.type).toBe('page');

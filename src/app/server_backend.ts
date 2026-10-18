@@ -35,12 +35,12 @@ export function backend_for(data_dir: string, requested = ''): Backend {
 
 /**
  * The format a data folder holds: a SQLite database in db.sqlite3, or files
- * in site/. Null for a new folder. A folder holding both is refused; that only
+ * in db/. Null for a new folder. A folder holding both is refused; that only
  * happens when a conversion stopped halfway.
  */
 export function data_format(data_dir: string): DataFormat | null {
 	const sqlite = existsSync(join(data_dir, 'db.sqlite3'));
-	const files = existsSync(join(data_dir, 'site'));
+	const files = existsSync(join(data_dir, 'db'));
 	if (sqlite && files)
 		throw new Error(
 			`${data_dir} holds both a SQLite database and a site in files, which happens when a conversion stops halfway. Keep the one you want and move the other out of the folder.`
@@ -50,7 +50,7 @@ export function data_format(data_dir: string): DataFormat | null {
 
 /**
  * A data folder's backend in the given format: records in db.sqlite3, or in
- * site/ with each document as EDF and every other collection as JSON; asset
+ * db/ with each document as EDF and every other collection as JSON; asset
  * files in assets/ either way.
  */
 export function backend_in(data_dir: string, format: DataFormat): Backend {
@@ -58,7 +58,7 @@ export function backend_in(data_dir: string, format: DataFormat): Backend {
 	if (format === 'sqlite')
 		return sqlite_backend({ db: open_sqlite(join(data_dir, 'db.sqlite3')), asset_dir });
 	return files_backend(
-		{ dir: join(data_dir, 'site'), asset_dir },
+		{ db_dir: join(data_dir, 'db'), asset_dir },
 		{
 			serialize: (document) => serialize_edf(document, document_schema),
 			parse: (text) => parse_edf(text, document_schema),

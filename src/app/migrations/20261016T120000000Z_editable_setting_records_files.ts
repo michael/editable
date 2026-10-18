@@ -7,8 +7,8 @@ import type { FilesStorage } from '#lib/server/backends/files_backend.js';
 // written before kept each setting as a plain string.
 export default {
 	target: 'files',
-	up({ dir }: FilesStorage) {
-		const path = join(dir, 'settings.json');
+	up({ db_dir }: FilesStorage) {
+		const path = join(db_dir, 'settings.json');
 		if (!existsSync(path)) return;
 		const settings: Record<string, unknown> = JSON.parse(readFileSync(path, 'utf8'));
 		const records = Object.fromEntries(

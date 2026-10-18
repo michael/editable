@@ -82,7 +82,7 @@ const templates = {
 	sqlite:
 		"import type { Migration } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: 'sqlite',\n\tup() {\n\t\t// Leave empty if SQLite needs nothing for this change. Otherwise take its\n\t\t// storage: up({ db }: SqliteStorage), from '#lib/server/backends/sqlite_backend.js'.\n\t}\n} satisfies Migration;\n",
 	files:
-		"import type { Migration } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: 'files',\n\tup() {\n\t\t// Leave empty if the files backend needs nothing for this change. Otherwise\n\t\t// take its storage: up({ dir }: FilesStorage), from '#lib/server/backends/files_backend.js'.\n\t}\n} satisfies Migration;\n"
+		"import type { Migration } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: 'files',\n\tup() {\n\t\t// Leave empty if the files backend needs nothing for this change. Otherwise\n\t\t// take its storage: up({ db_dir }: FilesStorage), from '#lib/server/backends/files_backend.js'.\n\t}\n} satisfies Migration;\n"
 };
 const template_for = (t) =>
 	templates[t] ??
