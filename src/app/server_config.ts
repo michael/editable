@@ -11,14 +11,6 @@ export const ASSET_PATH = join(DATA_DIR, 'assets');
 export const STORAGE = process.env.STORAGE ?? '';
 
 /**
- * Start even when a storage change lacks a migration file for this site's
- * backend, with --allow-missing-migrations on the command line, such as
- * `pnpm dev -- --allow-missing-migrations`. The changes without a file are
- * skipped for this backend. Without it, a gap stops the server.
- */
-export const ALLOW_MISSING_MIGRATIONS = process.argv.includes('--allow-missing-migrations');
-
-/**
  * How many days an unreferenced asset file is kept after losing its last
  * reference. This is also the safe window for rolling back a database backup
  * against the live assets folder.

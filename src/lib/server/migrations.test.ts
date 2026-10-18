@@ -42,25 +42,34 @@ describe('assert_complete', () => {
 		'20260301T000000000Z_editable_redirects_files': { target: 'files', up }
 	});
 
-	it('accepts storage changes that cover every backend', () => {
+	it('accepts a backend that has a file for every storage change', () => {
 		expect(() => assert_complete(migrations, 'sqlite')).not.toThrow();
-		expect(() => assert_complete(migrations, 'content')).not.toThrow();
+		expect(() => assert_complete(migrations, 'files')).not.toThrow();
 	});
 
-	it('names every gap, whatever its date', () => {
+	it('names every gap of the backend being opened, whatever its date', () => {
 		const gap = load({
 			'20250101T000000000Z_editable_old_sqlite': { target: 'sqlite', up },
 			'20260101T000000000Z_editable_new_sqlite': { target: 'sqlite', up },
 			'20260101T000000000Z_editable_new_files': { target: 'files', up }
 		});
-		expect(() => assert_complete(gap, 'sqlite')).toThrow('20250101T000000000Z_editable_old_files');
+		expect(() => assert_complete(gap, 'files')).toThrow('20250101T000000000Z_editable_old_files');
+		expect(() => assert_complete(gap, 'sqlite')).not.toThrow();
 	});
 
-	it('warns instead of refusing gaps when allowed', () => {
-		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-		expect(() => assert_complete(migrations, 'atproto')).toThrow('--allow-missing-migrations');
-		expect(() => assert_complete(migrations, 'atproto', { allow_missing: true })).not.toThrow();
-		expect(warn.mock.calls[0][0]).toContain('20260101T000000000Z_editable_schema_atproto');
+	it('ignores gaps of other backends, such as a fork changing only its own', () => {
+		const fork = [
+			...migrations,
+			...load({
+				'20260101T000000000Z_editable_schema_atproto': { target: 'atproto', up },
+				'20260301T000000000Z_editable_redirects_atproto': { target: 'atproto', up },
+				'20260401T000000000Z_custom_handles_atproto': { target: 'atproto', up }
+			})
+		];
+		expect(() => assert_complete(fork, 'atproto')).not.toThrow();
+		expect(() => assert_complete(fork, 'sqlite')).toThrow(
+			'20260401T000000000Z_custom_handles_sqlite'
+		);
 	});
 
 	it('catches a misspelled target and a backend without migrations', () => {

@@ -47,33 +47,23 @@ const change_of = ({ id, target }: LoadedMigration) =>
 	id.endsWith(`_${target}`) ? id.slice(0, -target.length - 1) : id;
 
 /**
- * Refuse storage changes that skip a backend. Every change with a storage
- * migration needs one for every storage target, whatever its date, so a
- * backend can never miss a change. The targets are those the migrations
- * name, plus the one being opened.
+ * Refuse to run a backend that misses a storage change. Every change with a
+ * storage migration, whatever its date, needs a file for the backend being
+ * opened, an empty one where it needs nothing. Other backends' gaps do not
+ * matter here: they surface when those backends run.
  */
-export function assert_complete(
-	migrations: LoadedMigration[],
-	opened_target: string,
-	{ allow_missing = false } = {}
-) {
+export function assert_complete(migrations: LoadedMigration[], target: string) {
 	const storage = migrations.filter((migration) => migration.target !== 'content');
-	const targets = new Set(storage.map((migration) => migration.target));
-	if (opened_target !== 'content') targets.add(opened_target);
-	const covered = new Map<string, Set<string>>();
-	for (const migration of storage) {
-		const change = change_of(migration);
-		if (!covered.has(change)) covered.set(change, new Set());
-		covered.get(change)!.add(migration.target);
-	}
-	const missing = [...covered].flatMap(([change, has]) =>
-		[...targets].filter((target) => !has.has(target)).map((target) => `${change}_${target}`)
+	const covered = new Set(
+		storage.filter((migration) => migration.target === target).map(change_of)
 	);
-	if (!missing.length) return;
-	const message = `Storage migrations are missing: ${missing.join(', ')}. Every storage change needs a migration for every backend, an empty one where it needs nothing.`;
-	if (!allow_missing)
-		throw new Error(`${message} To start anyway, skipping them, pass --allow-missing-migrations.`);
-	console.warn(`${message} Starting anyway, skipping them, because of --allow-missing-migrations.`);
+	const missing = [...new Set(storage.map(change_of))]
+		.filter((change) => !covered.has(change))
+		.map((change) => `${change}_${target}`);
+	if (missing.length)
+		throw new Error(
+			`Storage migrations are missing for the ${target} backend: ${missing.join(', ')}. Every storage change needs a file for each backend that runs, an empty one where it needs nothing. Add one with pnpm migration:create --join <id> --target ${target}.`
+		);
 }
 
 /**

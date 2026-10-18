@@ -1289,7 +1289,7 @@ export default {
 } satisfies Migration;
 ```
 
-Every storage change in `src/app/migrations` needs a file for every backend in use, so an Editable release that adds a table to SQLite stops your site from starting until your backend has its own file for that change, even an empty one. Add it with `--join` (see [Placing a migration](#placing-a-migration)), or start with `--allow-missing-migrations` while you catch up (see [Storage migrations](#storage-migrations)). Content migrations need nothing from you: they go through the interface and run on every backend.
+Every storage change in `src/app/migrations` needs a file for the backend a site runs, so an Editable release that adds a table to SQLite stops your site from starting until your backend has its own file for that change, even an empty one. That stop is deliberate: it makes you look at each change and decide what your backend needs. Add the file with `--join` (see [Placing a migration](#placing-a-migration)). Changes of your own that only your backend needs get a file for it alone, with `--target`; SQLite and files sites only miss them if you run those backends. Content migrations need nothing from you: they go through the interface and run on every backend.
 
 The `pnpm data:*` commands, backups, and Litestream work on `sqlite_backend`'s data folder. A backend of your own brings its own way to back up its storage.
 
@@ -1472,7 +1472,7 @@ They are deliberately tolerant: a node that never had the property is left alone
 
 ### Storage migrations
 
-A change to how a backend stores records, such as a new table, needs a storage migration for every backend, so that none of them misses it. Generate the set with `--storage`:
+A change to how a backend stores records, such as a new table, needs a storage migration for every backend that runs, so that none of them misses it. Generate the set with `--storage`:
 
 ```sh
 pnpm migration:create redirects --storage
@@ -1492,17 +1492,9 @@ export default {
 } satisfies Migration;
 ```
 
-Where a backend needs nothing, its file stays with an empty `up`; the files backend, for example, creates a collection's file on first write. The files must stay: a storage change missing a file for any backend stops the site from starting, whatever the change's date, and so does the test suite. That makes a forgotten backend, a misspelled target, or a backend added without migrations an error instead of a silent gap.
+Where a backend needs nothing, its file stays with an empty `up`; the files backend, for example, creates a collection's file on first write. The empty file is the record that someone checked. The files must stay: when a site starts, a storage change without a file for its backend stops it, whatever the change's date. That makes a forgotten file, a misspelled target, or a backend added without migrations an error instead of a silent gap.
 
-Failing early is the default, and skipping the check takes an explicit command-line flag. With `--allow-missing-migrations`, the site starts anyway: the log lists every missing file, and the changes without a file for the site's backend are skipped for it. Use it while a backend of your own catches up with an Editable release, then add the files and drop the flag:
-
-```sh
-pnpm dev -- --allow-missing-migrations                 # in development, after the -- that passes it on from Vite
-node build --allow-missing-migrations                  # a built server
-pnpm data:convert --to files --allow-missing-migrations
-```
-
-On a deployment, append it to the start command, such as the `CMD` in the `Dockerfile`. A host that runs `migrate` itself passes `{ allow_missing_migrations: true }` instead. The test suite checks the migrations folder regardless.
+The check at startup only looks at the backend that starts, so a fork's changes for its own backend never stop it. Editable's test suite keeps the two built-in backends in step: it fails when a storage change has a file for SQLite but not for files, or the other way round. A fork that no longer runs one of them drops it from that test.
 
 A new backend starts with a file for every storage change in the folder, and a fresh backend of any kind replays all of them in order.
 
@@ -1516,7 +1508,7 @@ pnpm migration:create reconcile-heading --after 20261009T120000000Z_editable_sit
 
 A migration that must run before another is placed right after the one preceding that. This works because migrations that arrive together are all pending when a site upgrades. One dated before a migration a site already ran still runs, but later, and the log warns about it.
 
-When you maintain your own backend and update Editable, every new Editable storage change needs your backend's file too, and the site won't start until it has one, unless you pass `--allow-missing-migrations`. Add it to that change with `--join`, which reuses the change's timestamp and name:
+When you maintain your own backend and update Editable, every new Editable storage change needs your backend's file too, and the site won't start until it has one. Add it to that change with `--join`, which reuses the change's timestamp and name:
 
 ```sh
 pnpm migration:create --join 20261101T120000000Z_editable_redirects_sqlite --target atproto

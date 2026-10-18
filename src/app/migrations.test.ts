@@ -6,7 +6,8 @@ import { join } from 'node:path';
 import type { Backend } from '#lib/server/backend.js';
 import initial_schema from './migrations/20260803T131059242Z_editable_initial_schema.js';
 import translations_schema from './migrations/20260923T180000000Z_editable_translations.js';
-import { migrate, migrate_storage } from './migrations.js';
+import { all_migrations, migrate, migrate_storage } from './migrations.js';
+import { assert_complete } from '#lib/server/migrations.js';
 import { backend_in } from './server_backend.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
@@ -114,12 +115,9 @@ it('refuses a backend that misses storage migrations, as a fork adding one would
 	expect(existsSync(join(dir, 'db', '_migrations.json'))).toBe(false);
 });
 
-it('starts a backend despite missing storage migrations when allowed', async () => {
-	vi.spyOn(console, 'warn').mockImplementation(() => {});
-	const atproto: Backend = { ...backend_in(temp_dir(), 'files'), name: 'atproto' };
-	await migrate(atproto, { allow_missing_migrations: true });
-	expect(await atproto.settings.get('home_page_id')).not.toBeNull();
-	expect(await atproto.applied_migrations()).toEqual([]);
+it('keeps the SQLite and files backends in step: every storage change has a file for both', () => {
+	for (const target of ['sqlite', 'files'])
+		expect(() => assert_complete(all_migrations, target)).not.toThrow();
 });
 
 it('refuses data migrated by a newer version', async () => {

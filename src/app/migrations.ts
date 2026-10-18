@@ -8,24 +8,17 @@ import { create_migration_helpers } from '#lib/server/migration_helpers.js';
 import type { Backend } from '#lib/server/backend.js';
 import seed_initial_documents from './seed_initial_documents.js';
 
-const all_migrations = load_migrations(
+/** Every migration in src/app/migrations, in id order. */
+export const all_migrations = load_migrations(
 	import.meta.glob('./migrations/*.ts', { eager: true, import: 'default' }) as Record<
 		string,
 		Migration
 	>
 );
 
-/** What a migration run may tolerate. */
-export type MigrateOptions = {
-	/** Warn about storage changes without a file for this backend instead of refusing them. */
-	allow_missing_migrations?: boolean;
-};
-
 /** Bring a backend's storage up to date with the storage migrations for its name. */
-export async function migrate_storage(backend: Backend, options: MigrateOptions = {}) {
-	assert_complete(all_migrations, backend.name, {
-		allow_missing: options.allow_missing_migrations
-	});
+export async function migrate_storage(backend: Backend) {
+	assert_complete(all_migrations, backend.name);
 	await backend.transaction(async (tx) =>
 		run_migrations(
 			all_migrations,
@@ -74,7 +67,7 @@ export async function migrate_content(backend: Backend) {
 }
 
 /** Bring a site up to date: its backend's storage first, then its content. */
-export async function migrate(backend: Backend, options: MigrateOptions = {}) {
-	await migrate_storage(backend, options);
+export async function migrate(backend: Backend) {
+	await migrate_storage(backend);
 	await migrate_content(backend);
 }

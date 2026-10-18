@@ -15,11 +15,9 @@ import { join, resolve } from 'node:path';
 import { createServer } from 'vite';
 
 const args = process.argv.slice(2);
-const allow_missing_migrations = args.includes('--allow-missing-migrations');
-const rest = args.filter((arg) => arg !== '--allow-missing-migrations');
-const to = rest[0] === '--to' ? rest[1] : null;
-if (rest.length !== 2 || (to !== 'files' && to !== 'sqlite'))
-	fail('Usage: pnpm data:convert --to files|sqlite [--allow-missing-migrations]');
+const to = args[0] === '--to' ? args[1] : null;
+if (args.length !== 2 || (to !== 'files' && to !== 'sqlite'))
+	fail('Usage: pnpm data:convert --to files|sqlite');
 const dir = resolve(process.env.DATA_DIR || 'data');
 const database = join(dir, 'db.sqlite3');
 if (spawnSync('lsof', [database]).status === 0)
@@ -42,10 +40,10 @@ try {
 	}
 
 	const source = storage.backend_in(dir, from);
-	await migrate(source, { allow_missing_migrations });
+	await migrate(source);
 	// The new format gets its own storage migrations; content progress arrives with the records.
 	const target = storage.backend_in(dir, to);
-	await migrate_storage(target, { allow_missing_migrations });
+	await migrate_storage(target);
 	await storage.copy_records(source, target);
 	await source.close();
 	await target.close();

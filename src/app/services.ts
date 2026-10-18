@@ -2,7 +2,6 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { collection_names, type Backend, type Collection } from '#lib/server/backend.js';
 import { migrate } from '#app/migrations.js';
 import { create_backend } from '#app/server_backend.js';
-import { ALLOW_MISSING_MIGRATIONS } from '#app/server_config.js';
 import { site } from '#app/server_site.js';
 import { WEBP_HEADER_BYTES, webp_dimensions } from '#lib/server/webp.js';
 
@@ -12,7 +11,7 @@ let default_backend: Promise<Backend> | undefined;
 export function get_default_backend(): Promise<Backend> {
 	default_backend ??= (async () => {
 		const backend = create_backend();
-		await migrate(backend, { allow_missing_migrations: ALLOW_MISSING_MIGRATIONS });
+		await migrate(backend);
 		return backend;
 	})().catch((error) => {
 		default_backend = undefined;
