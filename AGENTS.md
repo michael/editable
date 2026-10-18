@@ -2,7 +2,7 @@
 
 Repository-specific guidance for coding agents working on Svedit.
 
-`README.md` is the user-facing manual and source of truth for setup, customization, and usage patterns. Consult only the relevant sections when working on those areas; keep agent-specific guidance here.
+`README.md` is the user-facing manual and source of truth for setup, customization, and usage patterns. `INTEGRATION.md` covers running Editable inside larger systems: backends, file storage, hosting several sites, and custom sign-in. Consult only the relevant sections when working on those areas; keep agent-specific guidance here.
 
 ## Principles
 

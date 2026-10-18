@@ -300,7 +300,7 @@ snapshot_local_db() {
 }
 
 # A data folder holds a SQLite database or a site kept as files in db/
-# (README → File storage). The data commands work with SQLite.
+# (INTEGRATION.md → File storage). The data commands work with SQLite.
 local_holds_files() { [ -d "$DATA_DIR_LOCAL/db" ]; }
 
 # Commands that read the local database stop at a site kept as files.
