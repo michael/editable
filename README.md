@@ -1123,7 +1123,7 @@ await backend.transaction(async (tx) => {
 });
 ```
 
-What happens next is up to the backend. `sqlite_backend` replaces three rows inside a SQLite transaction. `files_backend` rewrites the document's EDF file and two JSON files. A backend for the AT Protocol, as in the example below, sends the document to a repository and the references to Postgres.
+What happens next is up to the backend. `sqlite_backend` replaces three rows inside a SQLite transaction. `files_backend` rewrites the document's EDF file and two JSON files. A backend of your own, such as the Git example below, might commit the document to a repository and keep the references in Postgres.
 
 Editable comes with two backends:
 
@@ -1202,27 +1202,26 @@ The two built-in backends run their record operations one at a time on a single 
 
 ### Write your own backend
 
-As an example, a backend that publishes a site's content to the AT Protocol: pages, slugs, translations, and settings become records in the site owner's repository, uploaded files become blobs there, and everything private, plus the references, lives in Postgres next to the server.
+As an example, a backend that publishes a site's content to a Git repository: pages, slugs, translations, and settings become files committed to the repository, so the site's content is versioned and reviewable on any Git host. Everything private, plus the references, lives in Postgres next to the server, and uploaded files in an S3-compatible bucket. The same shape fits any public document store next to a private database.
 
 Start with its storage, the things it is built on:
 
 ```ts
-import type { Agent } from '@atproto/api';
 import type { Sql } from 'postgres';
 
-export type AtprotoStorage = {
-	/** Signed in as the account that owns the site's repository. */
-	agent: Agent;
-	/** The repository the site is published to. */
-	did: string;
+export type GitStorage = {
+	/** The repository the content is committed to, through its Git host's API. */
+	git: GitRepository;
+	/**
+	 * Reads and writes the content's files. Outside a transaction it commits
+	 * each write right away; inside one it collects the changes, which the
+	 * transaction commits at once, and its reads see them.
+	 */
+	files: ContentFiles;
 	/** Private records, references, and asset bookkeeping. */
 	sql: Sql;
-	/**
-	 * Reads and writes records in the repository. Outside a transaction it
-	 * writes right away; inside one it collects the writes, which the
-	 * transaction sends as one batch, and its reads see them.
-	 */
-	repo: RepoWriter;
+	/** Uploaded files and their variants. */
+	bucket: Bucket;
 };
 ```
 
@@ -1231,17 +1230,17 @@ Then implement the interface over it. A sketch, with the small helpers left out:
 ```ts
 import type { Backend } from '#lib/server/backend.js';
 
-export function atproto_backend(storage: AtprotoStorage): Backend {
+export function git_backend(storage: GitStorage): Backend {
 	return {
-		name: 'atproto',
+		name: 'git',
 		storage,
-		// Public: one record per document under its id, written with putRecord
-		documents: repo_collection(storage, 'com.example.editable.document', (r) => r.document_id),
-		slugs: repo_collection(storage, 'com.example.editable.slug', (r) => r.slug),
-		translations: repo_collection(storage, 'com.example.editable.translation', (r) =>
+		// Public: one file per record, such as documents/<id>.edf
+		documents: file_collection(storage, 'documents', (r) => r.document_id),
+		slugs: file_collection(storage, 'slugs', (r) => r.slug),
+		translations: file_collection(storage, 'translations', (r) =>
 			translation_key(r.document_id, r.language)
 		),
-		settings: repo_collection(storage, 'com.example.editable.setting', (r) => r.key),
+		settings: file_collection(storage, 'settings', (r) => r.key),
 		// Private: one Postgres table each
 		document_refs: table(storage, 'document_refs', 'document_id'),
 		asset_refs: table(storage, 'asset_refs', 'document_id'),
@@ -1249,12 +1248,11 @@ export function atproto_backend(storage: AtprotoStorage): Backend {
 		// …login_throttle and the OAuth tables the same way
 
 		// Writes to both stores as one step; see Writing to two stores below.
-		transaction: (fn) => atproto_transaction(storage, fn),
+		transaction: (fn) => git_transaction(storage, fn),
 
-		// Upload as a blob, and keep a record that refers to it so the
-		// repository keeps it; Postgres tracks when it was last used.
-		write_asset: (asset_id, data) => upload_blob(storage, asset_id, data),
-		read_asset: (asset_id, options) => read_blob(storage, asset_id, options),
+		// Objects in the bucket; Postgres tracks when each original was last used.
+		write_asset: (asset_id, data, variant) => put_object(storage, asset_id, variant, data),
+		read_asset: (asset_id, options) => get_object(storage, asset_id, options),
 		// …
 
 		applied_migrations: async () =>
@@ -1267,13 +1265,14 @@ export function atproto_backend(storage: AtprotoStorage): Backend {
 }
 ```
 
-How a backend meets the interface is its own business. Reading every record from a repository on each request is slow, so a real one would cache, or load the site into a working copy and write the changes back after each save. Credentials can be per site, too: a host serving many sites creates a backend per site with its owner's session and passes it as `backend` in `event.locals.site`.
+How a backend meets the interface is its own business. Reading every file from a Git host on each request is slow, so a real one would cache, or load the site into a working copy and write the changes back after each save. Credentials can be per site, too: a host serving many sites creates a backend per site with its owner's access and passes it as `backend` in `event.locals.site`.
 
 Use it by returning it from `create_backend` in `src/app/server_backend.ts`:
 
 ```ts
 export function create_backend(): Backend {
-	return atproto_backend({ agent, did: SITE_DID, sql: postgres(DATABASE_URL) });
+	const git = git_repository(GIT_REMOTE, GIT_TOKEN);
+	return git_backend({ git, files: content_files(git), sql: postgres(DATABASE_URL), bucket });
 }
 ```
 
@@ -1281,11 +1280,11 @@ The backend's storage migrations target its name and receive its storage. Its fi
 
 ```ts
 import type { Migration } from '#lib/server/migrations.js';
-import type { AtprotoStorage } from '../backends/atproto_backend.js';
+import type { GitStorage } from '../backends/git_backend.js';
 
 export default {
-	target: 'atproto',
-	async up({ sql }: AtprotoStorage) {
+	target: 'git',
+	async up({ sql }: GitStorage) {
 		await sql`CREATE TABLE IF NOT EXISTS sessions (session_id TEXT PRIMARY KEY, expires BIGINT NOT NULL)`;
 		// …the other private tables
 	}
@@ -1294,34 +1293,33 @@ export default {
 
 #### Writing to two stores
 
-No transaction spans Postgres and a repository, and a repository cannot take a write back. A backend over both cannot be all or nothing in the strict sense, but it can come close: either everything lands, nothing does, or an interrupted run converges when it runs again. Its `transaction` gets there by making Postgres the anchor and sending the repository's writes last:
+No transaction spans Postgres and a Git repository, and a pushed commit cannot be taken back, only reverted. A backend over both cannot be all or nothing in the strict sense, but it can come close: either everything lands, nothing does, or an interrupted run converges when it runs again. Its `transaction` gets there by making Postgres the anchor and committing to the repository last:
 
 1. All SQL runs in one Postgres transaction, including the record that a storage migration ran.
-2. Repository writes are collected rather than sent, and reads through the transaction see them.
-3. When the work is done, the collected writes go out as one `applyWrites` batch, pinned with `swapCommit` to the commit the repository had when the transaction began, so it fails if anything else moved the repository meanwhile.
-4. Postgres commits only after the batch has landed.
+2. File changes are collected rather than committed, and reads through the transaction see them.
+3. When the work is done, the collected changes become one commit on top of the commit the branch pointed to when the transaction began, and the branch moves only if it still points there, so the commit fails if anything else moved the branch meanwhile.
+4. Postgres commits only after the branch has moved.
 
-A sketch, with `buffered_repo`, which collects writes, and `is_invalid_swap` left out:
+A sketch, with `collected_files`, which collects changes, and `is_not_fast_forward` left out:
 
 ```ts
 import { ConflictError, type Backend } from '#lib/server/backend.js';
 
-async function atproto_transaction<T>(storage: AtprotoStorage, fn: (tx: Backend) => Promise<T>) {
-	const { agent, did } = storage;
-	const head = (await agent.com.atproto.sync.getLatestCommit({ did })).data.cid;
+async function git_transaction<T>(storage: GitStorage, fn: (tx: Backend) => Promise<T>) {
+	const parent = await storage.git.head();
 	// sql.begin commits when the callback resolves and rolls back when it throws.
 	return storage.sql.begin(async (sql) => {
-		const repo = buffered_repo(storage);
+		const files = collected_files(storage.git, parent);
 		const tx: Backend = {
-			...atproto_backend({ ...storage, sql, repo }),
+			...git_backend({ ...storage, sql, files }),
 			transaction: (inner) => inner(tx)
 		};
 		const result = await fn(tx);
-		if (repo.writes.length)
-			await agent.com.atproto.repo
-				.applyWrites({ repo: did, writes: repo.writes, swapCommit: head })
+		if (files.changes.length)
+			await storage.git
+				.commit({ parent, changes: files.changes, message: 'Save from Editable' })
 				.catch((error) => {
-					throw is_invalid_swap(error) ? new ConflictError('The repository changed.') : error;
+					throw is_not_fast_forward(error) ? new ConflictError('The repository changed.') : error;
 				});
 		return result;
 	});
@@ -1330,27 +1328,29 @@ async function atproto_transaction<T>(storage: AtprotoStorage, fn: (tx: Backend)
 
 Run these one at a time per site, such as through a promise chain, as the interface asks. Then:
 
-| Fails at                                               | Afterwards                                                                                                                                                           |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The work, before anything is sent                      | Postgres rolls back, the repository is untouched                                                                                                                     |
-| The batch: a conflict, the batch limit, or the network | Postgres rolls back, and the batch is atomic, so nothing changed                                                                                                     |
-| The Postgres commit, after the batch landed            | The repository has the writes, Postgres does not. A storage migration is not recorded and runs again on the next start; a save is repeated by the editor's next save |
+| Fails at                                    | Afterwards                                                                                                                                                           |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The work, before anything is committed      | Postgres rolls back, the repository is untouched                                                                                                                     |
+| The commit: a conflict or the network       | Postgres rolls back, and the branch did not move, so nothing changed                                                                                                 |
+| The Postgres commit, after the branch moved | The repository has the commit, Postgres does not. A storage migration is not recorded and runs again on the next start; a save is repeated by the editor's next save |
 
-The last row is the only gap, and idempotent repository writes make it harmless: putting a record to its final value twice ends in the same state. A backend that wants to close it keeps the records its batch replaced and, when the commit fails, sends them back in a second pinned batch. Two more limits apply. A repository accepts at most 200 writes per batch, so larger work cannot be atomic there and must be safe to resume. And a `ConflictError` makes a save report a version conflict, so the editor asks to reload instead of overwriting what changed.
+The last row is the only gap, and idempotent file changes make it harmless: writing a file with its final content twice ends in the same state, and a commit without changes is skipped. A backend that wants to close it reverts its commit, pinned the same way, when the Postgres commit fails. A `ConflictError` makes a save report a version conflict, so the editor asks to reload instead of overwriting what changed.
 
 A storage migration gets the same guarantees through `tx.storage`. One that changes both stores reads like a single step, and stays idempotent by skipping what is already done:
 
 ```ts
 export default {
-	target: 'atproto',
-	async up({ sql, repo }: AtprotoStorage) {
-		await sql`ALTER TABLE asset_refs ADD COLUMN IF NOT EXISTS blob_cid TEXT`;
-		for (const { rkey, value } of await repo.list('com.example.editable.document'))
-			if (value.schema_version !== 2)
-				repo.put('com.example.editable.document', rkey, { ...value, schema_version: 2 });
+	target: 'git',
+	async up({ sql, files }: GitStorage) {
+		// Content moves from pages/ to documents/, and Postgres learns where each document lives.
+		await sql`ALTER TABLE document_refs ADD COLUMN IF NOT EXISTS path TEXT`;
+		for (const path of await files.list('pages/'))
+			await files.move(path, path.replace(/^pages\//, 'documents/'));
 	}
 } satisfies Migration;
 ```
+
+The same recipe fits any store that applies a batch of changes at once and can refuse it when something else changed first.
 
 Every storage change in `src/app/migrations` needs a file for the backend a site runs, so an Editable release that adds a table to SQLite stops your site from starting until your backend has its own file for that change, even an empty one. That stop is deliberate: it makes you look at each change and decide what your backend needs. Add the file with `--join` (see [Placing a migration](#placing-a-migration)). Changes of your own that only your backend needs get a file for it alone, with `--target`; SQLite and files sites only miss them if you run those backends. Content migrations need nothing from you: they go through the interface and run on every backend.
 
@@ -1395,7 +1395,7 @@ event.locals.site = {
 - `base` is the path the site is served under, or `''` at the root. Stored links never include it: `/about` stays `/about` in the database, reaches the browser as `/alice/about` the way language prefixes do, and is stored without it again, so a site can move to another path or its own domain without changing content. Components render `node.href` as is; asset URLs and the editor's own navigation go through `resolve_href(href, site)`.
 - `languages` lists the site's languages, the main language first, or none.
 - `backend` is where the site's records and asset files go (see [Backends](#backends-experimental)). `backend_for(dir)` from `src/app/server_backend.ts` gives a data folder's backend in the format the folder holds. Run `migrate` from `src/app/migrations.ts` on it before use, which brings its storage and then its content up to date and seeds a new site. Editable reads and writes through the backend for the request and caches nothing; opening, caching, and closing site data is up to the host. Asset cleanup deletes files the site's records no longer reference, so a host that shares asset files between sites gives each a backend whose `delete_asset` keeps them.
-- `auth` decides who is signed in and how they sign in, replacing the admin password. It implements `get_user(event)`, `log_in(event, credentials)`, and `log_out(event)` (types in `src/app/server_auth.ts`). `get_user` returns the signed-in user, or `null`, and Editable puts it on `event.locals.user`; whoever is signed in may edit. The user is an object of your own shape: Editable's admin password signs in `{ username: 'admin', name: 'Admin' }`, and an OAuth host might use `{ did, handle }`. It reaches the browser as page data, so keep secrets out of it. `log_in` receives whatever the login dialog sends to `login_admin`; Editable's own dialog sends `{ password }`. It either starts a session or returns `{ ok: true, redirect }` to continue elsewhere: to sign in with OAuth, have your own login dialog send a username, return the provider's authorization URL, and handle the callback in a route of your own that sets your session, which `get_user` then reads. `event.url` in `log_in` is the page the login started from. Editable's own password sign-in names its session cookie after the site's base, `ew_admin_session` at the root and `ew_admin_session_alice` under `/alice`, so sites sharing an origin keep their sign-ins apart; an auth of your own scopes its cookies the same way.
+- `auth` decides who is signed in and how they sign in, replacing the admin password. It implements `get_user(event)`, `log_in(event, credentials)`, and `log_out(event)` (types in `src/app/server_auth.ts`). `get_user` returns the signed-in user, or `null`, and Editable puts it on `event.locals.user`; whoever is signed in may edit. The user is an object of your own shape: Editable's admin password signs in `{ username: 'admin', name: 'Admin' }`, and an OAuth host might use `{ id, email }`. It reaches the browser as page data, so keep secrets out of it. `log_in` receives whatever the login dialog sends to `login_admin`; Editable's own dialog sends `{ password }`. It either starts a session or returns `{ ok: true, redirect }` to continue elsewhere: to sign in with OAuth, have your own login dialog send a username, return the provider's authorization URL, and handle the callback in a route of your own that sets your session, which `get_user` then reads. `event.url` in `log_in` is the page the login started from. Editable's own password sign-in names its session cookie after the site's base, `ew_admin_session` at the root and `ew_admin_session_alice` under `/alice`, so sites sharing an origin keep their sign-ins apart; an auth of your own scopes its cookies the same way.
 
 To replace the login dialog itself, for example to ask for a username, to offer several sign-in providers, or when embedding Editable in another environment, set your own component in place of `AuthDialog` as `auth_dialog` in `system_components` in `src/app/document_config.ts`. It opens in the same drawer and receives `onlogin_success`, to call after signing in on the page, and `onedit_for_fun`, for editing without saving (see `AuthDialogProps` in `src/app/components/AuthDialog.svelte`):
 
@@ -1576,7 +1576,7 @@ A migration that must run before another is placed right after the one preceding
 When you maintain your own backend and update Editable, every new Editable storage change needs your backend's file too, and the site won't start until it has one. Add it to that change with `--join`, which reuses the change's timestamp and name:
 
 ```sh
-pnpm migration:create --join 20261101T120000000Z_editable_redirects_sqlite --target atproto
+pnpm migration:create --join 20261101T120000000Z_editable_redirects_sqlite --target git
 ```
 
 Editable's own migrations use the `editable` source name; `custom` migrations belong to your project. The timestamp-first filenames keep both sources in one chronological list without a central registry or sequence-number conflicts. Because order across versions follows timestamps rather than when a migration arrived, prefer tolerant migrations, "create if missing" rather than "create", which safely do nothing when their source shape is absent.

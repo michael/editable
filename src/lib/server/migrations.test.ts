@@ -61,12 +61,12 @@ describe('assert_complete', () => {
 		const fork = [
 			...migrations,
 			...load({
-				'20260101T000000000Z_editable_schema_atproto': { target: 'atproto', up },
-				'20260301T000000000Z_editable_redirects_atproto': { target: 'atproto', up },
-				'20260401T000000000Z_custom_handles_atproto': { target: 'atproto', up }
+				'20260101T000000000Z_editable_schema_git': { target: 'git', up },
+				'20260301T000000000Z_editable_redirects_git': { target: 'git', up },
+				'20260401T000000000Z_custom_handles_git': { target: 'git', up }
 			})
 		];
-		expect(() => assert_complete(fork, 'atproto')).not.toThrow();
+		expect(() => assert_complete(fork, 'git')).not.toThrow();
 		expect(() => assert_complete(fork, 'sqlite')).toThrow(
 			'20260401T000000000Z_custom_handles_sqlite'
 		);
@@ -78,8 +78,8 @@ describe('assert_complete', () => {
 			...load({ '20260401T000000000Z_editable_x_sqllite': { target: 'sqllite', up } })
 		];
 		expect(() => assert_complete(typo, 'sqlite')).toThrow('20260401T000000000Z_editable_x_sqlite');
-		expect(() => assert_complete(migrations, 'atproto')).toThrow(
-			'20260101T000000000Z_editable_schema_atproto, 20260301T000000000Z_editable_redirects_atproto'
+		expect(() => assert_complete(migrations, 'git')).toThrow(
+			'20260101T000000000Z_editable_schema_git, 20260301T000000000Z_editable_redirects_git'
 		);
 	});
 });

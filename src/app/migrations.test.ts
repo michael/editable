@@ -127,9 +127,9 @@ it('gives storage migrations the storage of the transaction they run in', async 
 it('refuses a backend that misses storage migrations, as a fork adding one would', async () => {
 	const dir = join(temp_dir(), 'fork');
 	mkdirSync(dir);
-	const atproto: Backend = { ...backend_in(dir, 'files'), name: 'atproto' };
-	await expect(migrate_storage(atproto)).rejects.toThrow(
-		'20260803T131059242Z_editable_initial_schema_atproto'
+	const git: Backend = { ...backend_in(dir, 'files'), name: 'git' };
+	await expect(migrate_storage(git)).rejects.toThrow(
+		'20260803T131059242Z_editable_initial_schema_git'
 	);
 	expect(existsSync(join(dir, 'db', '_migrations.json'))).toBe(false);
 });

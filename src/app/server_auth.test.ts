@@ -76,7 +76,7 @@ it('keeps the sign-ins of sites under different paths on one origin apart', asyn
 });
 
 it('uses the auth a host sets for the request, with users of its own shape', async () => {
-	const alice = { did: 'did:plc:alice', handle: 'alice.example' };
+	const alice = { id: 'u_42', email: 'alice@example.com' };
 	const host_auth: Auth = {
 		get_user: () => alice,
 		log_in: (event, { username }) => ({
