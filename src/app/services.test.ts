@@ -32,17 +32,15 @@ it('uses the backend a host sets for the request, and opens the deployment’s o
 	request.locals = {
 		site: { origin: 'https://host.example', base: '/alice', languages: [], backend: hosted }
 	};
-	await services.backend.transaction(() =>
-		services.backend.settings.put({ key: 'greeting', value: 'hosted' })
-	);
+	await services.backend.save_documents({ settings: [{ key: 'greeting', value: 'hosted' }] });
 	expect(hosted_db.prepare('SELECT value FROM site_settings').all()).toEqual([{ value: 'hosted' }]);
 	expect(await services.asset_exists('hosted.webp')).toBe(true);
 	expect(existsSync(data_dir)).toBe(false);
 
 	// Without a host's backend, the deployment's own opens on first use, migrated and seeded.
 	request.locals = {};
-	expect(await services.backend.settings.get('greeting')).toBeNull();
-	expect(await services.backend.settings.get('home_page_id')).not.toBeNull();
+	expect(await services.backend.get_setting('greeting')).toBeNull();
+	expect(await services.backend.get_setting('home_page_id')).not.toBeNull();
 	expect(existsSync(join(data_dir, 'db.sqlite3'))).toBe(true);
 	expect(await services.get_backend()).toBe(await services.get_default_backend());
 	expect(await services.asset_exists('hosted.webp')).toBe(false);
@@ -54,15 +52,15 @@ it('keeps a site in files instead of a database with STORAGE=files', async () =>
 	vi.stubEnv('STORAGE', 'files');
 	const { backend } = await import('./services.js');
 
-	const home_page_id = (await backend.settings.get('home_page_id'))?.value;
+	const home_page_id = await backend.get_setting('home_page_id');
 	expect(home_page_id).not.toBeNull();
 	expect(existsSync(join(data_dir, 'db.sqlite3'))).toBe(false);
 	expect(existsSync(join(data_dir, 'db', 'documents', `${home_page_id}.edf`))).toBe(true);
 
-	const home = (await backend.documents.get(home_page_id!))!;
+	const home = (await backend.get_document(home_page_id!))!;
 	expect(home.type).toBe('page');
 	expect(home.data.document_id).toBe(home_page_id);
-	expect((await backend.documents.all()).map((record) => record.type).sort()).toEqual([
+	expect((await backend.list_documents()).map((record) => record.type).sort()).toEqual([
 		'banner',
 		'footer',
 		'nav',

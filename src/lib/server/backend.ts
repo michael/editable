@@ -1,52 +1,68 @@
 import type { Document } from 'svedit';
 
 /**
- * Where a site's data goes. Editable's server code reads and writes through
- * one backend per site; each backend keeps the records and asset files
- * however its storage suits, and makes no decisions about content. Every
- * method is asynchronous, so a backend can sit on a network service as easily
- * as on a local file.
+ * Where a site's data goes: a function for each thing Editable reads or
+ * writes. Each write is atomic, doing all of its work or none of it, and two
+ * writes never interleave. A backend stores what Editable hands it and makes
+ * no decisions about content. Every function is asynchronous, so a backend
+ * can sit on a network service as easily as on a local file.
  */
 export type Backend = {
 	/** Storage migrations with this name as their target run on this backend. */
 	name: string;
-	/**
-	 * What the backend is built on. A transaction's tx has its own, bound to
-	 * the transaction, such as a Postgres connection inside it; storage
-	 * migrations receive that one.
-	 */
+	/** What the backend is built on; its storage migrations receive it. */
 	storage: unknown;
 
-	documents: Collection<DocumentRecord>;
-	slugs: Collection<SlugRecord>;
-	translations: Collection<TranslationRecord>;
-	settings: Collection<SettingRecord>;
-	document_refs: Collection<DocumentRefsRecord>;
-	asset_refs: Collection<AssetRefsRecord>;
+	// Pages and the shared banner, nav, and footer
+	get_document(document_id: string): Promise<DocumentRecord | null>;
+	list_documents(type?: string): Promise<DocumentRecord[]>;
+	/** Store documents and what changes with them, all at once. */
+	save_documents(save: DocumentSave): Promise<void>;
+	/** Delete a page with its slugs, translations, and references, and drop it from others' references. */
+	delete_page(document_id: string): Promise<void>;
+
+	// Page URLs: one active slug per page, earlier ones redirect
+	resolve_slug(slug: string): Promise<ResolvedSlug | null>;
+	get_active_slug(document_id: string): Promise<string | null>;
+	list_slugs(): Promise<SlugRecord[]>;
+
+	// What each document refers to, as Editable worked it out on its last save
+	list_document_refs(): Promise<DocumentRefsRecord[]>;
+	list_asset_refs(): Promise<AssetRefsRecord[]>;
+
+	// Translations: one record per document and language
+	list_translations(filter?: {
+		document_ids?: string[];
+		language?: string;
+	}): Promise<TranslationRecord[]>;
+	save_translations(save: TranslationSave): Promise<void>;
+
+	// Site settings: the home page, and the content migrations applied
+	get_setting(key: string): Promise<string | null>;
+	list_settings(): Promise<SettingRecord[]>;
+
 	// Private: these let people into the site, so never store them where others can read them.
-	sessions: Collection<SessionRecord>;
-	login_throttle: Collection<LoginThrottleRecord>;
-	oauth_clients: Collection<OAuthClientRecord>;
-	oauth_grants: Collection<OAuthGrantRecord>;
-	oauth_tokens: Collection<OAuthTokenRecord>;
-
-	/**
-	 * Delete the sessions and OAuth tokens that expired at or before now, in
-	 * seconds since the epoch, without reading them first. Editable calls it
-	 * when it signs someone in or approves an MCP client, so expired entries
-	 * do not pile up; a backend may also expire them on its own.
-	 */
+	get_session(session_id: string): Promise<SessionRecord | null>;
+	save_session(session: SessionRecord): Promise<void>;
+	delete_session(session_id: string): Promise<void>;
+	get_login_throttle(key: string): Promise<LoginThrottleRecord | null>;
+	save_login_throttle(throttle: LoginThrottleRecord): Promise<void>;
+	list_oauth_clients(): Promise<OAuthClientRecord[]>;
+	get_oauth_client(client_id: string): Promise<OAuthClientRecord | null>;
+	save_oauth_client(client: OAuthClientRecord): Promise<void>;
+	delete_oauth_client(client_id: string): Promise<void>;
+	list_oauth_grants(): Promise<OAuthGrantRecord[]>;
+	get_oauth_grant(grant_id: string): Promise<OAuthGrantRecord | null>;
+	save_oauth_grant(grant: OAuthGrantRecord): Promise<void>;
+	delete_oauth_grant(grant_id: string): Promise<void>;
+	get_oauth_token(token_hash: string): Promise<OAuthTokenRecord | null>;
+	save_oauth_token(token: OAuthTokenRecord): Promise<void>;
+	/** Delete a token and return it, so a code or refresh token is only ever redeemed once. */
+	take_oauth_token(token_hash: string): Promise<OAuthTokenRecord | null>;
+	/** Delete every token and end every grant that has not ended, such as when the admin logs out. */
+	revoke_oauth_grants(now: number): Promise<void>;
+	/** Delete the sessions and tokens that expired at or before now, in seconds. */
 	delete_expired(now: number): Promise<void>;
-
-	/**
-	 * Run work whose writes belong together, through tx; called on a tx, it
-	 * runs within that transaction. Transactions in one
-	 * process never interleave, reads see the transaction's own writes, and
-	 * its writes land together wherever the storage allows. Throw a
-	 * ConflictError when the storage changed underneath and the work cannot
-	 * be committed.
-	 */
-	transaction<T>(fn: (tx: Backend) => Promise<T>): Promise<T>;
 
 	/**
 	 * Store an asset original under its id, or a file made from it under a
@@ -70,52 +86,67 @@ export type Backend = {
 
 	/** Ids of the storage migrations it has applied. */
 	applied_migrations(): Promise<string[]>;
-	record_migration(id: string): Promise<void>;
+	/** Run a storage migration with the storage and record it as applied, as one step. */
+	run_migration(id: string, up: (storage: unknown) => unknown): Promise<void>;
 
 	close(): Promise<void>;
 };
 
-/** The backend's collections of records. */
-export const collection_names = [
-	'documents',
-	'slugs',
-	'translations',
-	'settings',
-	'document_refs',
-	'asset_refs',
-	'sessions',
-	'login_throttle',
-	'oauth_clients',
-	'oauth_grants',
-	'oauth_tokens'
-] as const satisfies (keyof Backend)[];
-
-/** A backend's records of one kind, each keyed by a field of its records. */
-export type Collection<Record> = {
-	get(key: string): Promise<Record | null>;
-	all(): Promise<Record[]>;
-	/** Insert or replace the record, under the key it carries. */
-	put(record: Record): Promise<void>;
-	delete(key: string): Promise<void>;
+/** What save_documents stores at once. */
+export type DocumentSave = {
+	/**
+	 * The version each document had when it was read, or null if it did not
+	 * exist. Throw a ConflictError and write nothing when one has changed.
+	 */
+	expect?: { [document_id: string]: string | null };
+	/** New and changed documents; the backend gives each a new version. */
+	documents?: NewDocument[];
+	/** What the saved documents now link to and use, replacing what they did before. */
+	document_refs?: DocumentRefsRecord[];
+	asset_refs?: AssetRefsRecord[];
+	/** Translations rewritten or dropped along with the documents. */
+	translations?: { put?: NewTranslation[]; delete?: TranslationKey[] };
+	/** Slugs added or changed, such as a new page's first one or a renamed page's. */
+	slugs?: SlugRecord[];
+	/** Settings that change with the documents, such as the content migrations applied. */
+	settings?: SettingRecord[];
 };
 
-/** Thrown by a backend when its storage changed underneath a transaction. */
+/** What save_translations stores at once: some documents' overrides in one language. */
+export type TranslationSave = {
+	/** Versions as in DocumentSave: of the documents, and of their translations in this language. */
+	expect: {
+		documents: { [document_id: string]: string };
+		translations: (TranslationKey & { version: string | null })[];
+	};
+	put: NewTranslation[];
+	delete: TranslationKey[];
+	asset_refs: AssetRefsRecord[];
+};
+
+/** Thrown by a write whose expected versions no longer match. */
 export class ConflictError extends Error {}
 
 export type AssetData = ReadableStream<Uint8Array> | Uint8Array;
 export type AssetWritten = { bytes_written: number; sha256: string };
 export type ByteRange = { start: number; end: number };
 
-/** Keyed by document_id. */
+/**
+ * A page or a shared banner, nav, or footer. Its version changes with every
+ * write, set by the backend: a counter, a random token, or what the storage
+ * already has, such as a Git blob hash.
+ */
 export type DocumentRecord = {
 	document_id: string;
 	type: string;
 	data: Document;
 	created_at: string;
 	updated_at: string;
+	version: string;
 };
+export type NewDocument = Omit<DocumentRecord, 'version'>;
 
-/** Keyed by slug; a page has one active slug, its earlier ones redirect. */
+/** A page's slug; a page has one active slug, its earlier ones redirect. */
 export type SlugRecord = {
 	slug: string;
 	document_id: string;
@@ -123,37 +154,33 @@ export type SlugRecord = {
 	created_at: string;
 };
 
-/** A language's overrides for one document, as JSON text; keyed by translation_key. */
+export type ResolvedSlug = { document_id: string; is_active: boolean; active_slug: string };
+
+/** A language's overrides for one document, as JSON text, versioned like documents. */
 export type TranslationRecord = {
 	document_id: string;
 	language: string;
 	value: string;
 	updated_at: string;
+	version: string;
 };
+export type NewTranslation = Omit<TranslationRecord, 'version'>;
+export type TranslationKey = { document_id: string; language: string };
 
-/** Translations are keyed by document and language. */
-export const translation_key = (document_id: string, language: string) =>
-	`${document_id}:${language}`;
-
-/**
- * A site-wide value by key: the home page, and the content migrations
- * applied so far, as a JSON list of ids under 'migrations'.
- */
+/** A site-wide value by key: home_page_id, and migrations, a JSON list of ids. */
 export type SettingRecord = { key: string; value: string };
 
-/** The pages a document links to, in document order; keyed by document_id. */
+/** The pages a document links to, in document order. */
 export type DocumentRefsRecord = { document_id: string; target_ids: string[] };
 
-/** The assets a document and its translations refer to; keyed by document_id. */
+/** The assets a document and its translations refer to. */
 export type AssetRefsRecord = { document_id: string; asset_ids: string[] };
 
-/** Keyed by session_id. */
 export type SessionRecord = { session_id: string; expires: number };
 
-/** Failed sign-ins and the lockout they caused; keyed by key, 'admin' for the password. */
+/** Failed sign-ins and the lockout they caused, under 'admin' for the password. */
 export type LoginThrottleRecord = { key: string; failed_count: number; locked_until: number };
 
-/** Keyed by client_id. */
 export type OAuthClientRecord = {
 	client_id: string;
 	client_name: string;
@@ -161,7 +188,6 @@ export type OAuthClientRecord = {
 	created_at: number;
 };
 
-/** Keyed by grant_id. */
 export type OAuthGrantRecord = {
 	grant_id: string;
 	client_id: string;
@@ -171,7 +197,6 @@ export type OAuthGrantRecord = {
 	expires_at: number;
 };
 
-/** Keyed by token_hash. */
 export type OAuthTokenRecord = {
 	token_hash: string;
 	grant_id: string;

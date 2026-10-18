@@ -47,15 +47,12 @@ export type PageTreeNode = {
 };
 
 async function list_page_documents(): Promise<PageDocumentRecord[]> {
-	return (await backend.documents.all())
-		.filter((record) => record.type === 'page')
-		.sort((a, b) => a.document_id.localeCompare(b.document_id))
-		.map((record) => ({
-			document_id: record.document_id,
-			nodes: record.data.nodes,
-			created_at: record.created_at ?? null,
-			updated_at: record.updated_at ?? null
-		}));
+	return (await backend.list_documents('page')).map((record) => ({
+		document_id: record.document_id,
+		nodes: record.data.nodes,
+		created_at: record.created_at ?? null,
+		updated_at: record.updated_at ?? null
+	}));
 }
 
 function summarize_page_document(
@@ -99,7 +96,7 @@ export async function build_page_browser_data(
 	const page_docs = await list_page_documents();
 	const page_docs_by_id = new Map(page_docs.map((page_doc) => [page_doc.document_id, page_doc]));
 	const active_slugs = new Map(
-		(await backend.slugs.all())
+		(await backend.list_slugs())
 			.filter((record) => record.is_active)
 			.map((record) => [record.document_id, record.slug])
 	);
@@ -109,7 +106,7 @@ export async function build_page_browser_data(
 	const summaries_by_id = new Map(summaries.map((summary) => [summary.document_id, summary]));
 	// What every document links to, as recorded on its last save.
 	const refs_by_document_id = new Map(
-		(await backend.document_refs.all()).map((refs) => [refs.document_id, refs.target_ids])
+		(await backend.list_document_refs()).map((refs) => [refs.document_id, refs.target_ids])
 	);
 	const refs_by_page_id = new Map(
 		page_docs.map((page_doc) => [

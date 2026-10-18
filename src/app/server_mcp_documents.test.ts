@@ -35,8 +35,7 @@ vi.mock('./services.js', async () => {
 import * as services from './services.js';
 const { backend, sqlite } = services as unknown as typeof services & { sqlite: DatabaseSync };
 import { webp_bytes } from './test_helpers/webp.js';
-import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
-import translations_schema from '#app/migrations/20260923T180000000Z_editable_translations.js';
+import { migrate_storage } from './migrations.js';
 import {
 	default_page_document,
 	default_banner_document,
@@ -45,7 +44,6 @@ import {
 } from './default_site.js';
 import { combine_page_document, get_doc_from_db } from './server_documents.js';
 import { create_mcp_page, read_mcp_document, write_mcp_document } from './server_mcp_documents.js';
-import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 const page_id = default_page_document.document_id;
 const banner_id = default_banner_document.document_id;
@@ -53,13 +51,18 @@ const nav_id = default_nav_document.document_id;
 const footer_id = default_footer_document.document_id;
 
 afterAll(() => (sqlite as DatabaseSync).close());
+await migrate_storage(backend as never);
 
 beforeEach(() => {
-	sqlite.exec(
-		'DROP TABLE IF EXISTS documents; DROP TABLE IF EXISTS site_settings; DROP TABLE IF EXISTS document_refs; DROP TABLE IF EXISTS asset_refs; DROP TABLE IF EXISTS document_slugs; DROP TABLE IF EXISTS sessions; DROP TABLE IF EXISTS translations'
-	);
-	initial_schema.up({ db: sqlite } as SqliteStorage);
-	translations_schema.up({ db: sqlite } as SqliteStorage);
+	for (const table of [
+		'documents',
+		'site_settings',
+		'document_refs',
+		'asset_refs',
+		'document_slugs',
+		'translations'
+	])
+		sqlite.exec(`DELETE FROM ${table}`);
 	sqlite.prepare("INSERT INTO site_settings VALUES ('home_page_id', ?)").run(page_id);
 	for (const [type, doc] of [
 		['page', default_page_document],
@@ -68,15 +71,17 @@ beforeEach(() => {
 		['footer', default_footer_document]
 	] as const) {
 		sqlite
-			.prepare('INSERT INTO documents VALUES (?, ?, ?, ?, ?)')
-			.run(doc.document_id, type, JSON.stringify(doc), 'v0', 'v0');
+			.prepare(
+				'INSERT INTO documents (document_id, type, data, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?)'
+			)
+			.run(doc.document_id, type, JSON.stringify(doc), 'v0', 'v0', 'v0');
 	}
 });
 
 const read = (document = '/', language?: string) => read_mcp_document(document, language);
 
 async function save(edf: string, expected_version?: string) {
-	expected_version ??= (await await read()).version!;
+	expected_version ??= (await read()).version!;
 	return write_mcp_document({ edf, expected_version });
 }
 

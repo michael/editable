@@ -9,8 +9,6 @@ import {
 	default_nav_document,
 	default_footer_document
 } from './default_site.js';
-import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
-import translations_schema from '#app/migrations/20260923T180000000Z_editable_translations.js';
 
 vi.mock('$app/env/private', () => ({
 	LANGUAGES: 'en,de',
@@ -42,7 +40,7 @@ vi.mock('./services.js', async () => {
 });
 
 import * as services from './services.js';
-const { sqlite } = services as unknown as { sqlite: DatabaseSync };
+const { sqlite, backend } = services as unknown as typeof services & { sqlite: DatabaseSync };
 import { default_site } from './server_site.js';
 import {
 	update_page_slug,
@@ -52,9 +50,9 @@ import {
 	get_sitemap_entries
 } from './api.remote.js';
 import { warn_about_language_slug_collisions } from './server_language_slugs.js';
-import { rebuild_document_refs } from './server_documents.js';
+import { document_refs_of, slug_targets } from './server_documents.js';
+import { migrate_storage } from './migrations.js';
 import * as markdown_registry from './markdown/registry.js';
-import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 // With no site set by a host, the code under test uses the deployment's own.
 const { languages } = default_site;
@@ -102,7 +100,7 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 	sqlite
 		.prepare('UPDATE documents SET data = ? WHERE document_id = ?')
 		.run(JSON.stringify(nav), nav.document_id);
-	await rebuild_document_refs(nav.document_id);
+	await backend.save_documents({ document_refs: [document_refs_of(nav, await slug_targets())] });
 	insert_slug.run('old-about', 'about-page', 0, 'now');
 	for (const [document_id, language, date] of [
 		['about-page', 'de', '2026-10-03T00:00:00Z'],
@@ -110,7 +108,9 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 		['about-page', 'es', '2026-10-05T00:00:00Z']
 	])
 		sqlite
-			.prepare('INSERT INTO translations VALUES (?, ?, ?, ?)')
+			.prepare(
+				'INSERT INTO translations (document_id, language, value, updated_at) VALUES (?, ?, ?, ?)'
+			)
 			.run(document_id, language, '{}', date);
 	const entries = await get_sitemap_entries();
 	expect(entries.map((entry) => entry.path).sort()).toEqual([
@@ -140,6 +140,7 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 
 // The mocked services export a real database.
 afterAll(() => (sqlite as unknown as DatabaseSync).close());
+await migrate_storage(backend as never);
 beforeEach(() => {
 	vi.restoreAllMocks();
 	languages.splice(0, languages.length, 'en', 'de');
@@ -149,12 +150,9 @@ beforeEach(() => {
 		'document_refs',
 		'asset_refs',
 		'document_slugs',
-		'sessions',
 		'translations'
 	])
-		sqlite.exec(`DROP TABLE IF EXISTS ${table}`);
-	initial_schema.up({ db: sqlite } as SqliteStorage);
-	translations_schema.up({ db: sqlite } as SqliteStorage);
+		sqlite.exec(`DELETE FROM ${table}`);
 });
 
 it('rejects a language homepage slug without changing the page or its links', async () => {
@@ -323,7 +321,9 @@ it.each([false, true])(
 				}
 			};
 			sqlite
-				.prepare('INSERT INTO translations VALUES (?, ?, ?, ?)')
+				.prepare(
+					'INSERT INTO translations (document_id, language, value, updated_at) VALUES (?, ?, ?, ?)'
+				)
 				.run(id, language, JSON.stringify(map), '2026-10-02T00:00:00.000Z');
 		}
 		const result = await update_page_slug({ document_id: id, slug: 'updated' });
@@ -353,14 +353,18 @@ it('deletes all stored translations with the original page when multilingual sup
 		.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)')
 		.run(id, 'page', JSON.stringify(page));
 	for (const language of ['de', 'es']) {
-		sqlite.prepare('INSERT INTO translations VALUES (?, ?, ?, ?)').run(
-			id,
-			language,
-			JSON.stringify({
-				[id]: { title: { content: 'Translated', nodes: {}, marks: [], annotations: [] } }
-			}),
-			'now'
-		);
+		sqlite
+			.prepare(
+				'INSERT INTO translations (document_id, language, value, updated_at) VALUES (?, ?, ?, ?)'
+			)
+			.run(
+				id,
+				language,
+				JSON.stringify({
+					[id]: { title: { content: 'Translated', nodes: {}, marks: [], annotations: [] } }
+				}),
+				'now'
+			);
 	}
 	await delete_page({ document_id: id });
 	expect(sqlite.prepare('SELECT * FROM translations').all()).toEqual([]);

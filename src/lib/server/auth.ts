@@ -5,7 +5,10 @@ import { error } from '@sveltejs/kit';
 import { ADMIN_PASSWORD, NODE_ENV } from '$app/env/private';
 
 /** The records auth keeps: sessions and the login throttle. */
-type AuthRecords = Pick<Backend, 'sessions' | 'login_throttle' | 'delete_expired'>;
+type AuthRecords = Pick<
+	Backend,
+	'save_session' | 'get_login_throttle' | 'save_login_throttle' | 'delete_expired'
+>;
 
 /**
  * The session cookie of the site served under base: ew_admin_session at the
@@ -43,7 +46,7 @@ export function passwords_match(a: string, b: string): boolean {
 }
 
 async function get_login_throttle_state(records: AuthRecords) {
-	const state = await records.login_throttle.get(LOGIN_THROTTLE_KEY);
+	const state = await records.get_login_throttle(LOGIN_THROTTLE_KEY);
 	return state ?? { key: LOGIN_THROTTLE_KEY, failed_count: 0, locked_until: 0 };
 }
 
@@ -68,11 +71,11 @@ export async function register_failed_login(records: AuthRecords) {
 		state.locked_until = Math.floor(Date.now() / 1000) + lockout_seconds;
 	}
 
-	await records.login_throttle.put(state);
+	await records.save_login_throttle(state);
 }
 
 export async function reset_login_throttle(records: AuthRecords) {
-	await records.login_throttle.put({ key: LOGIN_THROTTLE_KEY, failed_count: 0, locked_until: 0 });
+	await records.save_login_throttle({ key: LOGIN_THROTTLE_KEY, failed_count: 0, locked_until: 0 });
 }
 
 export function get_required_admin_password(): string {
@@ -106,10 +109,6 @@ export function set_admin_session_cookie(cookies: Cookies, name: string, session
 		secure: NODE_ENV === 'production',
 		maxAge: session_duration_seconds
 	});
-}
-
-export async function delete_session(session_id: string, records: AuthRecords) {
-	await records.sessions.delete(session_id);
 }
 
 /** The signed-in user, or a 401 when nobody is signed in. */
@@ -149,7 +148,7 @@ export async function log_in_admin(
 	await records.delete_expired(Math.floor(Date.now() / 1000));
 
 	const session_id = crypto.randomUUID();
-	await records.sessions.put({ session_id, expires: get_session_expires_at() });
+	await records.save_session({ session_id, expires: get_session_expires_at() });
 	set_admin_session_cookie(cookies, cookie_name, session_id);
 	return { ok: true };
 }

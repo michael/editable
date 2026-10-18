@@ -3,9 +3,10 @@
 //   pnpm data:convert --to files
 //   pnpm data:convert --to sqlite
 //
-// Works on DATA_DIR, data/ by default. Every record is copied, including which
-// content migrations have run; assets/ stays where it is, since both formats
-// share it. The previous format then moves out of the folder into
+// Works on DATA_DIR, data/ by default. The site's content, references, and
+// settings are copied, including which content migrations have run; sign-ins
+// and MCP connections start over. assets/ stays where it is, since both
+// formats share it. The previous format then moves out of the folder into
 // data-backups/: a database as a regular backup that pnpm data:backups lists,
 // files as a dated folder. Stop the dev server first.
 
@@ -44,7 +45,7 @@ try {
 	// The new format gets its own storage migrations; content progress arrives with the records.
 	const target = storage.backend_in(dir, to);
 	await migrate_storage(target);
-	await storage.copy_records(source, target);
+	await storage.copy_site(source, target);
 	await source.close();
 	await target.close();
 

@@ -9,20 +9,16 @@ import {
 } from './document_links.js';
 import { language_path, language_href, is_reserved_language_slug } from './languages.js';
 import { getRequestEvent, query, command } from '$app/server';
-import {
-	cleanup_translations,
-	save_translated_document,
-	translated_document
-} from './server_translations.js';
+import { save_translated_document, translated_document } from './server_translations.js';
 import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import slugify from 'slugify';
 import { backend } from '#app/services.js';
+import { ConflictError } from '#lib/server/backend.js';
 import {
 	type DocumentData,
 	InvalidDocumentError,
 	VersionConflictError,
-	create_page_slug,
 	get_active_slug_for_document_id,
 	get_attached_ranges,
 	get_combined_document,
@@ -33,7 +29,7 @@ import {
 	is_home_page_document_id,
 	is_reserved_route_slug,
 	persist_document,
-	rebuild_document_refs,
+	document_refs_of,
 	resolve_slug,
 	shared_document_types,
 	with_asset_cleanup
@@ -213,7 +209,7 @@ export const get_page_browser_data = query(v.string(), async (href) => {
 export const get_sitemap_entries = query(async () => {
 	const { languages } = site;
 	const { page_forest } = await build_page_browser_data('/', true);
-	const records = (await backend.documents.all()).map((record) => {
+	const records = (await backend.list_documents()).map((record) => {
 		const root = record.data.nodes[record.document_id];
 		return {
 			document_id: record.document_id,
@@ -224,7 +220,7 @@ export const get_sitemap_entries = query(async () => {
 		};
 	});
 	const records_by_id = new Map(records.map((record) => [record.document_id, record]));
-	const translations = await backend.translations.all();
+	const translations = await backend.list_translations();
 	const modified_by_language = new Map(
 		translations.map((row) => [JSON.stringify([row.document_id, row.language]), row.updated_at])
 	);
@@ -272,28 +268,15 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
 		error(400, 'The home page cannot be deleted');
 	}
 
-	const existing_doc = await get_optional_doc_from_db(document_id);
-	if (!existing_doc) {
+	const existing = await backend.get_document(document_id);
+	if (!existing) {
 		error(404, `Document not found: ${document_id}`);
 	}
+	if (existing.type !== 'page') {
+		error(400, 'Only pages can be deleted; the banner, navigation, and footer are shared.');
+	}
 
-	await with_asset_cleanup(() =>
-		backend.transaction(async () => {
-			for (const record of await backend.slugs.all())
-				if (record.document_id === document_id) await backend.slugs.delete(record.slug);
-			if (existing_doc.nodes[document_id]?.type === 'page')
-				await backend.documents.delete(document_id);
-			await cleanup_translations(document_id);
-			await backend.asset_refs.delete(document_id);
-			await backend.document_refs.delete(document_id);
-			for (const refs of await backend.document_refs.all())
-				if (refs.target_ids.includes(document_id))
-					await backend.document_refs.put({
-						...refs,
-						target_ids: refs.target_ids.filter((id) => id !== document_id)
-					});
-		})
-	);
+	await with_asset_cleanup(() => backend.delete_page(document_id));
 
 	return {
 		ok: true,
@@ -315,7 +298,7 @@ export const get_internal_link_preview = query(v.string(), async (href) => {
 		return null;
 	}
 
-	const record = await backend.documents.get(resolved.document_id);
+	const record = await backend.get_document(resolved.document_id);
 	if (!record || record.type !== 'page') {
 		return null;
 	}
@@ -334,37 +317,29 @@ export const get_internal_link_preview = query(v.string(), async (href) => {
 /**
  * Save a document to the database, splitting shared documents (nav, footer) back out.
  */
-async function rewrite_internal_page_href(
+/** Point a link at new_slug when it leads to the page through one of its slugs. */
+function rewrite_internal_page_href(
 	href: string,
-	target_document_id: string,
+	target_slugs: Set<string>,
 	new_slug: string,
 	link_languages: string[]
 ) {
 	const parsed = parse_internal_page_href(href, link_languages);
-	if (!parsed) return href;
-
-	const resolved = await resolve_slug(parsed.slug);
-	if (resolved?.document_id !== target_document_id) return href;
-
+	if (!parsed || !target_slugs.has(parsed.slug)) return href;
 	return `${parsed.prefix}/${new_slug}${parsed.suffix}`;
 }
 
-async function rewrite_internal_page_hrefs(
+function rewrite_internal_page_hrefs(
 	nodes: Record<string, DocumentNode>,
-	target_document_id: string,
+	target_slugs: Set<string>,
 	new_slug: string,
-	link_languages = site.languages
+	link_languages: string[]
 ) {
 	for (const node of Object.values(nodes)) {
 		if (!node || typeof node !== 'object') continue;
 
 		if (typeof node.href === 'string') {
-			node.href = await rewrite_internal_page_href(
-				node.href,
-				target_document_id,
-				new_slug,
-				link_languages
-			);
+			node.href = rewrite_internal_page_href(node.href, target_slugs, new_slug, link_languages);
 		}
 
 		const type_schema: NodeSchema | undefined = document_schema[node.type];
@@ -382,24 +357,15 @@ async function rewrite_internal_page_hrefs(
 				if (!range_node || range_node.type !== 'link') continue;
 				if (typeof range_node.href !== 'string') continue;
 
-				range_node.href = await rewrite_internal_page_href(
+				range_node.href = rewrite_internal_page_href(
 					range_node.href,
-					target_document_id,
+					target_slugs,
 					new_slug,
 					link_languages
 				);
 			}
 		}
 	}
-}
-
-/** Make a slug the page's active one; its previous active slug stays as a redirect. */
-async function assign_active_slug(document_id: string, slug: string) {
-	const created_at = new Date().toISOString();
-	for (const record of await backend.slugs.all())
-		if (record.document_id === document_id && record.is_active)
-			await backend.slugs.put({ ...record, is_active: false });
-	await backend.slugs.put({ slug, document_id, is_active: true, created_at });
 }
 
 export const get_translated_document = query(
@@ -449,18 +415,10 @@ export const save_document = command(save_document_input_schema, async (combined
 		({ version } = await persist_document(combined_doc.document_id, nodes, {
 			expected_version:
 				combined_doc.create || combined_doc.force ? undefined : combined_doc.expected_version,
-			on_write: async (page_doc) => {
-				if (
-					!combined_doc.create ||
-					(await get_active_slug_for_document_id(combined_doc.document_id)) ||
-					(await is_home_page_document_id(combined_doc.document_id))
-				)
-					return;
-				await create_page_slug(
-					combined_doc.document_id,
-					extract_page_metadata(page_doc).title || 'Untitled page'
-				);
-			}
+			slug_base: combined_doc.create
+				? extract_page_metadata({ document_id: combined_doc.document_id, nodes }).title ||
+					'Untitled page'
+				: undefined
 		}));
 	} catch (err) {
 		if (err instanceof InvalidDocumentError) error(400, err.message);
@@ -542,7 +500,7 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		};
 	}
 
-	const existing_slug = await backend.slugs.get(normalized_slug);
+	const existing_slug = await backend.resolve_slug(normalized_slug);
 	if (existing_slug && existing_slug.document_id !== input.document_id && existing_slug.is_active) {
 		return create_page_url_error_result(
 			'page_url_used_by_other_page',
@@ -550,42 +508,65 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		);
 	}
 
-	const new_active_slug = await backend.transaction(async () => {
-		await assign_active_slug(input.document_id, normalized_slug);
-		const active_slug = await get_active_slug_for_document_id(input.document_id);
-		if (!active_slug) {
-			throw new Error('Failed to assign new active slug');
-		}
+	// The page's earlier slugs stay as redirects to the new active one.
+	const now = new Date().toISOString();
+	const [all_slugs, documents, translations] = await Promise.all([
+		backend.list_slugs(),
+		backend.list_documents(),
+		backend.list_translations()
+	]);
+	const own_slugs = all_slugs.filter((record) => record.document_id === input.document_id);
+	const slugs = [
+		...own_slugs
+			.filter((record) => record.is_active)
+			.map((record) => ({ ...record, is_active: false })),
+		{ slug: normalized_slug, document_id: input.document_id, is_active: true, created_at: now }
+	];
+	const targets = new Map(all_slugs.map((record) => [record.slug, record.document_id]));
+	for (const record of slugs) targets.set(record.slug, record.document_id);
 
-		const translations = await backend.translations.all();
-		const link_languages = [
-			...new Set([...site.languages, ...translations.map((row) => row.language)])
-		];
-
-		// Rewritten links still point at the same page, so this is not a content
-		// change and leaves updated_at alone.
-		for (const record of await backend.documents.all()) {
-			const doc = structuredClone(record.data);
-			await rewrite_internal_page_hrefs(doc.nodes, input.document_id, active_slug, link_languages);
-			if (JSON.stringify(doc) === JSON.stringify(record.data)) continue;
-			await backend.documents.put({ ...record, data: doc });
-			await rebuild_document_refs(record.document_id);
-		}
-
-		for (const row of translations) {
-			const map: TranslationMap = JSON.parse(row.value);
-			for (const payload of translation_payloads(map))
-				await rewrite_internal_page_hrefs(
-					payload.nodes ?? {},
-					input.document_id,
-					active_slug,
-					link_languages
-				);
-			const value = JSON.stringify(map);
-			if (value !== row.value) await backend.translations.put({ ...row, value });
-		}
-		return active_slug;
+	// Links through any of the page's slugs now use the new one. They still point
+	// at the same page, so this is not a content change and leaves updated_at alone.
+	const target_slugs = new Set(own_slugs.map((record) => record.slug));
+	const link_languages = [
+		...new Set([...site.languages, ...translations.map((row) => row.language)])
+	];
+	const rewritten = documents.flatMap(({ version, ...record }) => {
+		const data = structuredClone(record.data);
+		rewrite_internal_page_hrefs(data.nodes, target_slugs, normalized_slug, link_languages);
+		return JSON.stringify(data) === JSON.stringify(record.data)
+			? []
+			: [{ ...record, data, version }];
 	});
+	const rewritten_translations = translations.flatMap(({ version: _, ...row }) => {
+		const map: TranslationMap = JSON.parse(row.value);
+		for (const payload of translation_payloads(map))
+			rewrite_internal_page_hrefs(
+				payload.nodes ?? {},
+				target_slugs,
+				normalized_slug,
+				link_languages
+			);
+		const value = JSON.stringify(map);
+		return value === row.value ? [] : [{ ...row, value }];
+	});
+
+	try {
+		await backend.save_documents({
+			expect: Object.fromEntries(rewritten.map((record) => [record.document_id, record.version])),
+			documents: rewritten.map(({ version: _, ...record }) => record),
+			document_refs: rewritten.map((record) => document_refs_of(record.data, targets)),
+			translations: { put: rewritten_translations },
+			slugs
+		});
+	} catch (err) {
+		if (!(err instanceof ConflictError)) throw err;
+		return create_page_url_error_result(
+			'page_changed',
+			'A page changed while its links were being updated. Try again.'
+		);
+	}
+	const new_active_slug = normalized_slug;
 
 	return {
 		ok: true,

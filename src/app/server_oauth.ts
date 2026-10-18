@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit';
 import { site } from './server_site.js';
 import { require_user } from '#lib/server/auth.js';
 import { backend } from './services.js';
-import type { OAuthGrantRecord } from '#lib/server/backend.js';
+import type { OAuthGrantRecord, OAuthTokenRecord } from '#lib/server/backend.js';
 
 // An approval grants MCP access for a fixed window; clients refresh short-lived
 // access tokens within it and must ask for approval again afterwards.
@@ -99,15 +99,15 @@ export async function register_client(input: { client_name?: unknown; redirect_u
 
 	// Registration is unauthenticated: pending registrations expire, and when
 	// too many pile up the oldest make room rather than blocking new clients.
-	const approved = new Set((await backend.oauth_grants.all()).map((grant) => grant.client_id));
+	const approved = new Set((await backend.list_oauth_grants()).map((grant) => grant.client_id));
 	// Newest first; among equal times the later registration counts as newer.
-	const pending = (await backend.oauth_clients.all())
+	const pending = (await backend.list_oauth_clients())
 		.filter((client) => !approved.has(client.client_id))
 		.reverse()
 		.sort((a, b) => b.created_at - a.created_at);
 	for (const [index, client] of pending.entries()) {
 		if (index >= MAX_PENDING_CLIENTS - 1 || client.created_at < now() - PENDING_CLIENT_TTL_SECONDS)
-			await backend.oauth_clients.delete(client.client_id);
+			await backend.delete_oauth_client(client.client_id);
 	}
 
 	const client: OAuthClient = {
@@ -118,12 +118,12 @@ export async function register_client(input: { client_name?: unknown; redirect_u
 				: 'Unnamed MCP client',
 		redirect_uris
 	};
-	await backend.oauth_clients.put({ ...client, created_at: now() });
+	await backend.save_oauth_client({ ...client, created_at: now() });
 	return client;
 }
 
 export async function find_client(client_id: string): Promise<OAuthClient | null> {
-	const record = await backend.oauth_clients.get(client_id);
+	const record = await backend.get_oauth_client(client_id);
 	if (!record) return null;
 	const { client_name, redirect_uris } = record;
 	return { client_id, client_name, redirect_uris };
@@ -131,18 +131,20 @@ export async function find_client(client_id: string): Promise<OAuthClient | null
 
 async function insert_token(grant_id: string, kind: TokenKind, expires_at: number) {
 	const token = new_secret();
-	await backend.oauth_tokens.put({ token_hash: hash(token), grant_id, kind, expires_at });
+	await backend.save_oauth_token({ token_hash: hash(token), grant_id, kind, expires_at });
 	return token;
 }
 
-/** The unexpired grant a token of the given kind belongs to. */
-async function find_grant(token: string, kind: TokenKind): Promise<Grant | null> {
+/** The unexpired grant an unexpired token of the given kind belongs to. */
+async function grant_of(record: OAuthTokenRecord | null, kind: TokenKind): Promise<Grant | null> {
 	const time = now();
-	const record = await backend.oauth_tokens.get(hash(token));
 	if (!record || record.kind !== kind || record.expires_at <= time) return null;
-	const grant = await backend.oauth_grants.get(record.grant_id);
+	const grant = await backend.get_oauth_grant(record.grant_id);
 	return grant && grant.expires_at > time ? grant : null;
 }
+
+const find_grant = async (token: string, kind: TokenKind) =>
+	grant_of(await backend.get_oauth_token(hash(token)), kind);
 
 /** Record an admin's approval and return the authorization code for the client. */
 export async function approve_client(input: {
@@ -153,11 +155,11 @@ export async function approve_client(input: {
 	const time = now();
 	await backend.delete_expired(time);
 	// A client's latest grant stays as its approval record; older ended ones go.
-	for (const grant of await backend.oauth_grants.all())
+	for (const grant of await backend.list_oauth_grants())
 		if (grant.client_id === input.client_id && grant.expires_at <= time)
-			await backend.oauth_grants.delete(grant.grant_id);
+			await backend.delete_oauth_grant(grant.grant_id);
 	const grant_id = new_secret();
-	await backend.oauth_grants.put({
+	await backend.save_oauth_grant({
 		grant_id,
 		...input,
 		created_at: time,
@@ -182,8 +184,8 @@ function pkce_challenge(verifier: string) {
 
 /**
  * Token endpoint grant types: authorization_code (with PKCE) and rotating
- * refresh_token. Each exchange is one transaction, so a code or refresh token
- * can only be redeemed once.
+ * refresh_token. The presented code or refresh token is taken out of the
+ * backend in one step, so it can only ever be redeemed once.
  */
 export async function exchange_token(params: URLSearchParams) {
 	const client_id = params.get('client_id') ?? '';
@@ -192,12 +194,8 @@ export async function exchange_token(params: URLSearchParams) {
 
 	if (params.get('grant_type') === 'authorization_code') {
 		const code = params.get('code') ?? '';
-		const grant = await backend.transaction(async () => {
-			const grant = await find_grant(code, 'code');
-			// Codes are single use, whether or not the exchange succeeds.
-			await backend.oauth_tokens.delete(hash(code));
-			return grant;
-		});
+		// Codes are single use, whether or not the exchange succeeds.
+		const grant = await grant_of(await backend.take_oauth_token(hash(code)), 'code');
 		if (
 			!grant ||
 			grant.client_id !== client_id ||
@@ -210,16 +208,13 @@ export async function exchange_token(params: URLSearchParams) {
 
 	if (params.get('grant_type') === 'refresh_token') {
 		const refresh_token = params.get('refresh_token') ?? '';
-		return backend.transaction(async () => {
-			const grant = await find_grant(refresh_token, 'refresh');
-			if (!grant || grant.client_id !== client_id)
-				throw new OAuthError(
-					'invalid_grant',
-					'The refresh token is invalid or the 48-hour approval has ended. Connect again.'
-				);
-			await backend.oauth_tokens.delete(hash(refresh_token));
-			return issue_tokens(grant);
-		});
+		const grant = await grant_of(await backend.take_oauth_token(hash(refresh_token)), 'refresh');
+		if (!grant || grant.client_id !== client_id)
+			throw new OAuthError(
+				'invalid_grant',
+				'The refresh token is invalid or the 48-hour approval has ended. Connect again.'
+			);
+		return issue_tokens(grant);
 	}
 
 	throw new OAuthError(
@@ -235,7 +230,7 @@ export async function verify_access_token(token: string) {
 
 export async function create_upload_token(grant_id: string) {
 	const time = now();
-	const grant = await backend.oauth_grants.get(grant_id);
+	const grant = await backend.get_oauth_grant(grant_id);
 	if (!grant || grant.expires_at <= time)
 		throw new Error('The MCP connection has ended. Connect again.');
 	const expires_at = Math.min(time + UPLOAD_TOKEN_TTL_SECONDS, grant.expires_at);
@@ -244,10 +239,7 @@ export async function create_upload_token(grant_id: string) {
 
 /** End every MCP connection, e.g. when the admin logs out. Clients stay registered. */
 export async function revoke_all_grants() {
-	for (const token of await backend.oauth_tokens.all())
-		await backend.oauth_tokens.delete(token.token_hash);
-	for (const grant of await backend.oauth_grants.all())
-		if (grant.expires_at > now()) await backend.oauth_grants.put({ ...grant, expires_at: now() });
+	await backend.revoke_oauth_grants(now());
 }
 
 /**

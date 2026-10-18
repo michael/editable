@@ -24,21 +24,21 @@ function temp_dir() {
 }
 
 const content_applied = async (backend: Backend) =>
-	JSON.parse((await backend.settings.get('migrations'))?.value ?? '[]') as string[];
+	JSON.parse((await backend.get_setting('migrations')) ?? '[]') as string[];
 
 it('seeds a new site and records every migration as applied, on files and on SQLite', async () => {
 	for (const format of ['files', 'sqlite'] as const) {
 		const backend = backend_in(temp_dir(), format);
 		await migrate(backend);
-		expect(await backend.settings.get('home_page_id')).not.toBeNull();
+		expect(await backend.get_setting('home_page_id')).not.toBeNull();
 		expect(await content_applied(backend)).toContain('20261009T120000000Z_editable_site_banner');
 		expect(await backend.applied_migrations()).toContain(
 			`20261016T120000000Z_editable_setting_records_${backend.name}`
 		);
 		// Running again changes nothing.
-		const documents = await backend.documents.all();
+		const documents = await backend.list_documents();
 		await migrate(backend);
-		expect(await backend.documents.all()).toEqual(documents);
+		expect(await backend.list_documents()).toEqual(documents);
 	}
 });
 
@@ -67,8 +67,8 @@ it('upgrades an old database that kept content progress with its SQLite migratio
 	const backend = backend_in(data_dir, 'sqlite');
 	await migrate(backend);
 	// The banner migration had not run: the site gets its banner, the page refers to it.
-	expect((await backend.documents.get('banner_1'))?.type).toBe('banner');
-	expect((await backend.documents.get('p1'))?.data.nodes.p1.banner).toBe('banner_1');
+	expect((await backend.get_document('banner_1'))?.type).toBe('banner');
+	expect((await backend.get_document('p1'))?.data.nodes.p1.banner).toBe('banner_1');
 	expect(await content_applied(backend)).toEqual([
 		'20260831T211746789Z_custom_rename_prose_grid_layouts',
 		'20261003T120000000Z_editable_code_blocks',
@@ -76,19 +76,19 @@ it('upgrades an old database that kept content progress with its SQLite migratio
 	]);
 	expect(await backend.applied_migrations()).toContain('20261010T180000000Z_editable_mcp_oauth');
 	// The login throttle moved out of the settings.
-	expect(await backend.login_throttle.get('admin')).toEqual({
+	expect(await backend.get_login_throttle('admin')).toEqual({
 		key: 'admin',
 		failed_count: 6,
 		locked_until: 99
 	});
-	expect(await backend.settings.get('login_throttle')).toBeNull();
+	expect(await backend.get_setting('login_throttle')).toBeNull();
 });
 
 it('upgrades a file folder written before settings became records', async () => {
 	const data_dir = temp_dir();
 	const first = backend_in(data_dir, 'files');
 	await migrate(first);
-	const home_page_id = (await first.settings.get('home_page_id'))!.value;
+	const home_page_id = (await first.get_setting('home_page_id'))!;
 	// What a folder from before format tracking looks like.
 	const db_dir = join(data_dir, 'db');
 	rmSync(join(db_dir, '_migrations.json'));
@@ -96,32 +96,10 @@ it('upgrades a file folder written before settings became records', async () => 
 
 	const reopened = backend_in(data_dir, 'files');
 	await migrate(reopened);
-	expect(await reopened.settings.get('home_page_id')).toEqual({
-		key: 'home_page_id',
-		value: home_page_id
-	});
+	expect(await reopened.get_setting('home_page_id')).toBe(home_page_id);
 	expect(JSON.parse(readFileSync(join(db_dir, '_migrations.json'), 'utf8')).migrations).toContain(
 		'20261016T120000000Z_editable_setting_records_files'
 	);
-});
-
-it('gives storage migrations the storage of the transaction they run in', async () => {
-	const files = backend_in(temp_dir(), 'files');
-	const read: PropertyKey[] = [];
-	const backend: Backend = {
-		...files,
-		transaction: (fn) =>
-			files.transaction((tx) =>
-				fn({
-					...tx,
-					storage: new Proxy(tx.storage as object, {
-						get: (storage, key) => (read.push(key), Reflect.get(storage, key))
-					})
-				})
-			)
-	};
-	await migrate_storage(backend);
-	expect(read).toContain('db_dir');
 });
 
 it('refuses a backend that misses storage migrations, as a fork adding one would', async () => {
@@ -142,12 +120,9 @@ it('keeps the SQLite and files backends in step: every storage change has a file
 it('refuses data migrated by a newer version', async () => {
 	const backend = backend_in(temp_dir(), 'files');
 	await migrate(backend);
-	await backend.settings.put({
-		key: 'migrations',
-		value: JSON.stringify([
-			...(await content_applied(backend)),
-			'29990101T000000000Z_editable_future'
-		])
+	const future = [...(await content_applied(backend)), '29990101T000000000Z_editable_future'];
+	await backend.save_documents({
+		settings: [{ key: 'migrations', value: JSON.stringify(future) }]
 	});
 	await expect(migrate(backend)).rejects.toThrow('29990101T000000000Z_editable_future');
 });

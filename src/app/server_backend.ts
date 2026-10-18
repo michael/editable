@@ -1,21 +1,12 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { collection_names, type Backend, type Collection } from '#lib/server/backend.js';
+import type { Backend } from '#lib/server/backend.js';
 import { open_sqlite, sqlite_backend } from '#lib/server/backends/sqlite_backend.js';
 import { files_backend } from '#lib/server/backends/files_backend.js';
 import { parse_edf, serialize_edf } from '#lib/edf.js';
-import { DATA_DIR, STORAGE } from './server_config.js';
 import { document_schema } from './document_schema.js';
 
 export type DataFormat = 'sqlite' | 'files';
-
-/**
- * The backend of the deployment's own site, in DATA_DIR. Return your own here
- * to keep the site elsewhere; Editable migrates it before first use.
- */
-export function create_backend(): Backend {
-	return backend_for(DATA_DIR, STORAGE);
-}
 
 /**
  * The backend for a data folder, in the format the folder holds. A new folder
@@ -67,11 +58,21 @@ export function backend_in(data_dir: string, format: DataFormat): Backend {
 	);
 }
 
-/** Copy every record of one backend into another, for example to change formats. */
-export async function copy_records(from: Backend, to: Backend) {
-	await to.transaction(async (tx) => {
-		for (const name of collection_names)
-			for (const record of await from[name].all())
-				await (tx[name] as Collection<unknown>).put(record);
+/**
+ * Copy a site's content, references, and settings from one backend into
+ * another, for example to change formats. Sign-ins and MCP connections are
+ * not copied.
+ */
+export async function copy_site(from: Backend, to: Backend) {
+	const documents = await from.list_documents();
+	await to.save_documents({
+		documents: documents.map(({ version: _, ...record }) => record),
+		slugs: await from.list_slugs(),
+		translations: {
+			put: (await from.list_translations()).map(({ version: _, ...record }) => record)
+		},
+		document_refs: await from.list_document_refs(),
+		asset_refs: await from.list_asset_refs(),
+		settings: await from.list_settings()
 	});
 }

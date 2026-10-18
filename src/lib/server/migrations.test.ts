@@ -95,7 +95,8 @@ describe('run_migrations', () => {
 	it('runs the pending migrations of one target in id order and records each', async () => {
 		ran.length = 0;
 		const recorded: string[] = [];
-		await run_migrations(migrations, 'content', new Set(), {}, async (id) => {
+		await run_migrations(migrations, 'content', new Set(), async ({ id, up }) => {
+			await up({});
 			recorded.push(id);
 		});
 		expect(ran).toEqual(['a', 'c']);
@@ -110,8 +111,9 @@ describe('run_migrations', () => {
 			migrations,
 			'content',
 			new Set(['20260103T000000000Z_editable_c']),
-			{},
-			async () => {}
+			async ({ up }) => {
+				await up({});
+			}
 		);
 		expect(ran).toEqual(['a']);
 		expect(warn.mock.calls[0][0]).toContain('after 20260103T000000000Z_editable_c');
@@ -119,7 +121,7 @@ describe('run_migrations', () => {
 
 	it('refuses unknown applied ids and reports a failing migration', async () => {
 		await expect(
-			run_migrations(migrations, 'content', new Set(['x']), {}, async () => {})
+			run_migrations(migrations, 'content', new Set(['x']), async () => {})
 		).rejects.toThrow('not present in this application: x');
 		const failing = load({
 			'20260101T000000000Z_editable_bad': {
@@ -129,22 +131,10 @@ describe('run_migrations', () => {
 			}
 		});
 		vi.spyOn(console, 'log').mockImplementation(() => {});
-		await expect(run_migrations(failing, 'content', new Set(), {}, async () => {})).rejects.toThrow(
-			'Migration "20260101T000000000Z_editable_bad" failed.'
-		);
-		// Asynchronous migrations are awaited.
-		const waited: string[] = [];
-		const async_migration = load({
-			'20260101T000000000Z_editable_later': {
-				up: async () => {
-					await new Promise((resolve) => setTimeout(resolve, 1));
-					waited.push('done');
-				}
-			}
-		});
-		await run_migrations(async_migration, 'content', new Set(), {}, async () => {
-			waited.push('recorded');
-		});
-		expect(waited).toEqual(['done', 'recorded']);
+		await expect(
+			run_migrations(failing, 'content', new Set(), async ({ up }) => {
+				await up({});
+			})
+		).rejects.toThrow('Migration "20260101T000000000Z_editable_bad" failed.');
 	});
 });

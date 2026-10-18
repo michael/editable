@@ -1,4 +1,4 @@
-import type { MigrationHelpers } from './migration_helpers.js';
+import type { MigrationDocument, MigrationHelpers } from './migration_helpers.js';
 import type { Backend } from './backend.js';
 
 /**
@@ -9,8 +9,15 @@ import type { Backend } from './backend.js';
  */
 export type Migration = { target?: string; up: (context: any) => unknown };
 
-/** What a content migration receives. */
-export type ContentContext = { backend: Backend } & MigrationHelpers;
+/**
+ * What a content migration receives: the site's documents in memory, which
+ * the helpers change and Editable saves afterwards, and the backend to read
+ * anything else.
+ */
+export type ContentContext = {
+	documents: MigrationDocument[];
+	backend: Backend;
+} & MigrationHelpers;
 
 export type LoadedMigration = { id: string; target: string; up: (context: any) => unknown };
 
@@ -68,16 +75,16 @@ export function assert_complete(migrations: LoadedMigration[], target: string) {
 
 /**
  * Run the migrations of one target that have not been applied, in id order,
- * recording each as it completes. Refuses data recording migrations this
- * code does not know. Warns when a migration runs behind a later one already
- * applied, which happens when migrations arrive out of order.
+ * through run, which runs one and records it as applied. Refuses data
+ * recording migrations this code does not know. Warns when a migration runs
+ * behind a later one already applied, which happens when migrations arrive
+ * out of order.
  */
 export async function run_migrations(
 	migrations: LoadedMigration[],
 	target: string,
 	applied: Set<string>,
-	context: unknown,
-	record: (id: string) => Promise<void>
+	run: (migration: LoadedMigration) => Promise<void>
 ) {
 	const known = new Set(migrations.map((migration) => migration.id));
 	const unknown = [...applied].filter((id) => !known.has(id));
@@ -99,10 +106,9 @@ export async function run_migrations(
 			console.warn(`Running migration ${migration.id} after ${latest}, which was applied first.`);
 		console.log('Running migration... ', migration.id);
 		try {
-			await migration.up(context);
+			await run(migration);
 		} catch (error) {
 			throw new Error(`Migration "${migration.id}" failed.`, { cause: error });
 		}
-		await record(migration.id);
 	}
 }

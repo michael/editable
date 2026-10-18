@@ -1,27 +1,25 @@
 import { backend } from './services.js';
 import { collect_asset_ids, translation_payloads } from '#lib/asset_references.js';
+import type { Document } from 'svedit';
+import type { AssetRefsRecord } from '#lib/server/backend.js';
 import { ASSET_ID_REGEX } from './config.js';
 import { ASSET_GRACE_PERIOD_DAYS } from './server_config.js';
 
-/** Record the assets a document and all its translations refer to, atomically with saves. */
-export async function rebuild_asset_refs(document_id: string) {
-	const record = await backend.documents.get(document_id);
-	if (!record) {
-		await backend.asset_refs.delete(document_id);
-		return;
-	}
+/** The assets a document and its translations, given as their JSON values, refer to. */
+export function asset_refs_of(
+	document: Document,
+	translations: { value: string }[]
+): AssetRefsRecord {
 	const payloads = [
-		record.data,
-		...(await backend.translations.all())
-			.filter((row) => row.document_id === document_id)
-			.flatMap((row) => [...translation_payloads(JSON.parse(row.value))])
+		document,
+		...translations.flatMap((row) => [...translation_payloads(JSON.parse(row.value))])
 	];
-	await backend.asset_refs.put({ document_id, asset_ids: [...collect_asset_ids(payloads)] });
+	return { document_id: document.document_id, asset_ids: [...collect_asset_ids(payloads)] };
 }
 
 /** Every asset any document refers to, from the references kept per document. */
 export async function referenced_asset_ids(): Promise<Set<string>> {
-	return new Set((await backend.asset_refs.all()).flatMap((record) => record.asset_ids));
+	return new Set((await backend.list_asset_refs()).flatMap((record) => record.asset_ids));
 }
 
 /**

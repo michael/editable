@@ -19,7 +19,6 @@ import { assert_uploaded_images } from './server_mcp_images.js';
 import {
 	type DocumentData,
 	combine_page_document,
-	create_page_slug,
 	get_active_slug_for_document_id,
 	get_doc_from_db,
 	get_document_version,
@@ -329,12 +328,10 @@ export async function create_mcp_page(input: { edf: string; slug?: string }) {
 		document_id,
 		{ ...shared_nodes, ...submitted },
 		{
-			on_write: async (doc) => {
-				await create_page_slug(
-					document_id,
-					input.slug || extract_page_metadata(doc).title || 'Untitled page'
-				);
-			}
+			slug_base:
+				input.slug ||
+				extract_page_metadata({ document_id, nodes: submitted }).title ||
+				'Untitled page'
 		}
 	);
 	return write_result(document_id, doc, version, null);

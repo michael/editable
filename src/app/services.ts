@@ -1,7 +1,6 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
-import { collection_names, type Backend, type Collection } from '#lib/server/backend.js';
+import type { Backend } from '#lib/server/backend.js';
 import { migrate } from '#app/migrations.js';
-import { create_backend } from '#app/server_backend.js';
+import { create_backend } from '#app/backend.js';
 import { site } from '#app/server_site.js';
 import { WEBP_HEADER_BYTES, webp_dimensions } from '#lib/server/webp.js';
 
@@ -20,53 +19,27 @@ export function get_default_backend(): Promise<Backend> {
 	return default_backend;
 }
 
-// The transaction the current async work runs in, if any.
-const transaction_scope = new AsyncLocalStorage<Backend>();
-
-/** The backend of the current request's site, or of the transaction it runs in. */
+/** The backend of the current request's site. */
 export async function get_backend(): Promise<Backend> {
-	return transaction_scope.getStore() ?? site.backend ?? get_default_backend();
+	return site.backend ?? get_default_backend();
 }
 
-/** What Editable's server code reads and writes through. */
+/** The functions Editable's server code calls. */
 export type SiteBackend = Omit<
 	Backend,
-	'name' | 'storage' | 'applied_migrations' | 'record_migration' | 'close'
+	'name' | 'storage' | 'applied_migrations' | 'run_migration' | 'close'
 >;
-
-const forward =
-	<K extends keyof SiteBackend>(name: K) =>
-	async (...args: unknown[]) =>
-		((await get_backend())[name] as (...args: unknown[]) => unknown)(...args);
 
 /**
  * The current site's backend. Each call goes to the backend of the request it
- * runs in, so code imports it once and uses it inside functions. Inside
- * backend.transaction, it is the transaction.
+ * runs in, so code imports it once and uses it inside functions.
  */
-export const backend: SiteBackend = {
-	...(Object.fromEntries(
-		collection_names.map((name) => {
-			const collection = async () => (await get_backend())[name] as Collection<unknown>;
-			const forwarded: Collection<unknown> = {
-				get: async (key) => (await collection()).get(key),
-				all: async () => (await collection()).all(),
-				put: async (record) => (await collection()).put(record),
-				delete: async (key) => (await collection()).delete(key)
-			};
-			return [name, forwarded];
-		})
-	) as Pick<SiteBackend, (typeof collection_names)[number]>),
-	transaction: async (fn) =>
-		(await get_backend()).transaction((tx) => transaction_scope.run(tx, () => fn(tx))),
-	write_asset: forward('write_asset') as SiteBackend['write_asset'],
-	read_asset: forward('read_asset') as SiteBackend['read_asset'],
-	asset_size: forward('asset_size') as SiteBackend['asset_size'],
-	delete_asset: forward('delete_asset') as SiteBackend['delete_asset'],
-	touch_asset: forward('touch_asset') as SiteBackend['touch_asset'],
-	list_assets: forward('list_assets') as SiteBackend['list_assets'],
-	delete_expired: forward('delete_expired') as SiteBackend['delete_expired']
-};
+export const backend = new Proxy({} as SiteBackend, {
+	get:
+		(_, name: keyof SiteBackend) =>
+		async (...args: unknown[]) =>
+			((await get_backend())[name] as (...args: unknown[]) => unknown)(...args)
+});
 
 /** Whether an asset original, or one of its variants, exists. */
 export async function asset_exists(asset_id: string, variant?: string) {

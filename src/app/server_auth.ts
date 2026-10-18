@@ -3,7 +3,6 @@ import { backend } from './services.js';
 import { site } from './server_site.js';
 import {
 	clear_admin_session_cookie,
-	delete_session,
 	get_session_expires_at,
 	log_in_admin,
 	session_duration_seconds,
@@ -54,7 +53,7 @@ export const password_auth: Auth = {
 		const session_id = cookies.get(cookie_name());
 		if (!session_id) return null;
 
-		const row = await backend.sessions.get(session_id);
+		const row = await backend.get_session(session_id);
 		const now = Math.floor(Date.now() / 1000);
 
 		if (!row) {
@@ -62,14 +61,14 @@ export const password_auth: Auth = {
 			return null;
 		}
 		if (row.expires <= now) {
-			await backend.sessions.delete(session_id);
+			await backend.delete_session(session_id);
 			clear_admin_session_cookie(cookies, cookie_name());
 			return null;
 		}
 		// Sliding renewal, at most once per renewal interval
 		const last_renewed_at = row.expires - session_duration_seconds;
 		if (now - last_renewed_at >= session_renewal_interval_seconds) {
-			await backend.sessions.put({ session_id, expires: get_session_expires_at() });
+			await backend.save_session({ session_id, expires: get_session_expires_at() });
 			set_admin_session_cookie(cookies, cookie_name(), session_id);
 		}
 		return admin_user;
@@ -81,7 +80,7 @@ export const password_auth: Auth = {
 
 	async log_out({ cookies }) {
 		const session_id = cookies.get(cookie_name());
-		if (session_id) await delete_session(session_id, backend);
+		if (session_id) await backend.delete_session(session_id);
 		clear_admin_session_cookie(cookies, cookie_name());
 	}
 };

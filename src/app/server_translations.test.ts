@@ -26,8 +26,12 @@ vi.mock('./services.js', async () => {
 
 import { default_site } from './server_site.js';
 import * as services from './services.js';
-const { sqlite, asset_exists } = services as unknown as typeof services & { sqlite: DatabaseSync };
-import migration from '#app/migrations/20260923T180000000Z_editable_translations.js';
+const { sqlite, asset_exists, backend } = services as unknown as typeof services & {
+	sqlite: DatabaseSync;
+};
+await migrate_storage(backend as never);
+import { migrate_storage } from './migrations.js';
+import { asset_refs_of } from './server_asset_refs.js';
 import {
 	default_page_document,
 	default_banner_document,
@@ -35,14 +39,13 @@ import {
 	default_footer_document
 } from './default_site.js';
 import {
-	cleanup_translations,
+	clean_translations,
 	save_translated_document,
 	translated_document
 } from './server_translations.js';
 import { property_payload, translation_properties, type TranslationMap } from './translations.js';
 import { replace_translation } from './test_helpers/translations.js';
 import { referenced_assets } from '../../scripts/asset-references.js';
-import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 // With no site set by a host, the code under test uses the deployment's own.
 const { languages } = default_site;
@@ -51,23 +54,29 @@ afterAll(() => (sqlite as DatabaseSync).close());
 
 beforeEach(() => {
 	languages.splice(0, languages.length, 'en', 'de', 'fr');
-	sqlite.exec(
-		'DROP TABLE IF EXISTS documents; DROP TABLE IF EXISTS asset_refs; DROP TABLE IF EXISTS translations'
-	);
+	sqlite.exec('DELETE FROM documents; DELETE FROM asset_refs; DELETE FROM translations');
 	vi.mocked(asset_exists).mockResolvedValue(true);
-	sqlite.exec(
-		'CREATE TABLE documents (document_id TEXT PRIMARY KEY, data TEXT); CREATE TABLE asset_refs (asset_id TEXT, document_id TEXT, PRIMARY KEY (asset_id, document_id))'
-	);
-	migration.up({ db: sqlite } as SqliteStorage);
 	for (const doc of [
 		default_page_document,
 		default_banner_document,
 		default_nav_document,
 		default_footer_document
-	]) {
-		sqlite.prepare('INSERT INTO documents VALUES (?, ?)').run(doc.document_id, JSON.stringify(doc));
-	}
+	])
+		sqlite
+			.prepare('INSERT INTO documents (document_id, type, data, version) VALUES (?, ?, ?, ?)')
+			.run(doc.document_id, doc.nodes[doc.document_id].type, JSON.stringify(doc), 'v0');
 });
+
+/** What saving a document does to its translations. */
+async function cleanup(document_id: string) {
+	const document = (await backend.get_document(document_id))!;
+	const rows = await backend.list_translations({ document_ids: [document_id] });
+	const result = clean_translations(document.data, rows);
+	await backend.save_documents({
+		translations: { put: result.put, delete: result.delete },
+		asset_refs: [asset_refs_of(document.data, result.kept)]
+	});
+}
 
 function stored_map(document_id: string, language = 'de'): TranslationMap {
 	const row = sqlite
@@ -93,7 +102,9 @@ function store_translation(
 	}
 	(map[node_id] ??= {})[property_id] = payload;
 	sqlite
-		.prepare('INSERT OR REPLACE INTO translations VALUES (?, ?, ?, ?)')
+		.prepare(
+			'INSERT OR REPLACE INTO translations (document_id, language, value, updated_at, version) VALUES (?, ?, ?, ?, lower(hex(randomblob(8))))'
+		)
 		.run(document_id, language, JSON.stringify(map), updated_at);
 }
 
@@ -205,7 +216,7 @@ it('stores media overrides, loads original fallback, and retains assets across l
 	replace_image(french, id, 'image', asset_a);
 	await save_translated_document(french);
 	// Cleaning up after an original save must retain translation-only assets.
-	await cleanup_translations(id);
+	await cleanup(id);
 	expect(referenced_assets(sqlite)).toContain(asset_a);
 	for (const language of ['de', 'fr']) {
 		const reset = await load_input(language);
@@ -234,14 +245,18 @@ it.each([false, true])(
 		const nav: Document = structuredClone(default_nav_document);
 		const spanish_map = stored_map(nav.document_id);
 		sqlite
-			.prepare('INSERT INTO translations VALUES (?, ?, ?, ?)')
+			.prepare(
+				'INSERT INTO translations (document_id, language, value, updated_at, version) VALUES (?, ?, ?, ?, lower(hex(randomblob(8))))'
+			)
 			.run(nav.document_id, 'es', JSON.stringify(spanish_map), 'now');
 		if (disabled) languages.splice(0);
 		delete nav.nodes[node_id];
 		sqlite
-			.prepare('UPDATE documents SET data = ? WHERE document_id = ?')
+			.prepare(
+				'UPDATE documents SET data = ?, version = lower(hex(randomblob(8))) WHERE document_id = ?'
+			)
 			.run(JSON.stringify(nav), nav.document_id);
-		await cleanup_translations(nav.document_id);
+		await cleanup(nav.document_id);
 		expect(sqlite.prepare('SELECT * FROM translations').all()).toHaveLength(0);
 		expect(referenced_assets(sqlite)).not.toContain(asset_b);
 	}
@@ -267,9 +282,8 @@ it('rejects unuploaded media, stale saves, extraneous nodes and structural chang
 	await save_translated_document(input);
 	await expect(save_translated_document(input)).rejects.toThrow();
 	expect(referenced_assets(sqlite)).toContain(asset_a);
-	// Deleting the owning document releases translations and their assets too.
-	sqlite.prepare('DELETE FROM documents WHERE document_id = ?').run(id);
-	await cleanup_translations(id);
+	// Deleting the owning page releases translations and their assets too.
+	await backend.delete_page(id);
 	expect(sqlite.prepare('SELECT * FROM translations').all()).toHaveLength(0);
 	expect(referenced_assets(sqlite)).not.toContain(asset_a);
 });
@@ -282,7 +296,9 @@ it('keeps a translated asset alive while a regular document still references it'
 	const original = structuredClone(default_page_document);
 	original.nodes[original.nodes[id].image].src = asset_a;
 	sqlite
-		.prepare('UPDATE documents SET data = ? WHERE document_id = ?')
+		.prepare(
+			'UPDATE documents SET data = ?, version = lower(hex(randomblob(8))) WHERE document_id = ?'
+		)
 		.run(JSON.stringify(original), id);
 	const reset = await load_input();
 	replace_translation(reset, id, 'image', property_payload(original, id, 'image'));
@@ -291,7 +307,9 @@ it('keeps a translated asset alive while a regular document still references it'
 	expect(referenced_assets(sqlite)).toContain(asset_a);
 	original.nodes[original.nodes[id].image].src = '';
 	sqlite
-		.prepare('UPDATE documents SET data = ? WHERE document_id = ?')
+		.prepare(
+			'UPDATE documents SET data = ?, version = lower(hex(randomblob(8))) WHERE document_id = ?'
+		)
 		.run(JSON.stringify(original), id);
 	expect(referenced_assets(sqlite)).not.toContain(asset_a);
 });
@@ -314,7 +332,7 @@ it('removes incompatible media overrides and their asset references during origi
 		new Date().toISOString()
 	);
 	expect(referenced_assets(sqlite)).toContain(asset_b);
-	await cleanup_translations(id);
+	await cleanup(id);
 	expect(sqlite.prepare('SELECT * FROM translations').all()).toHaveLength(0);
 	expect(referenced_assets(sqlite)).not.toContain(asset_b);
 });
@@ -324,7 +342,9 @@ it('persists deleted translated media as an empty override and releases its asse
 	const source = structuredClone(default_page_document);
 	source.nodes[source.nodes[id].image].src = `${'c'.repeat(64)}.webp`;
 	sqlite
-		.prepare('UPDATE documents SET data = ? WHERE document_id = ?')
+		.prepare(
+			'UPDATE documents SET data = ?, version = lower(hex(randomblob(8))) WHERE document_id = ?'
+		)
 		.run(JSON.stringify(source), id);
 	const original = (await translated_document(id, 'en')).document;
 	const input = await load_input();
@@ -358,14 +378,18 @@ it('keeps server references in sync with backup scanning across documents and di
 	const nav: Document = structuredClone(default_nav_document);
 	nav.nodes[nav.nodes.nav_logo.media].src = asset_a;
 	sqlite
-		.prepare('UPDATE documents SET data = ? WHERE document_id = ?')
+		.prepare(
+			'UPDATE documents SET data = ?, version = lower(hex(randomblob(8))) WHERE document_id = ?'
+		)
 		.run(JSON.stringify(nav), nav_id);
 	expect(referenced_assets(sqlite)).toContain(asset_a);
 	sqlite.prepare('DELETE FROM translations WHERE document_id = ?').run(page_id);
 	// The nav still refers to it.
 	expect(referenced_assets(sqlite)).toContain(asset_a);
 	sqlite
-		.prepare('UPDATE documents SET data = ? WHERE document_id = ?')
+		.prepare(
+			'UPDATE documents SET data = ?, version = lower(hex(randomblob(8))) WHERE document_id = ?'
+		)
 		.run(JSON.stringify(default_nav_document), nav_id);
 	expect(referenced_assets(sqlite)).not.toContain(asset_a);
 });
@@ -406,7 +430,9 @@ it('composes 500 translated paragraphs with one full-document validation', async
 		);
 	}
 	sqlite
-		.prepare('UPDATE documents SET data = ? WHERE document_id = ?')
+		.prepare(
+			'UPDATE documents SET data = ?, version = lower(hex(randomblob(8))) WHERE document_id = ?'
+		)
 		.run(JSON.stringify(page), id);
 	expect(sqlite.prepare('SELECT * FROM translations').all()).toHaveLength(1);
 	expect(Object.keys(stored_map(id))).toHaveLength(500);
@@ -440,7 +466,9 @@ it('rejects invalid overrides atomically while keeping valid translations and sh
 	page.nodes.other_paragraph = { ...paragraph, id: 'other_paragraph' };
 	wrapper.body.nodes.push('other_paragraph');
 	sqlite
-		.prepare('UPDATE documents SET data = ? WHERE document_id = ?')
+		.prepare(
+			'UPDATE documents SET data = ?, version = lower(hex(randomblob(8))) WHERE document_id = ?'
+		)
 		.run(JSON.stringify(page), id);
 	const original_media = page.nodes[page.nodes[id].image];
 	store_translation(
@@ -527,7 +555,9 @@ it.each(['/de/about', '/fr/about', '/about', 'https://example.com/de/about'])(
 		};
 		page.nodes.original_link = { id: 'original_link', type: 'link', href, target: '_self' };
 		sqlite
-			.prepare('UPDATE documents SET data = ? WHERE document_id = ?')
+			.prepare(
+				'UPDATE documents SET data = ?, version = lower(hex(randomblob(8))) WHERE document_id = ?'
+			)
 			.run(JSON.stringify(page), id);
 		const input = await load_input();
 		input.nodes[paragraph.id].content.content = 'Deutsch!';
@@ -543,7 +573,9 @@ it.each(['/de/about', '/fr/about', '/about', 'https://example.com/de/about'])(
 		paragraph.content.content = 'Updated original';
 		paragraph.content.marks[0].end_offset = 16;
 		sqlite
-			.prepare('UPDATE documents SET data = ? WHERE document_id = ?')
+			.prepare(
+				'UPDATE documents SET data = ?, version = lower(hex(randomblob(8))) WHERE document_id = ?'
+			)
 			.run(JSON.stringify(page), id);
 		expect((await load_input()).nodes[paragraph.id].content.content).toBe('Updated original');
 	}
@@ -582,12 +614,14 @@ it('falls back on malformed maps and removes them during original cleanup', asyn
 	try {
 		for (const value of ['{invalid', 'null', '[]', '{"broken":null}']) {
 			sqlite
-				.prepare('INSERT OR REPLACE INTO translations VALUES (?, ?, ?, ?)')
+				.prepare(
+					'INSERT OR REPLACE INTO translations (document_id, language, value, updated_at, version) VALUES (?, ?, ?, ?, lower(hex(randomblob(8))))'
+				)
 				.run(id, 'de', value, '2026-10-02T00:00:00.000Z');
 			expect((await load_input()).nodes[id].title.content).toBe(
 				default_page_document.nodes[id].title.content
 			);
-			await cleanup_translations(id);
+			await cleanup(id);
 			expect(sqlite.prepare('SELECT * FROM translations').all()).toHaveLength(0);
 		}
 	} finally {

@@ -1,41 +1,27 @@
 import { describe, it, expect } from 'vitest';
-import { DatabaseSync } from 'node:sqlite';
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import type { Document } from 'svedit';
-import { create_migration_helpers } from './migration_helpers.js';
-import { sqlite_backend } from './backends/sqlite_backend.js';
-import type { Backend } from './backend.js';
-import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
-import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
+import { create_migration_helpers, type MigrationDocument } from './migration_helpers.js';
 
-async function create_db(documents: Record<string, unknown>) {
-	const sqlite = new DatabaseSync(':memory:');
-	initial_schema.up({ db: sqlite } as SqliteStorage);
-	const db = sqlite_backend({
-		db: sqlite,
-		asset_dir: mkdtempSync(join(tmpdir(), 'editable-assets-'))
-	});
-	for (const [document_id, data] of Object.entries(documents)) {
-		await db.documents.put({
-			document_id,
-			type: 'page',
-			data: data as Document,
-			created_at: 'created',
-			updated_at: 'updated'
-		});
-	}
-	return db;
+function create_db(documents: Record<string, unknown>): MigrationDocument[] {
+	return Object.entries(documents).map(([document_id, data]) => ({
+		document_id,
+		type: 'page',
+		data: data as Document,
+		created_at: 'created',
+		updated_at: 'updated'
+	}));
 }
 
-async function read_nodes(db: Backend, document_id: string) {
-	return (await db.documents.get(document_id))!.data.nodes as Record<string, any>;
+const find = (db: MigrationDocument[], document_id: string) =>
+	db.find((record) => record.document_id === document_id);
+
+function read_nodes(db: MigrationDocument[], document_id: string) {
+	return find(db, document_id)!.data.nodes as Record<string, any>;
 }
 
 describe('rename_property', () => {
-	it('renames the property on matching nodes only', async () => {
-		const db = await create_db({
+	it('renames the property on matching nodes only', () => {
+		const db = create_db({
 			page_1: {
 				document_id: 'page_1',
 				nodes: {
@@ -46,59 +32,54 @@ describe('rename_property', () => {
 		});
 		const helpers = create_migration_helpers(db);
 
-		expect(await helpers.rename_property('hero', 'image', 'media')).toBe(1);
+		expect(helpers.rename_property('hero', 'image', 'media')).toBe(1);
 
-		const result = await read_nodes(db, 'page_1');
+		const result = read_nodes(db, 'page_1');
 		expect(result.hero_1).toEqual({ id: 'hero_1', type: 'hero', media: 'asset_1' });
 		expect(result.story_1.image).toBe('asset_2');
 	});
 
-	it('keeps the property position, so node key order stays stable', async () => {
-		const db = await create_db({
+	it('keeps the property position, so node key order stays stable', () => {
+		const db = create_db({
 			page_1: {
 				document_id: 'page_1',
 				nodes: { hero_1: { id: 'hero_1', type: 'hero', image: 'asset_1', layout: 'default' } }
 			}
 		});
 
-		await create_migration_helpers(db).rename_property('hero', 'image', 'media');
+		create_migration_helpers(db).rename_property('hero', 'image', 'media');
 
-		expect(Object.keys((await read_nodes(db, 'page_1')).hero_1)).toEqual([
-			'id',
-			'type',
-			'media',
-			'layout'
-		]);
+		expect(Object.keys(read_nodes(db, 'page_1').hero_1)).toEqual(['id', 'type', 'media', 'layout']);
 	});
 
-	it('leaves nodes without the property alone', async () => {
-		const db = await create_db({
+	it('leaves nodes without the property alone', () => {
+		const db = create_db({
 			page_1: {
 				document_id: 'page_1',
 				nodes: { hero_1: { id: 'hero_1', type: 'hero' } }
 			}
 		});
 
-		expect(await create_migration_helpers(db).rename_property('hero', 'image', 'media')).toBe(0);
+		expect(create_migration_helpers(db).rename_property('hero', 'image', 'media')).toBe(0);
 	});
 
-	it('throws when the target property already exists', async () => {
-		const db = await create_db({
+	it('throws when the target property already exists', () => {
+		const db = create_db({
 			page_1: {
 				document_id: 'page_1',
 				nodes: { hero_1: { id: 'hero_1', type: 'hero', image: 'asset_1', media: 'asset_2' } }
 			}
 		});
 
-		await expect(
-			create_migration_helpers(db).rename_property('hero', 'image', 'media')
-		).rejects.toThrow(/already has that property/);
+		expect(() => create_migration_helpers(db).rename_property('hero', 'image', 'media')).toThrow(
+			/already has that property/
+		);
 	});
 });
 
 describe('replace_value', () => {
-	it('replaces the value across documents and reports the count', async () => {
-		const db = await create_db({
+	it('replaces the value across documents and reports the count', () => {
+		const db = create_db({
 			page_1: {
 				document_id: 'page_1',
 				nodes: {
@@ -113,17 +94,17 @@ describe('replace_value', () => {
 		});
 		const helpers = create_migration_helpers(db);
 
-		expect(await helpers.replace_value('hero', 'layout', 'default', 'regular')).toBe(2);
+		expect(helpers.replace_value('hero', 'layout', 'default', 'regular')).toBe(2);
 
-		expect((await read_nodes(db, 'page_1')).hero_1.layout).toBe('regular');
-		expect((await read_nodes(db, 'page_1')).hero_2.layout).toBe('wide');
-		expect((await read_nodes(db, 'page_2')).hero_3.layout).toBe('regular');
+		expect(read_nodes(db, 'page_1').hero_1.layout).toBe('regular');
+		expect(read_nodes(db, 'page_1').hero_2.layout).toBe('wide');
+		expect(read_nodes(db, 'page_2').hero_3.layout).toBe('regular');
 	});
 });
 
 describe('rename_type', () => {
-	it('renames matching nodes only', async () => {
-		const db = await create_db({
+	it('renames matching nodes only', () => {
+		const db = create_db({
 			page_1: {
 				document_id: 'page_1',
 				nodes: {
@@ -133,31 +114,31 @@ describe('rename_type', () => {
 			}
 		});
 
-		expect(await create_migration_helpers(db).rename_type('hero', 'banner')).toBe(1);
+		expect(create_migration_helpers(db).rename_type('hero', 'banner')).toBe(1);
 
-		const result = await read_nodes(db, 'page_1');
+		const result = read_nodes(db, 'page_1');
 		expect(result.hero_1).toEqual({ id: 'hero_1', type: 'banner', layout: 'default' });
 		expect(result.story_1.type).toBe('story');
 	});
 
-	it('keeps the record type in step for document root nodes', async () => {
-		const db = await create_db({
+	it('keeps the record type in step for document root nodes', () => {
+		const db = create_db({
 			page_1: {
 				document_id: 'page_1',
 				nodes: { page_1: { id: 'page_1', type: 'page' } }
 			}
 		});
 
-		expect(await create_migration_helpers(db).rename_type('page', 'article')).toBe(1);
+		expect(create_migration_helpers(db).rename_type('page', 'article')).toBe(1);
 
-		expect((await read_nodes(db, 'page_1')).page_1.type).toBe('article');
-		expect((await db.documents.get('page_1'))!.type).toBe('article');
+		expect(read_nodes(db, 'page_1').page_1.type).toBe('article');
+		expect(find(db, 'page_1')!.type).toBe('article');
 	});
 });
 
 describe('delete_property', () => {
-	it('drops the property from matching nodes only', async () => {
-		const db = await create_db({
+	it('drops the property from matching nodes only', () => {
+		const db = create_db({
 			page_1: {
 				document_id: 'page_1',
 				nodes: {
@@ -167,70 +148,70 @@ describe('delete_property', () => {
 			}
 		});
 
-		expect(await create_migration_helpers(db).delete_property('hero', 'subtitle')).toBe(1);
+		expect(create_migration_helpers(db).delete_property('hero', 'subtitle')).toBe(1);
 
-		const result = await read_nodes(db, 'page_1');
+		const result = read_nodes(db, 'page_1');
 		expect(result.hero_1).toEqual({ id: 'hero_1', type: 'hero', layout: 'default' });
 		expect(result.story_1.subtitle).toBe('kept');
 	});
 
-	it('leaves nodes without the property alone', async () => {
-		const db = await create_db({
+	it('leaves nodes without the property alone', () => {
+		const db = create_db({
 			page_1: {
 				document_id: 'page_1',
 				nodes: { hero_1: { id: 'hero_1', type: 'hero' } }
 			}
 		});
 
-		expect(await create_migration_helpers(db).delete_property('hero', 'subtitle')).toBe(0);
+		expect(create_migration_helpers(db).delete_property('hero', 'subtitle')).toBe(0);
 	});
 });
 
 describe('update', () => {
-	it('applies arbitrary transforms and leaves updated_at untouched', async () => {
-		const db = await create_db({
+	it('applies arbitrary transforms and leaves updated_at untouched', () => {
+		const db = create_db({
 			page_1: {
 				document_id: 'page_1',
 				nodes: { hero_1: { id: 'hero_1', type: 'hero', layout: 'default' } }
 			}
 		});
 
-		const changed = await create_migration_helpers(db).update('hero', (node) => {
+		const changed = create_migration_helpers(db).update('hero', (node) => {
 			node.layout = `${node.layout}-v2`;
 		});
 
 		expect(changed).toBe(1);
-		expect((await read_nodes(db, 'page_1')).hero_1.layout).toBe('default-v2');
+		expect(read_nodes(db, 'page_1').hero_1.layout).toBe('default-v2');
 
-		expect((await db.documents.get('page_1'))!.updated_at).toBe('updated');
+		expect(find(db, 'page_1')!.updated_at).toBe('updated');
 	});
 
-	it('reports no changes when the transform changes nothing', async () => {
-		const db = await create_db({
+	it('reports no changes when the transform changes nothing', () => {
+		const db = create_db({
 			page_1: {
 				document_id: 'page_1',
 				nodes: { hero_1: { id: 'hero_1', type: 'hero', layout: 'default' } }
 			}
 		});
 
-		expect(await create_migration_helpers(db).update('hero', () => {})).toBe(0);
+		expect(create_migration_helpers(db).update('hero', () => {})).toBe(0);
 	});
 });
 
 describe('ensure_document', () => {
-	it('adds a document typed by its root node, and leaves an existing one alone', async () => {
-		const db = await create_db({});
+	it('adds a document typed by its root node, and leaves an existing one alone', () => {
+		const db = create_db({});
 		const helpers = create_migration_helpers(db);
 		const banner = {
 			document_id: 'banner_1',
 			nodes: { banner_1: { id: 'banner_1', type: 'banner' } }
 		} as Document;
 
-		expect(await helpers.ensure_document(banner)).toBe(true);
-		expect(await db.documents.get('banner_1')).toMatchObject({ type: 'banner', data: banner });
+		expect(helpers.ensure_document(banner)).toBe(true);
+		expect(find(db, 'banner_1')).toMatchObject({ type: 'banner', data: banner });
 
 		const changed = { ...banner, nodes: { banner_1: { id: 'banner_1', type: 'banner', x: 1 } } };
-		expect(await helpers.ensure_document(changed as Document)).toBe(false);
-		expect((await db.documents.get('banner_1'))!.data).toEqual(banner);
+		expect(helpers.ensure_document(changed as Document)).toBe(false);
+		expect(find(db, 'banner_1')!.data).toEqual(banner);
 	});
 });

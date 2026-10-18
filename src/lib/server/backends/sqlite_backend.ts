@@ -1,9 +1,21 @@
+import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-import type { Backend, Collection } from '../backend.js';
+import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
+import {
+	ConflictError,
+	type Backend,
+	type DocumentRecord,
+	type LoginThrottleRecord,
+	type OAuthClientRecord,
+	type OAuthGrantRecord,
+	type OAuthTokenRecord,
+	type SessionRecord,
+	type SettingRecord,
+	type SlugRecord,
+	type TranslationRecord
+} from '../backend.js';
 import { asset_files } from './asset_files.js';
-import { one_at_a_time } from './one_at_a_time.js';
 
 /** What sqlite_backend is built on, and what its storage migrations receive. */
 export type SqliteStorage = {
@@ -21,14 +33,14 @@ export function open_sqlite(path: string): DatabaseSync {
 	return db;
 }
 
+type Row = Record<string, unknown>;
+
 /**
- * Records in SQLite and asset files in a folder. Each collection is a table
- * its storage migrations create, and a record is a row with its JSON columns
- * parsed. Operations run one at a time on the single connection, so a
- * transaction is a real SQLite transaction. The storage migrations it has
- * applied are recorded in _migrations; databases from before content
- * progress moved into the settings list their content migrations there as
- * well.
+ * Records in SQLite and asset files in a folder. node:sqlite is synchronous,
+ * so each function runs to its end before another starts, and each write is
+ * one SQLite transaction. The storage migrations it has applied are recorded
+ * in _migrations; databases from before content progress moved into the
+ * settings list their content migrations there as well.
  */
 export function sqlite_backend(storage: SqliteStorage): Backend {
 	const { db } = storage;
@@ -36,203 +48,322 @@ export function sqlite_backend(storage: SqliteStorage): Backend {
 		'CREATE TABLE IF NOT EXISTS _migrations (id TEXT PRIMARY KEY NOT NULL, timestamp TEXT NOT NULL)'
 	);
 
-	function collection<R>(
-		table: string,
-		key: string,
-		to_row: (record: R) => Record<string, unknown>,
-		from_row: (row: Record<string, unknown>) => R
-	): Collection<R> {
-		return {
-			async get(value) {
-				const row = db.prepare(`SELECT * FROM ${table} WHERE ${key} = ?`).get(value);
-				return row ? from_row(row as Record<string, unknown>) : null;
-			},
-			async all() {
-				return (db.prepare(`SELECT * FROM ${table}`).all() as Record<string, unknown>[]).map(
-					from_row
-				);
-			},
-			async put(record) {
-				const row = to_row(record);
-				const names = Object.keys(row);
-				db.prepare(
-					`INSERT OR REPLACE INTO ${table} (${names.join(', ')}) VALUES (${names.map(() => '?').join(', ')})`
-				).run(...names.map((name) => row[name] as string | number | null));
-			},
-			async delete(value) {
-				db.prepare(`DELETE FROM ${table} WHERE ${key} = ?`).run(value);
-			}
-		};
+	const one = <T = Row>(sql: string, ...params: SQLInputValue[]) =>
+		(db.prepare(sql).get(...params) as T | undefined) ?? null;
+	const all = <T = Row>(sql: string, ...params: SQLInputValue[]) =>
+		db.prepare(sql).all(...params) as T[];
+	const run = (sql: string, ...params: SQLInputValue[]) => db.prepare(sql).run(...params);
+
+	function atomically(work: () => void) {
+		db.exec('BEGIN IMMEDIATE');
+		try {
+			work();
+			db.exec('COMMIT');
+		} catch (error) {
+			db.exec('ROLLBACK');
+			throw error;
+		}
 	}
 
-	return one_at_a_time(
-		{
-			name: 'sqlite',
-			storage,
-			documents: collection(
-				'documents',
-				'document_id',
-				(record) => ({ ...record, data: JSON.stringify(record.data) }),
-				(row) => ({ ...(row as any), data: JSON.parse(row.data as string) })
-			),
-			slugs: collection(
-				'document_slugs',
-				'slug',
-				(record) => ({ ...record, is_active: record.is_active ? 1 : 0 }),
-				(row) => ({ ...(row as any), is_active: row.is_active === 1 })
-			),
-			translations: {
-				...collection<any>(
-					'translations',
-					'rowid',
-					(r) => r,
-					(r) => r
-				),
-				async get(key) {
-					const [document_id, language] = key.split(':');
-					const row = db
-						.prepare('SELECT * FROM translations WHERE document_id = ? AND language = ?')
-						.get(document_id, language);
-					return (row as any) ?? null;
-				},
-				async put(record) {
-					db.prepare(
-						'INSERT INTO translations (document_id, language, value, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(document_id, language) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at'
-					).run(record.document_id, record.language, record.value, record.updated_at);
-				},
-				async delete(key) {
-					const [document_id, language] = key.split(':');
-					db.prepare('DELETE FROM translations WHERE document_id = ? AND language = ?').run(
-						document_id,
-						language
-					);
-				}
-			},
-			// One row per link, grouped into a record per source document in link order.
-			document_refs: {
-				async get(document_id) {
-					const rows = db
-						.prepare(
-							'SELECT target_document_id FROM document_refs WHERE source_document_id = ? ORDER BY ref_order'
-						)
-						.all(document_id) as { target_document_id: string }[];
-					return rows.length
-						? { document_id, target_ids: rows.map((row) => row.target_document_id) }
-						: null;
-				},
-				async all() {
-					const by_source = new Map<string, string[]>();
-					const rows = db
-						.prepare(
-							'SELECT target_document_id, source_document_id FROM document_refs ORDER BY ref_order'
-						)
-						.all() as { target_document_id: string; source_document_id: string }[];
-					for (const row of rows) {
-						if (!by_source.has(row.source_document_id)) by_source.set(row.source_document_id, []);
-						by_source.get(row.source_document_id)!.push(row.target_document_id);
-					}
-					return [...by_source].map(([document_id, target_ids]) => ({ document_id, target_ids }));
-				},
-				async put({ document_id, target_ids }) {
-					db.prepare('DELETE FROM document_refs WHERE source_document_id = ?').run(document_id);
-					const insert = db.prepare(
-						'INSERT OR REPLACE INTO document_refs (target_document_id, source_document_id, ref_order) VALUES (?, ?, ?)'
-					);
-					for (const [ref_order, target_id] of target_ids.entries())
-						insert.run(target_id, document_id, ref_order);
-				},
-				async delete(document_id) {
-					db.prepare('DELETE FROM document_refs WHERE source_document_id = ?').run(document_id);
-				}
-			},
-			// One row per asset and document, grouped into a record per document.
-			asset_refs: {
-				async get(document_id) {
-					const rows = db
-						.prepare('SELECT asset_id FROM asset_refs WHERE document_id = ?')
-						.all(document_id) as { asset_id: string }[];
-					return rows.length ? { document_id, asset_ids: rows.map((row) => row.asset_id) } : null;
-				},
-				async all() {
-					const by_document = new Map<string, string[]>();
-					const rows = db.prepare('SELECT asset_id, document_id FROM asset_refs').all() as {
-						asset_id: string;
-						document_id: string;
-					}[];
-					for (const row of rows) {
-						if (!by_document.has(row.document_id)) by_document.set(row.document_id, []);
-						by_document.get(row.document_id)!.push(row.asset_id);
-					}
-					return [...by_document].map(([document_id, asset_ids]) => ({ document_id, asset_ids }));
-				},
-				async put({ document_id, asset_ids }) {
-					db.prepare('DELETE FROM asset_refs WHERE document_id = ?').run(document_id);
-					const insert = db.prepare(
-						'INSERT OR IGNORE INTO asset_refs (asset_id, document_id) VALUES (?, ?)'
-					);
-					for (const asset_id of asset_ids) insert.run(asset_id, document_id);
-				},
-				async delete(document_id) {
-					db.prepare('DELETE FROM asset_refs WHERE document_id = ?').run(document_id);
-				}
-			},
-			settings: collection(
-				'site_settings',
-				'key',
-				(r) => r,
-				(r) => r as any
-			),
-			sessions: collection(
-				'sessions',
-				'session_id',
-				(r) => r,
-				(r) => r as any
-			),
-			oauth_clients: collection(
-				'oauth_clients',
-				'client_id',
-				(record) => ({ ...record, redirect_uris: JSON.stringify(record.redirect_uris) }),
-				(row) => ({ ...(row as any), redirect_uris: JSON.parse(row.redirect_uris as string) })
-			),
-			oauth_grants: collection(
-				'oauth_grants',
-				'grant_id',
-				(r) => r,
-				(r) => r as any
-			),
-			oauth_tokens: collection(
-				'oauth_tokens',
-				'token_hash',
-				(r) => r,
-				(r) => r as any
-			),
-			login_throttle: collection(
-				'login_throttle',
-				'key',
-				(r) => r,
-				(r) => r as any
-			),
-			...asset_files(storage.asset_dir),
-			delete_expired: async (now) => {
-				db.prepare('DELETE FROM sessions WHERE expires <= ?').run(now);
-				db.prepare('DELETE FROM oauth_tokens WHERE expires_at <= ?').run(now);
-			},
-			applied_migrations: async () =>
-				(db.prepare('SELECT id FROM _migrations ORDER BY id').all() as { id: string }[]).map(
-					(row) => row.id
-				),
-			record_migration: async (id) => {
-				db.prepare('INSERT INTO _migrations (id, timestamp) VALUES (?, ?)').run(
-					id,
-					new Date().toISOString()
-				);
-			},
-			close: async () => db.close()
-		},
-		{
-			begin: () => db.exec('BEGIN IMMEDIATE'),
-			commit: () => db.exec('COMMIT'),
-			rollback: () => db.exec('ROLLBACK')
+	const document = (row: Row) =>
+		({ ...row, data: JSON.parse(row.data as string) }) as DocumentRecord;
+	const slug = (row: Row) => ({ ...row, is_active: row.is_active === 1 }) as SlugRecord;
+	const oauth_client = (row: Row) =>
+		({ ...row, redirect_uris: JSON.parse(row.redirect_uris as string) }) as OAuthClientRecord;
+	const grouped = (rows: Row[], key: string, value: string, field: string) => {
+		const groups = new Map<string, string[]>();
+		for (const row of rows) {
+			const id = row[key] as string;
+			if (!groups.has(id)) groups.set(id, []);
+			groups.get(id)!.push(row[value] as string);
 		}
-	);
+		return [...groups].map(([document_id, ids]) => ({ document_id, [field]: ids }));
+	};
+
+	function assert_version(
+		table: string,
+		where: string,
+		params: SQLInputValue[],
+		expected: string | null
+	) {
+		const current = (one(`SELECT version FROM ${table} WHERE ${where}`, ...params)?.version ??
+			null) as string | null;
+		if (current !== expected)
+			throw new ConflictError(`${params.join(' ')} changed since it was read.`);
+	}
+
+	function put_document_refs(document_id: string, target_ids: string[]) {
+		run('DELETE FROM document_refs WHERE source_document_id = ?', document_id);
+		for (const [ref_order, target_id] of target_ids.entries())
+			run(
+				'INSERT OR REPLACE INTO document_refs (target_document_id, source_document_id, ref_order) VALUES (?, ?, ?)',
+				target_id,
+				document_id,
+				ref_order
+			);
+	}
+
+	function put_asset_refs(document_id: string, asset_ids: string[]) {
+		run('DELETE FROM asset_refs WHERE document_id = ?', document_id);
+		for (const asset_id of asset_ids)
+			run(
+				'INSERT OR IGNORE INTO asset_refs (asset_id, document_id) VALUES (?, ?)',
+				asset_id,
+				document_id
+			);
+	}
+
+	function put_translation(record: Omit<TranslationRecord, 'version'>) {
+		run(
+			'INSERT OR REPLACE INTO translations (document_id, language, value, updated_at, version) VALUES (?, ?, ?, ?, ?)',
+			record.document_id,
+			record.language,
+			record.value,
+			record.updated_at,
+			randomUUID()
+		);
+	}
+
+	const delete_translation = ({
+		document_id,
+		language
+	}: {
+		document_id: string;
+		language: string;
+	}) =>
+		run('DELETE FROM translations WHERE document_id = ? AND language = ?', document_id, language);
+
+	return {
+		name: 'sqlite',
+		storage,
+
+		get_document: async (document_id) => {
+			const row = one('SELECT * FROM documents WHERE document_id = ?', document_id);
+			return row && document(row);
+		},
+		list_documents: async (type) =>
+			(type
+				? all('SELECT * FROM documents WHERE type = ? ORDER BY document_id', type)
+				: all('SELECT * FROM documents ORDER BY document_id')
+			).map(document),
+		save_documents: async (save) =>
+			atomically(() => {
+				for (const [document_id, version] of Object.entries(save.expect ?? {}))
+					assert_version('documents', 'document_id = ?', [document_id], version);
+				for (const record of save.documents ?? [])
+					run(
+						'INSERT OR REPLACE INTO documents (document_id, type, data, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?)',
+						record.document_id,
+						record.type,
+						JSON.stringify(record.data),
+						record.created_at,
+						record.updated_at,
+						randomUUID()
+					);
+				for (const refs of save.document_refs ?? [])
+					put_document_refs(refs.document_id, refs.target_ids);
+				for (const refs of save.asset_refs ?? []) put_asset_refs(refs.document_id, refs.asset_ids);
+				for (const record of save.translations?.put ?? []) put_translation(record);
+				for (const key of save.translations?.delete ?? []) delete_translation(key);
+				// Inactive slugs first, so a page never has two active ones at a time.
+				for (const record of [...(save.slugs ?? [])].sort((a, b) => +a.is_active - +b.is_active))
+					run(
+						'INSERT OR REPLACE INTO document_slugs (slug, document_id, is_active, created_at) VALUES (?, ?, ?, ?)',
+						record.slug,
+						record.document_id,
+						record.is_active ? 1 : 0,
+						record.created_at
+					);
+				for (const { key, value } of save.settings ?? [])
+					run('INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)', key, value);
+			}),
+		delete_page: async (document_id) =>
+			atomically(() => {
+				run('DELETE FROM documents WHERE document_id = ?', document_id);
+				run('DELETE FROM document_slugs WHERE document_id = ?', document_id);
+				run('DELETE FROM translations WHERE document_id = ?', document_id);
+				run('DELETE FROM asset_refs WHERE document_id = ?', document_id);
+				run(
+					'DELETE FROM document_refs WHERE source_document_id = ? OR target_document_id = ?',
+					document_id,
+					document_id
+				);
+			}),
+
+		resolve_slug: async (slug) => {
+			const row = one(
+				`SELECT slug.document_id, slug.is_active, active.slug AS active_slug
+				FROM document_slugs slug JOIN document_slugs active
+				ON active.document_id = slug.document_id AND active.is_active = 1
+				WHERE slug.slug = ?`,
+				slug
+			);
+			return (
+				row && {
+					document_id: row.document_id as string,
+					is_active: row.is_active === 1,
+					active_slug: row.active_slug as string
+				}
+			);
+		},
+		get_active_slug: async (document_id) =>
+			(one('SELECT slug FROM document_slugs WHERE document_id = ? AND is_active = 1', document_id)
+				?.slug as string | undefined) ?? null,
+		list_slugs: async () => all('SELECT * FROM document_slugs').map(slug),
+
+		list_document_refs: async () =>
+			grouped(
+				all('SELECT source_document_id, target_document_id FROM document_refs ORDER BY ref_order'),
+				'source_document_id',
+				'target_document_id',
+				'target_ids'
+			) as { document_id: string; target_ids: string[] }[],
+		list_asset_refs: async () =>
+			grouped(
+				all('SELECT document_id, asset_id FROM asset_refs'),
+				'document_id',
+				'asset_id',
+				'asset_ids'
+			) as { document_id: string; asset_ids: string[] }[],
+
+		list_translations: async ({ document_ids, language } = {}) => {
+			const where: string[] = [];
+			const params: SQLInputValue[] = [];
+			if (document_ids) {
+				where.push(`document_id IN (${document_ids.map(() => '?').join(', ')})`);
+				params.push(...document_ids);
+			}
+			if (language) {
+				where.push('language = ?');
+				params.push(language);
+			}
+			return all<TranslationRecord>(
+				`SELECT * FROM translations${where.length ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY document_id, language`,
+				...params
+			);
+		},
+		save_translations: async (save) =>
+			atomically(() => {
+				for (const [document_id, version] of Object.entries(save.expect.documents))
+					assert_version('documents', 'document_id = ?', [document_id], version);
+				for (const { document_id, language, version } of save.expect.translations)
+					assert_version(
+						'translations',
+						'document_id = ? AND language = ?',
+						[document_id, language],
+						version
+					);
+				for (const record of save.put) put_translation(record);
+				for (const key of save.delete) delete_translation(key);
+				for (const refs of save.asset_refs) put_asset_refs(refs.document_id, refs.asset_ids);
+			}),
+
+		get_setting: async (key) =>
+			(one('SELECT value FROM site_settings WHERE key = ?', key)?.value as string | undefined) ??
+			null,
+		list_settings: async () => all<SettingRecord>('SELECT key, value FROM site_settings'),
+
+		get_session: async (session_id) =>
+			one<SessionRecord>('SELECT * FROM sessions WHERE session_id = ?', session_id),
+		save_session: async ({ session_id, expires }) => {
+			run(
+				'INSERT OR REPLACE INTO sessions (session_id, expires) VALUES (?, ?)',
+				session_id,
+				expires
+			);
+		},
+		delete_session: async (session_id) => {
+			run('DELETE FROM sessions WHERE session_id = ?', session_id);
+		},
+		get_login_throttle: async (key) =>
+			one<LoginThrottleRecord>('SELECT * FROM login_throttle WHERE key = ?', key),
+		save_login_throttle: async ({ key, failed_count, locked_until }) => {
+			run(
+				'INSERT OR REPLACE INTO login_throttle (key, failed_count, locked_until) VALUES (?, ?, ?)',
+				key,
+				failed_count,
+				locked_until
+			);
+		},
+
+		list_oauth_clients: async () => all('SELECT * FROM oauth_clients').map(oauth_client),
+		get_oauth_client: async (client_id) => {
+			const row = one('SELECT * FROM oauth_clients WHERE client_id = ?', client_id);
+			return row && oauth_client(row);
+		},
+		save_oauth_client: async (client) => {
+			run(
+				'INSERT OR REPLACE INTO oauth_clients (client_id, client_name, redirect_uris, created_at) VALUES (?, ?, ?, ?)',
+				client.client_id,
+				client.client_name,
+				JSON.stringify(client.redirect_uris),
+				client.created_at
+			);
+		},
+		delete_oauth_client: async (client_id) => {
+			run('DELETE FROM oauth_clients WHERE client_id = ?', client_id);
+		},
+		list_oauth_grants: async () => all<OAuthGrantRecord>('SELECT * FROM oauth_grants'),
+		get_oauth_grant: async (grant_id) =>
+			one<OAuthGrantRecord>('SELECT * FROM oauth_grants WHERE grant_id = ?', grant_id),
+		save_oauth_grant: async (grant) => {
+			run(
+				'INSERT OR REPLACE INTO oauth_grants (grant_id, client_id, redirect_uri, code_challenge, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)',
+				grant.grant_id,
+				grant.client_id,
+				grant.redirect_uri,
+				grant.code_challenge,
+				grant.created_at,
+				grant.expires_at
+			);
+		},
+		delete_oauth_grant: async (grant_id) => {
+			run('DELETE FROM oauth_grants WHERE grant_id = ?', grant_id);
+		},
+		get_oauth_token: async (token_hash) =>
+			one<OAuthTokenRecord>('SELECT * FROM oauth_tokens WHERE token_hash = ?', token_hash),
+		save_oauth_token: async (token) => {
+			run(
+				'INSERT OR REPLACE INTO oauth_tokens (token_hash, grant_id, kind, expires_at) VALUES (?, ?, ?, ?)',
+				token.token_hash,
+				token.grant_id,
+				token.kind,
+				token.expires_at
+			);
+		},
+		take_oauth_token: async (token_hash) =>
+			one<OAuthTokenRecord>(
+				'DELETE FROM oauth_tokens WHERE token_hash = ? RETURNING *',
+				token_hash
+			),
+		revoke_oauth_grants: async (now) =>
+			atomically(() => {
+				run('DELETE FROM oauth_tokens');
+				run('UPDATE oauth_grants SET expires_at = ? WHERE expires_at > ?', now, now);
+			}),
+		delete_expired: async (now) =>
+			atomically(() => {
+				run('DELETE FROM sessions WHERE expires <= ?', now);
+				run('DELETE FROM oauth_tokens WHERE expires_at <= ?', now);
+			}),
+
+		...asset_files(storage.asset_dir),
+
+		applied_migrations: async () =>
+			all('SELECT id FROM _migrations ORDER BY id').map((row) => row.id as string),
+		// Storage migrations run at startup, before requests, so awaiting one cannot interleave.
+		run_migration: async (id, up) => {
+			db.exec('BEGIN IMMEDIATE');
+			try {
+				await up(storage);
+				run('INSERT INTO _migrations (id, timestamp) VALUES (?, ?)', id, new Date().toISOString());
+				db.exec('COMMIT');
+			} catch (error) {
+				db.exec('ROLLBACK');
+				throw error;
+			}
+		},
+
+		close: async () => db.close()
+	};
 }

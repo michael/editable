@@ -8,12 +8,8 @@ export async function warn_about_language_slug_collisions() {
 	// Runs at startup, for the deployment's own site.
 	const { languages } = default_site;
 	if (!languages.length) return;
-	const pages = new Set(
-		(await backend.documents.all())
-			.filter((record) => record.type === 'page')
-			.map((record) => record.document_id)
-	);
-	const rows = (await backend.slugs.all()).filter((record) => pages.has(record.document_id));
+	const pages = new Set((await backend.list_documents('page')).map((record) => record.document_id));
+	const rows = (await backend.list_slugs()).filter((record) => pages.has(record.document_id));
 	for (const row of rows) {
 		if (!is_reserved_language_slug(row.slug, languages)) continue;
 		console.warn(

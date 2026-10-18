@@ -1,55 +1,49 @@
 // Content helpers for migrations, so the common transformations work the same
 // on every backend and do not have to be written against stored records.
 //
-// Every helper scans all documents (pages, banner, nav, footer), applies the change to
-// matching nodes, and writes back only the documents that actually changed.
-// `updated_at` is left untouched: a migration is not a content edit.
+// The helpers change the site's documents in memory: every helper scans all
+// documents (pages, banner, nav, footer) and applies the change to matching
+// nodes. Editable then saves the documents that changed. `updated_at` is left
+// untouched: a migration is not a content edit.
 
 import type { Document } from 'svedit';
-import type { Backend } from './backend.js';
+import type { NewDocument } from './backend.js';
 
 type MigrationNode = Record<string, unknown>;
 
+/** A document as a migration sees it; one it added has no version yet. */
+export type MigrationDocument = NewDocument & { version?: string };
+
 export type MigrationHelpers = {
-	update: (type: string, transform: (node: MigrationNode) => void) => Promise<number>;
-	rename_property: (type: string, from: string, to: string) => Promise<number>;
-	rename_type: (from: string, to: string) => Promise<number>;
-	replace_value: (type: string, property: string, from: unknown, to: unknown) => Promise<number>;
-	delete_property: (type: string, property: string) => Promise<number>;
-	ensure_document: (document: Document) => Promise<boolean>;
+	update: (type: string, transform: (node: MigrationNode) => void) => number;
+	rename_property: (type: string, from: string, to: string) => number;
+	rename_type: (from: string, to: string) => number;
+	replace_value: (type: string, property: string, from: unknown, to: unknown) => number;
+	delete_property: (type: string, property: string) => number;
+	ensure_document: (document: Document) => boolean;
 };
 
 /**
- * Build the helpers spread into every content migration's `up` context.
+ * Build the helpers spread into every content migration's `up` context, over
+ * the documents they change.
  */
-export function create_migration_helpers(backend: Backend): MigrationHelpers {
+export function create_migration_helpers(documents: MigrationDocument[]): MigrationHelpers {
 	/**
 	 * Apply `transform` to every node of `type` in every document. The transform
 	 * mutates the node it is given; returns the number of nodes it changed.
 	 */
-	async function update(type: string, transform: (node: MigrationNode) => void) {
+	function update(type: string, transform: (node: MigrationNode) => void): number {
 		let changed_nodes = 0;
-
-		for (const record of await backend.documents.all()) {
-			const data = structuredClone(record.data);
-			let changed_in_document = 0;
-
-			for (const node of Object.values(data.nodes ?? {}) as MigrationNode[]) {
+		for (const record of documents) {
+			for (const node of Object.values(record.data.nodes ?? {}) as MigrationNode[]) {
 				if (!node || node.type !== type) continue;
-
 				// Comparing serialized nodes keeps the transform a plain mutation
 				// while still reporting accurate counts.
 				const before = JSON.stringify(node);
 				transform(node);
-				if (JSON.stringify(node) !== before) changed_in_document += 1;
-			}
-
-			if (changed_in_document > 0) {
-				await backend.documents.put({ ...record, data });
-				changed_nodes += changed_in_document;
+				if (JSON.stringify(node) !== before) changed_nodes += 1;
 			}
 		}
-
 		return changed_nodes;
 	}
 
@@ -57,7 +51,7 @@ export function create_migration_helpers(backend: Backend): MigrationHelpers {
 	 * Rename a property on all nodes of one type, keeping its value as is.
 	 * Nodes that never had the property are left alone.
 	 */
-	function rename_property(type: string, from: string, to: string) {
+	function rename_property(type: string, from: string, to: string): number {
 		return update(type, (node) => {
 			if (!(from in node)) return;
 			if (to in node) {
@@ -79,13 +73,11 @@ export function create_migration_helpers(backend: Backend): MigrationHelpers {
 	 * Rename a node type on every node that has it. Document records also
 	 * carry the type of their root node, which is kept in step.
 	 */
-	async function rename_type(from: string, to: string) {
-		const changed_nodes = await update(from, (node) => {
+	function rename_type(from: string, to: string): number {
+		const changed_nodes = update(from, (node) => {
 			node.type = to;
 		});
-		for (const record of await backend.documents.all()) {
-			if (record.type === from) await backend.documents.put({ ...record, type: to });
-		}
+		for (const record of documents) if (record.type === from) record.type = to;
 		return changed_nodes;
 	}
 
@@ -94,7 +86,7 @@ export function create_migration_helpers(backend: Backend): MigrationHelpers {
 	 * example a renamed layout id. Matching is strict equality, so this is for
 	 * primitive values.
 	 */
-	function replace_value(type: string, property: string, from: unknown, to: unknown) {
+	function replace_value(type: string, property: string, from: unknown, to: unknown): number {
 		return update(type, (node) => {
 			if (node[property] === from) node[property] = to;
 		});
@@ -105,7 +97,7 @@ export function create_migration_helpers(backend: Backend): MigrationHelpers {
 	 * removed by saving — nodes are stored as they are loaded — so this is how
 	 * a property retired from the schema leaves stored content.
 	 */
-	function delete_property(type: string, property: string) {
+	function delete_property(type: string, property: string): number {
 		return update(type, (node) => {
 			delete node[property];
 		});
@@ -116,10 +108,10 @@ export function create_migration_helpers(backend: Backend): MigrationHelpers {
 	 * document every page refers to. Its type is its root node's. Returns
 	 * whether it was added.
 	 */
-	async function ensure_document(document: Document) {
-		if (await backend.documents.get(document.document_id)) return false;
+	function ensure_document(document: Document): boolean {
+		if (documents.some((record) => record.document_id === document.document_id)) return false;
 		const now = new Date().toISOString();
-		await backend.documents.put({
+		documents.push({
 			document_id: document.document_id,
 			type: document.nodes[document.document_id].type,
 			data: document,

@@ -13,12 +13,8 @@ export type ShadowedPage = {
 
 /** Pages that exist in the database but whose URL a markdown page serves. */
 export async function find_shadowed_pages(): Promise<ShadowedPage[]> {
-	const pages = new Set(
-		(await backend.documents.all())
-			.filter((record) => record.type === 'page')
-			.map((record) => record.document_id)
-	);
-	const rows = (await backend.slugs.all())
+	const pages = new Set((await backend.list_documents('page')).map((record) => record.document_id));
+	const rows = (await backend.list_slugs())
 		.filter((record) => record.is_active && pages.has(record.document_id))
 		.map(({ slug, document_id }) => ({ slug, document_id }));
 
