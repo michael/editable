@@ -41,7 +41,7 @@ export function data_format(data_dir: string): DataFormat | null {
 
 /**
  * A data folder's backend in the given format: records in db.sqlite3, or in
- * db/ with each document as EDF and every other collection as JSON; asset
+ * db/ with each document as EDF and every other kind of record as JSON; asset
  * files in assets/ either way.
  */
 export function backend_in(data_dir: string, format: DataFormat): Backend {
@@ -64,9 +64,8 @@ export function backend_in(data_dir: string, format: DataFormat): Backend {
  * not copied.
  */
 export async function copy_site(from: Backend, to: Backend) {
-	const documents = await from.list_documents();
 	await to.save_documents({
-		documents: documents.map(({ version: _, ...record }) => record),
+		documents: (await from.list_documents()).map(({ version: _, ...record }) => record),
 		slugs: await from.list_slugs(),
 		translations: {
 			put: (await from.list_translations()).map(({ version: _, ...record }) => record)

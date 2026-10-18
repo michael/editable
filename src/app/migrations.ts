@@ -37,7 +37,7 @@ export async function migrate_storage(backend: Backend) {
  * documents in memory, and the changed ones are saved together with its id in
  * the 'migrations' setting.
  */
-export async function migrate_content(backend: Backend) {
+async function migrate_content(backend: Backend) {
 	const content_ids = all_migrations
 		.filter((migration) => migration.target === 'content')
 		.map((migration) => migration.id);

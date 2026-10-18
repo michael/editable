@@ -10,7 +10,7 @@
 // data-backups/: a database as a regular backup that pnpm data:backups lists,
 // files as a dated folder. Stop the dev server first.
 
-import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
+import { mkdirSync, renameSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { createServer } from 'vite';
@@ -59,7 +59,6 @@ try {
 		from === 'sqlite'
 			? join(backups, `local-${stamp}-${random}-before-files.sqlite3`)
 			: join(backups, `local-${stamp}-${random}-before-sqlite`);
-	if (existsSync(kept)) fail(`${kept} already exists.`);
 	if (from === 'sqlite') {
 		renameSync(database, kept);
 		for (const suffix of ['-wal', '-shm']) rmSync(database + suffix, { force: true });

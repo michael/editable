@@ -317,7 +317,6 @@ set_aside_files() {
 	mkdir -p "$BACKUP_DIR_LOCAL"
 	local dest
 	dest="$BACKUP_DIR_LOCAL/local-$(date -u +%Y%m%dT%H%M%SZ)-$(printf '%04x' "$RANDOM")-files"
-	[ ! -e "$dest" ] || die "$dest already exists"
 	mv "$DATA_DIR_LOCAL/db" "$dest"
 	info "Moved the site kept as files to $dest (restart the dev server if it is running)"
 }

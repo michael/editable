@@ -1,10 +1,6 @@
 import type { DocumentNode } from 'svedit';
 import { backend } from '#app/services.js';
-import {
-	get_home_page_id_from_db,
-	resolve_slug,
-	shared_document_types
-} from '#app/server_documents.js';
+import { get_home_page_id_from_db, shared_document_types } from '#app/server_documents.js';
 import { is_reserved_language_slug } from '#app/languages.js';
 import { site } from '#app/server_site.js';
 import { is_reserved_markdown_slug } from '#app/markdown/registry.js';
@@ -92,7 +88,7 @@ export async function build_page_browser_data(
 	const current_document_id =
 		pathname === '/'
 			? home_page_id
-			: ((await resolve_slug(pathname.slice(1)))?.document_id ?? null);
+			: ((await backend.resolve_slug(pathname.slice(1)))?.document_id ?? null);
 	const page_docs = await list_page_documents();
 	const page_docs_by_id = new Map(page_docs.map((page_doc) => [page_doc.document_id, page_doc]));
 	const active_slugs = new Map(

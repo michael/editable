@@ -8,6 +8,7 @@ import {
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
 import { edf_root_id, parse_edf, serialize_edf } from '#lib/edf.js';
 import { site } from './server_site.js';
+import { backend } from './services.js';
 import { language_href, language_path } from './languages.js';
 import { save_translated_document, translated_document } from './server_translations.js';
 import { parse_internal_page_href } from './document_links.js';
@@ -19,13 +20,11 @@ import { assert_uploaded_images } from './server_mcp_images.js';
 import {
 	type DocumentData,
 	combine_page_document,
-	get_active_slug_for_document_id,
 	get_doc_from_db,
 	get_document_version,
 	get_home_page_id_from_db,
 	get_optional_doc_from_db,
 	persist_document,
-	resolve_slug,
 	shared_document_types,
 	with_asset_cleanup
 } from './server_documents.js';
@@ -51,7 +50,7 @@ async function resolve_document(
 
 	const parsed = parse_internal_page_href(pathname, languages);
 	return {
-		document_id: parsed ? ((await resolve_slug(parsed.slug))?.document_id ?? null) : null,
+		document_id: parsed ? ((await backend.resolve_slug(parsed.slug))?.document_id ?? null) : null,
 		language
 	};
 }
@@ -79,7 +78,7 @@ async function unwrap_http_error<T>(fn: () => Promise<T>): Promise<T> {
 
 async function page_href_for(document_id: string, language: string | null): Promise<string> {
 	const { languages } = site;
-	const slug = await get_active_slug_for_document_id(document_id);
+	const slug = await backend.get_active_slug(document_id);
 	const href = slug ? `/${slug}` : '/';
 	return language ? language_href(href, language, languages) : href;
 }

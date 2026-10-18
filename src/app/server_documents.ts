@@ -86,15 +86,6 @@ export async function is_home_page_document_id(document_id: string): Promise<boo
 	return (await get_home_page_id_from_db()) === document_id;
 }
 
-export function get_active_slug_for_document_id(document_id: string): Promise<string | null> {
-	return backend.get_active_slug(document_id);
-}
-
-/** Resolve an active or historical slug to its document and current active slug. */
-export function resolve_slug(slug: string) {
-	return backend.resolve_slug(slug);
-}
-
 export function is_reserved_route_slug(slug: string) {
 	return RESERVED_ROUTE_SLUGS.has(slug);
 }
@@ -273,9 +264,8 @@ function has_same_nodes(a: DocumentData, b: DocumentData): boolean {
 }
 
 /** A page's version together with its shared documents', from their stored records. */
-function version_of(records: DocumentRecord[]) {
-	return records.map((record) => record.version).join('.');
-}
+const version_of = (records: (DocumentRecord | null)[]) =>
+	records.map((record) => record?.version).join('.');
 
 /**
  * The version of a document as stored, and for a page also of its shared
@@ -284,8 +274,8 @@ function version_of(records: DocumentRecord[]) {
 export async function get_document_version(document_id: string): Promise<string | null> {
 	const page = await backend.get_document(document_id);
 	if (!page) return null;
-	const shared = await Promise.all(shared_ids_of(page.data).map((id) => backend.get_document(id)));
-	return version_of([page, ...shared.filter((record) => record !== null)]);
+	const shared = shared_ids_of(page.data).map((id) => backend.get_document(id));
+	return version_of([page, ...(await Promise.all(shared))]);
 }
 
 /**
@@ -339,19 +329,15 @@ export async function persist_document(
 			throw new InvalidDocumentError(
 				`Document ${record.document_id} is a ${record.type}, not a ${documents[index].type}.`
 			);
-	if (
-		expected_version !== undefined &&
-		(await get_document_version(document_id)) !== expected_version
-	)
+	if (expected_version !== undefined && version_of(records) !== expected_version)
 		throw new VersionConflictError();
 
 	const changed = documents
 		.map((document, index) => ({ ...document, record: records[index] }))
 		.filter(({ record, doc }) => !record || !has_same_nodes(record.data, doc));
-	const changed_ids = changed.map((document) => document.document_id);
 	const [slugs, translations, first_slug] = await Promise.all([
 		slug_targets(),
-		backend.list_translations({ document_ids: changed_ids }),
+		backend.list_translations({ document_ids: changed.map((document) => document.document_id) }),
 		slug_base && !records[0] ? new_page_slug(document_id, slug_base) : null
 	]);
 	if (first_slug) slugs.set(first_slug.slug, document_id);

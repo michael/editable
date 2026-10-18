@@ -8,7 +8,7 @@
 //
 // --editable uses Editable's namespace instead of the project's own.
 
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const MIGRATION_ID = /^(\d{8}T\d{9}Z)_([a-z][a-z0-9-]*)_([a-z0-9]+(?:_[a-z0-9]+)*)$/;
@@ -88,7 +88,6 @@ const template_for = (t) =>
 	templates[t] ??
 	`import type { Migration } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: '${t}',\n\tup() {\n\t\t// Leave empty if the ${t} backend needs nothing for this change.\n\t}\n} satisfies Migration;\n`;
 
-mkdirSync(migration_dir, { recursive: true });
 for (const t of targets) {
 	const id = t === 'content' ? change : `${change}_${t}`;
 	const path = join(migration_dir, `${id}.ts`);

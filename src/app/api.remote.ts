@@ -19,7 +19,7 @@ import {
 	type DocumentData,
 	InvalidDocumentError,
 	VersionConflictError,
-	get_active_slug_for_document_id,
+	combine_page_document,
 	get_attached_ranges,
 	get_combined_document,
 	get_doc_from_db,
@@ -30,7 +30,6 @@ import {
 	is_reserved_route_slug,
 	persist_document,
 	document_refs_of,
-	resolve_slug,
 	shared_document_types,
 	with_asset_cleanup
 } from '#app/server_documents.js';
@@ -96,7 +95,7 @@ function resolve_site_links(document: DocumentData): DocumentData {
  * Get a document from the database, stitching in shared documents (banner, nav, footer).
  */
 export const get_document = query(v.string(), async (slug) => {
-	const resolved = await resolve_slug(slug);
+	const resolved = await backend.resolve_slug(slug);
 
 	if (!resolved) {
 		error(404, `Page not found for slug: ${slug}`);
@@ -123,7 +122,7 @@ export const get_page_document_for_duplicate = query(v.string(), async (slug) =>
 	const document_id =
 		slug === '/'
 			? await get_home_page_id_from_db()
-			: ((await resolve_slug(slug))?.document_id ?? null);
+			: ((await backend.resolve_slug(slug))?.document_id ?? null);
 
 	if (!document_id) {
 		error(404, `Page not found for slug: ${slug}`);
@@ -147,7 +146,7 @@ export const get_home_document = query(v.void(), async () => {
 	return {
 		document: resolve_site_links(await get_combined_document(home_page_id)),
 		version: await get_document_version(home_page_id),
-		slug: await get_active_slug_for_document_id(home_page_id),
+		slug: await backend.get_active_slug(home_page_id),
 		redirect_to_slug: null
 	};
 });
@@ -293,7 +292,7 @@ export const get_internal_link_preview = query(v.string(), async (href) => {
 		return null;
 	}
 
-	const resolved = await resolve_slug(parsed.slug);
+	const resolved = await backend.resolve_slug(parsed.slug);
 	if (!resolved) {
 		return null;
 	}
@@ -396,13 +395,14 @@ export const save_document = command(save_document_input_schema, async (combined
 	if (combined_doc.language && combined_doc.language !== site.languages[0])
 		error(400, 'Use the translation save command for additional languages.');
 
-	if (combined_doc.create && (await get_optional_doc_from_db(combined_doc.document_id))) {
+	const existing = await get_optional_doc_from_db(combined_doc.document_id);
+	if (combined_doc.create && existing) {
 		error(409, `Document already exists: ${combined_doc.document_id}`);
 	}
 
 	// Links come back resolved for the site; stored links never include the base.
-	const baseline = (await get_optional_doc_from_db(combined_doc.document_id))
-		? await get_combined_document(combined_doc.document_id)
+	const baseline = existing
+		? await combine_page_document(existing)
 		: { document_id: combined_doc.document_id, nodes: {} };
 	const { nodes } = normalize_hrefs(
 		{ document_id: combined_doc.document_id, nodes: structuredClone(combined_doc.nodes) },
@@ -434,7 +434,7 @@ export const save_document = command(save_document_input_schema, async (combined
 		document_id: combined_doc.document_id,
 		slug: (await is_home_page_document_id(combined_doc.document_id))
 			? null
-			: await get_active_slug_for_document_id(combined_doc.document_id),
+			: await backend.get_active_slug(combined_doc.document_id),
 		created: !!combined_doc.create
 	};
 });
@@ -485,7 +485,7 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		);
 	}
 
-	const current_active_slug = await get_active_slug_for_document_id(input.document_id);
+	const current_active_slug = await backend.get_active_slug(input.document_id);
 	if (!current_active_slug) {
 		return create_page_url_error_result(
 			'active_slug_missing',
@@ -531,12 +531,10 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 	const link_languages = [
 		...new Set([...site.languages, ...translations.map((row) => row.language)])
 	];
-	const rewritten = documents.flatMap(({ version, ...record }) => {
+	const rewritten = documents.flatMap((record) => {
 		const data = structuredClone(record.data);
 		rewrite_internal_page_hrefs(data.nodes, target_slugs, normalized_slug, link_languages);
-		return JSON.stringify(data) === JSON.stringify(record.data)
-			? []
-			: [{ ...record, data, version }];
+		return JSON.stringify(data) === JSON.stringify(record.data) ? [] : [{ ...record, data }];
 	});
 	const rewritten_translations = translations.flatMap(({ version: _, ...row }) => {
 		const map: TranslationMap = JSON.parse(row.value);
@@ -566,11 +564,9 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 			'A page changed while its links were being updated. Try again.'
 		);
 	}
-	const new_active_slug = normalized_slug;
-
 	return {
 		ok: true,
 		document_id: input.document_id,
-		page_href: `/${new_active_slug}`
+		page_href: `/${normalized_slug}`
 	};
 });

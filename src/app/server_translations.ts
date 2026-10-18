@@ -41,10 +41,6 @@ async function load_records(document_id: string): Promise<DocumentRecord[]> {
 	return [page, ...(await Promise.all(shared.map(read)))];
 }
 
-function read_rows(document_ids: string[], language: string) {
-	return backend.list_translations({ document_ids, language });
-}
-
 /** Changes whenever any of the documents or their translations is written. */
 function revision(records: DocumentRecord[], rows: TranslationRecord[]) {
 	return [...records, ...rows].map((record) => record.version).join('.');
@@ -67,10 +63,10 @@ export async function translated_document(document_id: string, requested?: strin
 	const docs = records.map((record) => record.data);
 	const rows =
 		language && language !== languages[0]
-			? await read_rows(
-					docs.map((doc) => doc.document_id),
-					language
-				)
+			? await backend.list_translations({
+					document_ids: docs.map((doc) => doc.document_id),
+					language: language
+				})
 			: [];
 	const document = overlay_document(compose(docs), docs, rows);
 	return { document, language, languages, translation_revision: revision(records, rows) };
@@ -184,7 +180,7 @@ export async function translate_shared_document(source: Document, requested: str
 		overlay_document(
 			fill_document_defaults(source, document_schema),
 			[source],
-			await read_rows([source.document_id], language)
+			await backend.list_translations({ document_ids: [source.document_id], language })
 		),
 		site,
 		language
@@ -203,7 +199,10 @@ export async function save_translated_document(input: {
 	const records = await load_records(input.document_id);
 	const docs = records.map((record) => record.data);
 	const document_ids = docs.map((doc) => doc.document_id);
-	const rows = await read_rows(document_ids, input.language);
+	const rows = await backend.list_translations({
+		document_ids: document_ids,
+		language: input.language
+	});
 	const stale_message =
 		'This page or its translations changed. Keep a copy of your edits and reload before saving.';
 	if (revision(records, rows) !== input.translation_revision) error(409, stale_message);

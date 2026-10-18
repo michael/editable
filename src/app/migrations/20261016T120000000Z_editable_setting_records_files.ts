@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import type { Migration } from '#lib/server/migrations.js';
 import type { FilesStorage } from '#lib/server/backends/files_backend.js';
 
-// Settings became { key, value } records like every other collection; folders
+// Settings became { key, value } records like everything else; folders
 // written before kept each setting as a plain string.
 export default {
 	target: 'files',

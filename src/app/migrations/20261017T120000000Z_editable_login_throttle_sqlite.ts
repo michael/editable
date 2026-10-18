@@ -1,7 +1,7 @@
 import type { Migration } from '#lib/server/migrations.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
-// The login throttle moves out of the settings into a private collection of its own.
+// The login throttle moves out of the settings into private records of its own.
 export default {
 	target: 'sqlite',
 	up({ db }: SqliteStorage) {

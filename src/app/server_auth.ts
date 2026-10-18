@@ -25,7 +25,7 @@ export type LogInResult =
 export type User = Record<string, unknown>;
 
 /** The user Editable's admin password signs in. */
-export const admin_user: User = { username: 'admin', name: 'Admin' };
+const admin_user: User = { username: 'admin', name: 'Admin' };
 
 /**
  * Who is signed in to a site, and how they sign in. Editable's default checks

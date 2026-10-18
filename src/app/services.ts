@@ -12,10 +12,7 @@ export function get_default_backend(): Promise<Backend> {
 		const backend = create_backend();
 		await migrate(backend);
 		return backend;
-	})().catch((error) => {
-		default_backend = undefined;
-		throw error;
-	});
+	})();
 	return default_backend;
 }
 
@@ -25,7 +22,7 @@ export async function get_backend(): Promise<Backend> {
 }
 
 /** The functions Editable's server code calls. */
-export type SiteBackend = Omit<
+type SiteBackend = Omit<
 	Backend,
 	'name' | 'storage' | 'applied_migrations' | 'run_migration' | 'close'
 >;

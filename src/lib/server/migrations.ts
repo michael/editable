@@ -32,10 +32,6 @@ export function load_migrations(modules: Record<string, Migration>): LoadedMigra
 			if (!FILENAME.test(filename)) throw new Error(`Invalid migration filename "${filename}".`);
 			if (!migration || typeof migration !== 'object')
 				throw fail('must have a default object export.');
-			if ('before' in migration)
-				throw fail(
-					'uses before, which was removed: migrations run in id order. Date it to sit where it must run; pnpm migration:create --after <id> places a new one right after another.'
-				);
 			const unknown = Object.keys(migration).filter((key) => !['target', 'up'].includes(key));
 			if (unknown.length) throw fail(`has unknown export properties: ${unknown.join(', ')}.`);
 			if (migration.target !== undefined && !/^[a-z][a-z0-9]*$/.test(migration.target))

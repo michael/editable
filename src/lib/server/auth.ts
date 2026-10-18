@@ -28,7 +28,7 @@ export const session_renewal_interval_seconds = 24 * 60 * 60;
 // Login throttle: the first `free_attempts` failures are free, then each
 // failure locks login for `base_lockout_seconds`, doubling per failure up to
 // `max_lockout_seconds`. Global (there is only one admin), persisted in
-// the login_throttle collection so restarts don't reset it.
+// the backend so restarts don't reset it.
 const LOGIN_THROTTLE = {
 	free_attempts: 5,
 	base_lockout_seconds: 30,

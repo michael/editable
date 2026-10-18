@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import type { Migration } from '#lib/server/migrations.js';
 import type { FilesStorage } from '#lib/server/backends/files_backend.js';
 
-// The login throttle moves out of the settings into a private collection of its own.
+// The login throttle moves out of the settings into private records of its own.
 export default {
 	target: 'files',
 	up({ db_dir }: FilesStorage) {

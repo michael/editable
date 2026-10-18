@@ -7,12 +7,14 @@ import {
 	type Backend,
 	type DocumentRecord,
 	type LoginThrottleRecord,
+	type NewTranslation,
 	type OAuthClientRecord,
 	type OAuthGrantRecord,
 	type OAuthTokenRecord,
 	type SessionRecord,
 	type SettingRecord,
 	type SlugRecord,
+	type TranslationKey,
 	type TranslationRecord
 } from '../backend.js';
 import { asset_files } from './asset_files.js';
@@ -113,7 +115,7 @@ export function sqlite_backend(storage: SqliteStorage): Backend {
 			);
 	}
 
-	function put_translation(record: Omit<TranslationRecord, 'version'>) {
+	function put_translation(record: NewTranslation) {
 		run(
 			'INSERT OR REPLACE INTO translations (document_id, language, value, updated_at, version) VALUES (?, ?, ?, ?, ?)',
 			record.document_id,
@@ -124,13 +126,7 @@ export function sqlite_backend(storage: SqliteStorage): Backend {
 		);
 	}
 
-	const delete_translation = ({
-		document_id,
-		language
-	}: {
-		document_id: string;
-		language: string;
-	}) =>
+	const delete_translation = ({ document_id, language }: TranslationKey) =>
 		run('DELETE FROM translations WHERE document_id = ? AND language = ?', document_id, language);
 
 	return {

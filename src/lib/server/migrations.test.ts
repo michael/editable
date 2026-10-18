@@ -21,12 +21,12 @@ describe('load_migrations', () => {
 		]);
 	});
 
-	it('refuses before, unknown properties, bad targets, and bad names', () => {
+	it('refuses unknown properties, bad targets, and bad names', () => {
 		const one =
 			(migration: Migration, name = '20260101T000000000Z_custom_x') =>
 			() =>
 				load({ [name]: migration });
-		expect(one({ up, before: ['x'] } as Migration)).toThrow('uses before, which was removed');
+		expect(one({ up, before: ['x'] } as Migration)).toThrow('unknown export properties: before');
 		expect(one({ up, after: 'x' } as Migration)).toThrow('unknown export properties: after');
 		expect(one({ target: 'SQLite', up })).toThrow('invalid target');
 		expect(one({ up }, 'add-things')).toThrow('Invalid migration filename');
