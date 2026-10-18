@@ -1217,6 +1217,12 @@ export type AtprotoStorage = {
 	did: string;
 	/** Private records, references, and asset bookkeeping. */
 	sql: Sql;
+	/**
+	 * Reads and writes records in the repository. Outside a transaction it
+	 * writes right away; inside one it collects the writes, which the
+	 * transaction sends as one batch, and its reads see them.
+	 */
+	repo: RepoWriter;
 };
 ```
 
@@ -1242,9 +1248,7 @@ export function atproto_backend(storage: AtprotoStorage): Backend {
 		sessions: table(storage, 'sessions', 'session_id'),
 		// …login_throttle and the OAuth tables the same way
 
-		// Buffer repository writes and send them as one applyWrites call with
-		// swapCommit, throwing a ConflictError if the repository moved on, then
-		// commit the Postgres writes in one SQL transaction.
+		// Writes to both stores as one step; see Writing to two stores below.
 		transaction: (fn) => atproto_transaction(storage, fn),
 
 		// Upload as a blob, and keep a record that refers to it so the
@@ -1262,8 +1266,6 @@ export function atproto_backend(storage: AtprotoStorage): Backend {
 	};
 }
 ```
-
-Here a save is atomic in the repository and in Postgres, but not across the two: a crash in between can leave a document's references behind its content. The references are computed, so the API can rebuild them.
 
 How a backend meets the interface is its own business. Reading every record from a repository on each request is slow, so a real one would cache, or load the site into a working copy and write the changes back after each save. Credentials can be per site, too: a host serving many sites creates a backend per site with its owner's session and passes it as `backend` in `event.locals.site`.
 
@@ -1286,6 +1288,66 @@ export default {
 	async up({ sql }: AtprotoStorage) {
 		await sql`CREATE TABLE IF NOT EXISTS sessions (session_id TEXT PRIMARY KEY, expires BIGINT NOT NULL)`;
 		// …the other private tables
+	}
+} satisfies Migration;
+```
+
+#### Writing to two stores
+
+No transaction spans Postgres and a repository, and a repository cannot take a write back. A backend over both cannot be all or nothing in the strict sense, but it can come close: either everything lands, nothing does, or an interrupted run converges when it runs again. Its `transaction` gets there by making Postgres the anchor and sending the repository's writes last:
+
+1. All SQL runs in one Postgres transaction, including the record that a storage migration ran.
+2. Repository writes are collected rather than sent, and reads through the transaction see them.
+3. When the work is done, the collected writes go out as one `applyWrites` batch, pinned with `swapCommit` to the commit the repository had when the transaction began, so it fails if anything else moved the repository meanwhile.
+4. Postgres commits only after the batch has landed.
+
+A sketch, with `buffered_repo`, which collects writes, and `is_invalid_swap` left out:
+
+```ts
+import { ConflictError, type Backend } from '#lib/server/backend.js';
+
+async function atproto_transaction<T>(storage: AtprotoStorage, fn: (tx: Backend) => Promise<T>) {
+	const { agent, did } = storage;
+	const head = (await agent.com.atproto.sync.getLatestCommit({ did })).data.cid;
+	// sql.begin commits when the callback resolves and rolls back when it throws.
+	return storage.sql.begin(async (sql) => {
+		const repo = buffered_repo(storage);
+		const tx: Backend = {
+			...atproto_backend({ ...storage, sql, repo }),
+			transaction: (inner) => inner(tx)
+		};
+		const result = await fn(tx);
+		if (repo.writes.length)
+			await agent.com.atproto.repo
+				.applyWrites({ repo: did, writes: repo.writes, swapCommit: head })
+				.catch((error) => {
+					throw is_invalid_swap(error) ? new ConflictError('The repository changed.') : error;
+				});
+		return result;
+	});
+}
+```
+
+Run these one at a time per site, such as through a promise chain, as the interface asks. Then:
+
+| Fails at                                               | Afterwards                                                                                                                                                           |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The work, before anything is sent                      | Postgres rolls back, the repository is untouched                                                                                                                     |
+| The batch: a conflict, the batch limit, or the network | Postgres rolls back, and the batch is atomic, so nothing changed                                                                                                     |
+| The Postgres commit, after the batch landed            | The repository has the writes, Postgres does not. A storage migration is not recorded and runs again on the next start; a save is repeated by the editor's next save |
+
+The last row is the only gap, and idempotent repository writes make it harmless: putting a record to its final value twice ends in the same state. A backend that wants to close it keeps the records its batch replaced and, when the commit fails, sends them back in a second pinned batch. Two more limits apply. A repository accepts at most 200 writes per batch, so larger work cannot be atomic there and must be safe to resume. And a `ConflictError` makes a save report a version conflict, so the editor asks to reload instead of overwriting what changed.
+
+A storage migration gets the same guarantees through `tx.storage`. One that changes both stores reads like a single step, and stays idempotent by skipping what is already done:
+
+```ts
+export default {
+	target: 'atproto',
+	async up({ sql, repo }: AtprotoStorage) {
+		await sql`ALTER TABLE asset_refs ADD COLUMN IF NOT EXISTS blob_cid TEXT`;
+		for (const { rkey, value } of await repo.list('com.example.editable.document'))
+			if (value.schema_version !== 2)
+				repo.put('com.example.editable.document', rkey, { ...value, schema_version: 2 });
 	}
 } satisfies Migration;
 ```
@@ -1492,6 +1554,8 @@ export default {
 	}
 } satisfies Migration;
 ```
+
+A storage migration runs inside its backend's transaction and receives that transaction's storage, so with SQLite or Postgres its changes commit together with the record that it ran, and a failure leaves both as they were. A backend over stores that cannot commit together says what it guarantees instead; see [Writing to two stores](#writing-to-two-stores) for one over Postgres and a repository.
 
 Where a backend needs nothing, its file stays with an empty `up`; the files backend, for example, creates a collection's file on first write. The empty file is the record that someone checked. The files must stay: when a site starts, a storage change without a file for its backend stops it, whatever the change's date. That makes a forgotten file, a misspelled target, or a backend added without migrations an error instead of a silent gap.
 
