@@ -1142,7 +1142,7 @@ All of a backend's methods are asynchronous, so it can sit on a network service 
 export type Backend = {
 	/** Storage migrations with this name as their target run on this backend. */
 	name: string;
-	/** What the backend is built on; its storage migrations receive it. */
+	/** What the backend is built on; a tx's storage is bound to its transaction. */
 	storage: unknown;
 
 	// Records, each collection keyed by a field of its records
@@ -1192,6 +1192,7 @@ A backend keeps these promises:
 
 - **Records come back as they were put.** The backend stores what it gets, including the references the API computes. A backend may also keep the references only in memory and rebuild them from the documents, since they are derived.
 - **Transactions don't interleave.** Within one process, a transaction runs to its end before another starts, and reads inside it see its own writes. Its writes land together wherever the storage allows: in one SQLite transaction, or in one batch for a service that accepts batches. Where they span places that cannot commit together, the backend documents what can be left half done. When the storage changed underneath, such as a repository moving on, throw a `ConflictError`; a save then reports a version conflict and the editor asks to reload.
+- **A transaction's storage is bound to it.** Inside `transaction`, `tx.storage` reaches the storage through the transaction, such as the Postgres connection the transaction runs on, so work done through it commits or rolls back with the transaction. Storage migrations receive `tx.storage`, which makes a schema change and the record that it ran one unit. A backend over a single connection, like the built-in ones, can hand out the same storage everywhere.
 - **Collections are the unit.** A backend may keep each collection anywhere, but a collection is kept as a whole, so Editable keeps anything that may need to live apart in a collection of its own. That is why the login throttle is a collection rather than a setting.
 - **Private collections stay private, and per site.** Sessions, the login throttle, and the OAuth clients, grants, and token hashes let people into the site. Never store them where others can read them, and never let one site see another's: a session or an MCP access token found in a shared table would open every site in it. See [Keep each site's private records apart](#keep-each-sites-private-records-apart).
 - **Expired entries go without a scan.** Sessions and OAuth tokens carry their expiry, `expires` and `expires_at`, in seconds since the epoch. `delete_expired(now)` removes those that expired at or before `now` in one step, such as one `DELETE … WHERE expires_at <= $1` per table, so a backend over a large or remote store never reads them all. Editable calls it whenever someone signs in with the admin password and whenever an MCP client is approved. A backend may also expire entries on its own, such as with a database's time-to-live, and make `delete_expired` do nothing.

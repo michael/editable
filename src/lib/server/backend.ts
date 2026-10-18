@@ -10,7 +10,11 @@ import type { Document } from 'svedit';
 export type Backend = {
 	/** Storage migrations with this name as their target run on this backend. */
 	name: string;
-	/** What the backend is built on; its storage migrations receive it. */
+	/**
+	 * What the backend is built on. A transaction's tx has its own, bound to
+	 * the transaction, such as a Postgres connection inside it; storage
+	 * migrations receive that one.
+	 */
 	storage: unknown;
 
 	documents: Collection<DocumentRecord>;

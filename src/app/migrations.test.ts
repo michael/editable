@@ -105,6 +105,25 @@ it('upgrades a file folder written before settings became records', async () => 
 	);
 });
 
+it('gives storage migrations the storage of the transaction they run in', async () => {
+	const files = backend_in(temp_dir(), 'files');
+	const read: PropertyKey[] = [];
+	const backend: Backend = {
+		...files,
+		transaction: (fn) =>
+			files.transaction((tx) =>
+				fn({
+					...tx,
+					storage: new Proxy(tx.storage as object, {
+						get: (storage, key) => (read.push(key), Reflect.get(storage, key))
+					})
+				})
+			)
+	};
+	await migrate_storage(backend);
+	expect(read).toContain('db_dir');
+});
+
 it('refuses a backend that misses storage migrations, as a fork adding one would', async () => {
 	const dir = join(temp_dir(), 'fork');
 	mkdirSync(dir);

@@ -16,7 +16,11 @@ export const all_migrations = load_migrations(
 	>
 );
 
-/** Bring a backend's storage up to date with the storage migrations for its name. */
+/**
+ * Bring a backend's storage up to date with the storage migrations for its
+ * name. They run in one transaction and receive its storage, so their changes
+ * commit or roll back together with the record that they ran.
+ */
 export async function migrate_storage(backend: Backend) {
 	assert_complete(all_migrations, backend.name);
 	await backend.transaction(async (tx) =>
@@ -24,7 +28,7 @@ export async function migrate_storage(backend: Backend) {
 			all_migrations,
 			backend.name,
 			new Set(await tx.applied_migrations()),
-			backend.storage,
+			tx.storage,
 			(id) => tx.record_migration(id)
 		)
 	);
