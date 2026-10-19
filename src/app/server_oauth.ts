@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { error } from '@sveltejs/kit';
 import { site } from './server_site.js';
-import { require_user } from '#lib/server/auth.js';
+import { require_editor } from '#lib/server/auth.js';
 import { backend } from './services.js';
 import type { OAuthGrantRecord, OAuthTokenRecord } from '#lib/server/backend.js';
 
@@ -240,11 +240,11 @@ export async function revoke_all_grants() {
  */
 export async function authorize_asset_upload(
 	request: Request,
-	locals: { user?: unknown }
+	locals: { user?: unknown; is_editor?: boolean }
 ): Promise<'admin_session' | 'upload_token'> {
 	const token = /^Bearer (\S+)$/i.exec(request.headers.get('authorization') ?? '')?.[1];
 	if (!token) {
-		require_user(locals);
+		require_editor(locals);
 		return 'admin_session';
 	}
 	if (!(await find_grant(token, 'upload')))

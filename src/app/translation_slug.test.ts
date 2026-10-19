@@ -18,7 +18,9 @@ vi.mock('$app/env/private', () => ({
 	NODE_ENV: 'test'
 }));
 vi.mock('$app/server', () => ({
-	getRequestEvent: () => ({ locals: { user: { username: 'admin', name: 'Admin' } } }),
+	getRequestEvent: () => ({
+		locals: { user: { username: 'admin', name: 'Admin' }, is_editor: true }
+	}),
 	query: (schema_or_callback: object, callback?: object) =>
 		Object.assign(callback ?? schema_or_callback, { __: { type: 'query' } }),
 	command: (schema_or_callback: object, callback?: object) =>

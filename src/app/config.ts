@@ -43,11 +43,16 @@ export const OPTIMIZED_VIDEO_REGEX = /[._-]optimized\.(?:mp4|webm)$/i;
 /** URL prefix for serving assets */
 export const ASSET_BASE = '/assets';
 
-/** Top-level paths served by Editable's own routes; never page slugs. */
+/**
+ * The top-level paths routes serve, which no page may take as its slug:
+ * Editable's own and any you add. A test fails while a route folder whose name
+ * could be a slug is missing here.
+ */
 export const RESERVED_ROUTE_SLUGS = new Set([
 	'api',
 	'assets',
 	'design-system',
+	'login',
 	'mcp',
 	'new',
 	'oauth'

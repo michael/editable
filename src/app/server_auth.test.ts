@@ -26,7 +26,8 @@ const { sqlite } = services as unknown as { sqlite: DatabaseSync };
 import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
 import throttle_schema from '#app/migrations/20261017T120000000Z_editable_login_throttle.js';
 import oauth_schema from '#app/migrations/20261010T180000000Z_editable_mcp_oauth.js';
-import { get_auth, password_auth, type Auth } from './server_auth.js';
+import { get_auth, password_auth, require_user, sign_in_state, type Auth } from './server_auth.js';
+import { require_editor } from '#lib/server/auth.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 initial_schema.up({ db: sqlite } as SqliteStorage);
@@ -93,5 +94,65 @@ it('uses the auth a host sets for the request, with users of its own shape', asy
 		ok: true,
 		redirect: 'https://auth.example/authorize?login_hint=alice.example&from=/about'
 	});
+	request.locals = {};
+});
+
+it('lets everyone signed in edit, unless the auth tells editors apart', async () => {
+	const jar = new Map<string, string>();
+	expect(await sign_in_state(event_with_cookies(jar))).toEqual({ user: null, is_editor: false });
+	await password_auth.log_in(event_with_cookies(jar), { password: 'secret' });
+	expect(await sign_in_state(event_with_cookies(jar))).toMatchObject({ is_editor: true });
+
+	// An app whose accounts are not all editors.
+	const accounts = {
+		anna: { username: 'anna', role: 'editor' },
+		ben: { username: 'ben', role: 'reader' }
+	};
+	let current: keyof typeof accounts = 'ben';
+	const app_auth: Auth = {
+		get_user: () => accounts[current],
+		log_in: () => ({ ok: true }),
+		log_out: () => {},
+		is_editor: (user) => user.role === 'editor'
+	};
+	request.locals = { site: { origin: '', base: '', languages: [], auth: app_auth } };
+	expect(await sign_in_state(event_with_cookies())).toEqual({
+		user: accounts.ben,
+		is_editor: false
+	});
+	current = 'anna';
+	expect(await sign_in_state(event_with_cookies())).toEqual({
+		user: accounts.anna,
+		is_editor: true
+	});
+	request.locals = {};
+});
+
+it('lets only editors edit: 401 signed out, 403 for someone else', () => {
+	expect(() => require_editor({ user: null, is_editor: false })).toThrow(
+		expect.objectContaining({ status: 401 })
+	);
+	expect(() => require_editor({ user: { username: 'ben' }, is_editor: false })).toThrow(
+		expect.objectContaining({ status: 403 })
+	);
+	expect(() => require_editor({ user: { username: 'anna' }, is_editor: true })).not.toThrow();
+});
+
+it("sends an app's page to /login when nobody is signed in, and back afterwards", () => {
+	const event = (path: string, user: object | null = null) =>
+		({ locals: { user }, url: new URL(`https://example.com${path}`) }) as unknown as RequestEvent;
+	const ben = { username: 'ben' };
+	expect(require_user(event('/orders', ben))).toBe(ben);
+	expect(() => require_user(event('/orders?page=2'))).toThrow(
+		expect.objectContaining({
+			status: 303,
+			location: '/login?redirect_to=%2Forders%3Fpage%3D2'
+		})
+	);
+	// A site under a path keeps its base on /login, and redirect_to leaves it out.
+	request.locals = { site: { origin: 'https://example.com', base: '/alice', languages: [] } };
+	expect(() => require_user(event('/alice/orders'))).toThrow(
+		expect.objectContaining({ location: '/alice/login?redirect_to=%2Forders' })
+	);
 	request.locals = {};
 });

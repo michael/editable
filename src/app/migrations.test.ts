@@ -10,6 +10,15 @@ import { all_migrations, migrate } from './migrations.js';
 import { backend_for } from './server_backend.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
+// The site's environment; these tests need none of it, so they run without a .env.
+vi.mock('$app/env/private', () => ({
+	ADMIN_PASSWORD: 'secret',
+	NODE_ENV: 'test',
+	ORIGIN: 'https://example.com',
+	LANGUAGES: '',
+	VERCEL: ''
+}));
+
 const dirs: string[] = [];
 afterEach(() => {
 	vi.restoreAllMocks();
