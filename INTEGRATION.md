@@ -181,6 +181,143 @@ export default {
 
 The `pnpm data:*` commands, backups, and Litestream work on `sqlite_backend`'s data folder; a backend of your own brings its own backups.
 
+## Sign-in
+
+Let people sign in with an account they already have, such as GitHub or your company's single sign-on, instead of the admin password.
+
+On every request Editable asks the site's `auth` who is signed in and puts the answer on `event.locals.user`. Whoever is signed in may edit, and everything that writes checks it with `require_user(locals)`, including asset uploads and the consent page for MCP clients. Editable's own auth, `password_auth` in `src/app/server_auth.ts`, checks `ADMIN_PASSWORD`, keeps sliding sessions in the site's backend, and throttles failed attempts.
+
+### The auth interface
+
+An auth is three functions, typed as `Auth` in `src/app/server_auth.ts`:
+
+| Function                     | Does                                                                                                                                                                                                                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_user(event)`            | Returns the signed-in user, or `null`. It runs on every request, so read a cookie rather than call a provider.                                                                                                                                                |
+| `log_in(event, credentials)` | Receives what the login dialog sends to `login_admin`. It starts a session and returns `{ ok: true }`, returns `{ ok: true, redirect }` to continue at a provider, or returns `{ ok: false, code, message }`. `event.url` is the page the login started from. |
+| `log_out(event)`             | Ends the session. Editable then also ends every MCP connection.                                                                                                                                                                                               |
+
+The user is an object of your own shape: the admin password signs in `{ username: 'admin', name: 'Admin' }`, and a GitHub sign-in might use `{ login, name }`. It reaches the browser as page data, so keep tokens and other secrets out of it.
+
+Deciding who may edit is part of your auth: `get_user` returns a user only for accounts allowed to edit, and `null` for everyone else.
+
+### Plug it in
+
+Editable reads the auth from the request's site. A host serving several sites sets one per site (see [Hosting several sites](#hosting-several-sites)). A single site sets it in a `handle` hook that runs before Editable's, keeping the deployment's own origin, languages, and backend:
+
+```ts
+// src/hooks.server.ts
+import type { Handle } from '@sveltejs/kit';
+import { sequence } from '@sveltejs/kit/hooks';
+import { default_site } from '#app/server_site.js';
+import { github_auth } from '#app/github_auth.js';
+
+const sign_in: Handle = ({ event, resolve }) => {
+	event.locals.site = { ...default_site, auth: github_auth };
+	return resolve(event);
+};
+
+export const handle = sequence(sign_in, editable_handle);
+```
+
+Rename Editable's own `handle` in that file to `editable_handle`. Keep your change to these lines, so merging an Editable release that touches the file stays simple.
+
+### Example: sign in with GitHub
+
+A sketch, with the small helpers left out: `sign` and `verify` protect the session cookie with a secret, and `github_user` exchanges the authorization code for the GitHub account. Register an OAuth app on GitHub with the callback URL `https://your-site.example.com/auth/callback`, and set `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SESSION_SECRET`, and `EDITORS`, the GitHub accounts allowed to edit, in the environment.
+
+```ts
+// src/app/github_auth.ts
+import { dev } from '$app/env';
+import { GITHUB_CLIENT_ID } from '$app/env/private';
+import type { Auth } from '#app/server_auth.js';
+import { site } from '#app/server_site.js';
+import { absolute_page_url } from '#app/seo.js';
+import { session_cookie_name } from '#lib/server/auth.js';
+
+// Named after the site's base, like Editable's own, so sites sharing an origin stay apart.
+export const github_cookie = () => session_cookie_name(site.base).replace('admin', 'github');
+export const cookie_options = { path: '/', httpOnly: true, sameSite: 'lax', secure: !dev } as const;
+
+export const github_auth: Auth = {
+	get_user: ({ cookies }) => verify(cookies.get(github_cookie())),
+
+	log_in: ({ cookies, url }) => {
+		const state = crypto.randomUUID();
+		cookies.set('ew_github_state', JSON.stringify({ state, return_to: url.pathname }), {
+			...cookie_options,
+			maxAge: 10 * 60
+		});
+		const authorize = new URL('https://github.com/login/oauth/authorize');
+		authorize.searchParams.set('client_id', GITHUB_CLIENT_ID);
+		authorize.searchParams.set('redirect_uri', absolute_page_url('/auth/callback', site));
+		authorize.searchParams.set('state', state);
+		return { ok: true, redirect: authorize.href };
+	},
+
+	log_out: ({ cookies }) => cookies.delete(github_cookie(), { path: '/' })
+};
+```
+
+GitHub sends the browser back to a route of your own, which checks the state, allows only the listed accounts, and starts the session:
+
+```ts
+// src/routes/auth/callback/+server.ts
+import { error, redirect } from '@sveltejs/kit';
+import { EDITORS } from '$app/env/private';
+import { cookie_options, github_cookie } from '#app/github_auth.js';
+
+export const GET = async ({ url, cookies }) => {
+	const saved = JSON.parse(cookies.get('ew_github_state') ?? 'null');
+	if (!saved || url.searchParams.get('state') !== saved.state)
+		error(400, 'The sign-in expired. Try again.');
+	cookies.delete('ew_github_state', { path: '/' });
+
+	const { login, name } = await github_user(url.searchParams.get('code') ?? '');
+	if (!EDITORS.split(',').includes(login)) error(403, 'This account may not edit the site.');
+
+	cookies.set(github_cookie(), sign({ login, name }), {
+		...cookie_options,
+		maxAge: 14 * 24 * 60 * 60
+	});
+	redirect(303, saved.return_to.startsWith('/') ? saved.return_to : '/');
+};
+```
+
+Add `auth` to `RESERVED_ROUTE_SLUGS` in `src/app/config.ts`, so no page can take the callback's path; `oauth` is already Editable's, for MCP clients.
+
+Editable's login dialog asks for the password and ignores a redirect. Set your own component as `auth_dialog` in `system_components` in `src/app/document_config.ts`; it opens in the same drawer and receives `onedit_for_fun`, for editing without saving, and `onlogin_success`, to call after signing in on the page (see `AuthDialogProps` in `src/app/components/AuthDialog.svelte`):
+
+```svelte
+<!-- src/app/components/GitHubSignIn.svelte -->
+<script lang="ts">
+	async function sign_in() {
+		const { login_admin } = await import('#app/api.remote.js');
+		const result = await login_admin({});
+		if (result.ok && result.redirect) location.href = result.redirect;
+	}
+</script>
+
+<button type="button" onclick={sign_in}>Sign in with GitHub</button>
+```
+
+```ts
+system_components: {
+	overlays: Overlays,
+	auth_dialog: GitHubSignIn
+},
+```
+
+Style the button with the design system's primary button recipe. A dialog that asks for something first, such as a username for a company's sign-on, sends it in the object passed to `login_admin`, and `log_in` receives it as `credentials`.
+
+### Before you ship it
+
+- **Only editors get a user.** Anyone `get_user` returns may change every page, the shared navigation, and the assets.
+- **Sessions are yours.** Editable's `sessions` and `login_throttle` records belong to the admin password; your auth keeps its own sessions, in a signed cookie as above or in a store of your own.
+- **Cookies are scoped to the site's base,** as Editable's own are, when several sites share an origin.
+- **Rate limiting is yours** if your auth checks secrets itself; a provider such as GitHub does it for you.
+- **MCP clients follow your sign-in.** Their consent page shows your login dialog and asks whoever is signed in, and signing out ends their connections.
+
 ## Hosting several sites
 
 A deployment normally serves one site, configured by `ORIGIN` and `LANGUAGES`. A hosting service that serves several sites from one process can set the site per request instead: in its own `handle` hook, running before Editable's, it sets `event.locals.site`:
@@ -199,16 +336,7 @@ event.locals.site = {
 - `base` is the path the site is served under, or `''` at the root. Stored links never include it: `/about` stays `/about` in the database, reaches the browser as `/alice/about` the way language prefixes do, and is stored without it again, so a site can move to another path or its own domain without changing content. Components render `node.href` as is; asset URLs and the editor's own navigation go through `resolve_href(href, site)`.
 - `languages` lists the site's languages, the main language first, or none.
 - `backend` is where the site's records and asset files go (see [Backends](#backends)), such as a data folder's from `backend_for(dir)` in `src/app/server_backend.ts`. Run `migrate` from `src/app/migrations.ts` on it first, which also seeds a new site. Editable caches nothing between requests; opening, caching, and closing backends is up to the host. Asset cleanup deletes files no record refers to, so a host sharing asset files between sites gives each a `delete_asset` that keeps them.
-- `auth` decides who is signed in and how they sign in, replacing the admin password. It implements `get_user(event)`, `log_in(event, credentials)`, and `log_out(event)` (types in `src/app/server_auth.ts`). `get_user` returns the signed-in user, or `null`, and Editable puts it on `event.locals.user`; whoever is signed in may edit. The user is an object of your own shape: Editable's admin password signs in `{ username: 'admin', name: 'Admin' }`, and an OAuth host might use `{ id, email }`. It reaches the browser as page data, so keep secrets out of it. `log_in` receives whatever the login dialog sends to `login_admin`; Editable's own dialog sends `{ password }`. It either starts a session or returns `{ ok: true, redirect }` to continue elsewhere: to sign in with OAuth, have your own login dialog send a username, return the provider's authorization URL, and handle the callback in a route of your own that sets your session, which `get_user` then reads. `event.url` in `log_in` is the page the login started from. Editable's own password sign-in names its session cookie after the site's base, `ew_admin_session` at the root and `ew_admin_session_alice` under `/alice`, so sites sharing an origin keep their sign-ins apart; an auth of your own scopes its cookies the same way.
-
-To replace the login dialog itself, for example to ask for a username, to offer several sign-in providers, or when embedding Editable in another environment, set your own component in place of `AuthDialog` as `auth_dialog` in `system_components` in `src/app/document_config.ts`. It opens in the same drawer and receives `onlogin_success`, to call after signing in on the page, and `onedit_for_fun`, for editing without saving (see `AuthDialogProps` in `src/app/components/AuthDialog.svelte`):
-
-```ts
-system_components: {
-	overlays: Overlays,
-	auth_dialog: LoginDialog
-},
-```
+- `auth` decides who is signed in and how, in place of the admin password (see [Sign-in](#sign-in)).
 
 Requests for `/alice/...` must reach Editable's routes, either through a proxy that strips the base or through a `reroute` hook that maps `/alice/about` to `/about`. When no site is set, Editable uses its own from the environment and opens its backend from `create_backend` on first use, so single-site deployments need no changes. Backups and the `pnpm data:*` commands work on `DATA_DIR` and are not used for host-provided backends.
 

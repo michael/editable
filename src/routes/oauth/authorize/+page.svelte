@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
-	import AuthDialog from '#app/components/AuthDialog.svelte';
+	import { document_config } from '#app/document_config.js';
 
 	let { data, form } = $props();
+	// The site's login dialog, so a sign-in of your own works here too.
+	const AuthDialog = document_config.system_components.auth_dialog;
 </script>
 
 <svelte:head>
