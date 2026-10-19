@@ -11,12 +11,13 @@ type AuthRecords = Pick<
 >;
 
 /**
- * The session cookie of the site served under base: ew_admin_session at the
- * root, with the base appended under a path, so sites sharing an origin keep
- * their sign-ins apart.
+ * The session cookie of an auth, by name, for the site served under base:
+ * ew_<name>_session at the root, with the base appended under a path, so
+ * sites sharing an origin keep their sign-ins apart.
  */
-export function session_cookie_name(base: string) {
-	return base ? `ew_admin_session_${base.slice(1).replace(/[^\w-]/g, '_')}` : 'ew_admin_session';
+export function session_cookie_name(name: string, base: string) {
+	const cookie = `ew_${name}_session`;
+	return base ? `${cookie}_${base.slice(1).replace(/[^\w-]/g, '_')}` : cookie;
 }
 export const session_duration_seconds = 14 * 24 * 60 * 60;
 
@@ -91,24 +92,24 @@ export function get_session_expires_at(): number {
 	return Math.floor(Date.now() / 1000) + session_duration_seconds;
 }
 
-export function clear_admin_session_cookie(cookies: Cookies, name: string) {
-	cookies.set(name, '', {
+/** Set a session cookie: only sent to the server, and only over HTTPS in production. */
+export function set_session_cookie(
+	cookies: Cookies,
+	name: string,
+	value: string,
+	max_age = session_duration_seconds
+) {
+	cookies.set(name, value, {
 		path: '/',
 		httpOnly: true,
 		sameSite: 'lax',
 		secure: NODE_ENV === 'production',
-		maxAge: 0
+		maxAge: max_age
 	});
 }
 
-export function set_admin_session_cookie(cookies: Cookies, name: string, session_id: string) {
-	cookies.set(name, session_id, {
-		path: '/',
-		httpOnly: true,
-		sameSite: 'lax',
-		secure: NODE_ENV === 'production',
-		maxAge: session_duration_seconds
-	});
+export function clear_session_cookie(cookies: Cookies, name: string) {
+	set_session_cookie(cookies, name, '', 0);
 }
 
 /** Refuse the request unless an editor is signed in: 401 when nobody is, 403 for someone else. */
@@ -148,6 +149,6 @@ export async function log_in_admin(
 
 	const session_id = crypto.randomUUID();
 	await records.save_session({ session_id, expires: get_session_expires_at() });
-	set_admin_session_cookie(cookies, cookie_name, session_id);
+	set_session_cookie(cookies, cookie_name, session_id);
 	return { ok: true };
 }

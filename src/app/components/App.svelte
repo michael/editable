@@ -406,7 +406,8 @@
 	}
 
 	function handle_mobile_touchstart() {
-		if (!can_edit || !is_mobile_touch_device() || editable || is_editor || auth_dialog_open) return;
+		// Someone signed in who may not edit gets nothing, like on any website.
+		if (!can_edit || !is_mobile_touch_device() || editable || user || auth_dialog_open) return;
 		mobile_touch_active = true;
 		mobile_touch_started_at_page_end = is_at_page_end();
 		if (!mobile_touch_started_at_page_end) {
@@ -459,7 +460,8 @@
 				return;
 			}
 
-			open_auth_dialog();
+			// Someone signed in who may not edit gets nothing: the site need not tell them it is editable.
+			if (!user) open_auth_dialog();
 		}
 	}
 

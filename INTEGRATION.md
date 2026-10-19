@@ -267,26 +267,26 @@ A sketch, with the small helpers left out: `sign` and `verify` protect the sessi
 
 ```ts
 // src/app/github_auth.ts
-import { dev } from '$app/env';
 import { GITHUB_CLIENT_ID } from '$app/env/private';
 import type { Auth } from '#app/server_auth.js';
 import { site } from '#app/server_site.js';
 import { absolute_page_url } from '#app/seo.js';
-import { session_cookie_name } from '#lib/server/auth.js';
+import { clear_session_cookie, session_cookie_name, set_session_cookie } from '#lib/server/auth.js';
 
-// Named after the site's base, like Editable's own, so sites sharing an origin stay apart.
-export const github_cookie = () => session_cookie_name(site.base).replace('admin', 'github');
-export const cookie_options = { path: '/', httpOnly: true, sameSite: 'lax', secure: !dev } as const;
+// ew_github_session, named after the site's base like Editable's own, so sites sharing an origin stay apart.
+export const github_cookie = () => session_cookie_name('github', site.base);
 
 export const github_auth: Auth = {
 	get_user: ({ cookies }) => verify(cookies.get(github_cookie())),
 
 	log_in: ({ cookies, url }) => {
 		const state = crypto.randomUUID();
-		cookies.set('ew_github_state', JSON.stringify({ state, return_to: url.pathname }), {
-			...cookie_options,
-			maxAge: 10 * 60
-		});
+		set_session_cookie(
+			cookies,
+			'ew_github_state',
+			JSON.stringify({ state, return_to: url.pathname }),
+			10 * 60
+		);
 		const authorize = new URL('https://github.com/login/oauth/authorize');
 		authorize.searchParams.set('client_id', GITHUB_CLIENT_ID);
 		authorize.searchParams.set('redirect_uri', absolute_page_url('/auth/callback', site));
@@ -294,7 +294,7 @@ export const github_auth: Auth = {
 		return { ok: true, redirect: authorize.href };
 	},
 
-	log_out: ({ cookies }) => cookies.delete(github_cookie(), { path: '/' })
+	log_out: ({ cookies }) => clear_session_cookie(cookies, github_cookie())
 };
 ```
 
@@ -304,21 +304,20 @@ GitHub sends the browser back to a route of your own, which checks the state, al
 // src/routes/auth/callback/+server.ts
 import { error, redirect } from '@sveltejs/kit';
 import { EDITORS } from '$app/env/private';
-import { cookie_options, github_cookie } from '#app/github_auth.js';
+import { clear_session_cookie, set_session_cookie } from '#lib/server/auth.js';
+import { github_cookie } from '#app/github_auth.js';
 
 export const GET = async ({ url, cookies }) => {
 	const saved = JSON.parse(cookies.get('ew_github_state') ?? 'null');
 	if (!saved || url.searchParams.get('state') !== saved.state)
 		error(400, 'The sign-in expired. Try again.');
-	cookies.delete('ew_github_state', { path: '/' });
+	clear_session_cookie(cookies, 'ew_github_state');
 
 	const { login, name } = await github_user(url.searchParams.get('code') ?? '');
 	if (!EDITORS.split(',').includes(login)) error(403, 'This account may not edit the site.');
 
-	cookies.set(github_cookie(), sign({ login, name }), {
-		...cookie_options,
-		maxAge: 14 * 24 * 60 * 60
-	});
+	// Cookies from set_session_cookie are only sent to the server, and only over HTTPS in production.
+	set_session_cookie(cookies, github_cookie(), sign({ login, name }));
 	redirect(303, saved.return_to.startsWith('/') ? saved.return_to : '/');
 };
 ```
@@ -355,7 +354,7 @@ Editable can be the website of an app with accounts of its own, such as a shop w
 
 - **Accounts and sessions are the app's.** Its tables live in the site's database through a storage migration of its own (`pnpm migration:create <name> --target sqlite`), prefixed so they cannot collide with Editable's, such as `app_accounts`. Backups and restores then cover them. Its code reaches the database through the backend's storage, `(await get_backend()).storage`, which ties the app to the SQLite backend.
 - **The auth returns every signed-in account** from `get_user`, and `is_editor` decides who may edit. The app's own pages use `locals.user` freely; Editable's checks only ever look at `locals.is_editor`.
-- **Its login dialog covers both cases.** Signed out, it asks for the app's credentials. Signed in without edit rights, which is when ⌘ E still opens it, it can say so and offer the app's own pages or logging out. `page.data.user` and `page.data.is_editor` tell the two apart.
+- **Its login dialog only logs people in.** ⌘ E and the gesture at the bottom of a phone screen do nothing for someone signed in who may not edit, so they never learn the site is editable; the dialog shows to visitors who are signed out, and at `/login`. Keep its wording about logging in, not editing, if your users should not hear of it either.
 - **Its pages call `require_user(event)`,** which returns the signed-in account and sends anyone else to `/login` and back. Its own API endpoints, where a redirect would be wrong, check `locals.user` and answer 401.
 - **The toolbar shows to everyone signed in.** Its menu holds Logout, labeled Page actions for editors and Account for everyone else. Two slots in `system_components` add the app's own: `toolbar_items` renders buttons next to Editable's, receiving the toolbar's `button_class`, and `menu_items` renders entries at the top of the menu, receiving `item_class` and `close` (see `ToolbarItemsProps` and `MenuItemsProps` in `src/app/components/Toolbar.svelte`).
 - **Its pages sit inside the site's banner, nav, and footer** with `PageShell` (see [Pages of your own](#pages-of-your-own)).

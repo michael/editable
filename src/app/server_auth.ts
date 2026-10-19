@@ -4,13 +4,13 @@ import { site } from './server_site.js';
 import { create_auth } from './create_auth.js';
 import { normalize_href, resolve_href } from './document_links.js';
 import {
-	clear_admin_session_cookie,
+	clear_session_cookie,
 	get_session_expires_at,
 	log_in_admin,
 	session_duration_seconds,
 	session_cookie_name,
 	session_renewal_interval_seconds,
-	set_admin_session_cookie
+	set_session_cookie
 } from '#lib/server/auth.js';
 
 /** The fields the login dialog sends; Editable's own sends the password. */
@@ -52,7 +52,7 @@ export type Auth = {
 };
 
 /** The current site's session cookie. */
-const cookie_name = () => session_cookie_name(site.base);
+const cookie_name = () => session_cookie_name('admin', site.base);
 
 /** The admin password from ADMIN_PASSWORD, with sliding sessions in the site's backend. */
 export const password_auth: Auth = {
@@ -64,19 +64,19 @@ export const password_auth: Auth = {
 		const now = Math.floor(Date.now() / 1000);
 
 		if (!row) {
-			clear_admin_session_cookie(cookies, cookie_name());
+			clear_session_cookie(cookies, cookie_name());
 			return null;
 		}
 		if (row.expires <= now) {
 			await backend.delete_session(session_id);
-			clear_admin_session_cookie(cookies, cookie_name());
+			clear_session_cookie(cookies, cookie_name());
 			return null;
 		}
 		// Sliding renewal, at most once per renewal interval
 		const last_renewed_at = row.expires - session_duration_seconds;
 		if (now - last_renewed_at >= session_renewal_interval_seconds) {
 			await backend.save_session({ session_id, expires: get_session_expires_at() });
-			set_admin_session_cookie(cookies, cookie_name(), session_id);
+			set_session_cookie(cookies, cookie_name(), session_id);
 		}
 		return admin_user;
 	},
@@ -88,7 +88,7 @@ export const password_auth: Auth = {
 	async log_out({ cookies }) {
 		const session_id = cookies.get(cookie_name());
 		if (session_id) await backend.delete_session(session_id);
-		clear_admin_session_cookie(cookies, cookie_name());
+		clear_session_cookie(cookies, cookie_name());
 	}
 };
 
