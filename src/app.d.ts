@@ -9,6 +9,8 @@ declare global {
 		interface Locals {
 			/** Whoever is signed in, or null; signed-in users may edit the site. */
 			user: import('#app/server_auth.js').User | null;
+			/** Whether the signed-in user may edit the site. */
+			is_editor: boolean;
 			/** Set by a host serving several sites; otherwise the deployment's own site is used. */
 			site?: import('#app/server_site.js').Site;
 		}

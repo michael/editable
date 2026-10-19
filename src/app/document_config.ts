@@ -232,6 +232,8 @@ export const document_config = {
 	// Provide definitions/overrides for system native components,
 	// such as node_gap, node_gap_markers, node_selection_markers, or overlays.
 	// auth_dialog is Editable's login dialog; replace it with your own (see AuthDialogProps).
+	// toolbar_items and menu_items add your own buttons to the toolbar and entries to its menu,
+	// for people signed in (see ToolbarItemsProps and MenuItemsProps).
 	system_components: {
 		overlays: Overlays,
 		auth_dialog: AuthDialog

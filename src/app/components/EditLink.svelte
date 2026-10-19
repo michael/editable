@@ -223,7 +223,7 @@
 					onkeydown={handle_keydown}
 					onpaste={handle_paste}
 				/>
-				{#if app.has_backend && app.is_admin}
+				{#if app.has_backend && app.is_editor}
 					<button
 						type="button"
 						class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent p-0 text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"

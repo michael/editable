@@ -185,42 +185,39 @@ The `pnpm data:*` commands, backups, and Litestream work on `sqlite_backend`'s d
 
 Let people sign in with an account they already have, such as GitHub or your company's single sign-on, instead of the admin password.
 
-On every request Editable asks the site's `auth` who is signed in and puts the answer on `event.locals.user`. Whoever is signed in may edit, and everything that writes checks it with `require_user(locals)`, including asset uploads and the consent page for MCP clients. Editable's own auth, `password_auth` in `src/app/server_auth.ts`, checks `ADMIN_PASSWORD`, keeps sliding sessions in the site's backend, and throttles failed attempts.
+On every request Editable asks the site's `auth` who is signed in and whether they may edit, and puts the answers on `event.locals.user` and `event.locals.is_editor`. Everything that changes the website checks `require_editor(locals)`, including asset uploads and the consent page for MCP clients: it answers 401 to someone signed out and 403 to someone who may not edit. Editable's own auth, `password_auth` in `src/app/server_auth.ts`, checks `ADMIN_PASSWORD`, keeps sliding sessions in the site's backend, and throttles failed attempts.
+
+People sign in with ⌘ E on any page, or at `/login`, which shows the same dialog and then returns to `redirect_to`, a path on the site, such as `/login?redirect_to=/about`.
 
 ### The auth interface
 
-An auth is three functions, typed as `Auth` in `src/app/server_auth.ts`:
+An auth is three functions and an optional fourth, typed as `Auth` in `src/app/server_auth.ts`:
 
-| Function                     | Does                                                                                                                                                                                                                                                          |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_user(event)`            | Returns the signed-in user, or `null`. It runs on every request, so read a cookie rather than call a provider.                                                                                                                                                |
-| `log_in(event, credentials)` | Receives what the login dialog sends to `login_admin`. It starts a session and returns `{ ok: true }`, returns `{ ok: true, redirect }` to continue at a provider, or returns `{ ok: false, code, message }`. `event.url` is the page the login started from. |
-| `log_out(event)`             | Ends the session. Editable then also ends every MCP connection.                                                                                                                                                                                               |
+| Function                     | Does                                                                                                                                                                                                                                                                                            |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_user(event)`            | Returns the signed-in user, or `null`. It runs on every request, so read a cookie rather than call a provider.                                                                                                                                                                                  |
+| `log_in(event, credentials)` | Receives what the login dialog sends to the `log_in` command in `src/app/api.remote.ts`. It starts a session and returns `{ ok: true }`, returns `{ ok: true, redirect }` to continue at a provider, or returns `{ ok: false, code, message }`. `event.url` is the page the login started from. |
+| `log_out(event)`             | Ends the session. When an editor logs out, Editable also ends every MCP connection.                                                                                                                                                                                                             |
+| `is_editor(user)`            | Optional: whether a signed-in user may edit the website, for an app whose users are not all editors. Without it, everyone signed in may edit.                                                                                                                                                   |
 
 The user is an object of your own shape: the admin password signs in `{ username: 'admin', name: 'Admin' }`, and a GitHub sign-in might use `{ login, name }`. It reaches the browser as page data, so keep tokens and other secrets out of it.
 
-Deciding who may edit is part of your auth: `get_user` returns a user only for accounts allowed to edit, and `null` for everyone else.
+Deciding who may edit is part of your auth. A site whose only accounts are editors returns a user just for them. An app with other accounts as well returns every signed-in user from `get_user` and tells editors apart with `is_editor`; see [An app whose accounts are not all editors](#an-app-whose-accounts-are-not-all-editors).
 
 ### Plug it in
 
-Editable reads the auth from the request's site. A host serving several sites sets one per site (see [Hosting several sites](#hosting-several-sites)). A single site sets it in a `handle` hook that runs before Editable's, keeping the deployment's own origin, languages, and backend:
+The deployment's own site gets its auth from `create_auth` in `src/app/create_auth.ts`, which returns `password_auth` until you return your own:
 
 ```ts
-// src/hooks.server.ts
-import type { Handle } from '@sveltejs/kit';
-import { sequence } from '@sveltejs/kit/hooks';
-import { default_site } from '#app/server_site.js';
-import { github_auth } from '#app/github_auth.js';
+import type { Auth } from './server_auth.js';
+import { github_auth } from './github_auth.js';
 
-const sign_in: Handle = ({ event, resolve }) => {
-	event.locals.site = { ...default_site, auth: github_auth };
-	return resolve(event);
-};
-
-export const handle = sequence(sign_in, editable_handle);
+export function create_auth(): Auth {
+	return github_auth;
+}
 ```
 
-Rename Editable's own `handle` in that file to `editable_handle`. Keep your change to these lines, so merging an Editable release that touches the file stays simple.
+Editable keeps that file to this one function, so changing it never conflicts with a release. A host serving several sites sets an auth per site instead (see [Hosting several sites](#hosting-several-sites)).
 
 ### Example: sign in with GitHub
 
@@ -292,8 +289,8 @@ Editable's login dialog asks for the password and ignores a redirect. Set your o
 <!-- src/app/components/GitHubSignIn.svelte -->
 <script lang="ts">
 	async function sign_in() {
-		const { login_admin } = await import('#app/api.remote.js');
-		const result = await login_admin({});
+		const { log_in } = await import('#app/api.remote.js');
+		const result = await log_in({});
 		if (result.ok && result.redirect) location.href = result.redirect;
 	}
 </script>
@@ -308,11 +305,23 @@ system_components: {
 },
 ```
 
-Style the button with the design system's primary button recipe. A dialog that asks for something first, such as a username for a company's sign-on, sends it in the object passed to `login_admin`, and `log_in` receives it as `credentials`.
+Style the button with the design system's primary button recipe. A dialog that asks for something first, such as a username for a company's sign-on, sends it in the object passed to the `log_in` command, and the auth's `log_in` receives it as `credentials`.
+
+### An app whose accounts are not all editors
+
+Editable can be the website of an app with accounts of its own, such as a utility's portal where households log in to report their meter readings and a few staff also edit the website. The app owns its accounts; Editable only learns who is signed in and whether they may edit.
+
+- **Accounts and sessions are the app's.** Its tables live in the site's database through a storage migration of its own (`pnpm migration:create <name> --target sqlite`), prefixed so they cannot collide with Editable's, such as `app_accounts`. Backups and restores then cover them. Its code reaches the database through the backend's storage, `(await get_backend()).storage`, which ties the app to the SQLite backend.
+- **The auth returns every signed-in account** from `get_user`, and `is_editor` decides who may edit. The app's own pages use `locals.user` freely; Editable's checks only ever look at `locals.is_editor`.
+- **Its login dialog covers both cases.** Signed out, it asks for the app's credentials. Signed in without edit rights, which is when ⌘ E still opens it, it can say so and offer the app's own pages or logging out. `page.data.user` and `page.data.is_editor` tell the two apart.
+- **Its pages send signed-out visitors to `/login`** with themselves as `redirect_to`.
+- **The toolbar shows to everyone signed in.** Its menu holds Logout, labeled Page actions for editors and Account for everyone else. Two slots in `system_components` add the app's own: `toolbar_items` renders buttons next to Editable's, receiving the toolbar's `button_class`, and `menu_items` renders entries at the top of the menu, receiving `item_class` and `close` (see `ToolbarItemsProps` and `MenuItemsProps` in `src/app/components/Toolbar.svelte`).
+- **Its forms render outside the editor's canvas.** A route that puts its content inside `App`, as the design system page does, gets the site's banner, nav, and footer, but the canvas takes the keystrokes of inputs placed there. Put buttons in the page and the inputs in a `Drawer` the route renders next to `App`.
+- **`pnpm data:push` replaces the live database,** with the accounts and what they reported. Once people use the app, edit the live site instead of pushing.
 
 ### Before you ship it
 
-- **Only editors get a user.** Anyone `get_user` returns may change every page, the shared navigation, and the assets.
+- **Only editors may edit.** Anyone `is_editor` allows, or anyone `get_user` returns when there is no `is_editor`, may change every page, the shared navigation, and the assets.
 - **Sessions are yours.** Editable's `sessions` and `login_throttle` records belong to the admin password; your auth keeps its own sessions, in a signed cookie as above or in a store of your own.
 - **Cookies are scoped to the site's base,** as Editable's own are, when several sites share an origin.
 - **Rate limiting is yours** if your auth checks secrets itself; a provider such as GitHub does it for you.

@@ -21,6 +21,7 @@
 	document={page.data.not_found_document}
 	has_backend={page.data.has_backend}
 	user={page.data.user}
+	is_editor={page.data.is_editor}
 	origin={page.data.origin}
 	languages={page.data.languages}
 	language={page.data.language}

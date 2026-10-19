@@ -48,6 +48,7 @@ export const RESERVED_ROUTE_SLUGS = new Set([
 	'api',
 	'assets',
 	'design-system',
+	'login',
 	'mcp',
 	'new',
 	'oauth'

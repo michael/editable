@@ -48,9 +48,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	event.locals.user = null;
+	event.locals.is_editor = false;
 	if (!VERCEL) {
-		const { get_auth } = await import('#app/server_auth.js');
-		event.locals.user = await get_auth().get_user(event);
+		const { sign_in_state } = await import('#app/server_auth.js');
+		Object.assign(event.locals, await sign_in_state(event));
 	}
 
 	const language = request_language(event.url) || 'en';

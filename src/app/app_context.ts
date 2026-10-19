@@ -13,7 +13,8 @@ export type AppContext = {
 	readonly has_backend: boolean;
 	readonly can_edit: boolean;
 	readonly is_demo_mode: boolean;
-	readonly is_admin: boolean;
+	readonly is_signed_in: boolean;
+	readonly is_editor: boolean;
 	readonly origin: string | null;
 	readonly document_title: string | null;
 	readonly slug: string | null;

@@ -1,11 +1,11 @@
 import { error } from '@sveltejs/kit';
 import { ASSET_ID_REGEX } from '#app/config.js';
 import { asset_exists, backend } from '#app/services.js';
-import { require_user } from '#lib/server/auth.js';
+import { require_editor } from '#lib/server/auth.js';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
-	require_user(locals);
+	require_editor(locals);
 
 	const { asset_id } = params;
 	if (!ASSET_ID_REGEX.test(asset_id)) {

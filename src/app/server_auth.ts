@@ -1,6 +1,7 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { backend } from './services.js';
 import { site } from './server_site.js';
+import { create_auth } from './create_auth.js';
 import {
 	clear_admin_session_cookie,
 	get_session_expires_at,
@@ -18,9 +19,9 @@ export type LogInResult =
 	{ ok: true; redirect?: string } | { ok: false; code: string; message: string };
 
 /**
- * Whoever is signed in, as event.locals.user; signed-in users may edit the
- * site. Its shape is up to the auth that signs them in, and it reaches the
- * browser as page data, so keep secrets out of it.
+ * Whoever is signed in, as event.locals.user. Its shape is up to the auth that
+ * signs them in, and it reaches the browser as page data, so keep secrets out
+ * of it. Whether they may edit the site is event.locals.is_editor.
  */
 export type User = Record<string, unknown>;
 
@@ -42,6 +43,11 @@ export type Auth = {
 	 */
 	log_in(event: RequestEvent, credentials: Credentials): LogInResult | Promise<LogInResult>;
 	log_out(event: RequestEvent): void | Promise<void>;
+	/**
+	 * Whether a signed-in user may edit the site, for an app whose users are not
+	 * all editors. Without it, everyone signed in may edit.
+	 */
+	is_editor?(user: User): boolean | Promise<boolean>;
 };
 
 /** The current site's session cookie. */
@@ -85,7 +91,20 @@ export const password_auth: Auth = {
 	}
 };
 
-/** The current request's site's auth; the admin password by default. */
+/** The current request's site's auth: a host's, or the deployment's own from create_auth. */
 export function get_auth(): Auth {
-	return site.auth ?? password_auth;
+	return site.auth ?? create_auth();
+}
+
+/**
+ * Who a request comes from, and whether they may edit the site: everyone
+ * signed in may, unless the auth's is_editor says otherwise. Editable sets
+ * both on event.locals, and everything that edits checks is_editor alone.
+ */
+export async function sign_in_state(
+	event: RequestEvent
+): Promise<{ user: User | null; is_editor: boolean }> {
+	const auth = get_auth();
+	const user = await auth.get_user(event);
+	return { user, is_editor: !!user && ((await auth.is_editor?.(user)) ?? true) };
 }

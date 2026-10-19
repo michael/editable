@@ -111,10 +111,9 @@ export function set_admin_session_cookie(cookies: Cookies, name: string, session
 	});
 }
 
-/** The signed-in user, or a 401 when nobody is signed in. */
-export function require_user<User>(locals: { user?: User | null }): User {
-	if (!locals.user) error(401, 'Unauthorized');
-	return locals.user;
+/** Refuse the request unless an editor is signed in: 401 when nobody is, 403 for someone else. */
+export function require_editor(locals: { user?: unknown; is_editor?: boolean }) {
+	if (!locals.is_editor) error(locals.user ? 403 : 401, locals.user ? 'Forbidden' : 'Unauthorized');
 }
 
 function format_lockout_duration(seconds: number): string {
