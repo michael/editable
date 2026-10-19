@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { assert_complete, load_migrations, run_migrations, type Migration } from './migrations.js';
+import { load_migrations, run_migrations, type Migration } from './migrations.js';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -30,57 +30,6 @@ describe('load_migrations', () => {
 		expect(one({ up, after: 'x' } as Migration)).toThrow('unknown export properties: after');
 		expect(one({ target: 'SQLite', up })).toThrow('invalid target');
 		expect(one({ up }, 'add-things')).toThrow('Invalid migration filename');
-	});
-});
-
-describe('assert_complete', () => {
-	const migrations = load({
-		'20260101T000000000Z_editable_schema': { target: 'sqlite', up },
-		'20260101T000000000Z_editable_schema_files': { target: 'files', up },
-		'20260201T000000000Z_editable_content': { up },
-		'20260301T000000000Z_editable_redirects_sqlite': { target: 'sqlite', up },
-		'20260301T000000000Z_editable_redirects_files': { target: 'files', up }
-	});
-
-	it('accepts a backend that has a file for every storage change', () => {
-		expect(() => assert_complete(migrations, 'sqlite')).not.toThrow();
-		expect(() => assert_complete(migrations, 'files')).not.toThrow();
-	});
-
-	it('names every gap of the backend being opened, whatever its date', () => {
-		const gap = load({
-			'20250101T000000000Z_editable_old_sqlite': { target: 'sqlite', up },
-			'20260101T000000000Z_editable_new_sqlite': { target: 'sqlite', up },
-			'20260101T000000000Z_editable_new_files': { target: 'files', up }
-		});
-		expect(() => assert_complete(gap, 'files')).toThrow('20250101T000000000Z_editable_old_files');
-		expect(() => assert_complete(gap, 'sqlite')).not.toThrow();
-	});
-
-	it('ignores gaps of other backends, such as a fork changing only its own', () => {
-		const fork = [
-			...migrations,
-			...load({
-				'20260101T000000000Z_editable_schema_git': { target: 'git', up },
-				'20260301T000000000Z_editable_redirects_git': { target: 'git', up },
-				'20260401T000000000Z_custom_handles_git': { target: 'git', up }
-			})
-		];
-		expect(() => assert_complete(fork, 'git')).not.toThrow();
-		expect(() => assert_complete(fork, 'sqlite')).toThrow(
-			'20260401T000000000Z_custom_handles_sqlite'
-		);
-	});
-
-	it('catches a misspelled target and a backend without migrations', () => {
-		const typo = [
-			...migrations,
-			...load({ '20260401T000000000Z_editable_x_sqllite': { target: 'sqllite', up } })
-		];
-		expect(() => assert_complete(typo, 'sqlite')).toThrow('20260401T000000000Z_editable_x_sqlite');
-		expect(() => assert_complete(migrations, 'git')).toThrow(
-			'20260101T000000000Z_editable_schema_git, 20260301T000000000Z_editable_redirects_git'
-		);
 	});
 });
 

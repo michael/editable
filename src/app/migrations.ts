@@ -1,9 +1,4 @@
-import {
-	assert_complete,
-	load_migrations,
-	run_migrations,
-	type Migration
-} from '#lib/server/migrations.js';
+import { load_migrations, run_migrations, type Migration } from '#lib/server/migrations.js';
 import { create_migration_helpers, type MigrationDocument } from '#lib/server/migration_helpers.js';
 import type { Backend } from '#lib/server/backend.js';
 import initial_site from './initial_site.js';
@@ -21,7 +16,6 @@ export const all_migrations = load_migrations(
  * name. The backend runs each with its storage and records it in one step.
  */
 export async function migrate_storage(backend: Backend) {
-	assert_complete(all_migrations, backend.name);
 	await run_migrations(
 		all_migrations,
 		backend.name,

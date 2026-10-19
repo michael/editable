@@ -76,7 +76,19 @@ test_backend('git', async () => {
 });
 ```
 
-- **Each storage change stops it until you decide.** An Editable release that adds a SQLite table stops your site from starting until your backend has its own file for that change, even an empty one; add it with `--join` (see [Placing a migration](README.md#placing-a-migration)). Content migrations run on every backend without your help.
+- **Its storage migrations are its own.** Your backend runs only the migrations that target its name, and Editable's SQLite and files migrations never run on it. Create one with `pnpm migration:create <name> --target git`.
+
+### Merge an Editable release
+
+The contract between Editable and your backend is the `Backend` interface and its tests, not Editable's migrations. After merging a release:
+
+1. **Run `pnpm check`.** A changed interface shows up as type errors in your backend. Implement what they name.
+2. **Run your backend tests.** New promises arrive as new tests in `test_backend`, such as a version check on a save. Make them pass.
+3. **Read the release's SQLite migrations.** They show how Editable's own records changed, such as a new column for document versions, and hint at what yours need. They never run on your backend.
+4. **Upgrade your existing data, if it must change.** When the new code cannot read what your backend already stores, such as records without a version, write a storage migration for your backend, dated now. Where your storage already has what is needed, such as a Git blob hash for a version, write nothing.
+5. **Try the upgrade on a copy of a real site.** `test_backend` starts every test with an empty backend, so only real data shows whether step 4 was needed and works.
+
+Editable's content migrations need nothing from you. They change documents through the interface, so they run on your backend once it meets the release's interface, and always after its storage migrations.
 
 ### Write your own backend
 

@@ -1195,7 +1195,7 @@ The helpers work on the site's documents in memory, and Editable saves the chang
 
 ### Storage migrations
 
-A change to how a backend stores records, such as a new table, needs a storage migration for every backend that runs, so that none of them misses it. Generate the set with `--storage`:
+A change to how the built-in backends store records, such as a new table, needs a storage migration for each of them. Generate the pair with `--storage`:
 
 ```sh
 pnpm migration:create redirects --storage
@@ -1215,7 +1215,7 @@ export default {
 } satisfies Migration;
 ```
 
-Where a backend needs nothing, its file stays with an empty `up`, the record that someone checked. A site refuses to start while any storage change lacks a file for its backend, whatever the change's date, which turns a forgotten file, a misspelled target, or a new backend without migrations into an error. Only the starting backend is checked, so a fork's changes for its own backend never stop it; Editable's tests keep SQLite and files in step instead. A fresh backend replays every storage migration in order.
+Where a backend needs nothing, its file stays with an empty `up`, the record that someone checked; Editable's tests fail while a change has a file for one of the two and not the other. A backend runs only the storage migrations that target it, and a fresh one replays them all in order. A backend of your own has its own storage migrations, made with `--target <name>`.
 
 ### Placing a migration
 
@@ -1226,12 +1226,6 @@ pnpm migration:create reconcile-heading --after 20261009T120000000Z_editable_sit
 ```
 
 A migration that must run before another is placed right after the one preceding that. This works because migrations that arrive together are all pending when a site upgrades. One dated before a migration a site already ran still runs, but later, and the log warns about it.
-
-A backend of your own needs its file for every new Editable storage change. `--join` adds it with that change's timestamp and name:
-
-```sh
-pnpm migration:create --join 20261101T120000000Z_editable_redirects_sqlite --target git
-```
 
 Editable's own migrations use the `editable` source name; `custom` migrations belong to your project. The timestamp-first filenames keep both sources in one chronological list without a central registry or sequence-number conflicts. Because order across versions follows timestamps rather than when a migration arrived, prefer tolerant migrations, "create if missing" rather than "create", which safely do nothing when their source shape is absent.
 

@@ -1,13 +1,12 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Backend } from '#lib/server/backend.js';
 import initial_schema from './migrations/20260803T131059242Z_editable_initial_schema.js';
 import translations_schema from './migrations/20260923T180000000Z_editable_translations.js';
-import { all_migrations, migrate, migrate_storage } from './migrations.js';
-import { assert_complete } from '#lib/server/migrations.js';
+import { all_migrations, migrate } from './migrations.js';
 import { backend_in } from './server_backend.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
@@ -102,19 +101,14 @@ it('upgrades a file folder written before settings became records', async () => 
 	);
 });
 
-it('refuses a backend that misses storage migrations, as a fork adding one would', async () => {
-	const dir = join(temp_dir(), 'fork');
-	mkdirSync(dir);
-	const git: Backend = { ...backend_in(dir, 'files'), name: 'git' };
-	await expect(migrate_storage(git)).rejects.toThrow(
-		'20260803T131059242Z_editable_initial_schema_git'
-	);
-	expect(existsSync(join(dir, 'db', '_migrations.json'))).toBe(false);
-});
-
 it('keeps the SQLite and files backends in step: every storage change has a file for both', () => {
-	for (const target of ['sqlite', 'files'])
-		expect(() => assert_complete(all_migrations, target)).not.toThrow();
+	// A change's files share its id, with the target as a suffix.
+	const changes = (target: string) =>
+		all_migrations
+			.filter((migration) => migration.target === target)
+			.map(({ id }) => id.replace(new RegExp(`_${target}$`), ''))
+			.sort();
+	expect(changes('files')).toEqual(changes('sqlite'));
 });
 
 it('refuses data migrated by a newer version', async () => {
