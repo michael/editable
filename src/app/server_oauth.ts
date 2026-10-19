@@ -11,10 +11,6 @@ const GRANT_TTL_SECONDS = 48 * 60 * 60;
 const ACCESS_TOKEN_TTL_SECONDS = 60 * 60;
 const CODE_TTL_SECONDS = 10 * 60;
 const UPLOAD_TOKEN_TTL_SECONDS = 30 * 60;
-// Registrations the admin never approved expire; approved clients are kept so
-// they can reconnect with the same client_id after their approval ends.
-const PENDING_CLIENT_TTL_SECONDS = 24 * 60 * 60;
-const MAX_PENDING_CLIENTS = 100;
 
 type TokenKind = 'code' | 'access' | 'refresh' | 'upload';
 type Grant = OAuthGrantRecord;
@@ -83,50 +79,46 @@ export function is_own_resource(resource: string | null | undefined) {
 	return !resource || resource.replace(/\/$/, '').toLowerCase() === mcp_resource().toLowerCase();
 }
 
-/** Dynamic client registration (RFC 7591) for public clients. */
-export async function register_client(input: { client_name?: unknown; redirect_uris?: unknown }) {
-	const redirect_uris = input.redirect_uris;
-	if (
-		!Array.isArray(redirect_uris) ||
-		redirect_uris.length === 0 ||
-		redirect_uris.length > 10 ||
-		!redirect_uris.every(is_allowed_redirect_uri)
-	)
+const is_redirect_uris = (value: unknown): value is string[] =>
+	Array.isArray(value) &&
+	value.length > 0 &&
+	value.length <= 10 &&
+	value.every(is_allowed_redirect_uri);
+
+/**
+ * Dynamic client registration (RFC 7591) for public clients. Anyone may
+ * register, so a stored registration would prove nothing: the client_id is
+ * the registration itself, and a site never forgets a client, even when its
+ * data is restored or replaced.
+ */
+export function register_client(input: {
+	client_name?: unknown;
+	redirect_uris?: unknown;
+}): OAuthClient {
+	if (!is_redirect_uris(input.redirect_uris))
 		throw new OAuthError(
 			'invalid_redirect_uri',
 			'redirect_uris must list 1 to 10 URIs on localhost or HTTPS.'
 		);
-
-	// Registration is unauthenticated: pending registrations expire, and when
-	// too many pile up the oldest make room rather than blocking new clients.
-	const approved = new Set((await backend.list_oauth_grants()).map((grant) => grant.client_id));
-	// Newest first; among equal times the later registration counts as newer.
-	const pending = (await backend.list_oauth_clients())
-		.filter((client) => !approved.has(client.client_id))
-		.reverse()
-		.sort((a, b) => b.created_at - a.created_at);
-	for (const [index, client] of pending.entries()) {
-		if (index >= MAX_PENDING_CLIENTS - 1 || client.created_at < now() - PENDING_CLIENT_TTL_SECONDS)
-			await backend.delete_oauth_client(client.client_id);
-	}
-
-	const client: OAuthClient = {
-		client_id: new_secret(),
+	const registration = {
 		client_name:
 			typeof input.client_name === 'string' && input.client_name.trim()
 				? input.client_name.trim().slice(0, 100)
 				: 'Unnamed MCP client',
-		redirect_uris
+		redirect_uris: input.redirect_uris
 	};
-	await backend.save_oauth_client({ ...client, created_at: now() });
-	return client;
+	const client_id = Buffer.from(JSON.stringify(registration)).toString('base64url');
+	return { client_id, ...registration };
 }
 
-export async function find_client(client_id: string): Promise<OAuthClient | null> {
-	const record = await backend.get_oauth_client(client_id);
-	if (!record) return null;
-	const { client_name, redirect_uris } = record;
-	return { client_id, client_name, redirect_uris };
+export function find_client(client_id: string): OAuthClient | null {
+	try {
+		const client = register_client(JSON.parse(Buffer.from(client_id, 'base64url').toString()));
+		// Anyone can make a client_id: accept only what registration gives out, so none skips its checks.
+		return client.client_id === client_id ? client : null;
+	} catch {
+		return null;
+	}
 }
 
 async function insert_token(grant_id: string, kind: TokenKind, expires_at: number) {
@@ -154,10 +146,6 @@ export async function approve_client(input: {
 }) {
 	const time = now();
 	await backend.delete_expired(time);
-	// A client's latest grant stays as its approval record; older ended ones go.
-	for (const grant of await backend.list_oauth_grants())
-		if (grant.client_id === input.client_id && grant.expires_at <= time)
-			await backend.delete_oauth_grant(grant.grant_id);
 	const grant_id = new_secret();
 	await backend.save_oauth_grant({
 		grant_id,
@@ -189,6 +177,9 @@ function pkce_challenge(verifier: string) {
  */
 export async function exchange_token(params: URLSearchParams) {
 	const client_id = params.get('client_id') ?? '';
+	// invalid_client makes the client register again.
+	if (!find_client(client_id))
+		throw new OAuthError('invalid_client', 'The app could not be identified. Connect again.', 401);
 	if (!is_own_resource(params.get('resource')))
 		throw new OAuthError('invalid_target', `Tokens are only issued for ${mcp_resource()}.`);
 
@@ -237,9 +228,9 @@ export async function create_upload_token(grant_id: string) {
 	return { upload_token: await insert_token(grant_id, 'upload', expires_at), expires_at };
 }
 
-/** End every MCP connection, e.g. when the admin logs out. Clients stay registered. */
+/** End every MCP connection, e.g. when the admin logs out. */
 export async function revoke_all_grants() {
-	await backend.revoke_oauth_grants(now());
+	await backend.revoke_oauth_grants();
 }
 
 /**

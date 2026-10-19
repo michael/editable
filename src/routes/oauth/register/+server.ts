@@ -8,7 +8,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const oauth = await import('#app/server_oauth.js');
 	try {
 		oauth.assert_small_body(request);
-		const client = await oauth.register_client(await request.json().catch(() => ({})));
+		const client = oauth.register_client(await request.json().catch(() => ({})));
 		return oauth.oauth_json(
 			{
 				...client,

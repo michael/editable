@@ -10,7 +10,6 @@ import {
 	type DocumentRefsRecord,
 	type LoginThrottleRecord,
 	type NewTranslation,
-	type OAuthClientRecord,
 	type OAuthGrantRecord,
 	type OAuthTokenRecord,
 	type SessionRecord,
@@ -230,14 +229,8 @@ export function files_backend(
 		delete_session: (session_id) => remove('sessions', session_id),
 		get_login_throttle: (key) => get<LoginThrottleRecord>('login_throttle', key),
 		save_login_throttle: (throttle) => put('login_throttle', throttle.key, throttle),
-		list_oauth_clients: () => list<OAuthClientRecord>('oauth_clients'),
-		get_oauth_client: (client_id) => get<OAuthClientRecord>('oauth_clients', client_id),
-		save_oauth_client: (client) => put('oauth_clients', client.client_id, client),
-		delete_oauth_client: (client_id) => remove('oauth_clients', client_id),
-		list_oauth_grants: () => list<OAuthGrantRecord>('oauth_grants'),
 		get_oauth_grant: (grant_id) => get<OAuthGrantRecord>('oauth_grants', grant_id),
 		save_oauth_grant: (grant) => put('oauth_grants', grant.grant_id, grant),
-		delete_oauth_grant: (grant_id) => remove('oauth_grants', grant_id),
 		get_oauth_token: (token_hash) => get<OAuthTokenRecord>('oauth_tokens', token_hash),
 		save_oauth_token: (token) => put('oauth_tokens', token.token_hash, token),
 		take_oauth_token: async (token_hash) => {
@@ -249,16 +242,18 @@ export function files_backend(
 			}
 			return token;
 		},
-		revoke_oauth_grants: async (now) => {
+		revoke_oauth_grants: async () => {
 			store('oauth_tokens', {});
-			change<OAuthGrantRecord>('oauth_grants', (all) => {
-				for (const grant of Object.values(all)) if (grant.expires_at > now) grant.expires_at = now;
-			});
+			store('oauth_grants', {});
 		},
 		delete_expired: async (now) => {
 			change<SessionRecord>('sessions', (all) => {
 				for (const [key, session] of Object.entries(all))
 					if (session.expires <= now) delete all[key];
+			});
+			change<OAuthGrantRecord>('oauth_grants', (all) => {
+				for (const [key, grant] of Object.entries(all))
+					if (grant.expires_at <= now) delete all[key];
 			});
 			change<OAuthTokenRecord>('oauth_tokens', (all) => {
 				for (const [key, token] of Object.entries(all))

@@ -14,7 +14,7 @@ async function validate_request(params: URLSearchParams) {
 	if (!oauth.is_own_resource(params.get('resource')))
 		return { error: `Access can only be granted to ${oauth.mcp_resource()}.` } as const;
 
-	const client = await oauth.find_client(params.get('client_id') ?? '');
+	const client = oauth.find_client(params.get('client_id') ?? '');
 	if (!client)
 		return {
 			error: 'The app could not be identified. Start connecting again from the app.'

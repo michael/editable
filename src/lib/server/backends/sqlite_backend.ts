@@ -8,7 +8,6 @@ import {
 	type DocumentRecord,
 	type LoginThrottleRecord,
 	type NewTranslation,
-	type OAuthClientRecord,
 	type OAuthGrantRecord,
 	type OAuthTokenRecord,
 	type SessionRecord,
@@ -70,8 +69,6 @@ export function sqlite_backend(storage: SqliteStorage): Backend {
 	const document = (row: Row) =>
 		({ ...row, data: JSON.parse(row.data as string) }) as DocumentRecord;
 	const slug = (row: Row) => ({ ...row, is_active: row.is_active === 1 }) as SlugRecord;
-	const oauth_client = (row: Row) =>
-		({ ...row, redirect_uris: JSON.parse(row.redirect_uris as string) }) as OAuthClientRecord;
 	const grouped = (rows: Row[], key: string, value: string, field: string) => {
 		const groups = new Map<string, string[]>();
 		for (const row of rows) {
@@ -282,24 +279,6 @@ export function sqlite_backend(storage: SqliteStorage): Backend {
 			);
 		},
 
-		list_oauth_clients: async () => all('SELECT * FROM oauth_clients').map(oauth_client),
-		get_oauth_client: async (client_id) => {
-			const row = one('SELECT * FROM oauth_clients WHERE client_id = ?', client_id);
-			return row && oauth_client(row);
-		},
-		save_oauth_client: async (client) => {
-			run(
-				'INSERT OR REPLACE INTO oauth_clients (client_id, client_name, redirect_uris, created_at) VALUES (?, ?, ?, ?)',
-				client.client_id,
-				client.client_name,
-				JSON.stringify(client.redirect_uris),
-				client.created_at
-			);
-		},
-		delete_oauth_client: async (client_id) => {
-			run('DELETE FROM oauth_clients WHERE client_id = ?', client_id);
-		},
-		list_oauth_grants: async () => all<OAuthGrantRecord>('SELECT * FROM oauth_grants'),
 		get_oauth_grant: async (grant_id) =>
 			one<OAuthGrantRecord>('SELECT * FROM oauth_grants WHERE grant_id = ?', grant_id),
 		save_oauth_grant: async (grant) => {
@@ -312,9 +291,6 @@ export function sqlite_backend(storage: SqliteStorage): Backend {
 				grant.created_at,
 				grant.expires_at
 			);
-		},
-		delete_oauth_grant: async (grant_id) => {
-			run('DELETE FROM oauth_grants WHERE grant_id = ?', grant_id);
 		},
 		get_oauth_token: async (token_hash) =>
 			one<OAuthTokenRecord>('SELECT * FROM oauth_tokens WHERE token_hash = ?', token_hash),
@@ -332,14 +308,15 @@ export function sqlite_backend(storage: SqliteStorage): Backend {
 				'DELETE FROM oauth_tokens WHERE token_hash = ? RETURNING *',
 				token_hash
 			),
-		revoke_oauth_grants: async (now) =>
+		revoke_oauth_grants: async () =>
 			atomically(() => {
 				run('DELETE FROM oauth_tokens');
-				run('UPDATE oauth_grants SET expires_at = ? WHERE expires_at > ?', now, now);
+				run('DELETE FROM oauth_grants');
 			}),
 		delete_expired: async (now) =>
 			atomically(() => {
 				run('DELETE FROM sessions WHERE expires <= ?', now);
+				run('DELETE FROM oauth_grants WHERE expires_at <= ?', now);
 				run('DELETE FROM oauth_tokens WHERE expires_at <= ?', now);
 			}),
 

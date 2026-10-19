@@ -35,15 +35,15 @@ Editable comes with two backends. The deployment's own comes from `create_backen
 
 `src/lib/server/backend.ts` defines the interface and its record types. All functions are asynchronous:
 
-| Records                   | Functions                                                                                                                                                        |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Documents                 | `get_document`, `list_documents`, `save_documents` (documents and everything that changes with them), `delete_page`                                              |
-| Page URLs                 | `resolve_slug`, `get_active_slug`, `list_slugs`                                                                                                                  |
-| References                | `list_document_refs`, `list_asset_refs`                                                                                                                          |
-| Translations and settings | `list_translations`, `save_translations`, `get_setting`, `list_settings`                                                                                         |
-| Sign-in and MCP (private) | `get`, `save`, and `delete` for sessions, the login throttle, and OAuth clients, grants, and tokens; `take_oauth_token`, `revoke_oauth_grants`, `delete_expired` |
-| Assets                    | `write_asset`, `read_asset`, `asset_size`, `delete_asset`, `touch_asset`, `list_assets`                                                                          |
-| Storage migrations        | `applied_migrations`, `run_migration`                                                                                                                            |
+| Records                   | Functions                                                                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Documents                 | `get_document`, `list_documents`, `save_documents` (documents and everything that changes with them), `delete_page`                                    |
+| Page URLs                 | `resolve_slug`, `get_active_slug`, `list_slugs`                                                                                                        |
+| References                | `list_document_refs`, `list_asset_refs`                                                                                                                |
+| Translations and settings | `list_translations`, `save_translations`, `get_setting`, `list_settings`                                                                               |
+| Sign-in and MCP (private) | `get`, `save`, and `delete` for sessions, the login throttle, and OAuth grants and tokens; `take_oauth_token`, `revoke_oauth_grants`, `delete_expired` |
+| Assets                    | `write_asset`, `read_asset`, `asset_size`, `delete_asset`, `touch_asset`, `list_assets`                                                                |
+| Storage migrations        | `applied_migrations`, `run_migration`                                                                                                                  |
 
 A backend keeps these promises:
 

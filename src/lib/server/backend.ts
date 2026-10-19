@@ -47,21 +47,15 @@ export type Backend = {
 	delete_session(session_id: string): Promise<void>;
 	get_login_throttle(key: string): Promise<LoginThrottleRecord | null>;
 	save_login_throttle(throttle: LoginThrottleRecord): Promise<void>;
-	list_oauth_clients(): Promise<OAuthClientRecord[]>;
-	get_oauth_client(client_id: string): Promise<OAuthClientRecord | null>;
-	save_oauth_client(client: OAuthClientRecord): Promise<void>;
-	delete_oauth_client(client_id: string): Promise<void>;
-	list_oauth_grants(): Promise<OAuthGrantRecord[]>;
 	get_oauth_grant(grant_id: string): Promise<OAuthGrantRecord | null>;
 	save_oauth_grant(grant: OAuthGrantRecord): Promise<void>;
-	delete_oauth_grant(grant_id: string): Promise<void>;
 	get_oauth_token(token_hash: string): Promise<OAuthTokenRecord | null>;
 	save_oauth_token(token: OAuthTokenRecord): Promise<void>;
 	/** Delete a token and return it, so a code or refresh token is only ever redeemed once. */
 	take_oauth_token(token_hash: string): Promise<OAuthTokenRecord | null>;
-	/** Delete every token and end every grant that has not ended, such as when the admin logs out. */
-	revoke_oauth_grants(now: number): Promise<void>;
-	/** Delete the sessions and tokens that expired at or before now, in seconds. */
+	/** Delete every grant and token, such as when the admin logs out. */
+	revoke_oauth_grants(): Promise<void>;
+	/** Delete the sessions, grants, and tokens that expired at or before now, in seconds. */
 	delete_expired(now: number): Promise<void>;
 
 	/**
@@ -180,13 +174,6 @@ export type SessionRecord = { session_id: string; expires: number };
 
 /** Failed sign-ins and the lockout they caused, under 'admin' for the password. */
 export type LoginThrottleRecord = { key: string; failed_count: number; locked_until: number };
-
-export type OAuthClientRecord = {
-	client_id: string;
-	client_name: string;
-	redirect_uris: string[];
-	created_at: number;
-};
 
 export type OAuthGrantRecord = {
 	grant_id: string;

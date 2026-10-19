@@ -205,21 +205,12 @@ export function test_backend(name: string, create: () => Promise<Backend>) {
 			expect(await backend.get_session('s2')).toBeNull();
 		});
 
-		it('keeps OAuth clients and grants, redeems a token once, and revokes grants', async () => {
+		it('keeps OAuth grants, redeems a token once, and revokes and expires grants', async () => {
 			const backend = await create();
-			const client = {
-				client_id: 'c1',
-				client_name: 'Claude',
-				redirect_uris: ['https://claude.ai/cb'],
-				created_at: 1
-			};
-			await backend.save_oauth_client(client);
-			expect(await backend.get_oauth_client('c1')).toEqual(client);
-			expect(await backend.list_oauth_clients()).toEqual([client]);
 			const grant = {
 				grant_id: 'g1',
 				client_id: 'c1',
-				redirect_uri: client.redirect_uris[0],
+				redirect_uri: 'https://claude.ai/cb',
 				code_challenge: 'x',
 				created_at: 1,
 				expires_at: 100
@@ -232,13 +223,15 @@ export function test_backend(name: string, create: () => Promise<Backend>) {
 			expect(await backend.take_oauth_token('h1')).toBeNull();
 
 			await backend.save_oauth_token({ ...token, token_hash: 'h2' });
-			await backend.revoke_oauth_grants(40);
+			await backend.revoke_oauth_grants();
 			expect(await backend.get_oauth_token('h2')).toBeNull();
-			expect((await backend.get_oauth_grant('g1'))!.expires_at).toBe(40);
-			await backend.delete_oauth_grant('g1');
-			await backend.delete_oauth_client('c1');
-			expect(await backend.list_oauth_grants()).toEqual([]);
-			expect(await backend.list_oauth_clients()).toEqual([]);
+			expect(await backend.get_oauth_grant('g1')).toBeNull();
+
+			await backend.save_oauth_grant(grant);
+			await backend.save_oauth_grant({ ...grant, grant_id: 'g2', expires_at: 101 });
+			await backend.delete_expired(100);
+			expect(await backend.get_oauth_grant('g1')).toBeNull();
+			expect(await backend.get_oauth_grant('g2')).not.toBeNull();
 		});
 
 		it('keeps asset originals and their variants by id', async () => {

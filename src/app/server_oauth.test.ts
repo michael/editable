@@ -44,9 +44,7 @@ const code_challenge = createHash('sha256').update(verifier).digest('base64url')
 initial_schema.up({ db: sqlite } as SqliteStorage);
 
 beforeEach(() => {
-	sqlite.exec(
-		'DROP TABLE IF EXISTS oauth_clients; DROP TABLE IF EXISTS oauth_grants; DROP TABLE IF EXISTS oauth_tokens'
-	);
+	sqlite.exec('DROP TABLE IF EXISTS oauth_grants; DROP TABLE IF EXISTS oauth_tokens');
 	migration.up({ db: sqlite } as SqliteStorage);
 });
 
@@ -73,11 +71,11 @@ function refresh(client_id: string, refresh_token: string) {
 }
 
 it('issues tokens for approved clients with PKCE and rotates refresh tokens', async () => {
-	const { client_id } = await register_client({
+	const { client_id } = register_client({
 		client_name: 'Claude Code',
 		redirect_uris: [redirect_uri]
 	});
-	expect(await find_client(client_id)).toMatchObject({ client_name: 'Claude Code' });
+	expect(find_client(client_id)).toMatchObject({ client_name: 'Claude Code' });
 
 	const code = await approve_client({ client_id, redirect_uri, code_challenge });
 	const params = { grant_type: 'authorization_code', code, client_id, redirect_uri };
@@ -94,14 +92,17 @@ it('issues tokens for approved clients with PKCE and rotates refresh tokens', as
 	const refreshed = await refresh(client_id, tokens.refresh_token);
 	expect(await verify_access_token(refreshed.access_token)).toMatchObject({ client_id });
 	await expect(refresh(client_id, tokens.refresh_token)).rejects.toThrow('Connect again');
-	await expect(refresh('another-client', refreshed.refresh_token)).rejects.toThrow('Connect again');
+	const another = register_client({ redirect_uris: ['http://localhost:4000/callback'] });
+	await expect(refresh(another.client_id, refreshed.refresh_token)).rejects.toThrow(
+		'Connect again'
+	);
 	await expect(
 		exchange_token(new URLSearchParams({ ...params, resource: 'https://evil.example/mcp' }))
 	).rejects.toThrow('only issued for https://example.com/mcp');
 });
 
 it('redeems a code only once, even when two exchanges race', async () => {
-	const { client_id } = await register_client({ redirect_uris: [redirect_uri] });
+	const { client_id } = register_client({ redirect_uris: [redirect_uri] });
 	const code = await approve_client({ client_id, redirect_uri, code_challenge });
 	const exchange = () =>
 		exchange_token(
@@ -119,7 +120,7 @@ it('redeems a code only once, even when two exchanges race', async () => {
 
 it('ends access after 48 hours or when the admin logs out', async () => {
 	vi.useFakeTimers({ now: new Date('2026-10-10T12:00:00Z') });
-	const { client_id } = await register_client({ redirect_uris: [redirect_uri] });
+	const { client_id } = register_client({ redirect_uris: [redirect_uri] });
 	const tokens = await connect(client_id);
 	const { grant_id } = (await verify_access_token(tokens.access_token))!;
 
@@ -168,35 +169,29 @@ it('only accepts redirects to this computer or HTTPS', async () => {
 	expect(is_allowed_redirect_uri('https://claude.ai/api/mcp/auth_callback')).toBe(true);
 	expect(is_allowed_redirect_uri('http://evil.example/callback')).toBe(false);
 	expect(is_allowed_redirect_uri('https://example.com/callback#fragment')).toBe(false);
-	await expect(
-		register_client({ redirect_uris: ['http://evil.example/callback'] })
-	).rejects.toThrow('localhost or HTTPS');
+	expect(() => register_client({ redirect_uris: ['http://evil.example/callback'] })).toThrow(
+		'localhost or HTTPS'
+	);
 });
 
-it('keeps approved clients registered but evicts stale pending registrations', async () => {
-	vi.useFakeTimers({ now: new Date('2026-10-10T12:00:00Z') });
-	const { client_id } = await register_client({ redirect_uris: [redirect_uri] });
-	await connect(client_id);
-	await revoke_all_grants();
+it('stores no registrations: a client_id carries its own', async () => {
+	const client = register_client({ client_name: 'Claude', redirect_uris: [redirect_uri] });
+	expect(find_client(client.client_id)).toEqual(client);
+	await connect(client.client_id);
 
-	// Reconnecting after a logout or after 48 hours reuses the stored client_id.
-	vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
-	const { client_id: pending_id } = await register_client({ redirect_uris: [redirect_uri] });
-	expect(await find_client(client_id)).not.toBeNull();
-	const reconnected = await connect(client_id);
-	expect(await verify_access_token(reconnected.access_token)).toMatchObject({ client_id });
-	expect(sqlite.prepare('SELECT COUNT(*) AS count FROM oauth_grants').get()).toEqual({ count: 1 });
-
-	// A flood of registrations makes room instead of blocking new clients.
-	for (let i = 0; i < 100; i++) await register_client({ redirect_uris: [redirect_uri] });
-	expect(await find_client(pending_id)).toBeNull();
-	expect(await find_client(client_id)).not.toBeNull();
-	expect(sqlite.prepare('SELECT COUNT(*) AS count FROM oauth_clients').get()).toEqual({
-		count: 101
+	// A client_id from before, or made up, makes the client register again.
+	const unknown = 'v06ot0c6l3AelbrLEtk_D77NMhW_DYCyatdFfDqE3wI';
+	expect(find_client(unknown)).toBeNull();
+	const crafted = (registration: object) =>
+		Buffer.from(JSON.stringify(registration)).toString('base64url');
+	expect(
+		find_client(crafted({ client_name: 'x'.repeat(500), redirect_uris: [redirect_uri] }))
+	).toBeNull();
+	expect(
+		find_client(crafted({ client_name: 'Evil', redirect_uris: ['http://evil.example/callback'] }))
+	).toBeNull();
+	await expect(refresh(unknown, 'token')).rejects.toMatchObject({
+		code: 'invalid_client',
+		status: 401
 	});
-
-	// Pending registrations expire after a day.
-	vi.setSystemTime(new Date('2026-10-22T12:00:00Z'));
-	await register_client({ redirect_uris: [redirect_uri] });
-	expect(sqlite.prepare('SELECT COUNT(*) AS count FROM oauth_clients').get()).toEqual({ count: 2 });
 });
