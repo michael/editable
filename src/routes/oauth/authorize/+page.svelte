@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { document_config } from '#app/document_config.js';
 
 	let { data, form } = $props();
@@ -22,7 +22,7 @@
 			<p class="m-0 text-sm leading-6 text-(--muted-foreground)">
 				An app wants to edit this website. Log in as admin to review the request.
 			</p>
-			<AuthDialog onlogin_success={invalidateAll} />
+			<AuthDialog onlogin_success={refreshAll} />
 		{:else if data.step === 'consent'}
 			<div class="flex flex-col gap-2">
 				<h1 class="m-0 display-5">Allow {data.client_name} to edit {data.site_host}?</h1>
