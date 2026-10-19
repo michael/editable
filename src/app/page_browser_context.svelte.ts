@@ -12,9 +12,9 @@ export const [get_page_browser, set_page_browser] = createContext<PageBrowser>()
 
 export function create_page_browser(options: {
 	goto: (href: string) => Promise<void> | void;
-	is_admin: () => boolean;
+	is_editor: () => boolean;
 }) {
-	const { goto, is_admin } = options;
+	const { goto, is_editor } = options;
 
 	const state = $state({
 		open: false,
@@ -29,14 +29,14 @@ export function create_page_browser(options: {
 	}
 
 	function open_navigate() {
-		if (!is_admin()) return;
+		if (!is_editor()) return;
 		state.mode = 'navigate';
 		state.on_select_page = null;
 		state.open = true;
 	}
 
 	function open_select(on_select_page: (page: PageTreeNode) => void) {
-		if (!is_admin()) return;
+		if (!is_editor()) return;
 		state.mode = 'select';
 		state.on_select_page = on_select_page;
 		state.open = true;

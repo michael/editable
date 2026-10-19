@@ -6,13 +6,13 @@
 	 * Usage:
 	 * - Provide content via the `children` snippet
 	 * - Bind `open` from the parent
-	 * - Optional `label` customizes the panel label
+	 * - `label` names it for screen readers, announced as it opens: what it is for, such as Pages
 	 * - Optional `center_content` centers short content in the drawer's min height
 	 */
 
 	let {
 		open = $bindable(),
-		label = 'Pages',
+		label,
 		drawer_height_mode = 'manual',
 		center_content = false,
 		children
@@ -230,6 +230,7 @@
 
 <dialog
 	bind:this={dialog_ref}
+	aria-label={label}
 	class="drawer-dialog"
 	class:mounted={is_mounted}
 	class:closing={is_closing}
@@ -239,8 +240,6 @@
 >
 	<div
 		class="drawer-shell"
-		role="complementary"
-		aria-label={label}
 		style={drawer_height_mode === 'manual'
 			? `--drawer-height: ${drawer_height_ratio * 100}dvh;`
 			: undefined}

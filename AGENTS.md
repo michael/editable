@@ -2,7 +2,7 @@
 
 Repository-specific guidance for coding agents working on Svedit.
 
-`README.md` is the user-facing manual and source of truth for setup, customization, and usage patterns. Consult only the relevant sections when working on those areas; keep agent-specific guidance here.
+`README.md` is the user-facing manual and source of truth for setup, customization, and usage patterns. `INTEGRATION.md` covers running Editable inside larger systems: backends, hosting several sites, and custom sign-in. Consult only the relevant sections when working on those areas; keep agent-specific guidance here.
 
 ## Principles
 
@@ -16,12 +16,12 @@ Editable is minimalistic by design: less, but better.
 
 ## Important constraints
 
-- For code running from `/` in no-backend/Vercel mode, do not add top-level imports of backend-only modules such as `#app/api.remote.js` or anything that imports `#lib/server/db.js`.
+- For code running from `/` in no-backend/Vercel mode, do not add top-level imports of backend-only modules such as `#app/api.remote.js` or anything that imports a backend from `#lib/server/backends/`.
 - In home-route server files, import backend-only code lazily inside the `has_backend` guard so static deployments do not evaluate database code at module load time.
 - Files using Svelte runes (`$state`, `$derived`, `$effect`, etc.) must use the `.svelte.js` or `.svelte.ts` extension.
 - Use sentence case for documentation headings and comments; capitalize `Svedit` as a proper noun.
 - Read the site's origin, base path, and languages through `site` from `#app/server_site.js` on the server and `#app/client_site.js` in the browser, never from `ORIGIN` or `LANGUAGES` directly: a host serving several sites sets them per request. Documents reach the browser with internal links already under the base, so components render `node.href` as is. Links the browser makes up itself, such as asset URLs and navigation targets, go through `resolve_href(href, site)` from `#app/document_links.js`; absolute URLs use `absolute_page_url(path, site)`. Stored links never include the base.
-- Use `db`, `with_transaction`, and the asset functions from `#app/services.js` only inside functions: they go to the current request's site storage. Never prepare statements or capture storage at module level.
+- Use `backend` and the asset helpers from `#app/services.js` only inside functions: they go to the current request's site backend. Every backend implements the asynchronous `Backend` interface in `src/lib/server/backend.ts`; the built-in SQLite backend lives in `src/lib/server/backends/`. Each backend function is atomic, so writes that belong together go into one call, such as `save_documents`; there are no transactions. Await every backend call. SQL exists only in the SQLite backend (`src/lib/server/backends/sqlite_backend.ts`) and in migrations with `target: 'sqlite'`. Content migrations, without a target, work through `backend` and the helpers and never SQL, so they run on every backend. A backend runs only the storage migrations that target it. A storage change gets a migration with `pnpm migration:create <name> --target sqlite`. Editable computes what it stores: the asset references a document uses are rebuilt into the `asset_refs` collection on every write, and link references into `document_refs`.
 
 ## Code style
 

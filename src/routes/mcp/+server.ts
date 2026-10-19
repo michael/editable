@@ -122,7 +122,7 @@ const tools = [
 	define_tool({
 		name: 'prepare_image_upload',
 		description:
-			'Get a 30-minute upload token and the steps for adding images, which are uploaded over HTTP rather than through MCP: encode a WebP original and its resized variants, upload them with curl, then reference the asset in write_document or create_page. Needs a shell with network access to the site. Videos cannot be uploaded.',
+			'Get a 30-minute upload token and the steps for adding images, which are uploaded over HTTP rather than through MCP: encode a WebP original and its resized variants, or take an SVG as it is, upload them with curl, then reference the asset in write_document or create_page. Needs a shell with network access to the site. Videos cannot be uploaded.',
 		input: v.strictObject({}),
 		annotations: { readOnlyHint: true },
 		handler: async (_args, { grant_id }) => {
@@ -271,7 +271,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	// Access tokens come from the OAuth flow; the 401 challenge points clients to its metadata.
 	const { resource_metadata_url, verify_access_token } = await import('#app/server_oauth.js');
 	const token = /^Bearer (\S+)$/i.exec(request.headers.get('authorization') ?? '')?.[1];
-	const grant = token ? verify_access_token(token) : null;
+	const grant = token ? await verify_access_token(token) : null;
 	if (!grant) {
 		const invalid = token ? ', error="invalid_token"' : '';
 		return new Response('Unauthorized', {

@@ -1,13 +1,24 @@
 import crypto from 'node:crypto';
-import type { DatabaseSync } from 'node:sqlite';
+import type { Backend } from './backend.js';
 import type { Cookies } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';
 import { ADMIN_PASSWORD, NODE_ENV } from '$app/env/private';
 
-/** The database calls auth needs: a DatabaseSync or a facade over the current site's. */
-type Database = Pick<DatabaseSync, 'prepare'>;
+/** The records auth keeps: sessions and the login throttle. */
+type AuthRecords = Pick<
+	Backend,
+	'save_session' | 'get_login_throttle' | 'save_login_throttle' | 'delete_expired'
+>;
 
-export const admin_session_cookie_name = 'ew_admin_session';
+/**
+ * The session cookie of an auth, by name, for the site served under base:
+ * ew_<name>_session at the root, with the base appended under a path, so
+ * sites sharing an origin keep their sign-ins apart.
+ */
+export function session_cookie_name(name: string, base: string) {
+	const cookie = `ew_${name}_session`;
+	return base ? `${cookie}_${base.slice(1).replace(/[^\w-]/g, '_')}` : cookie;
+}
 export const session_duration_seconds = 14 * 24 * 60 * 60;
 
 // Sliding sessions are renewed at most once per interval, not on every
@@ -18,14 +29,14 @@ export const session_renewal_interval_seconds = 24 * 60 * 60;
 // Login throttle: the first `free_attempts` failures are free, then each
 // failure locks login for `base_lockout_seconds`, doubling per failure up to
 // `max_lockout_seconds`. Global (there is only one admin), persisted in
-// site_settings so restarts don't reset it.
+// the backend so restarts don't reset it.
 const LOGIN_THROTTLE = {
 	free_attempts: 5,
 	base_lockout_seconds: 30,
 	max_lockout_seconds: 3600
 };
 
-const LOGIN_THROTTLE_KEY = 'login_throttle';
+const LOGIN_THROTTLE_KEY = 'admin';
 
 /**
  * Constant-time password comparison over SHA-256 digests.
@@ -35,37 +46,21 @@ export function passwords_match(a: string, b: string): boolean {
 	return crypto.timingSafeEqual(digest(a), digest(b));
 }
 
-function get_login_throttle_state(db: Database): {
-	failed_count: number;
-	locked_until: number;
-} {
-	const row = db
-		.prepare('SELECT value FROM site_settings WHERE key = ?')
-		.get(LOGIN_THROTTLE_KEY) as { value: string } | undefined;
-
-	return row ? JSON.parse(row.value) : { failed_count: 0, locked_until: 0 };
-}
-
-function set_login_throttle_state(
-	db: Database,
-	state: { failed_count: number; locked_until: number }
-) {
-	db.prepare('INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)').run(
-		LOGIN_THROTTLE_KEY,
-		JSON.stringify(state)
-	);
+async function get_login_throttle_state(records: AuthRecords) {
+	const state = await records.get_login_throttle(LOGIN_THROTTLE_KEY);
+	return state ?? { key: LOGIN_THROTTLE_KEY, failed_count: 0, locked_until: 0 };
 }
 
 /**
  * Seconds until login attempts are accepted again (0 when unlocked).
  */
-export function get_login_lockout_seconds(db: Database): number {
-	const { locked_until } = get_login_throttle_state(db);
+export async function get_login_lockout_seconds(records: AuthRecords): Promise<number> {
+	const { locked_until } = await get_login_throttle_state(records);
 	return Math.max(locked_until - Math.floor(Date.now() / 1000), 0);
 }
 
-export function register_failed_login(db: Database) {
-	const state = get_login_throttle_state(db);
+export async function register_failed_login(records: AuthRecords) {
+	const state = await get_login_throttle_state(records);
 	state.failed_count += 1;
 
 	const throttled_failures = state.failed_count - LOGIN_THROTTLE.free_attempts;
@@ -77,11 +72,11 @@ export function register_failed_login(db: Database) {
 		state.locked_until = Math.floor(Date.now() / 1000) + lockout_seconds;
 	}
 
-	set_login_throttle_state(db, state);
+	await records.save_login_throttle(state);
 }
 
-export function reset_login_throttle(db: Database) {
-	set_login_throttle_state(db, { failed_count: 0, locked_until: 0 });
+export async function reset_login_throttle(records: AuthRecords) {
+	await records.save_login_throttle({ key: LOGIN_THROTTLE_KEY, failed_count: 0, locked_until: 0 });
 }
 
 export function get_required_admin_password(): string {
@@ -97,34 +92,29 @@ export function get_session_expires_at(): number {
 	return Math.floor(Date.now() / 1000) + session_duration_seconds;
 }
 
-export function clear_admin_session_cookie(cookies: Cookies) {
-	cookies.set(admin_session_cookie_name, '', {
+/** Set a session cookie: only sent to the server, and only over HTTPS in production. */
+export function set_session_cookie(
+	cookies: Cookies,
+	name: string,
+	value: string,
+	max_age = session_duration_seconds
+) {
+	cookies.set(name, value, {
 		path: '/',
 		httpOnly: true,
 		sameSite: 'lax',
 		secure: NODE_ENV === 'production',
-		maxAge: 0
+		maxAge: max_age
 	});
 }
 
-export function set_admin_session_cookie(cookies: Cookies, session_id: string) {
-	cookies.set(admin_session_cookie_name, session_id, {
-		path: '/',
-		httpOnly: true,
-		sameSite: 'lax',
-		secure: NODE_ENV === 'production',
-		maxAge: session_duration_seconds
-	});
+export function clear_session_cookie(cookies: Cookies, name: string) {
+	set_session_cookie(cookies, name, '', 0);
 }
 
-export async function delete_session(session_id: string, db: Database) {
-	db.prepare('DELETE FROM sessions WHERE session_id = ?').run(session_id);
-}
-
-export function require_admin_session(locals: { is_admin?: boolean }) {
-	if (!locals.is_admin) {
-		error(401, 'Unauthorized');
-	}
+/** Refuse the request unless an editor is signed in: 401 when nobody is, 403 for someone else. */
+export function require_editor(locals: { user?: unknown; is_editor?: boolean }) {
+	if (!locals.is_editor) error(locals.user ? 403 : 401, locals.user ? 'Forbidden' : 'Unauthorized');
 }
 
 function format_lockout_duration(seconds: number): string {
@@ -134,12 +124,13 @@ function format_lockout_duration(seconds: number): string {
 }
 
 /** Start an admin session for a correct password, subject to the login throttle. */
-export function log_in_admin(
-	db: Database,
+export async function log_in_admin(
+	records: AuthRecords,
 	cookies: Cookies,
+	cookie_name: string,
 	password: string
-): { ok: true } | { ok: false; code: string; message: string } {
-	const lockout_seconds = get_login_lockout_seconds(db);
+): Promise<{ ok: true } | { ok: false; code: string; message: string }> {
+	const lockout_seconds = await get_login_lockout_seconds(records);
 	if (lockout_seconds > 0) {
 		return {
 			ok: false,
@@ -149,17 +140,15 @@ export function log_in_admin(
 	}
 
 	if (!passwords_match(password, get_required_admin_password())) {
-		register_failed_login(db);
+		await register_failed_login(records);
 		return { ok: false, code: 'invalid_password', message: 'Incorrect admin password.' };
 	}
 
-	reset_login_throttle(db);
+	await reset_login_throttle(records);
+	await records.delete_expired(Math.floor(Date.now() / 1000));
 
 	const session_id = crypto.randomUUID();
-	db.prepare('INSERT INTO sessions (session_id, expires) VALUES (?, ?)').run(
-		session_id,
-		get_session_expires_at()
-	);
-	set_admin_session_cookie(cookies, session_id);
+	await records.save_session({ session_id, expires: get_session_expires_at() });
+	set_session_cookie(cookies, cookie_name, session_id);
 	return { ok: true };
 }

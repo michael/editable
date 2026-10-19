@@ -1,13 +1,11 @@
-import { unlink } from 'node:fs/promises';
 import { error } from '@sveltejs/kit';
 import { ASSET_ID_REGEX, VARIANT_WIDTHS_SET } from '#app/config.js';
-import { asset_exists, write_variant, variant_path } from '#app/services.js';
+import { asset_exists, asset_webp_dimensions, backend } from '#app/services.js';
 import { authorize_asset_upload } from '#app/server_oauth.js';
-import { read_webp_dimensions } from '#lib/server/webp.js';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
-	const authorized_by = authorize_asset_upload(request, locals);
+	const authorized_by = await authorize_asset_upload(request, locals);
 
 	const { asset_id } = params;
 
@@ -15,8 +13,8 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		error(400, 'Invalid asset id');
 	}
 
-	// Validate the original asset exists on disk
-	if (!asset_exists(asset_id)) {
+	// Validate the original asset exists
+	if (!(await asset_exists(asset_id))) {
 		error(404, 'Asset not found');
 	}
 
@@ -48,25 +46,26 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		error(400, 'Empty request body');
 	}
 
-	// Stream the variant directly to disk
+	// Stream the variant directly to the backend
+	const variant = `w${width}.webp`;
 	let write_result;
 	try {
-		write_result = await write_variant(asset_id, width, request.body);
+		write_result = await backend.write_asset(asset_id, request.body, variant);
 	} catch (err) {
-		await unlink(variant_path(asset_id, width)).catch(() => {});
-		console.error('Failed to write variant to disk:', err);
+		await backend.delete_asset(asset_id, variant).catch(() => {});
+		console.error('Failed to store variant:', err);
 		error(500, 'Failed to store variant');
 	}
 
 	if (write_result.bytes_written === 0) {
-		await unlink(variant_path(asset_id, width)).catch(() => {});
+		await backend.delete_asset(asset_id, variant).catch(() => {});
 		error(400, 'Empty variant data');
 	}
 
 	if (authorized_by === 'upload_token') {
-		const actual = read_webp_dimensions(variant_path(asset_id, width));
+		const actual = await asset_webp_dimensions(asset_id, variant);
 		if (actual?.width !== width) {
-			await unlink(variant_path(asset_id, width)).catch(() => {});
+			await backend.delete_asset(asset_id, variant).catch(() => {});
 			error(
 				400,
 				actual
@@ -76,6 +75,5 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		}
 	}
 
-	const variant = `w${width}.webp`;
 	return Response.json({ ok: true, variant });
 };

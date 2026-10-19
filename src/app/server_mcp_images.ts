@@ -1,8 +1,6 @@
-import { existsSync } from 'node:fs';
 import type { DocumentNode } from 'svedit';
-import { read_webp_dimensions } from '#lib/server/webp.js';
 import { ASSET_ID_REGEX, MAX_IMAGE_WIDTH, VARIANT_WIDTHS } from './config.js';
-import { asset_exists, asset_path, variant_path } from './services.js';
+import { asset_exists, asset_webp_dimensions } from './services.js';
 import { create_upload_token } from './server_oauth.js';
 
 /**
@@ -10,8 +8,8 @@ import { create_upload_token } from './server_oauth.js';
  * Image bytes cannot travel through tool calls, so agents prepare the same
  * files the editor produces in the browser and upload them directly.
  */
-export function prepare_image_upload(origin: string, grant_id: string) {
-	const { upload_token, expires_at } = create_upload_token(grant_id);
+export async function prepare_image_upload(origin: string, grant_id: string) {
+	const { upload_token, expires_at } = await create_upload_token(grant_id);
 	const authorization = `Bearer ${upload_token}`;
 	return {
 		upload_token,
@@ -22,7 +20,8 @@ export function prepare_image_upload(origin: string, grant_id: string) {
 			'The asset id is the SHA-256 hex digest of the original file plus ".webp".',
 			`POST the original to ${origin}/api/assets with the headers Authorization, Content-Type: image/webp, X-Content-Hash (the digest), X-Asset-Width, and X-Asset-Height, and the file as the body.`,
 			`POST every variant to ${origin}/api/assets/<asset id>/variants with Authorization, Content-Type: image/webp, and X-Variant-Width.`,
-			'Use the image in write_document or create_page as <image src="<asset id>" mime_type="image/webp" width="<original width>" height="<original height>" alt="<description>"/>. Writes are rejected while variants are missing or width and height do not match the file.'
+			'Use the image in write_document or create_page as <image src="<asset id>" mime_type="image/webp" width="<original width>" height="<original height>" alt="<description>"/>. Writes are rejected while variants are missing or width and height do not match the file.',
+			`An SVG is uploaded as it is, with no variants: its asset id is the SHA-256 hex digest of the file plus ".svg", POST it to ${origin}/api/assets with Content-Type: image/svg+xml and X-Asset-Width and X-Asset-Height from its width and height or viewBox, and use it with mime_type="image/svg+xml".`
 		],
 		example: [
 			`curl -X POST ${origin}/api/assets -H "Authorization: ${authorization}" -H "Content-Type: image/webp" -H "X-Content-Hash: $(shasum -a 256 original.webp | cut -d' ' -f1)" -H "X-Asset-Width: 2048" -H "X-Asset-Height: 1365" --data-binary @original.webp`,
@@ -35,23 +34,24 @@ export function prepare_image_upload(origin: string, grant_id: string) {
  * New or changed media must reference uploaded assets. WebP images must also
  * match their file's dimensions and have every variant their srcset requests.
  */
-export function assert_uploaded_images(nodes: DocumentNode[]) {
+export async function assert_uploaded_images(nodes: DocumentNode[]) {
 	for (const node of nodes) {
 		if ((node.type !== 'image' && node.type !== 'video') || !node.src) continue;
-		if (!ASSET_ID_REGEX.test(node.src) || !asset_exists(node.src))
+		if (!ASSET_ID_REGEX.test(node.src) || !(await asset_exists(node.src)))
 			throw new Error(
 				`${node.type} ${node.id}: ${node.src} is not an uploaded asset. Use prepare_image_upload to add new images.`
 			);
 		if (node.type !== 'image' || !node.src.endsWith('.webp')) continue;
 
-		const actual = read_webp_dimensions(asset_path(node.src));
+		const actual = await asset_webp_dimensions(node.src);
 		if (actual && (actual.width !== node.width || actual.height !== node.height))
 			throw new Error(
 				`image ${node.id}: width and height (${node.width}×${node.height}) do not match ${node.src} (${actual.width}×${actual.height}).`
 			);
-		const missing = VARIANT_WIDTHS.filter(
-			(width) => width < node.width && !existsSync(variant_path(node.src, width))
-		);
+		const missing = [];
+		for (const width of VARIANT_WIDTHS)
+			if (width < node.width && !(await asset_exists(node.src, `w${width}.webp`)))
+				missing.push(width);
 		if (missing.length)
 			throw new Error(
 				`image ${node.id}: ${node.src} is missing variants ${missing.join(', ')}. Upload them before saving.`

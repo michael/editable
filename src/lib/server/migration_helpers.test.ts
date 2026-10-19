@@ -1,34 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import { DatabaseSync } from 'node:sqlite';
-import { create_migration_helpers } from './migration_helpers.js';
+import type { Document } from 'svedit';
+import { create_migration_helpers, type MigrationDocument } from './migration_helpers.js';
 
-function create_db(documents: Record<string, unknown>) {
-	const db = new DatabaseSync(':memory:');
-	db.exec(`
-		CREATE TABLE documents (
-			document_id TEXT NOT NULL PRIMARY KEY,
-			type TEXT NOT NULL,
-			data TEXT,
-			created_at TEXT,
-			updated_at TEXT
-		)
-	`);
-
-	const insert = db.prepare(
-		'INSERT INTO documents (document_id, type, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
-	);
-	for (const [document_id, data] of Object.entries(documents)) {
-		insert.run(document_id, 'page', JSON.stringify(data), 'created', 'updated');
-	}
-
-	return db;
+function create_db(documents: Record<string, unknown>): MigrationDocument[] {
+	return Object.entries(documents).map(([document_id, data]) => ({
+		document_id,
+		type: 'page',
+		data: data as Document,
+		created_at: 'created',
+		updated_at: 'updated'
+	}));
 }
 
-function read_nodes(db: DatabaseSync, document_id: string) {
-	const row = db
-		.prepare('SELECT data FROM documents WHERE document_id = ?')
-		.get(document_id) as unknown as { data: string };
-	return JSON.parse(row.data).nodes;
+const find = (db: MigrationDocument[], document_id: string) =>
+	db.find((record) => record.document_id === document_id);
+
+function read_nodes(db: MigrationDocument[], document_id: string) {
+	return find(db, document_id)!.data.nodes as Record<string, any>;
 }
 
 describe('rename_property', () => {
@@ -133,7 +121,7 @@ describe('rename_type', () => {
 		expect(result.story_1.type).toBe('story');
 	});
 
-	it('keeps the documents.type column in step for document root nodes', () => {
+	it('keeps the record type in step for document root nodes', () => {
 		const db = create_db({
 			page_1: {
 				document_id: 'page_1',
@@ -144,10 +132,7 @@ describe('rename_type', () => {
 		expect(create_migration_helpers(db).rename_type('page', 'article')).toBe(1);
 
 		expect(read_nodes(db, 'page_1').page_1.type).toBe('article');
-		const row = db
-			.prepare('SELECT type FROM documents WHERE document_id = ?')
-			.get('page_1') as unknown as { type: string };
-		expect(row.type).toBe('article');
+		expect(find(db, 'page_1')!.type).toBe('article');
 	});
 });
 
@@ -198,10 +183,7 @@ describe('update', () => {
 		expect(changed).toBe(1);
 		expect(read_nodes(db, 'page_1').hero_1.layout).toBe('default-v2');
 
-		const row = db
-			.prepare('SELECT updated_at FROM documents WHERE document_id = ?')
-			.get('page_1') as unknown as { updated_at: string };
-		expect(row.updated_at).toBe('updated');
+		expect(find(db, 'page_1')!.updated_at).toBe('updated');
 	});
 
 	it('reports no changes when the transform changes nothing', () => {
@@ -213,5 +195,23 @@ describe('update', () => {
 		});
 
 		expect(create_migration_helpers(db).update('hero', () => {})).toBe(0);
+	});
+});
+
+describe('ensure_document', () => {
+	it('adds a document typed by its root node, and leaves an existing one alone', () => {
+		const db = create_db({});
+		const helpers = create_migration_helpers(db);
+		const banner = {
+			document_id: 'banner_1',
+			nodes: { banner_1: { id: 'banner_1', type: 'banner' } }
+		} as Document;
+
+		expect(helpers.ensure_document(banner)).toBe(true);
+		expect(find(db, 'banner_1')).toMatchObject({ type: 'banner', data: banner });
+
+		const changed = { ...banner, nodes: { banner_1: { id: 'banner_1', type: 'banner', x: 1 } } };
+		expect(helpers.ensure_document(changed as Document)).toBe(false);
+		expect(find(db, 'banner_1')!.data).toEqual(banner);
 	});
 });

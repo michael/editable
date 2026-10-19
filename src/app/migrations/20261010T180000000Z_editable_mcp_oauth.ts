@@ -1,17 +1,13 @@
-import type { MigrationModule } from '#lib/server/migration_registry.js';
+import type { Migration } from '#lib/server/migrations.js';
+import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
-// OAuth for the MCP endpoint: registered clients, time-limited grants, and the
-// codes and tokens issued under them (stored as hashes only).
+// OAuth for the MCP endpoint: time-limited grants, and the codes and tokens
+// issued under them (stored as hashes only). Clients are not stored: a
+// client_id carries its registration.
 export default {
-	up({ db }) {
+	target: 'sqlite',
+	up({ db }: SqliteStorage) {
 		db.exec(`
-			CREATE TABLE oauth_clients (
-				client_id TEXT NOT NULL PRIMARY KEY,
-				client_name TEXT,
-				redirect_uris TEXT NOT NULL,
-				created_at INTEGER NOT NULL
-			);
-
 			CREATE TABLE oauth_grants (
 				grant_id TEXT NOT NULL PRIMARY KEY,
 				client_id TEXT NOT NULL,
@@ -29,4 +25,4 @@ export default {
 			);
 		`);
 	}
-} satisfies MigrationModule;
+} satisfies Migration;

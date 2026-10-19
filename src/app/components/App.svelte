@@ -33,7 +33,8 @@
 		slug = null,
 		has_backend = false,
 		is_new = false,
-		is_admin: server_is_admin = false,
+		user = null,
+		is_editor = false,
 		can_edit = true,
 		origin = null,
 		document_title = null,
@@ -48,7 +49,10 @@
 		slug?: string | null;
 		has_backend?: boolean;
 		is_new?: boolean;
-		is_admin?: boolean;
+		/** Whoever is signed in, or null. */
+		user?: Record<string, unknown> | null;
+		/** Whether the signed-in user may edit the site. */
+		is_editor?: boolean;
 		can_edit?: boolean;
 		origin?: string | null;
 		document_title?: string | null;
@@ -76,8 +80,7 @@
 		language: string;
 		doc_json: string;
 	} | null>(null);
-	let is_admin = $derived(server_is_admin);
-	let is_admin_mode = $derived(editable && is_admin);
+	let is_editor_mode = $derived(editable && is_editor);
 	const is_demo_mode = DEMO_MODE;
 
 	let save_progress_visible = $state(false);
@@ -233,8 +236,11 @@
 		get is_demo_mode() {
 			return is_demo_mode;
 		},
-		get is_admin() {
-			return is_admin;
+		get is_signed_in() {
+			return !!user;
+		},
+		get is_editor() {
+			return is_editor;
 		},
 		get origin() {
 			return origin;
@@ -264,7 +270,7 @@
 	const page_browser: PageBrowser = create_page_browser({
 		// Page hrefs are site-relative.
 		goto: (href) => goto(resolve_href(href, site)),
-		is_admin: () => app.is_admin
+		is_editor: () => app.is_editor
 	});
 
 	Object.defineProperty(page_browser, 'version', {
@@ -282,9 +288,10 @@
 
 	set_page_delete_dialog(create_page_delete_dialog());
 
-	$effect(() => {
-		document.documentElement.style.scrollBehavior = editable ? 'auto' : 'smooth';
-	});
+	// Smooth scrolling made jumping to anchors, such as in the manual, feel slow.
+	// $effect(() => {
+	// 	document.documentElement.style.scrollBehavior = editable ? 'auto' : 'smooth';
+	// });
 
 	function focus_canvas() {
 		if (svedit_ref) {
@@ -356,7 +363,7 @@
 			!can_edit ||
 			!is_mobile_touch_device() ||
 			editable ||
-			is_admin ||
+			is_editor ||
 			auth_dialog_open ||
 			!mobile_touch_active
 		) {
@@ -399,7 +406,8 @@
 	}
 
 	function handle_mobile_touchstart() {
-		if (!can_edit || !is_mobile_touch_device() || editable || is_admin || auth_dialog_open) return;
+		// Someone signed in who may not edit gets nothing, like on any website.
+		if (!can_edit || !is_mobile_touch_device() || editable || user || auth_dialog_open) return;
 		mobile_touch_active = true;
 		mobile_touch_started_at_page_end = is_at_page_end();
 		if (!mobile_touch_started_at_page_end) {
@@ -447,12 +455,13 @@
 				);
 			}
 
-			if (!has_backend || is_admin) {
+			if (!has_backend || is_editor) {
 				enter_edit_mode();
 				return;
 			}
 
-			open_auth_dialog();
+			// Someone signed in who may not edit gets nothing: the site need not tell them it is editable.
+			if (!user) open_auth_dialog();
 		}
 	}
 
@@ -471,7 +480,7 @@
 
 			const saved_doc_json =
 				has_backend &&
-				!is_admin &&
+				!is_editor &&
 				edit_for_fun_saved_doc?.document_id === loaded_document_id &&
 				edit_for_fun_saved_doc.language === language
 					? edit_for_fun_saved_doc.doc_json
@@ -493,8 +502,8 @@
 			const doc_json = session.to_json();
 			if (dev) console.log('Saved', doc_json);
 
-			if (!has_backend || !is_admin_mode) {
-				if (has_backend && !is_admin) {
+			if (!has_backend || !is_editor_mode) {
+				if (has_backend && !is_editor) {
 					edit_for_fun_saved_doc = {
 						document_id: loaded_document_id,
 						language,
@@ -513,7 +522,7 @@
 				import('#app/asset_upload.js')
 			]);
 
-			const save_document: any = api_module.save_document;
+			const save_page: any = api_module.save_page;
 
 			const {
 				collect_blob_urls,
@@ -567,8 +576,8 @@
 					slug?: string;
 					created?: boolean;
 				} = translation_mode
-					? await api_module.save_translations({ ...doc_json, language, translation_revision })
-					: await save_document({
+					? await api_module.save_page_translation({ ...doc_json, language, translation_revision })
+					: await save_page({
 							...doc_json,
 							create: is_new,
 							language: languages.length ? languages[0] : undefined,
@@ -648,18 +657,18 @@
 
 	function overwrite_after_conflict() {
 		save_conflict_open = false;
-		void app_commands.save_document.execute(true);
+		void app_commands.save_page.execute(true);
 	}
 
 	class LogoutCommand extends Command {
 		is_enabled() {
-			return has_backend && is_admin && !editable;
+			return has_backend && !!user && !editable;
 		}
 
 		async execute() {
 			try {
 				const api_module = await import('#app/api.remote.js');
-				await api_module.logout_admin();
+				await api_module.log_out();
 				editable = false;
 				page_browser.close?.();
 				await refreshAll();
@@ -689,7 +698,7 @@
 
 	class BrowsePagesCommand extends Command {
 		is_enabled() {
-			return has_backend && is_admin && !this.context.editable;
+			return has_backend && is_editor && !this.context.editable;
 		}
 
 		execute() {
@@ -699,7 +708,7 @@
 
 	class NewPageCommand extends Command {
 		is_enabled() {
-			return has_backend && is_admin && !this.context.editable;
+			return has_backend && is_editor && !this.context.editable;
 		}
 
 		execute() {
@@ -712,7 +721,7 @@
 
 	class DuplicatePageCommand extends Command {
 		is_enabled() {
-			return has_backend && is_admin && can_edit && !editable && !!duplicate_source;
+			return has_backend && is_editor && can_edit && !editable && !!duplicate_source;
 		}
 
 		execute() {
@@ -724,7 +733,7 @@
 
 	class EditPageUrlCommand extends Command {
 		is_enabled() {
-			return has_backend && is_admin && can_edit && !editable && !is_home_page;
+			return has_backend && is_editor && can_edit && !editable && !is_home_page;
 		}
 
 		execute() {
@@ -738,7 +747,7 @@
 
 	class PageMenuCommand extends Command {
 		is_enabled() {
-			return has_backend && is_admin && !editable;
+			return has_backend && !!user && !editable;
 		}
 
 		execute() {
@@ -779,8 +788,8 @@
 		new_page: new NewPageCommand(app_command_context),
 		edit_document: new EditCommand(app_command_context),
 		cancel_editing: new CancelCommand(app_command_context),
-		save_document: new SaveCommand(app_command_context),
-		logout_admin: new LogoutCommand(app_command_context),
+		save_page: new SaveCommand(app_command_context),
+		log_out: new LogoutCommand(app_command_context),
 		browse_pages: new BrowsePagesCommand(app_command_context),
 		copy_link_to_block: new CopyLinkToBlockCommand(app_command_context)
 	};
@@ -794,7 +803,7 @@
 		'ctrl+shift+m': [app_commands.page_menu],
 		'meta+p,ctrl+p': [app_commands.browse_pages],
 		'ctrl+shift+k': [app_commands.copy_link_to_block],
-		'meta+s,ctrl+s': [app_commands.save_document]
+		'meta+s,ctrl+s': [app_commands.save_page]
 	});
 	key_mapper.push_scope(app_key_map);
 

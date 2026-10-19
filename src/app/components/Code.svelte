@@ -10,6 +10,6 @@
 <code
 	id={node.id}
 	data-node-id={node.id}
-	class="rounded border border-(--stroke) bg-(--muted) px-1 box-decoration-clone font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
+	class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 	>{content}</code
 >

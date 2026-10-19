@@ -1,18 +1,25 @@
 import { expect, it, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdtemp, rm, writeFile, utimes, mkdir } from 'node:fs/promises';
+import { rm, writeFile, utimes, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { referenced_assets } from '../../scripts/asset-references.js';
-import { create_asset_storage } from '#lib/server/asset_storage.js';
-import { ASSET_ID_REGEX } from './config.js';
+import { asset_files } from '#lib/server/backends/asset_files.js';
 
 vi.mock('#lib/server/s3.js', () => ({ mirror_file: vi.fn() }));
+const dir = await vi.hoisted(async () => {
+	const { mkdtempSync } = await import('node:fs');
+	const { tmpdir } = await import('node:os');
+	return mkdtempSync(`${tmpdir()}/translation-assets-`);
+});
+vi.mock('./services.js', async () => {
+	const { asset_files } = await import('#lib/server/backends/asset_files.js');
+	return { backend: asset_files(dir) };
+});
+import { delete_orphaned_assets } from './server_asset_refs.js';
 
 it('verification finds translation-only assets and cleanup respects references and the grace period', async () => {
-	const dir = await mkdtemp(join(tmpdir(), 'translation-assets-'));
 	const db_path = join(dir, 'test.sqlite3');
 	const db = new DatabaseSync(db_path);
 	const asset_id = `${'d'.repeat(64)}.webp`;
@@ -40,23 +47,20 @@ it('verification finds translation-only assets and cleanup respects references a
 		await mkdir(variants);
 		await writeFile(join(variants, 'poster.webp'), 'poster');
 		await writeFile(join(variants, 'w320.webp'), 'variant');
-		const old = new Date(Date.now() - 3 * 86400000);
+		// Older than the default grace period of seven days.
+		const old = new Date(Date.now() - 10 * 86400000);
 		await utimes(file, old, old);
-		const storage = create_asset_storage({
-			asset_path: dir,
-			asset_grace_period_days: 1,
-			asset_id_regex: ASSET_ID_REGEX
-		});
-		expect(await storage.delete_orphaned_assets(referenced_assets(db))).toBe(0);
+		const storage = asset_files(dir);
+		expect(await delete_orphaned_assets(referenced_assets(db))).toBe(0);
 		const present = spawnSync(process.execPath, ['scripts/check-assets.js', db_path, dir], {
 			encoding: 'utf8'
 		});
 		expect(present.status).toBe(0);
 		db.exec('DELETE FROM translations');
 		await storage.touch_asset(asset_id);
-		expect(await storage.delete_orphaned_assets(referenced_assets(db))).toBe(0);
+		expect(await delete_orphaned_assets(referenced_assets(db))).toBe(0);
 		await utimes(file, old, old);
-		expect(await storage.delete_orphaned_assets(referenced_assets(db))).toBe(1);
+		expect(await delete_orphaned_assets(referenced_assets(db))).toBe(1);
 		expect(existsSync(file)).toBe(false);
 		expect(existsSync(variants)).toBe(false);
 		// Backups predating the translations table still work.

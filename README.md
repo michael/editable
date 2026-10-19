@@ -45,66 +45,9 @@ And run the development server:
 pnpm dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173), press `⌘` or `Ctrl` + `E`, and log in with your `ADMIN_PASSWORD` to edit the site live.
+Open [http://localhost:5173](http://localhost:5173), press `⌘` or `Ctrl` + `E`, and log in with your `ADMIN_PASSWORD` to edit the site live. You can also log in at [/login](http://localhost:5173/login).
 
 You can also use `Ctrl` + `Shift` + `E` to edit. In read mode, admins can create a new page with `Ctrl` + `Shift` + `N`.
-
-### Connect an MCP client
-
-Editable is a remote [MCP](https://modelcontextprotocol.io) server at `https://your-site.example.com/mcp`. Agents can list, read, create, and edit pages and the shared banner, navigation, and footer. The endpoint is part of the backend, so static deployments do not have it.
-
-Add the server to your client and follow its login prompt. For Claude Code:
-
-```sh
-claude mcp add --transport http editable https://your-site.example.com/mcp
-```
-
-Then run `/mcp` inside Claude Code to authenticate. In claude.ai, add the same URL as a custom connector under Settings → Connectors. Other clients with MCP authorization, such as Codex, connect the same way, and so does `http://localhost:5173/mcp` during development.
-
-The client registers itself with your site and opens a browser window where you log in as admin and allow the connection. The consent page names the app and the address it receives access at, so only allow connections you started yourself. An approval lasts 48 hours, and logging out of Editable ends every connection right away. Registrations that were never approved expire after a day. The token endpoint accepts form posts from any origin, as OAuth requires, so `vite.config.ts` disables SvelteKit's cross-site form check; the admin cookie's `SameSite=Lax` setting protects the login and consent forms instead. Call `list_pages` to confirm the connection. After updating Editable, start a new session in your MCP client so it sees the current tools.
-
-#### Tools
-
-- `get_schema` returns the EDF rules and every node type with its properties, allowed child types, and defaults.
-- `list_pages` returns the page hierarchy shown in the page browser.
-- `read_document` returns a document as EDF together with the `version` that `write_document` requires. It takes a page path such as `/about`, a full URL, a language-prefixed path, or a document id such as `nav_1`.
-- `write_document` writes the complete document as EDF with the version it was read at. Nodes left out are deleted, and new elements get ids.
-- `create_page` creates a page from EDF. It gets the shared banner, navigation, and footer, and its URL comes from `slug` or the title.
-- `prepare_image_upload` returns a 30-minute upload token and the steps for adding images over HTTP.
-
-Every write is checked before anything is stored: the document must be valid against the schema and the single-owner rule, and its version must still be current. A write fails when the document changed in between, for example because you saved it in the editor. The reverse is handled too: saving in the editor after an agent changed the page asks which version to keep.
-
-The banner, navigation, and footer are documents of their own. Pages reference them by id, as in `nav="nav_1"`, and agents read and write them by that id, so editing a page can never change the navigation by accident.
-
-#### EDF
-
-Documents travel as EDF, an XML form of the stored document. Each node is an element named by its type with an `id`, primitive properties are attributes, text and nested nodes are child elements, and marks are inline tags, so no character offsets appear:
-
-```xml
-<page id="about" banner="banner_1" nav="nav_1" footer="footer_1">
-	<title>About us</title>
-	<body>
-		<section id="s1">
-			<prose id="intro" layout="wide-left">
-				<body>
-					<heading_1 id="h1">Who we are</heading_1>
-					<paragraph id="p1">A small team with a <link id="l1" href="/story">long story</link>.</paragraph>
-				</body>
-			</prose>
-		</section>
-	</body>
-</page>
-```
-
-Ids are identity, exactly as in the editor: whatever keeps its id is kept, marks included, and anything without an id is new and gets one. Every value is written out, so a document keeps its meaning after a default in the schema changes; a left-out attribute on a new node gets the current default, like a block inserted in the editor. A node property written as an attribute, like `nav="nav_1"` above, refers to another document, and only a page does this. The server parses EDF back into the JSON the editor stores and runs the same validation. The serializer and parser live in `src/lib/edf.ts` and work with any Svedit schema whose element names cannot be read two ways.
-
-#### Images
-
-Image bytes do not travel through tool calls. `prepare_image_upload` returns a token and the steps to encode a WebP original with its resized variants, as the editor does in the browser, and to upload them over HTTP, so the agent needs a shell with network access to the site. Token uploads must be valid WebP files that match the declared dimensions, and a document can only reference images whose variants are all uploaded. Videos cannot be uploaded through MCP.
-
-#### Translations
-
-With [translations](#translations-experimental) enabled, a language-prefixed path such as `/de/about` or the `language` argument reads the translation, and `write_document` with `language` writes it. The banner, navigation, and footer are translated on their own, like every document. As in the editor, translations change text, inline formatting, and media only; structure and layout are edited in the main language.
 
 ## Make it yours
 
@@ -1097,41 +1040,6 @@ pnpm dev                                            # inspect the restored state
 
 When you've found the state you want live, restore production to it with `pnpm data:restore-cloud --at <timestamp>`.
 
-## Hosting several sites (experimental)
-
-A deployment normally serves one site, configured by `ORIGIN` and `LANGUAGES`. A hosting service that serves several sites from one process can set the site per request instead: in its own `handle` hook, running before Editable's, it sets `event.locals.site`:
-
-```ts
-event.locals.site = {
-	origin: 'https://host.example',
-	base: '/alice',
-	languages: [],
-	storage: { db, with_transaction, assets },
-	auth
-};
-```
-
-- `origin` is the public origin, used for canonical URLs, the sitemap, and the canonical host redirect.
-- `base` is the path the site is served under, or `''` at the root. Stored links never include it: `/about` stays `/about` in the database, reaches the browser as `/alice/about` the way language prefixes do, and is stored without it again, so a site can move to another path or its own domain without changing content. Components render `node.href` as is; asset URLs and the editor's own navigation go through `resolve_href(href, site)`.
-- `languages` lists the site's languages, the main language first, or none.
-- `storage` holds the site's SQLite database, a `with_transaction` function, and its asset files, created with `create_database` and `create_asset_storage` from `src/lib/server/`. Editable reads and writes through it for the request and caches nothing; opening, caching, and closing site data is up to the host. Run `run_migrations(storage)` from `src/app/migrations.ts` when opening a site's database. Asset cleanup deletes files the site's database no longer references, so a host that shares asset files between sites supplies asset functions that keep them.
-- `auth` decides who may edit the site and how they sign in, replacing the admin password. It implements `is_admin(event)`, `log_in(event, credentials)`, and `log_out(event)` (types in `src/app/server_admin_auth.ts`). `log_in` receives whatever the login dialog sends to `login_admin`; Editable's own dialog sends `{ password }`. It either starts a session or returns `{ ok: true, redirect }` to continue elsewhere: to sign in with OAuth, have your own login dialog send a username, return the provider's authorization URL, and handle the callback in a route of your own that sets your session, which `is_admin` then reads. `event.url` in `log_in` is the page the login started from. Editable's own sessions use one cookie for the whole host, so a host serving several sites from one origin scopes its sessions to the site, for example with a cookie that names it.
-
-To replace the login dialog itself, for example to ask for a username, to offer several sign-in providers, or when embedding Editable in another environment, set your own component in place of `AuthDialog` as `auth_dialog` in `system_components` in `src/app/document_config.ts`. It opens in the same drawer and receives `onlogin_success`, to call after signing in on the page, and `onedit_for_fun`, for editing without saving (see `AuthDialogProps` in `src/app/components/AuthDialog.svelte`):
-
-```ts
-system_components: {
-	overlays: Overlays,
-	auth_dialog: LoginDialog
-},
-```
-
-Requests for `/alice/...` must reach Editable's routes, either through a proxy that strips the base or through a `reroute` hook that maps `/alice/about` to `/about`. When no site is set, Editable uses its own from the environment and opens its database in `DATA_DIR` on first use, so single-site deployments need no changes. Backups and the `pnpm data:*` commands work on `DATA_DIR` and are not used for host-provided storage.
-
-Commands sent by the editor carry the page's path, so `event.url` is the page URL and the host can read the site from it. Queries do not, so for them a path-based host can only find the site through the `Referer` header; a host that gives each site its own hostname has no such gap. Routes the host adds, such as a registration page, need adding to the reserved slugs in `src/app/server_documents.ts`, or a page of the root site could take their path.
-
-Each site is its own MCP server and OAuth authorization server at its origin and base, with its clients and approvals in its own storage. For a site under a path, the discovery documents are expected at the host root with the site's path inserted, as in `/.well-known/oauth-authorization-server/alice` and `/.well-known/oauth-protected-resource/alice/mcp`, so the host's `reroute` maps those to Editable's discovery routes as well.
-
 ## Upgrading
 
 New Editable releases are one `git pull` away.
@@ -1157,11 +1065,18 @@ Merge conflicts can only occur in files you changed. If your customizations are 
 
 The app-specific Editable surface lives in `src/app`, while `src/routes` contains the SvelteKit route files. Customize the modules and components in `src/app` rather than the implementation modules in `src/lib` whenever possible. Keeping your schema, default site content, config, session setup, and components in `src/app` makes the intended extension points clear and reduces upgrade conflicts.
 
-## Database migrations
+## Migrations
 
-Keep stored content and database structure in step with changes to your site.
+Keep stored content in step with changes to your site.
 
-Migration files in `src/app/migrations` are discovered when SvelteKit builds the server and run automatically when it boots. Framework migrations use the `editable` namespace and project migrations use the `custom` namespace; their UTC timestamps determine the normal order. All pending migrations plus their tracking records run in one transaction: either the complete upgrade succeeds or nothing changes.
+Every migration lives in `src/app/migrations`, is discovered when SvelteKit builds the server, and runs automatically when it boots. Framework migrations use the `editable` namespace and project migrations use the `custom` namespace. Migrations run in id order, and an id starts with its UTC timestamp, so a migration's date is its place in the chain.
+
+There are two kinds, with the same shape:
+
+- **Content migrations** change the site's documents. They have no `target` and run on every backend. Which ones have run is stored with the site, so it travels when the site moves to another backend. A new site starts with the current default content and never runs them.
+- **Storage migrations** change how one backend keeps its data, such as a SQLite table. They name their backend, such as `target: 'sqlite'`, receive its storage, and are recorded by the backend itself.
+
+When a site opens, its pending storage migrations run first, then its content migrations. Each is saved together with the record that it ran, as one atomic step, so a failure stops the upgrade where the last complete migration left the site.
 
 Create a project migration with:
 
@@ -1169,22 +1084,24 @@ Create a project migration with:
 pnpm migration:create add-project-metadata
 ```
 
-This creates a timestamped `custom` migration. Its filename is its permanent ID:
+This creates a timestamped `custom` content migration. Its filename is its permanent ID:
 
-```js
+```ts
+import type { ContentContext, Migration } from '#lib/server/migrations.js';
+
 export default {
-	up({ db, rename_property, rename_type, replace_value, delete_property, update }) {
-		// Transform content with the helpers, or the database with `db`.
+	up({ documents, rename_property, update }: ContentContext) {
+		// Transform content with the helpers, or change `documents` directly.
 		// rename_property('hero', 'image', 'media');
 	}
-};
+} satisfies Migration;
 ```
 
-Adding a custom content type usually needs no migration because documents are stored as JSON. Write one when existing documents or database structure must be transformed.
+Adding a custom content type usually needs no migration because documents are stored as they are. Write one when existing documents must be transformed.
 
 ### Content helpers
 
-Content lives as JSON inside the `documents` table, so changing a node type's shape means rewriting that JSON rather than altering a column. The helpers on the `up` context do that for you — each one scans every document (pages, banner, nav, and footer), applies the change to nodes of the given type, and returns how many nodes it changed. Every helper takes the node type first, and where a before and after are involved, the old value comes before the new one:
+Changing a node type's shape means rewriting stored documents rather than altering a column. The helpers on the `up` context do that for you — each one scans every document (pages, banner, nav, and footer), applies the change to nodes of the given type, and returns how many nodes it changed. Every helper takes the node type first, and where a before and after are involved, the old value comes before the new one:
 
 ```js
 export default {
@@ -1211,36 +1128,49 @@ export default {
 
 They are deliberately tolerant: a node that never had the property is left alone, so a migration written for one node type does nothing on sites that never used it. The exception is a rename onto a property that already exists — that is a real conflict and aborts the upgrade. Documents that end up unchanged are not rewritten, and `updated_at` is never touched, because a migration is not a content edit.
 
-`rename_type` also updates the `documents.type` column, which mirrors the type of each document's root node. For block types nothing matches there and only the nodes change.
+`rename_type` also updates the type each document record carries for its root node. For block types nothing matches there and only the nodes change.
 
 `delete_property` exists because stored content does not clean itself up. Saving a page drops nodes that are no longer reachable, but properties are written back exactly as they were loaded — so a property you removed from the schema stays in every document, and in every backup, until a migration removes it.
 
-`db` remains available for everything else — schema changes, `site_settings`, or content queries the helpers don't cover. It is the [node:sqlite](https://nodejs.org/api/sqlite.html) database handle, so `exec` runs statements and `prepare` gives you one to run with parameters. Adding a column and backfilling the rows that need it is the typical case:
+`ensure_document` adds a whole document unless one with its id exists, such as a new shared document every page will refer to. Its type is its root node's, and it returns whether it added the document.
 
-```js
-export default {
-	up({ db }) {
-		db.exec('ALTER TABLE documents ADD COLUMN locale TEXT');
+The helpers work on the site's documents in memory, and Editable saves the changed ones afterwards. `documents` holds the same records, for changes the helpers don't cover; to read anything else, such as slugs, make `up` asynchronous and use `backend` from the context. Migrations may only change the site's documents; filesystem, network, and other external side effects cannot be rolled back. Migrations are forward-only: never rename, delete, or edit one that has been applied. Roll back an upgrade by restoring the backup made before deployment.
 
-		const result = db.prepare('UPDATE documents SET locale = ? WHERE locale IS NULL').run('en');
+### Storage migrations
 
-		console.log(`Backfilled locale on ${result.changes} documents`);
-	}
-};
-```
-
-`run()` reports how many rows a statement touched, which is worth logging — a migration that reports `0` is usually a migration that matched nothing. Migrations are synchronous and may only change SQLite; filesystem, network, and other external side effects cannot be rolled back. Migrations are forward-only: never rename, delete, or edit one that has been applied. Roll back an upgrade by restoring the database snapshot made before deployment.
-
-Editable's own migrations use the `editable` source name; `custom` migrations belong to your project. The timestamp-first filenames keep both sources in one chronological list without a central registry or sequence-number conflicts.
-
-Exceptionally, a project migration may need to prepare customized data before a pending Editable migration. Generate it with an explicit constraint:
+A change to how a backend stores records, such as a new table, needs a storage migration for that backend. Create one with `--target`:
 
 ```sh
-pnpm migration:create reconcile-heading \
-	--before 20260712T125641379Z_editable_add_page_metadata_fields
+pnpm migration:create redirects --target sqlite
 ```
 
-The generated `before` array overrides timestamp order for that relationship only. The target must exist and still be pending; missing targets, already-applied targets, and dependency cycles abort the upgrade before any changes are committed. Prefer tolerant migrations that safely do nothing when their source shape is absent, and reserve `before` for genuine conflicts.
+The migration states its target and receives its backend's storage, for SQLite the [node:sqlite](https://nodejs.org/api/sqlite.html) handle as `db`:
+
+```ts
+import type { Migration } from '#lib/server/migrations.js';
+import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
+
+export default {
+	target: 'sqlite',
+	up({ db }: SqliteStorage) {
+		db.exec('CREATE TABLE IF NOT EXISTS redirects (path TEXT PRIMARY KEY, target TEXT NOT NULL)');
+	}
+} satisfies Migration;
+```
+
+A backend runs only the storage migrations that target it, and a new one replays them all in order. A backend of your own has its own storage migrations the same way.
+
+### Placing a migration
+
+Migrations run in id order, so a migration's place in the chain is its timestamp. `--after <id>` dates a new migration one millisecond after another, for a fix-up that must run right after it:
+
+```sh
+pnpm migration:create reconcile-heading --after 20261009T120000000Z_editable_site_banner
+```
+
+A migration that must run before another is placed right after the one preceding that. This works because migrations that arrive together are all pending when a site upgrades. One dated before a migration a site already ran still runs, but later, and the log warns about it.
+
+Editable's own migrations use the `editable` source name; `custom` migrations belong to your project. The timestamp-first filenames keep both sources in one chronological list without a central registry or sequence-number conflicts. Because order across versions follows timestamps rather than when a migration arrived, prefer tolerant migrations, "create if missing" rather than "create", which safely do nothing when their source shape is absent.
 
 ## Translations (experimental)
 
@@ -1261,6 +1191,69 @@ On backend deployments, language versions are included automatically in the site
 Removing a language from the list hides its translations without deleting them. Leave `LANGUAGES` unset or blank for a single-language site.
 
 This feature is experimental: its behavior and storage format may change. Back up your database before upgrading.
+
+## Edit with AI agents (experimental)
+
+Let Claude and other AI agents write and update your pages for you.
+
+Editable is a remote [MCP](https://modelcontextprotocol.io) server at `https://your-site.example.com/mcp`. Agents can list, read, create, and edit pages and the shared banner, navigation, and footer.
+
+This feature is experimental, so back up your site before an agent edits it: `pnpm data:backup` for your local site, `pnpm data:backup --remote` for the live one (see [Backup, sync & recovery](#backup-sync--recovery)).
+
+### Connect a client
+
+Add the server to your client and follow its login prompt. For Claude Code:
+
+```sh
+claude mcp add --transport http editable https://your-site.example.com/mcp
+```
+
+Then run `/mcp` inside Claude Code to authenticate. In claude.ai, add the same URL as a custom connector under Settings → Connectors. Other clients with MCP authorization, such as Codex, connect the same way, and so does `http://localhost:5173/mcp` during development.
+
+The client registers itself with your site and opens a browser window where you log in as admin and allow the connection. The consent page names the app and the address it receives access at, so only allow connections you started yourself. An approval lasts 48 hours, and logging out of Editable ends every connection right away. The site stores no registrations: each client's id carries its own, so a connection still works after you restore or replace the site's data. The token endpoint accepts form posts from any origin, as OAuth requires, so `vite.config.ts` disables SvelteKit's cross-site form check; the admin cookie's `SameSite=Lax` setting protects the login and consent forms instead. Call `list_pages` to confirm the connection. After updating Editable, start a new session in your MCP client so it sees the current tools.
+
+### Tools
+
+- `get_schema` returns the EDF rules and every node type with its properties, allowed child types, and defaults.
+- `list_pages` returns the page hierarchy shown in the page browser.
+- `read_document` returns a document as EDF together with the `version` that `write_document` requires. It takes a page path such as `/about`, a full URL, a language-prefixed path, or a document id such as `nav_1`.
+- `write_document` writes the complete document as EDF with the version it was read at. Nodes left out are deleted, and new elements get ids.
+- `create_page` creates a page from EDF. It gets the shared banner, navigation, and footer, and its URL comes from `slug` or the title.
+- `prepare_image_upload` returns a 30-minute upload token and the steps for adding images over HTTP.
+
+Every write is checked before anything is stored: the document must be valid against the schema and the single-owner rule, and its version must still be current. A write fails when the document changed in between, for example because you saved it in the editor. The reverse is handled too: saving in the editor after an agent changed the page asks which version to keep.
+
+The banner, navigation, and footer are documents of their own. Pages reference them by id, as in `nav="nav_1"`, and agents read and write them by that id, so editing a page can never change the navigation by accident.
+
+### EDF
+
+Documents travel as EDF, an XML form of the stored document. Each node is an element named by its type with an `id`, primitive properties are attributes, text and nested nodes are child elements, and marks are inline tags, so no character offsets appear:
+
+```xml
+<page id="about" banner="banner_1" nav="nav_1" footer="footer_1">
+	<title>About us</title>
+	<body>
+		<section id="s1">
+			<prose id="intro" layout="wide-left">
+				<body>
+					<heading_1 id="h1">Who we are</heading_1>
+					<paragraph id="p1">A small team with a <link id="l1" href="/story">long story</link>.</paragraph>
+				</body>
+			</prose>
+		</section>
+	</body>
+</page>
+```
+
+Ids are identity, exactly as in the editor: whatever keeps its id is kept, marks included, and anything without an id is new and gets one. Every value is written out, so a document keeps its meaning after a default in the schema changes; a left-out attribute on a new node gets the current default, like a block inserted in the editor. A node property written as an attribute, like `nav="nav_1"` above, refers to another document, and only a page does this. The server parses EDF back into the JSON the editor stores and runs the same validation. The serializer and parser live in `src/lib/edf.ts` and work with any Svedit schema whose element names cannot be read two ways.
+
+### Adding images
+
+Image bytes do not travel through tool calls. `prepare_image_upload` returns a token and the steps to encode a WebP original with its resized variants, as the editor does in the browser, and to upload them over HTTP, so the agent needs a shell with network access to the site. An SVG is uploaded as it is, with no variants, as in the editor. Token uploads must be valid WebP files that match the declared dimensions, or SVG files, and a document can only reference WebP images whose variants are all uploaded. Videos cannot be uploaded through MCP.
+
+### Translations
+
+With [translations](#translations-experimental) enabled, a language-prefixed path such as `/de/about` or the `language` argument reads the translation, and `write_document` with `language` writes it. The banner, navigation, and footer are translated on their own, like every document. As in the editor, translations change text, inline formatting, and media only; structure and layout are edited in the main language.
 
 ## Markdown pages (experimental)
 

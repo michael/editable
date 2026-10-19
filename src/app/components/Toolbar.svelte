@@ -1,3 +1,19 @@
+<script module lang="ts">
+	/** What a component set as system_components.toolbar_items receives, to add buttons to the toolbar. */
+	export type ToolbarItemsProps = {
+		/** The class of the toolbar's own buttons and links; use:tooltip from #app/tooltip.js labels them. */
+		button_class: string;
+	};
+
+	/** What a component set as system_components.menu_items receives, to add entries to the toolbar's menu. */
+	export type MenuItemsProps = {
+		/** The class of the menu's own entries, for buttons and links; give each role="menuitem" too. */
+		item_class: string;
+		/** Closes the menu, such as after following a link. */
+		close: () => void;
+	};
+</script>
+
 <script lang="ts">
 	import { is_media_selection } from '#app/media.js';
 	import { get_app_context } from '#app/app_context.js';
@@ -70,12 +86,17 @@
 
 	let cancel_command = $derived(app_commands.cancel_editing ?? null);
 	let cancel_button_label = $derived(cancel_command?.label || 'Cancel');
-	let can_browse_pages = $derived(app.has_backend && app.is_admin && !editable);
-	let can_create_pages = $derived(app.has_backend && app.is_admin);
-	let can_manage_current_page = $derived(app.has_backend && app.is_admin && app.can_edit);
-	let can_logout = $derived(app.has_backend && app.is_admin && !editable);
+	let can_browse_pages = $derived(app.has_backend && app.is_editor && !editable);
+	let can_create_pages = $derived(app.has_backend && app.is_editor);
+	let can_manage_current_page = $derived(app.has_backend && app.is_editor && app.can_edit);
+	// Anyone signed in gets the menu, to log out; editors also find the page actions there.
+	let can_logout = $derived(app.has_backend && app.is_signed_in && !editable);
+	let page_menu_label = $derived(app.is_editor ? 'Page actions' : 'Account');
+	// Buttons and menu entries an app adds for people signed in, such as links to its own pages.
+	let ToolbarItems = $derived(session.config.system_components?.toolbar_items);
+	let MenuItems = $derived(session.config.system_components?.menu_items);
 	let can_edit_document = $derived(
-		(app.is_demo_mode || !app.has_backend || app.is_admin) && !app_commands.edit_document.disabled
+		(app.is_demo_mode || !app.has_backend || app.is_editor) && !app_commands.edit_document.disabled
 	);
 	let can_show_read_toolbar = $derived(
 		can_create_pages ||
@@ -195,7 +216,7 @@
 	}
 
 	function handle_edit_document_click() {
-		if (app.is_demo_mode && app.has_backend && !app.is_admin) {
+		if (app.is_demo_mode && app.has_backend && !app.is_editor) {
 			app.edit_for_fun();
 			return;
 		}
@@ -237,7 +258,7 @@
 	const tw_toolbar_btn_disabled = 'cursor-default opacity-40';
 	const tw_toolbar_btn_hover = 'cursor-pointer hover:bg-(--muted) active:bg-(--foreground)/10';
 	const tw_page_actions_item =
-		'flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal whitespace-nowrap text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11';
+		'flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal whitespace-nowrap text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) not-disabled:cursor-pointer not-disabled:hover:bg-(--muted) not-disabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11';
 
 	// preventDefault keeps focus and selection in the canvas; the command runs on
 	// click, which fires for both mouse and keyboard.
@@ -373,10 +394,10 @@
 		</button>
 	{/if}
 
-	{#if !app_commands.save_document.disabled}
+	{#if !app_commands.save_page.disabled}
 		<button
 			class="pointer-events-auto inline-flex min-h-9 w-9 min-w-9 shrink-0 cursor-pointer items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 text-sm leading-5 font-medium text-(--editing) hover:bg-(--editing-muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--editing)/15 sm:w-auto sm:px-3 sm:py-2"
-			onclick={() => app_commands.save_document.execute()}
+			onclick={() => app_commands.save_page.execute()}
 			use:tooltip={{ label: 'Save changes', keys: ['⌘', 'S'] }}
 			aria-label="Save changes"
 		>
@@ -500,6 +521,10 @@
 									</button>
 								{/if}
 
+								{#if ToolbarItems && app.is_signed_in}
+									<ToolbarItems button_class="{tw_toolbar_btn} {tw_toolbar_btn_hover}" />
+								{/if}
+
 								{#if can_logout}
 									<button
 										bind:this={page_menu_trigger}
@@ -509,8 +534,8 @@
 										aria-controls="toolbar-page-actions-menu"
 										aria-keyshortcuts="Control+Shift+M"
 										popovertarget="toolbar-page-actions-menu"
-										use:tooltip={{ label: 'Page actions', keys: ['⌃', '⇧', 'M'] }}
-										aria-label="Page actions"
+										use:tooltip={{ label: page_menu_label, keys: ['⌃', '⇧', 'M'] }}
+										aria-label={page_menu_label}
 									>
 										<svg
 											class="size-6"
@@ -533,8 +558,12 @@
 										popover="auto"
 										role="menu"
 										tabindex="-1"
-										aria-label="Page actions"
+										aria-label={page_menu_label}
 									>
+										{#if MenuItems}
+											<MenuItems item_class={tw_page_actions_item} close={close_page_menu} />
+											<div class="my-1 h-px bg-(--stroke)" role="separator"></div>
+										{/if}
 										{#if can_manage_current_page}
 											<button
 												type="button"
@@ -580,7 +609,7 @@
 											class={tw_page_actions_item}
 											popovertarget="toolbar-page-actions-menu"
 											popovertargetaction="hide"
-											onclick={() => app_commands.logout_admin.execute()}
+											onclick={() => app_commands.log_out.execute()}
 											role="menuitem">Logout</button
 										>
 									</div>

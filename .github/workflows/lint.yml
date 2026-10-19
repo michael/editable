@@ -1,0 +1,23 @@
+# Keeps upstream Prettier-clean and lint-free, so forks that format their
+# code never see formatting conflicts when merging a release, and runs the
+# tests, which also check that every route's path is reserved.
+name: Lint and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test

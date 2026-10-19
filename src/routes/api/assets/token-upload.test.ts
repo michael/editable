@@ -17,12 +17,18 @@ vi.mock('#app/services.js', async () => {
 	const { mkdtempSync } = await import('node:fs');
 	const { tmpdir } = await import('node:os');
 	const { join } = await import('node:path');
-	const { create_asset_storage } = await import('#lib/server/asset_storage.js');
-	return create_asset_storage({
-		asset_path: mkdtempSync(join(tmpdir(), 'editable-assets-')),
-		asset_grace_period_days: 1,
-		asset_id_regex: /^[a-f0-9]{64}\.[a-z0-9]+$/
-	});
+	const { asset_files } = await import('#lib/server/backends/asset_files.js');
+	const { webp_dimensions } = await import('#lib/server/webp.js');
+	const backend = asset_files(mkdtempSync(join(tmpdir(), 'editable-assets-')));
+	return {
+		backend,
+		asset_exists: async (asset_id: string, variant?: string) =>
+			(await backend.asset_size(asset_id, variant)) !== null,
+		asset_webp_dimensions: async (asset_id: string, variant?: string) => {
+			const stream = await backend.read_asset(asset_id, { variant });
+			return stream && webp_dimensions(new Uint8Array(await new Response(stream).arrayBuffer()));
+		}
+	};
 });
 
 import { POST as upload_original } from './+server.js';
@@ -67,6 +73,26 @@ it('accepts token uploads whose WebP headers match the declared sizes', async ()
 		body: { message: expect.stringContaining('do not match the image (1200×600)') }
 	});
 	await expect(variant(asset_id, 320, 640)).rejects.toMatchObject({ status: 400 });
+});
+
+it('accepts SVG token uploads as they are, and refuses other files sent as SVG', async () => {
+	const upload = (text: string) => {
+		const body = new TextEncoder().encode(text);
+		const headers = {
+			'content-type': 'image/svg+xml',
+			'x-content-hash': createHash('sha256').update(body).digest('hex'),
+			'x-asset-width': '24',
+			'x-asset-height': '24'
+		};
+		return (upload_original as any)({ request: request(body, headers), locals: {} });
+	};
+	const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle r="12"/></svg>';
+	expect(await (await upload(svg)).json()).toMatchObject({ deduplicated: false });
+	expect((await (await upload(svg)).json()).asset_id).toMatch(/\.svg$/);
+	await expect(upload('not an image')).rejects.toMatchObject({
+		status: 400,
+		body: { message: 'The file is not an SVG image.' }
+	});
 });
 
 it('rejects uploads without an admin session or a valid token', async () => {

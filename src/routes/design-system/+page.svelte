@@ -1,8 +1,5 @@
 <script lang="ts">
-	import App from '#app/components/App.svelte';
-	import type { PageData } from './$types';
-
-	let { data }: { data: PageData } = $props();
+	import PageShell from '#app/components/PageShell.svelte';
 </script>
 
 <!--
@@ -10,7 +7,10 @@
 	Keep examples explicit; adapt semantics and behavior in the consuming code.
 	Colors, fonts, and corner radius come from app.css.
 -->
-<App {...data}>
+<PageShell
+	title="The Editable Design System"
+	description="Editable's visual reference, in plain HTML and Tailwind."
+>
 	<div class="bg-(--background) pt-block-generous pb-16 font-sans text-(--foreground)">
 		<div class="mx-auto max-w-7xl space-y-16 px-5 sm:px-7">
 			<header class="space-y-3">
@@ -1678,23 +1678,23 @@ and menu keyboard behavior belong to the application; do not add menu roles with
 						>
 							<button
 								type="button"
-								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
+								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) not-disabled:cursor-pointer not-disabled:hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) not-disabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
 								>Duplicate page</button
 							><button
 								type="button"
 								disabled
-								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
+								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) not-disabled:cursor-pointer not-disabled:hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) not-disabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
 								>Edit URL</button
 							><button
 								type="button"
 								disabled
-								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
+								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) not-disabled:cursor-pointer not-disabled:hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) not-disabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
 								>Delete page</button
 							>
 							<hr class="my-1 border-0 border-t border-(--stroke)" />
 							<button
 								type="button"
-								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
+								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) not-disabled:cursor-pointer not-disabled:hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) not-disabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
 								>Logout</button
 							>
 						</div>
@@ -1781,4 +1781,4 @@ These destinations are real sections on this reference page. Application content
 			</section>
 		</div>
 	</div>
-</App>
+</PageShell>

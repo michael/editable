@@ -1,12 +1,19 @@
 import { site } from '#app/server_site.js';
 import { is_media_property } from './media.js';
-import { rebuild_asset_refs } from './server_asset_refs.js';
 import { ASSET_ID_REGEX } from './config.js';
 import { assert_safe_hrefs, normalize_hrefs, resolve_hrefs } from './document_links.js';
 import { createHash } from 'node:crypto';
 import { error } from '@sveltejs/kit';
 import { fill_document_defaults, validate_document, validate_node, type Document } from 'svedit';
-import { db, with_transaction, asset_exists } from './services.js';
+import { backend, asset_exists } from './services.js';
+import { asset_refs_of } from './server_asset_refs.js';
+import {
+	ConflictError,
+	type DocumentRecord,
+	type NewTranslation,
+	type TranslationKey,
+	type TranslationRecord
+} from '#lib/server/backend.js';
 import { document_schema } from './document_schema.js';
 import { select_language } from './languages.js';
 import {
@@ -20,39 +27,23 @@ import {
 	type TranslationMap
 } from './translations.js';
 
-type TranslationRow = {
-	document_id: string;
-	language: string;
-	value: string;
-};
+type TranslationRow = { document_id: string; language: string; value: string };
 
-function load_records(document_id: string) {
-	const read = (id: string): Document => {
-		const row = db.prepare('SELECT data FROM documents WHERE document_id = ?').get(id) as
-			{ data: string } | undefined;
-		if (!row) error(404, 'Document not found');
-		return JSON.parse(row.data);
-	};
-	const page = read(document_id);
-	const root = page.nodes[document_id];
-	return [
-		page,
-		...[root.banner, root.nav, root.footer]
-			.filter((id): id is string => typeof id === 'string')
-			.map(read)
-	];
+/** A page's record and its shared documents', or a shared document's alone. */
+async function load_records(document_id: string): Promise<DocumentRecord[]> {
+	const read = async (id: string) =>
+		(await backend.get_document(id)) ?? error(404, 'Document not found');
+	const page = await read(document_id);
+	const root = page.data.nodes[document_id];
+	const shared = [root.banner, root.nav, root.footer].filter(
+		(id): id is string => typeof id === 'string'
+	);
+	return [page, ...(await Promise.all(shared.map(read)))];
 }
 
-function read_rows(records: Document[], language: string): TranslationRow[] {
-	return db
-		.prepare(
-			`SELECT * FROM translations WHERE language = ? AND document_id IN (${records.map(() => '?').join(',')}) ORDER BY document_id`
-		)
-		.all(language, ...records.map((doc) => doc.document_id)) as TranslationRow[];
-}
-
-function revision(records: Document[], rows: TranslationRow[]) {
-	return createHash('sha256').update(stable_json({ records, rows })).digest('hex');
+/** Changes whenever any of the documents or their translations is written. */
+function revision(records: DocumentRecord[], rows: TranslationRecord[]) {
+	return [...records, ...rows].map((record) => record.version).join('.');
 }
 
 function compose(records: Document[]): Document {
@@ -65,12 +56,19 @@ function compose(records: Document[]): Document {
 	);
 }
 
-export function translated_document(document_id: string, requested?: string) {
+export async function translated_document(document_id: string, requested?: string) {
 	const { languages } = site;
 	const language = select_language(languages, requested);
-	const records = load_records(document_id);
-	const rows = language && language !== languages[0] ? read_rows(records, language) : [];
-	const document = overlay_document(compose(records), records, rows);
+	const records = await load_records(document_id);
+	const docs = records.map((record) => record.data);
+	const rows =
+		language && language !== languages[0]
+			? await backend.list_translations({
+					document_ids: docs.map((doc) => doc.document_id),
+					language: language
+				})
+			: [];
+	const document = overlay_document(compose(docs), docs, rows);
 	return { document, language, languages, translation_revision: revision(records, rows) };
 }
 
@@ -153,41 +151,43 @@ function normalized_map(map: TranslationMap) {
 	);
 }
 
-function write_map(document_id: string, language: string, map: TranslationMap, previous?: string) {
-	if (!Object.keys(map).length) {
-		db.prepare('DELETE FROM translations WHERE document_id = ? AND language = ?').run(
-			document_id,
-			language
-		);
-		return;
-	}
+/**
+ * What storing map in place of previous takes: a new row, a removed one when
+ * nothing is left to override, or nothing when it is unchanged.
+ */
+function map_change(
+	document_id: string,
+	language: string,
+	map: TranslationMap,
+	previous?: string
+): { put?: NewTranslation; delete?: TranslationKey } {
+	if (!Object.keys(map).length) return previous ? { delete: { document_id, language } } : {};
 	if (previous) {
 		try {
-			if (normalized_map(map) === normalized_map(parse_map(previous))) return;
+			if (normalized_map(map) === normalized_map(parse_map(previous))) return {};
 		} catch {
 			// Saving or cleanup replaces malformed stored overrides.
 		}
 	}
-	db.prepare(
-		'INSERT INTO translations (document_id, language, value, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(document_id, language) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at'
-	).run(document_id, language, JSON.stringify(map), new Date().toISOString());
+	const value = JSON.stringify(map);
+	return { put: { document_id, language, value, updated_at: new Date().toISOString() } };
 }
 
-export function translate_shared_document(source: Document, requested: string) {
+export async function translate_shared_document(source: Document, requested: string) {
 	const language = select_language(site.languages, requested);
 	if (!language || language === site.languages[0]) return source;
 	return resolve_hrefs(
 		overlay_document(
 			fill_document_defaults(source, document_schema),
 			[source],
-			read_rows([source], language)
+			await backend.list_translations({ document_ids: [source.document_id], language })
 		),
 		site,
 		language
 	);
 }
 
-export function save_translated_document(input: {
+export async function save_translated_document(input: {
 	document_id: string;
 	nodes: Document['nodes'];
 	language: string;
@@ -196,99 +196,119 @@ export function save_translated_document(input: {
 	const { languages } = site;
 	if (!languages.includes(input.language) || input.language === languages[0])
 		error(400, 'Translation language is not enabled');
-	return with_transaction(() => {
-		const records = load_records(input.document_id);
-		const rows = read_rows(records, input.language);
-		if (revision(records, rows) !== input.translation_revision)
+	const records = await load_records(input.document_id);
+	const docs = records.map((record) => record.data);
+	const document_ids = docs.map((doc) => doc.document_id);
+	// Every language's translations: this one's are edited, the others count for asset references.
+	const all_rows = await backend.list_translations({ document_ids });
+	const rows = all_rows.filter((row) => row.language === input.language);
+	const stale_message =
+		'This page or its translations changed. Keep a copy of your edits and reload before saving.';
+	if (revision(records, rows) !== input.translation_revision) error(409, stale_message);
+	const original = compose(docs);
+	const edited = normalize_hrefs(
+		fill_document_defaults({ document_id: input.document_id, nodes: input.nodes }, document_schema),
+		overlay_document(original, docs, rows),
+		site,
+		input.language
+	);
+	try {
+		validate_document(edited, document_schema);
+		assert_safe_hrefs(edited.nodes);
+		if (document_structure(original) !== document_structure(edited)) {
 			error(
-				409,
-				'This page or its translations changed. Keep a copy of your edits and reload before saving.'
+				400,
+				'Translations can save text, inline formatting, and media only. Make structure and layout changes in the main language. Your draft is still open.'
 			);
-		const original = compose(records);
-		const edited = normalize_hrefs(
-			fill_document_defaults(
-				{ document_id: input.document_id, nodes: input.nodes },
-				document_schema
-			),
-			overlay_document(original, records, rows),
-			site,
-			input.language
-		);
-		try {
-			validate_document(edited, document_schema);
-			assert_safe_hrefs(edited.nodes);
-			if (document_structure(original) !== document_structure(edited)) {
-				error(
-					400,
-					'Translations can save text, inline formatting, and media only. Make structure and layout changes in the main language. Your draft is still open.'
-				);
-			}
-		} catch (err) {
-			if (err && typeof err === 'object' && 'status' in err) throw err;
-			error(400, `Invalid translated document: ${err instanceof Error ? err.message : err}`);
 		}
-		const maps = new Map(records.map((record) => [record.document_id, {} as TranslationMap]));
-		const owners = new Map(
-			records.flatMap((record) =>
-				Object.keys(record.nodes).map((node_id) => [node_id, record.document_id] as const)
-			)
-		);
-		for (const { node_id, property_id } of translation_properties(original)) {
-			const owner_id = owners.get(node_id);
-			if (!owner_id) error(400, 'Unknown translation owner');
-			const payload = property_payload(edited, node_id, property_id);
-			if (
-				normalized_payload(payload) ===
-				normalized_payload(property_payload(original, node_id, property_id))
-			)
-				continue;
-			if ('node_id' in payload) {
-				const media = payload.nodes[payload.node_id];
-				if (media.src && (!ASSET_ID_REGEX.test(media.src) || !asset_exists(media.src)))
-					error(400, 'Upload translated media before saving. Your draft is still open.');
-			}
-			const map = maps.get(owner_id)!;
-			(map[node_id] ??= {})[property_id] = payload;
+	} catch (err) {
+		if (err && typeof err === 'object' && 'status' in err) throw err;
+		error(400, `Invalid translated document: ${err instanceof Error ? err.message : err}`);
+	}
+	const maps = new Map(document_ids.map((id) => [id, {} as TranslationMap]));
+	const owners = new Map(
+		docs.flatMap((doc) =>
+			Object.keys(doc.nodes).map((node_id) => [node_id, doc.document_id] as const)
+		)
+	);
+	for (const { node_id, property_id } of translation_properties(original)) {
+		const owner_id = owners.get(node_id);
+		if (!owner_id) error(400, 'Unknown translation owner');
+		const payload = property_payload(edited, node_id, property_id);
+		if (
+			normalized_payload(payload) ===
+			normalized_payload(property_payload(original, node_id, property_id))
+		)
+			continue;
+		if ('node_id' in payload) {
+			const media = payload.nodes[payload.node_id];
+			if (media.src && (!ASSET_ID_REGEX.test(media.src) || !(await asset_exists(media.src))))
+				error(400, 'Upload translated media before saving. Your draft is still open.');
 		}
-		for (const [document_id, map] of maps)
-			write_map(
-				document_id,
-				input.language,
-				map,
-				rows.find((row) => row.document_id === document_id)?.value
-			);
-		for (const record of records) rebuild_asset_refs(record.document_id);
-		return { ok: true };
-	});
+		const map = maps.get(owner_id)!;
+		(map[node_id] ??= {})[property_id] = payload;
+	}
+
+	const previous = (document_id: string) => rows.find((row) => row.document_id === document_id);
+	const changes = document_ids.map((id) =>
+		map_change(id, input.language, maps.get(id)!, previous(id)?.value)
+	);
+	// Asset references cover every language, with this one's rows as they will be.
+	const other_languages = all_rows.filter((row) => row.language !== input.language);
+	const rows_after = (document_id: string, index: number) => {
+		const change = changes[index];
+		const own = change.put ?? (change.delete ? undefined : previous(document_id));
+		return [
+			...other_languages.filter((row) => row.document_id === document_id),
+			...(own ? [own] : [])
+		];
+	};
+	await backend
+		.save_translations({
+			expect: {
+				documents: Object.fromEntries(
+					records.map((record) => [record.document_id, record.version])
+				),
+				translations: document_ids.map((document_id) => ({
+					document_id,
+					language: input.language,
+					version: previous(document_id)?.version ?? null
+				}))
+			},
+			put: changes.flatMap((change) => (change.put ? [change.put] : [])),
+			delete: changes.flatMap((change) => (change.delete ? [change.delete] : [])),
+			asset_refs: docs.map((doc, index) => asset_refs_of(doc, rows_after(doc.document_id, index)))
+		})
+		.catch((err) => {
+			if (err instanceof ConflictError) error(409, stale_message);
+			throw err;
+		});
+	return { ok: true };
 }
 
-export function cleanup_translations(document_id: string) {
-	const row = db.prepare('SELECT data FROM documents WHERE document_id = ?').get(document_id) as
-		{ data: string } | undefined;
-	if (!row) {
-		db.prepare('DELETE FROM translations WHERE document_id = ?').run(document_id);
-		return;
-	}
-	const doc = fill_document_defaults(JSON.parse(row.data), document_schema);
-	const rows = db
-		.prepare('SELECT * FROM translations WHERE document_id = ?')
-		.all(document_id) as TranslationRow[];
+/**
+ * What a document's translations become once it is saved: overrides of
+ * properties it no longer has, or that equal the original, are dropped, and a
+ * malformed or emptied row is removed. kept holds the rows as they will be.
+ */
+export function clean_translations(document: Document, rows: TranslationRow[]) {
+	const doc = fill_document_defaults(document, document_schema);
+	const put: NewTranslation[] = [];
+	const remove: TranslationKey[] = [];
+	const kept: { value: string }[] = [];
 	for (const entry of rows) {
 		let map: TranslationMap;
 		try {
 			map = parse_map(entry.value);
 		} catch {
-			db.prepare('DELETE FROM translations WHERE document_id = ? AND language = ?').run(
-				document_id,
-				entry.language
-			);
+			remove.push({ document_id: entry.document_id, language: entry.language });
 			continue;
 		}
 		for (const [node_id, properties] of Object.entries(map)) {
 			for (const [property_id, payload] of Object.entries(properties)) {
 				const property = document_schema[doc.nodes[node_id]?.type]?.properties[property_id];
-				let remove = property?.type !== 'text' && !is_media_property(property);
-				if (!remove) {
+				let drop = property?.type !== 'text' && !is_media_property(property);
+				if (!drop) {
 					try {
 						const replacement = prepare_translation(doc, node_id, property_id, payload);
 						const candidate_nodes: Document['nodes'] = Object.assign(
@@ -298,17 +318,21 @@ export function cleanup_translations(document_id: string) {
 						// Shared banner/nav/footer references live in their own document records.
 						for (const node of Object.values(replacement.nodes))
 							validate_node(node, document_schema, candidate_nodes, { require_references: false });
-						remove =
+						drop =
 							normalized_payload(payload) ===
 							normalized_payload(property_payload(doc, node_id, property_id));
 					} catch {
-						remove = true;
+						drop = true;
 					}
 				}
-				if (remove) delete properties[property_id];
+				if (drop) delete properties[property_id];
 			}
 			if (!Object.keys(properties).length) delete map[node_id];
 		}
-		write_map(document_id, entry.language, map, entry.value);
+		const change = map_change(entry.document_id, entry.language, map, entry.value);
+		if (change.put) put.push(change.put);
+		if (change.delete) remove.push(change.delete);
+		else kept.push(change.put ?? entry);
 	}
+	return { put, delete: remove, kept };
 }

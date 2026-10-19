@@ -93,7 +93,7 @@
 
 		try {
 			const api_module = await import('#app/api.remote.js');
-			const result = await api_module.login_admin({ password });
+			const result = await api_module.log_in({ password });
 
 			if (result && result.ok === false && 'message' in result) {
 				show_login_error(result.message || 'Login failed.');

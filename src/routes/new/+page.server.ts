@@ -13,7 +13,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		};
 	}
 
-	if (!locals.is_admin) {
+	if (!locals.is_editor) {
 		throw redirect(303, resolve_href('/', site));
 	}
 
