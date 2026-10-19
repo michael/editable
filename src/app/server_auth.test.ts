@@ -28,6 +28,7 @@ import throttle_schema from '#app/migrations/20261017T120000000Z_editable_login_
 import oauth_schema from '#app/migrations/20261010T180000000Z_editable_mcp_oauth.js';
 import { get_auth, password_auth, require_user, sign_in_state, type Auth } from './server_auth.js';
 import { require_editor } from '#lib/server/auth.js';
+import { create_auth } from './create_auth.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 initial_schema.up({ db: sqlite } as SqliteStorage);
@@ -44,10 +45,11 @@ function event_with_cookies(jar = new Map<string, string>()) {
 	return { cookies, url: new URL('https://example.com/about') } as unknown as RequestEvent;
 }
 
-it('signs in with the admin password by default', async () => {
+it('signs in with the admin password', async () => {
 	const event = event_with_cookies();
-	expect(get_auth()).toBe(password_auth);
-	expect(await get_auth().get_user(event)).toBeNull();
+	// The deployment's own auth, which is the admin password unless create_auth returns another.
+	expect(get_auth()).toBe(create_auth());
+	expect(await password_auth.get_user(event)).toBeNull();
 
 	expect(await password_auth.log_in(event, { password: 'wrong' })).toMatchObject({
 		ok: false,
@@ -98,6 +100,8 @@ it('uses the auth a host sets for the request, with users of its own shape', asy
 });
 
 it('lets everyone signed in edit, unless the auth tells editors apart', async () => {
+	// The admin password for this request, whatever create_auth returns.
+	request.locals = { site: { origin: '', base: '', languages: [], auth: password_auth } };
 	const jar = new Map<string, string>();
 	expect(await sign_in_state(event_with_cookies(jar))).toEqual({ user: null, is_editor: false });
 	await password_auth.log_in(event_with_cookies(jar), { password: 'secret' });
