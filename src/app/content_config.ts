@@ -20,5 +20,5 @@ import readme_md from '../../README.md?raw';
 
 export const MARKDOWN_SOURCES = [
 	// The developer manual is the repository README.
-	{ markdown: readme_md, source: 'README.md', pathname: '/manual', toc: true },
+	{ markdown: readme_md, source: 'README.md', pathname: '/manual', toc: true }
 ];

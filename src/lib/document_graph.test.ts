@@ -47,7 +47,13 @@ const shared_roots = new Set(['nav_doc', 'footer_doc']);
 describe('clone_subtree_with_new_ids', () => {
 	it('gives every copied node a fresh id', () => {
 		const nodes = make_page_nodes();
-		const result = clone_subtree_with_new_ids('page_1', nodes, make_id_generator(), document_schema, shared_roots);
+		const result = clone_subtree_with_new_ids(
+			'page_1',
+			nodes,
+			make_id_generator(),
+			document_schema,
+			shared_roots
+		);
 
 		const source_ids = Object.keys(nodes);
 		const cloned_ids = Object.keys(result.nodes);
@@ -64,7 +70,13 @@ describe('clone_subtree_with_new_ids', () => {
 
 	it('rewrites node and node_array references to the copies', () => {
 		const nodes = make_page_nodes();
-		const result = clone_subtree_with_new_ids('page_1', nodes, make_id_generator(), document_schema, shared_roots);
+		const result = clone_subtree_with_new_ids(
+			'page_1',
+			nodes,
+			make_id_generator(),
+			document_schema,
+			shared_roots
+		);
 
 		const page = result.nodes[result.root_id] as any;
 		const prose_id = page.body.nodes[0];
@@ -77,7 +89,13 @@ describe('clone_subtree_with_new_ids', () => {
 
 	it('rewrites mark references inside annotated text', () => {
 		const nodes = make_page_nodes();
-		const result = clone_subtree_with_new_ids('page_1', nodes, make_id_generator(), document_schema, shared_roots);
+		const result = clone_subtree_with_new_ids(
+			'page_1',
+			nodes,
+			make_id_generator(),
+			document_schema,
+			shared_roots
+		);
 
 		const page = result.nodes[result.root_id] as any;
 		const prose = result.nodes[page.body.nodes[0]] as any;
@@ -91,7 +109,13 @@ describe('clone_subtree_with_new_ids', () => {
 
 	it('leaves excluded shared roots pointing at their own documents', () => {
 		const nodes = make_page_nodes();
-		const result = clone_subtree_with_new_ids('page_1', nodes, make_id_generator(), document_schema, shared_roots);
+		const result = clone_subtree_with_new_ids(
+			'page_1',
+			nodes,
+			make_id_generator(),
+			document_schema,
+			shared_roots
+		);
 
 		const page = result.nodes[result.root_id] as any;
 		expect(page.nav).toBe('nav_doc');

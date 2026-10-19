@@ -1,4 +1,3 @@
-
 export type ProcessedAsset = {
 	original: { blob: Blob; width: number; height: number };
 	variants: Array<{ width: number; blob: Blob }>;
