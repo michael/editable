@@ -72,13 +72,9 @@ it('upgrades an old database that kept content progress with its SQLite migratio
 		'20261009T120000000Z_editable_site_banner'
 	]);
 	expect(await backend.applied_migrations()).toContain('20261010T180000000Z_editable_mcp_oauth');
-	// The login throttle moved out of the settings.
-	expect(await backend.get_login_throttle('admin')).toEqual({
-		key: 'admin',
-		failed_count: 6,
-		locked_until: 99
-	});
+	// The login throttle left the settings for a table of its own, starting over.
 	expect(await backend.get_setting('login_throttle')).toBeNull();
+	expect(await backend.get_login_throttle('admin')).toBeNull();
 });
 
 it('refuses data migrated by a newer version', async () => {

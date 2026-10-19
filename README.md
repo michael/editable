@@ -1201,7 +1201,7 @@ A change to how a backend stores records, such as a new table, needs a storage m
 pnpm migration:create redirects --target sqlite
 ```
 
-This writes `…_redirects_sqlite.ts`, with the backend as a suffix. It states its target and receives its backend's storage, for SQLite the [node:sqlite](https://nodejs.org/api/sqlite.html) handle as `db`:
+The migration states its target and receives its backend's storage, for SQLite the [node:sqlite](https://nodejs.org/api/sqlite.html) handle as `db`:
 
 ```ts
 import type { Migration } from '#lib/server/migrations.js';

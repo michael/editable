@@ -13,10 +13,10 @@ describe('load_migrations', () => {
 	it('orders by id and defaults the target to content', () => {
 		const migrations = load({
 			'20260102T000000000Z_editable_b': { up },
-			'20260101T000000000Z_editable_a_sqlite': { target: 'sqlite', up }
+			'20260101T000000000Z_editable_a': { target: 'sqlite', up }
 		});
 		expect(migrations.map(({ id, target }) => [id, target])).toEqual([
-			['20260101T000000000Z_editable_a_sqlite', 'sqlite'],
+			['20260101T000000000Z_editable_a', 'sqlite'],
 			['20260102T000000000Z_editable_b', 'content']
 		]);
 	});
@@ -37,7 +37,7 @@ describe('run_migrations', () => {
 	const ran: string[] = [];
 	const migrations = load({
 		'20260101T000000000Z_editable_a': { up: () => ran.push('a') },
-		'20260102T000000000Z_editable_b_sqlite': { target: 'sqlite', up: () => ran.push('b') },
+		'20260102T000000000Z_editable_b': { target: 'sqlite', up: () => ran.push('b') },
 		'20260103T000000000Z_editable_c': { up: () => ran.push('c') }
 	});
 

@@ -45,7 +45,7 @@ if (after) {
 	);
 	timestamp = new Date(Date.parse(parsed) + 1).toISOString().replace(/[-:.]/g, '');
 }
-const change = `${timestamp}_${namespace}_${slug}`;
+const id = `${timestamp}_${namespace}_${slug}`;
 const templates = {
 	content:
 		"import type { ContentContext, Migration } from '#lib/server/migrations.js';\n\nexport default {\n\tup({ documents, ensure_document, rename_property, rename_type, replace_value, delete_property, update }: ContentContext) {\n\t\t// Transform content with the helpers, or change `documents` directly.\n\t\t// rename_property('hero', 'image', 'media');\n\t}\n} satisfies Migration;\n",
@@ -56,10 +56,7 @@ const template =
 	templates[target || 'content'] ??
 	`import type { Migration } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: '${target}',\n\tup() {\n\t\t// Take the ${target} backend's storage, up(storage), and change it.\n\t}\n} satisfies Migration;\n`;
 
-const path = join(
-	migration_dir,
-	`${target && target !== 'content' ? `${change}_${target}` : change}.ts`
-);
+const path = join(migration_dir, `${id}.ts`);
 try {
 	writeFileSync(path, template, { flag: 'wx' });
 } catch (error) {

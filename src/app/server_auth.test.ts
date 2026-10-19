@@ -24,7 +24,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import * as services from './services.js';
 const { sqlite } = services as unknown as { sqlite: DatabaseSync };
 import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
-import throttle_schema from '#app/migrations/20261017T120000000Z_editable_login_throttle_sqlite.js';
+import throttle_schema from '#app/migrations/20261017T120000000Z_editable_login_throttle.js';
 import oauth_schema from '#app/migrations/20261010T180000000Z_editable_mcp_oauth.js';
 import { get_auth, password_auth, type Auth } from './server_auth.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
