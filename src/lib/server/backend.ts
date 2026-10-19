@@ -98,7 +98,10 @@ export type DocumentSave = {
 	/** What the saved documents now link to and use, replacing what they did before. */
 	document_refs?: DocumentRefsRecord[];
 	asset_refs?: AssetRefsRecord[];
-	/** Translations rewritten or dropped along with the documents. */
+	/**
+	 * Translations that change with the documents: put writes a document's whole
+	 * translation in one language, replacing the stored one; delete removes it.
+	 */
 	translations?: { put?: NewTranslation[]; delete?: TranslationKey[] };
 	/** Slugs added or changed, such as a new page's first one or a renamed page's. */
 	slugs?: SlugRecord[];
@@ -113,7 +116,9 @@ export type TranslationSave = {
 		documents: { [document_id: string]: string };
 		translations: (TranslationKey & { version: string | null })[];
 	};
+	/** Whole translations written, each replacing the stored one. */
 	put: NewTranslation[];
+	/** Translations removed, such as one whose overrides were all reverted. */
 	delete: TranslationKey[];
 	asset_refs: AssetRefsRecord[];
 };
