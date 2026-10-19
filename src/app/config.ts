@@ -54,6 +54,7 @@ export const RESERVED_ROUTE_SLUGS = new Set([
 	'design-system',
 	'login',
 	'mcp',
+	'meter-readings',
 	'new',
 	'oauth'
 ]);
