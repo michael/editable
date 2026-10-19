@@ -24,7 +24,7 @@ await backend.save_documents({
 });
 ```
 
-Editable comes with two backends. The deployment's own comes from `create_backend` in `src/app/backend.ts`, which picks one by what the data folder holds; a host serving several sites passes one per site (see [Hosting several sites](#hosting-several-sites)).
+Editable comes with two backends. The deployment's own comes from `create_backend` in `src/app/create_backend.ts`, which picks one by what the data folder holds; a host serving several sites passes one per site (see [Hosting several sites](#hosting-several-sites)).
 
 | Backend          | Records                          | Assets                  | Use                                                                                   |
 | ---------------- | -------------------------------- | ----------------------- | ------------------------------------------------------------------------------------- |
@@ -60,7 +60,7 @@ The built-in backends are synchronous inside, so each call runs to its end befor
 Merging an Editable release never touches a backend of your own:
 
 - **It lives in files of your own,** such as `src/app/backends/git_backend.ts`, with its storage migrations in `src/app/migrations` targeting its name. Editable ships nothing in `src/app/backends`.
-- **One file wires it up:** return it from `create_backend` in `src/app/backend.ts`, which Editable keeps to that one function.
+- **One file wires it up:** return it from `create_backend` in `src/app/create_backend.ts`, which Editable keeps to that one function.
 - **Interface changes arrive as type errors,** which `pnpm check` names, not as merge conflicts.
 - **Editable's backend tests run against it,** including those that later releases add:
 

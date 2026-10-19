@@ -1,6 +1,6 @@
 import type { Backend } from '#lib/server/backend.js';
 import { migrate } from '#app/migrations.js';
-import { create_backend } from '#app/backend.js';
+import { create_backend } from '#app/create_backend.js';
 import { site } from '#app/server_site.js';
 import { WEBP_HEADER_BYTES, webp_dimensions } from '#lib/server/webp.js';
 
