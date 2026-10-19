@@ -172,7 +172,17 @@
 			style:--ew-anchor-offset="{2 * nav_height}px"
 		>
 			{#if !svedit.editable && app.page_content}
-				{@render app.page_content()}
+				<!-- A route's own content may hold form fields: keep their typing from the canvas,
+				which would take it as document text. Remove once Svedit lets form fields
+				edit themselves (form-fields-in-canvas). -->
+				<div
+					class="contents"
+					onbeforeinput={(event) => event.stopPropagation()}
+					oncompositionstart={(event) => event.stopPropagation()}
+					oncompositionend={(event) => event.stopPropagation()}
+				>
+					{@render app.page_content()}
+				</div>
 			{:else}
 				<NodeArrayProperty class="body-node-array" path={[...path, 'body']} />
 			{/if}

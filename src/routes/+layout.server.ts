@@ -7,8 +7,7 @@ import {
 	default_site_document
 } from '#app/default_site.js';
 import { extract_site_metadata } from '#app/page_metadata.js';
-import { document_schema } from '#app/document_schema.js';
-import { fill_document_defaults, validate_document } from 'svedit';
+import { chrome_document, type SharedDocuments } from '#app/chrome_document.js';
 import type { Document } from 'svedit';
 import type { LayoutServerLoad } from './$types';
 
@@ -16,35 +15,15 @@ import type { LayoutServerLoad } from './$types';
 // the existing no-trailing-slash URLs for database-backed routes.
 export const trailingSlash = VERCEL ? 'always' : 'never';
 
-function create_not_found_document(shared_documents): Document {
-	const document_id = 'notfoundpage000000000';
-	const image_id = 'notfoundimage00000000';
-	const nodes = {
-		...structuredClone(shared_documents.banner_document.nodes),
-		...structuredClone(shared_documents.nav_document.nodes),
-		...structuredClone(shared_documents.footer_document.nodes),
-		[image_id]: { id: image_id, type: 'image' },
-		[document_id]: {
-			id: document_id,
-			type: 'page',
-			title: { content: 'Page not found', marks: [], annotations: [] },
-			image: image_id,
-			banner: shared_documents.banner_document.document_id,
-			nav: shared_documents.nav_document.document_id,
-			footer: shared_documents.footer_document.document_id
-		}
-	};
-	const doc = fill_document_defaults({ document_id, nodes }, document_schema);
-	validate_document(doc, document_schema);
-	return doc;
-}
+const not_found_document_of = (shared_documents: SharedDocuments) =>
+	chrome_document('notfoundpage000000000', { title: 'Page not found' }, shared_documents);
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const has_backend = !VERCEL;
 	const language = request_language(url);
 
 	let site_metadata;
-	let not_found_document: Document = create_not_found_document({
+	let not_found_document: Document = not_found_document_of({
 		banner_document: default_banner_document,
 		nav_document: default_nav_document,
 		footer_document: default_footer_document
@@ -70,7 +49,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				language
 			);
 		}
-		not_found_document = create_not_found_document(shared_documents);
+		not_found_document = not_found_document_of(shared_documents);
 		site_metadata = next_site_metadata;
 	} else {
 		site_metadata = extract_site_metadata(default_site_document);
