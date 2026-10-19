@@ -27,14 +27,14 @@ function get_canonical_redirect(url: URL, canonical_origin: URL, site: Site): st
 
 export const init: ServerInit = async () => {
 	if (!VERCEL) {
-		const { run_migrations } = await import('#app/migrations.js');
-		run_migrations();
+		const { get_default_backend } = await import('#app/services.js');
+		await get_default_backend();
 
 		const { warn_about_shadowed_pages } = await import('#app/markdown/shadowed.js');
-		warn_about_shadowed_pages();
+		await warn_about_shadowed_pages();
 
 		const { warn_about_language_slug_collisions } = await import('#app/server_language_slugs.js');
-		warn_about_language_slug_collisions();
+		await warn_about_language_slug_collisions();
 	}
 };
 
@@ -47,10 +47,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 		if (canonical_url) redirect(301, canonical_url, { external: [canonical_origin.origin] });
 	}
 
-	event.locals.is_admin = false;
+	event.locals.user = null;
 	if (!VERCEL) {
-		const { get_admin_auth } = await import('#app/server_admin_auth.js');
-		event.locals.is_admin = await get_admin_auth().is_admin(event);
+		const { get_auth } = await import('#app/server_auth.js');
+		event.locals.user = await get_auth().get_user(event);
 	}
 
 	const language = request_language(event.url) || 'en';

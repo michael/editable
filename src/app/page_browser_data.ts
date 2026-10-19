@@ -1,18 +1,10 @@
 import type { DocumentNode } from 'svedit';
-import { db } from '#app/services.js';
-import {
-	type DocumentData,
-	type DocumentRow,
-	collect_document_refs,
-	get_active_slug_for_document_id,
-	get_home_page_id_from_db,
-	resolve_slug,
-	shared_document_types
-} from '#app/server_documents.js';
+import { backend } from '#app/services.js';
+import { get_home_page_id_from_db, shared_document_types } from '#app/server_documents.js';
 import { is_reserved_language_slug } from '#app/languages.js';
 import { site } from '#app/server_site.js';
 import { is_reserved_markdown_slug } from '#app/markdown/registry.js';
-import { extract_page_metadata, collect_page_body_node_ids } from '#app/page_metadata.js';
+import { extract_page_metadata } from '#app/page_metadata.js';
 import type { PreviewMediaNode } from '#app/page_metadata.js';
 import { build_page_forest } from '#app/page_tree.js';
 
@@ -50,27 +42,23 @@ export type PageTreeNode = {
 	children: PageTreeNode[];
 };
 
-function list_page_documents(): PageDocumentRecord[] {
-	const rows = db
-		.prepare('SELECT * FROM documents WHERE type = ? ORDER BY document_id')
-		.all('page') as unknown as DocumentRow[];
-	return rows.map((row) => {
-		const doc = JSON.parse(row.data) as DocumentData;
-		return {
-			document_id: doc.document_id,
-			nodes: doc.nodes,
-			created_at: row.created_at ?? null,
-			updated_at: row.updated_at ?? null
-		};
-	});
+async function list_page_documents(): Promise<PageDocumentRecord[]> {
+	return (await backend.list_documents('page')).map((record) => ({
+		document_id: record.document_id,
+		nodes: record.data.nodes,
+		created_at: record.created_at ?? null,
+		updated_at: record.updated_at ?? null
+	}));
 }
 
-function summarize_page_document(page_doc: PageDocumentRecord): PageSummary {
+function summarize_page_document(
+	page_doc: PageDocumentRecord,
+	active_slug: string | null
+): PageSummary {
 	const metadata = extract_page_metadata({
 		document_id: page_doc.document_id,
 		nodes: page_doc.nodes
 	});
-	const active_slug = get_active_slug_for_document_id(page_doc.document_id);
 	return {
 		document_id: page_doc.document_id,
 		title: metadata.title || 'Untitled page',
@@ -87,45 +75,47 @@ function summarize_page_document(page_doc: PageDocumentRecord): PageSummary {
 	};
 }
 
-function get_outgoing_refs(source_document_id: string): string[] {
-	const rows = db
-		.prepare(
-			'SELECT target_document_id FROM document_refs WHERE source_document_id = ? ORDER BY ref_order, rowid'
-		)
-		.all(source_document_id) as Array<{ target_document_id: string }>;
-	return rows.map((row) => row.target_document_id);
-}
-
 /** Build the same page tree used by the Pages drawer. */
-export function build_page_browser_data(
+export async function build_page_browser_data(
 	pathname: string,
 	home_only = false
-): {
+): Promise<{
 	home_page_id: string | null;
 	current_document_id: string | null;
 	page_forest: PageTreeNode[];
-} {
-	const home_page_id = get_home_page_id_from_db();
+}> {
+	const home_page_id = await get_home_page_id_from_db();
 	const current_document_id =
-		pathname === '/' ? home_page_id : (resolve_slug(pathname.slice(1))?.document_id ?? null);
-	const page_docs = list_page_documents();
+		pathname === '/'
+			? home_page_id
+			: ((await backend.resolve_slug(pathname.slice(1)))?.document_id ?? null);
+	const page_docs = await list_page_documents();
 	const page_docs_by_id = new Map(page_docs.map((page_doc) => [page_doc.document_id, page_doc]));
-	const summaries = page_docs.map(summarize_page_document);
+	const active_slugs = new Map(
+		(await backend.list_slugs())
+			.filter((record) => record.is_active)
+			.map((record) => [record.document_id, record.slug])
+	);
+	const summaries = page_docs.map((page_doc) =>
+		summarize_page_document(page_doc, active_slugs.get(page_doc.document_id) ?? null)
+	);
 	const summaries_by_id = new Map(summaries.map((summary) => [summary.document_id, summary]));
-	const refs_by_page_id = new Map<string, string[]>();
-	for (const page_doc of page_docs) {
-		const body_node_ids = collect_page_body_node_ids(page_doc);
-		refs_by_page_id.set(
+	// What every document links to, as recorded on its last save.
+	const refs_by_document_id = new Map(
+		(await backend.list_document_refs()).map((refs) => [refs.document_id, refs.target_ids])
+	);
+	const refs_by_page_id = new Map(
+		page_docs.map((page_doc) => [
 			page_doc.document_id,
-			collect_document_refs(page_doc.nodes, body_node_ids, page_doc.document_id)
-		);
-	}
+			refs_by_document_id.get(page_doc.document_id) ?? []
+		])
+	);
 	// The home page also lists what the shared documents link to: banner and nav before its body, footer after.
 	const home_page_doc = home_page_id ? page_docs_by_id.get(home_page_id) : undefined;
 	if (home_page_doc) {
 		const [banner_refs, nav_refs, footer_refs] = shared_document_types.map((type) => {
 			const shared_id = home_page_doc.nodes[home_page_doc.document_id]?.[type];
-			return typeof shared_id === 'string' ? get_outgoing_refs(shared_id) : [];
+			return typeof shared_id === 'string' ? (refs_by_document_id.get(shared_id) ?? []) : [];
 		});
 		const home_body_refs = refs_by_page_id.get(home_page_doc.document_id) ?? [];
 		refs_by_page_id.set(home_page_doc.document_id, [

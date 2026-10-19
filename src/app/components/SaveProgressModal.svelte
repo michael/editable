@@ -56,7 +56,7 @@
 								class="text-(--stroke)"
 								cx="18"
 								cy="18"
-							r="15"
+								r="15"
 								stroke="currentColor"
 								stroke-width="3"
 							/>

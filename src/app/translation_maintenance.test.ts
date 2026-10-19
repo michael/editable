@@ -12,15 +12,16 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import initial_schema from './migrations/20260803T131059242Z_editable_initial_schema.js';
-import translations_schema from './migrations/20260923T180000000Z_editable_translations.js';
+import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
+import translations_schema from '#app/migrations/20260923T180000000Z_editable_translations.js';
 import { list_translations, purge_translations } from '../../scripts/translation-maintenance.js';
+import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 let db: DatabaseSync;
 beforeEach(() => {
 	db = new DatabaseSync(':memory:');
-	initial_schema.up({ db });
-	translations_schema.up({ db });
+	initial_schema.up({ db } as SqliteStorage);
+	translations_schema.up({ db } as SqliteStorage);
 	const original = { nodes: { image: { type: 'image', src: 'original.webp' } } };
 	db.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)').run(
 		'page',

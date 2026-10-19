@@ -86,15 +86,6 @@
 	--image-border-radius: 2.2rem;
 }
 
-/*
- * Always show the scrollbar, so pages don't shift sideways when their height
- * changes. Unlike scrollbar-gutter: stable, full-width backgrounds such as the
- * banner still reach the scrollbar instead of leaving an empty strip.
- */
-html {
-	overflow-y: scroll;
-}
-
 /* Native syntax ranges leave the editable text and selection DOM untouched. */
 .ew-code-block ::highlight(ew-code-foreground) {
 	color: var(--code-foreground);

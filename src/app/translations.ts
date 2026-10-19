@@ -1,7 +1,7 @@
 import { is_media_property } from './media.js';
 import nanoid from './nanoid.js';
 import { document_schema } from './document_schema.js';
-import type { Document, DocumentNode, NodeSchema, Text } from 'svedit';
+import type { Attachment, Document, DocumentNode, NodeSchema, Text } from 'svedit';
 
 const schema: Record<string, NodeSchema> = document_schema;
 export type TextTranslationPayload = Text & { nodes: Record<string, DocumentNode> };
@@ -189,5 +189,14 @@ export function document_structure(doc: Document) {
 		delete copy.nodes[node_id][property_id];
 	}
 	remove_unreferenced(copy, removed);
+	// A node array's ranges, such as sections, carry no meaning in their order.
+	const by_position = (a: Attachment, b: Attachment) =>
+		a.start_offset - b.start_offset || a.end_offset - b.end_offset;
+	for (const node of Object.values(copy.nodes))
+		for (const [property_id, property] of Object.entries(schema[node.type]?.properties ?? {}))
+			if (property.type === 'node_array' && node[property_id]) {
+				node[property_id].marks?.sort(by_position);
+				node[property_id].annotations?.sort(by_position);
+			}
 	return stable_json(copy);
 }

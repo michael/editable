@@ -1,8 +1,9 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { error } from '@sveltejs/kit';
 import { site } from './server_site.js';
-import { require_admin_session } from '#lib/server/auth.js';
-import { db } from './services.js';
+import { require_user } from '#lib/server/auth.js';
+import { backend } from './services.js';
+import type { OAuthGrantRecord, OAuthTokenRecord } from '#lib/server/backend.js';
 
 // An approval grants MCP access for a fixed window; clients refresh short-lived
 // access tokens within it and must ask for approval again afterwards.
@@ -10,19 +11,9 @@ const GRANT_TTL_SECONDS = 48 * 60 * 60;
 const ACCESS_TOKEN_TTL_SECONDS = 60 * 60;
 const CODE_TTL_SECONDS = 10 * 60;
 const UPLOAD_TOKEN_TTL_SECONDS = 30 * 60;
-// Registrations the admin never approved expire; approved clients are kept so
-// they can reconnect with the same client_id after their approval ends.
-const PENDING_CLIENT_TTL_SECONDS = 24 * 60 * 60;
-const MAX_PENDING_CLIENTS = 100;
 
 type TokenKind = 'code' | 'access' | 'refresh' | 'upload';
-type Grant = {
-	grant_id: string;
-	client_id: string;
-	redirect_uri: string;
-	code_challenge: string;
-	expires_at: number;
-};
+type Grant = OAuthGrantRecord;
 export type OAuthClient = { client_id: string; client_name: string; redirect_uris: string[] };
 
 export class OAuthError extends Error {
@@ -88,108 +79,90 @@ export function is_own_resource(resource: string | null | undefined) {
 	return !resource || resource.replace(/\/$/, '').toLowerCase() === mcp_resource().toLowerCase();
 }
 
-/** Dynamic client registration (RFC 7591) for public clients. */
-export function register_client(input: { client_name?: unknown; redirect_uris?: unknown }) {
-	const redirect_uris = input.redirect_uris;
-	if (
-		!Array.isArray(redirect_uris) ||
-		redirect_uris.length === 0 ||
-		redirect_uris.length > 10 ||
-		!redirect_uris.every(is_allowed_redirect_uri)
-	)
+const is_redirect_uris = (value: unknown): value is string[] =>
+	Array.isArray(value) &&
+	value.length > 0 &&
+	value.length <= 10 &&
+	value.every(is_allowed_redirect_uri);
+
+/**
+ * Dynamic client registration (RFC 7591) for public clients. Anyone may
+ * register, so a stored registration would prove nothing: the client_id is
+ * the registration itself, and a site never forgets a client, even when its
+ * data is restored or replaced.
+ */
+export function register_client(input: {
+	client_name?: unknown;
+	redirect_uris?: unknown;
+}): OAuthClient {
+	if (!is_redirect_uris(input.redirect_uris))
 		throw new OAuthError(
 			'invalid_redirect_uri',
 			'redirect_uris must list 1 to 10 URIs on localhost or HTTPS.'
 		);
-
-	// Registration is unauthenticated: pending registrations expire, and when
-	// too many pile up the oldest make room rather than blocking new clients.
-	const pending = 'client_id NOT IN (SELECT client_id FROM oauth_grants)';
-	db.prepare(`DELETE FROM oauth_clients WHERE created_at < ? AND ${pending}`).run(
-		now() - PENDING_CLIENT_TTL_SECONDS
-	);
-	db.prepare(
-		`DELETE FROM oauth_clients WHERE client_id IN (SELECT client_id FROM oauth_clients WHERE ${pending} ORDER BY created_at DESC, rowid DESC LIMIT -1 OFFSET ?)`
-	).run(MAX_PENDING_CLIENTS - 1);
-
-	const client: OAuthClient = {
-		client_id: new_secret(),
+	const registration = {
 		client_name:
 			typeof input.client_name === 'string' && input.client_name.trim()
 				? input.client_name.trim().slice(0, 100)
 				: 'Unnamed MCP client',
-		redirect_uris
+		redirect_uris: input.redirect_uris
 	};
-	db.prepare(
-		'INSERT INTO oauth_clients (client_id, client_name, redirect_uris, created_at) VALUES (?, ?, ?, ?)'
-	).run(client.client_id, client.client_name, JSON.stringify(redirect_uris), now());
-	return client;
+	const client_id = Buffer.from(JSON.stringify(registration)).toString('base64url');
+	return { client_id, ...registration };
 }
 
 export function find_client(client_id: string): OAuthClient | null {
-	const row = db
-		.prepare('SELECT client_id, client_name, redirect_uris FROM oauth_clients WHERE client_id = ?')
-		.get(client_id) as
-		{ client_id: string; client_name: string; redirect_uris: string } | undefined;
-	return row ? { ...row, redirect_uris: JSON.parse(row.redirect_uris) } : null;
+	try {
+		const client = register_client(JSON.parse(Buffer.from(client_id, 'base64url').toString()));
+		// Anyone can make a client_id: accept only what registration gives out, so none skips its checks.
+		return client.client_id === client_id ? client : null;
+	} catch {
+		return null;
+	}
 }
 
-function insert_token(grant_id: string, kind: TokenKind, expires_at: number) {
+async function insert_token(grant_id: string, kind: TokenKind, expires_at: number) {
 	const token = new_secret();
-	db.prepare(
-		'INSERT INTO oauth_tokens (token_hash, grant_id, kind, expires_at) VALUES (?, ?, ?, ?)'
-	).run(hash(token), grant_id, kind, expires_at);
+	await backend.save_oauth_token({ token_hash: hash(token), grant_id, kind, expires_at });
 	return token;
 }
 
-/** The unexpired grant a token of the given kind belongs to. */
-function find_grant(token: string, kind: TokenKind): Grant | null {
+/** The unexpired grant an unexpired token of the given kind belongs to. */
+async function grant_of(record: OAuthTokenRecord | null, kind: TokenKind): Promise<Grant | null> {
 	const time = now();
-	return (
-		(db
-			.prepare(
-				`SELECT g.grant_id, g.client_id, g.redirect_uri, g.code_challenge, g.expires_at
-				FROM oauth_tokens t JOIN oauth_grants g ON g.grant_id = t.grant_id
-				WHERE t.token_hash = ? AND t.kind = ? AND t.expires_at > ? AND g.expires_at > ?`
-			)
-			.get(hash(token), kind, time, time) as Grant | undefined) ?? null
-	);
+	if (!record || record.kind !== kind || record.expires_at <= time) return null;
+	const grant = await backend.get_oauth_grant(record.grant_id);
+	return grant && grant.expires_at > time ? grant : null;
 }
 
+const find_grant = async (token: string, kind: TokenKind) =>
+	grant_of(await backend.get_oauth_token(hash(token)), kind);
+
 /** Record an admin's approval and return the authorization code for the client. */
-export function approve_client(input: {
+export async function approve_client(input: {
 	client_id: string;
 	redirect_uri: string;
 	code_challenge: string;
 }) {
 	const time = now();
-	db.prepare('DELETE FROM oauth_tokens WHERE expires_at <= ?').run(time);
-	// A client's latest grant stays as its approval record; older ended ones go.
-	db.prepare('DELETE FROM oauth_grants WHERE client_id = ? AND expires_at <= ?').run(
-		input.client_id,
-		time
-	);
+	await backend.delete_expired(time);
 	const grant_id = new_secret();
-	db.prepare(
-		'INSERT INTO oauth_grants (grant_id, client_id, redirect_uri, code_challenge, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)'
-	).run(
+	await backend.save_oauth_grant({
 		grant_id,
-		input.client_id,
-		input.redirect_uri,
-		input.code_challenge,
-		time,
-		time + GRANT_TTL_SECONDS
-	);
+		...input,
+		created_at: time,
+		expires_at: time + GRANT_TTL_SECONDS
+	});
 	return insert_token(grant_id, 'code', time + CODE_TTL_SECONDS);
 }
 
-function issue_tokens(grant: Grant) {
+async function issue_tokens(grant: Grant) {
 	const access_expires_at = Math.min(now() + ACCESS_TOKEN_TTL_SECONDS, grant.expires_at);
 	return {
-		access_token: insert_token(grant.grant_id, 'access', access_expires_at),
+		access_token: await insert_token(grant.grant_id, 'access', access_expires_at),
 		token_type: 'Bearer',
 		expires_in: access_expires_at - now(),
-		refresh_token: insert_token(grant.grant_id, 'refresh', grant.expires_at)
+		refresh_token: await insert_token(grant.grant_id, 'refresh', grant.expires_at)
 	};
 }
 
@@ -197,17 +170,23 @@ function pkce_challenge(verifier: string) {
 	return createHash('sha256').update(verifier).digest('base64url');
 }
 
-/** Token endpoint grant types: authorization_code (with PKCE) and rotating refresh_token. */
-export function exchange_token(params: URLSearchParams) {
+/**
+ * Token endpoint grant types: authorization_code (with PKCE) and rotating
+ * refresh_token. The presented code or refresh token is taken out of the
+ * backend in one step, so it can only ever be redeemed once.
+ */
+export async function exchange_token(params: URLSearchParams) {
 	const client_id = params.get('client_id') ?? '';
+	// invalid_client makes the client register again.
+	if (!find_client(client_id))
+		throw new OAuthError('invalid_client', 'The app could not be identified. Connect again.', 401);
 	if (!is_own_resource(params.get('resource')))
 		throw new OAuthError('invalid_target', `Tokens are only issued for ${mcp_resource()}.`);
 
 	if (params.get('grant_type') === 'authorization_code') {
 		const code = params.get('code') ?? '';
-		const grant = find_grant(code, 'code');
 		// Codes are single use, whether or not the exchange succeeds.
-		db.prepare('DELETE FROM oauth_tokens WHERE token_hash = ?').run(hash(code));
+		const grant = await grant_of(await backend.take_oauth_token(hash(code)), 'code');
 		if (
 			!grant ||
 			grant.client_id !== client_id ||
@@ -220,13 +199,12 @@ export function exchange_token(params: URLSearchParams) {
 
 	if (params.get('grant_type') === 'refresh_token') {
 		const refresh_token = params.get('refresh_token') ?? '';
-		const grant = find_grant(refresh_token, 'refresh');
+		const grant = await grant_of(await backend.take_oauth_token(hash(refresh_token)), 'refresh');
 		if (!grant || grant.client_id !== client_id)
 			throw new OAuthError(
 				'invalid_grant',
 				'The refresh token is invalid or the 48-hour approval has ended. Connect again.'
 			);
-		db.prepare('DELETE FROM oauth_tokens WHERE token_hash = ?').run(hash(refresh_token));
 		return issue_tokens(grant);
 	}
 
@@ -237,24 +215,22 @@ export function exchange_token(params: URLSearchParams) {
 }
 
 /** The grant behind a valid MCP access token, or null. */
-export function verify_access_token(token: string) {
+export async function verify_access_token(token: string) {
 	return find_grant(token, 'access');
 }
 
-export function create_upload_token(grant_id: string) {
+export async function create_upload_token(grant_id: string) {
 	const time = now();
-	const grant = db
-		.prepare('SELECT expires_at FROM oauth_grants WHERE grant_id = ? AND expires_at > ?')
-		.get(grant_id, time) as { expires_at: number } | undefined;
-	if (!grant) throw new Error('The MCP connection has ended. Connect again.');
+	const grant = await backend.get_oauth_grant(grant_id);
+	if (!grant || grant.expires_at <= time)
+		throw new Error('The MCP connection has ended. Connect again.');
 	const expires_at = Math.min(time + UPLOAD_TOKEN_TTL_SECONDS, grant.expires_at);
-	return { upload_token: insert_token(grant_id, 'upload', expires_at), expires_at };
+	return { upload_token: await insert_token(grant_id, 'upload', expires_at), expires_at };
 }
 
-/** End every MCP connection, e.g. when the admin logs out. Clients stay registered. */
-export function revoke_all_grants() {
-	db.prepare('DELETE FROM oauth_tokens').run();
-	db.prepare('UPDATE oauth_grants SET expires_at = ? WHERE expires_at > ?').run(now(), now());
+/** End every MCP connection, e.g. when the admin logs out. */
+export async function revoke_all_grants() {
+	await backend.revoke_oauth_grants();
 }
 
 /**
@@ -262,16 +238,16 @@ export function revoke_all_grants() {
  * prepare_image_upload. Token uploads come from agents, so the caller
  * validates their files more strictly.
  */
-export function authorize_asset_upload(
+export async function authorize_asset_upload(
 	request: Request,
-	locals: { is_admin?: boolean }
-): 'admin_session' | 'upload_token' {
+	locals: { user?: unknown }
+): Promise<'admin_session' | 'upload_token'> {
 	const token = /^Bearer (\S+)$/i.exec(request.headers.get('authorization') ?? '')?.[1];
 	if (!token) {
-		require_admin_session(locals);
+		require_user(locals);
 		return 'admin_session';
 	}
-	if (!find_grant(token, 'upload'))
+	if (!(await find_grant(token, 'upload')))
 		error(401, 'The upload token is invalid or expired. Call prepare_image_upload for a new one.');
 	return 'upload_token';
 }

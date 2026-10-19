@@ -22,7 +22,7 @@
 <Node {path} class="text-sm text-(--foreground)">
 	<div class="mx-auto max-w-7xl">
 		<div
-			class="flex flex-col items-stretch gap-x-10 gap-y-10 pt-48 pb-10 sm:gap-y-14 sm:pt-32 lg:flex-row lg:py-32 px-5 sm:px-7"
+			class="flex flex-col items-stretch gap-x-10 gap-y-10 px-5 pt-48 pb-10 sm:gap-y-14 sm:px-7 sm:pt-32 lg:flex-row lg:py-32"
 		>
 			<NodeArrayProperty
 				class="flex flex-col gap-5 [--row:0] sm:gap-7 lg:w-1/3"

@@ -9,24 +9,17 @@ import {
 } from './document_links.js';
 import { language_path, language_href, is_reserved_language_slug } from './languages.js';
 import { getRequestEvent, query, command } from '$app/server';
-import {
-	cleanup_translations,
-	save_translated_document,
-	translated_document
-} from './server_translations.js';
+import { save_translated_document, translated_document } from './server_translations.js';
 import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import slugify from 'slugify';
-import { db, with_transaction } from '#app/services.js';
+import { backend } from '#app/services.js';
+import { ConflictError } from '#lib/server/backend.js';
 import {
 	type DocumentData,
-	type DocumentRow,
 	InvalidDocumentError,
 	VersionConflictError,
-	collect_document_refs,
-	collect_node_ids,
-	create_page_slug,
-	get_active_slug_for_document_id,
+	combine_page_document,
 	get_attached_ranges,
 	get_combined_document,
 	get_doc_from_db,
@@ -36,9 +29,8 @@ import {
 	is_home_page_document_id,
 	is_reserved_route_slug,
 	persist_document,
-	resolve_slug,
+	document_refs_of,
 	shared_document_types,
-	update_document_refs,
 	with_asset_cleanup
 } from '#app/server_documents.js';
 
@@ -53,9 +45,8 @@ import { is_reserved_markdown_slug, get_markdown_page_pathnames } from '#app/mar
 import { extract_page_metadata, extract_site_metadata } from '#app/page_metadata.js';
 import type { PreviewMediaNode } from '#app/page_metadata.js';
 import type { DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
-import type { StatementSync } from 'node:sqlite';
-import { require_admin_session } from '#lib/server/auth.js';
-import { get_admin_auth } from './server_admin_auth.js';
+import { require_user } from '#lib/server/auth.js';
+import { get_auth } from './server_auth.js';
 import { revoke_all_grants } from '#app/server_oauth.js';
 
 // Whatever the login dialog sends; Editable's own dialog sends the password.
@@ -76,7 +67,7 @@ export type InternalLinkPreview = {
 	preview_media_node: PreviewMediaNode | null;
 };
 
-const save_document_input_schema = v.object({
+const save_page_input_schema = v.object({
 	document_id: v.string(),
 	nodes: v.record(v.string(), v.any()),
 	create: v.optional(v.boolean()),
@@ -104,15 +95,15 @@ function resolve_site_links(document: DocumentData): DocumentData {
  * Get a document from the database, stitching in shared documents (banner, nav, footer).
  */
 export const get_document = query(v.string(), async (slug) => {
-	const resolved = resolve_slug(slug);
+	const resolved = await backend.resolve_slug(slug);
 
 	if (!resolved) {
 		error(404, `Page not found for slug: ${slug}`);
 	}
 
 	return {
-		document: resolve_site_links(get_combined_document(resolved.document_id)),
-		version: get_document_version(resolved.document_id),
+		document: resolve_site_links(await get_combined_document(resolved.document_id)),
+		version: await get_document_version(resolved.document_id),
 		slug: resolved.active_slug,
 		redirect_to_slug: resolved.is_active ? null : resolved.active_slug
 	};
@@ -124,19 +115,21 @@ export const get_document = query(v.string(), async (slug) => {
  * documents, so returning them here would only invite copying them by mistake.
  */
 export const get_page_document_for_duplicate = query(v.string(), async (slug) => {
-	require_admin_session(getRequestEvent().locals);
+	require_user(getRequestEvent().locals);
 
 	// The home page has no slug row by invariant, so it is addressed as `/` —
 	// the same way the page browser and `page_href` refer to it.
 	const document_id =
-		slug === '/' ? get_home_page_id_from_db() : (resolve_slug(slug)?.document_id ?? null);
+		slug === '/'
+			? await get_home_page_id_from_db()
+			: ((await backend.resolve_slug(slug))?.document_id ?? null);
 
 	if (!document_id) {
 		error(404, `Page not found for slug: ${slug}`);
 	}
 
 	return {
-		document: resolve_site_links(get_doc_from_db(document_id))
+		document: resolve_site_links(await get_doc_from_db(document_id))
 	};
 });
 
@@ -144,16 +137,16 @@ export const get_page_document_for_duplicate = query(v.string(), async (slug) =>
  * Resolve the configured home page and return its stitched document.
  */
 export const get_home_document = query(v.void(), async () => {
-	const home_page_id = get_home_page_id_from_db();
+	const home_page_id = await get_home_page_id_from_db();
 
 	if (!home_page_id) {
 		throw new Error('Home page is not configured');
 	}
 
 	return {
-		document: resolve_site_links(get_combined_document(home_page_id)),
-		version: get_document_version(home_page_id),
-		slug: get_active_slug_for_document_id(home_page_id),
+		document: resolve_site_links(await get_combined_document(home_page_id)),
+		version: await get_document_version(home_page_id),
+		slug: await backend.get_active_slug(home_page_id),
 		redirect_to_slug: null
 	};
 });
@@ -162,40 +155,42 @@ export const get_home_document = query(v.void(), async () => {
  * Derive site-level metadata (favicon) from the home page document.
  */
 export const get_site_metadata = query(v.void(), async () => {
-	const home_page_id = get_home_page_id_from_db();
+	const home_page_id = await get_home_page_id_from_db();
 
 	if (!home_page_id) {
 		return { favicon: null };
 	}
 
-	return extract_site_metadata(get_doc_from_db(home_page_id));
+	return extract_site_metadata(await get_doc_from_db(home_page_id));
 });
 
 /**
  * Return the current shared nav and footer documents used for composing new pages.
  */
 export const get_shared_documents = query(v.void(), async () => {
-	const home_page_id = get_home_page_id_from_db();
+	const home_page_id = await get_home_page_id_from_db();
 	if (!home_page_id) throw new Error('Home page is not configured');
 
-	const home_page_node = get_doc_from_db(home_page_id).nodes[home_page_id];
-	const [banner_document, nav_document, footer_document] = shared_document_types.map((type) => {
-		const shared_id = home_page_node?.[type];
-		if (typeof shared_id !== 'string')
-			throw new Error(`Home page ${type} document is not configured`);
-		return resolve_site_links(get_doc_from_db(shared_id));
-	});
+	const home_page_node = (await get_doc_from_db(home_page_id)).nodes[home_page_id];
+	const [banner_document, nav_document, footer_document] = await Promise.all(
+		shared_document_types.map(async (type) => {
+			const shared_id = home_page_node?.[type];
+			if (typeof shared_id !== 'string')
+				throw new Error(`Home page ${type} document is not configured`);
+			return resolve_site_links(await get_doc_from_db(shared_id));
+		})
+	);
 	return { banner_document, nav_document, footer_document };
 });
 
 export const login_admin = command(admin_login_input_schema, async (credentials) => {
-	return get_admin_auth().log_in(getRequestEvent(), credentials);
+	return get_auth().log_in(getRequestEvent(), credentials);
 });
 
 export const logout_admin = command(v.void(), async () => {
-	await get_admin_auth().log_out(getRequestEvent());
+	await get_auth().log_out(getRequestEvent());
 	// Logging out also ends every MCP connection the admin approved.
-	revoke_all_grants();
+	await revoke_all_grants();
 	return { ok: true };
 });
 
@@ -204,7 +199,7 @@ export const logout_admin = command(v.void(), async () => {
  */
 export const get_page_browser_data = query(v.string(), async (href) => {
 	const event = getRequestEvent();
-	require_admin_session(event.locals);
+	require_user(event.locals);
 	const pathname = normalize_href(new URL(href).pathname, site);
 	return build_page_browser_data(language_path(pathname, site.languages).pathname);
 });
@@ -212,26 +207,19 @@ export const get_page_browser_data = query(v.string(), async (href) => {
 /** Return public URLs and saved timestamps for pages reachable from Home. */
 export const get_sitemap_entries = query(async () => {
 	const { languages } = site;
-	const { page_forest } = build_page_browser_data('/', true);
-	const records = db
-		.prepare(
-			`SELECT document_id, COALESCE(updated_at, created_at) AS modified,
-		 json_extract(data, '$.nodes."' || document_id || '".banner') AS banner,
-		 json_extract(data, '$.nodes."' || document_id || '".nav') AS nav,
-		 json_extract(data, '$.nodes."' || document_id || '".footer') AS footer
-		 FROM documents WHERE type IN ('page', 'banner', 'nav', 'footer')`
-		)
-		.all() as {
-		document_id: string;
-		modified: string | null;
-		banner: string | null;
-		nav: string | null;
-		footer: string | null;
-	}[];
+	const { page_forest } = await build_page_browser_data('/', true);
+	const records = (await backend.list_documents()).map((record) => {
+		const root = record.data.nodes[record.document_id];
+		return {
+			document_id: record.document_id,
+			modified: record.updated_at ?? record.created_at ?? null,
+			banner: (root?.banner as string | null) ?? null,
+			nav: (root?.nav as string | null) ?? null,
+			footer: (root?.footer as string | null) ?? null
+		};
+	});
 	const records_by_id = new Map(records.map((record) => [record.document_id, record]));
-	const translations = db
-		.prepare('SELECT document_id, language, updated_at FROM translations')
-		.all() as { document_id: string; language: string; updated_at: string }[];
+	const translations = await backend.list_translations();
 	const modified_by_language = new Map(
 		translations.map((row) => [JSON.stringify([row.document_id, row.language]), row.updated_at])
 	);
@@ -267,9 +255,9 @@ export const get_sitemap_entries = query(async () => {
  * Delete a page document and its related refs.
  */
 export const delete_page = command(delete_page_input_schema, async ({ document_id }) => {
-	require_admin_session(getRequestEvent().locals);
+	require_user(getRequestEvent().locals);
 
-	const home_page_id = get_home_page_id_from_db();
+	const home_page_id = await get_home_page_id_from_db();
 
 	if (!document_id) {
 		error(400, 'Document id is required');
@@ -279,31 +267,15 @@ export const delete_page = command(delete_page_input_schema, async ({ document_i
 		error(400, 'The home page cannot be deleted');
 	}
 
-	const existing_doc = get_optional_doc_from_db(document_id);
-	if (!existing_doc) {
+	const existing = await backend.get_document(document_id);
+	if (!existing) {
 		error(404, `Document not found: ${document_id}`);
 	}
+	if (existing.type !== 'page') {
+		error(400, 'Only pages can be deleted; the banner, navigation, and footer are shared.');
+	}
 
-	const delete_document = db.prepare('DELETE FROM documents WHERE document_id = ? AND type = ?');
-	const delete_asset_refs = db.prepare('DELETE FROM asset_refs WHERE document_id = ?');
-	const delete_outgoing_document_refs = db.prepare(
-		'DELETE FROM document_refs WHERE source_document_id = ?'
-	);
-	const delete_incoming_document_refs = db.prepare(
-		'DELETE FROM document_refs WHERE target_document_id = ?'
-	);
-	const delete_document_slugs = db.prepare('DELETE FROM document_slugs WHERE document_id = ?');
-
-	await with_asset_cleanup(() =>
-		with_transaction(() => {
-			delete_asset_refs.run(document_id);
-			delete_outgoing_document_refs.run(document_id);
-			delete_incoming_document_refs.run(document_id);
-			delete_document_slugs.run(document_id);
-			delete_document.run(document_id, 'page');
-			cleanup_translations(document_id);
-		})
-	);
+	await with_asset_cleanup(() => backend.delete_page(document_id));
 
 	return {
 		ok: true,
@@ -320,20 +292,17 @@ export const get_internal_link_preview = query(v.string(), async (href) => {
 		return null;
 	}
 
-	const resolved = resolve_slug(parsed.slug);
+	const resolved = await backend.resolve_slug(parsed.slug);
 	if (!resolved) {
 		return null;
 	}
 
-	const doc_row = db
-		.prepare('SELECT type, data FROM documents WHERE document_id = ?')
-		.get(resolved.document_id) as unknown as DocumentRow | undefined;
-	if (!doc_row || doc_row.type !== 'page') {
+	const record = await backend.get_document(resolved.document_id);
+	if (!record || record.type !== 'page') {
 		return null;
 	}
 
-	const page_doc = JSON.parse(doc_row.data) as DocumentData;
-	const metadata = extract_page_metadata(page_doc);
+	const metadata = extract_page_metadata(record.data);
 
 	const preview: InternalLinkPreview = {
 		document_id: resolved.document_id,
@@ -347,37 +316,29 @@ export const get_internal_link_preview = query(v.string(), async (href) => {
 /**
  * Save a document to the database, splitting shared documents (nav, footer) back out.
  */
+/** Point a link at new_slug when it leads to the page through one of its slugs. */
 function rewrite_internal_page_href(
 	href: string,
-	target_document_id: string,
+	target_slugs: Set<string>,
 	new_slug: string,
 	link_languages: string[]
 ) {
 	const parsed = parse_internal_page_href(href, link_languages);
-	if (!parsed) return href;
-
-	const resolved = resolve_slug(parsed.slug);
-	if (resolved?.document_id !== target_document_id) return href;
-
+	if (!parsed || !target_slugs.has(parsed.slug)) return href;
 	return `${parsed.prefix}/${new_slug}${parsed.suffix}`;
 }
 
 function rewrite_internal_page_hrefs(
 	nodes: Record<string, DocumentNode>,
-	target_document_id: string,
+	target_slugs: Set<string>,
 	new_slug: string,
-	link_languages = site.languages
+	link_languages: string[]
 ) {
 	for (const node of Object.values(nodes)) {
 		if (!node || typeof node !== 'object') continue;
 
 		if (typeof node.href === 'string') {
-			node.href = rewrite_internal_page_href(
-				node.href,
-				target_document_id,
-				new_slug,
-				link_languages
-			);
+			node.href = rewrite_internal_page_href(node.href, target_slugs, new_slug, link_languages);
 		}
 
 		const type_schema: NodeSchema | undefined = document_schema[node.type];
@@ -397,7 +358,7 @@ function rewrite_internal_page_hrefs(
 
 				range_node.href = rewrite_internal_page_href(
 					range_node.href,
-					target_document_id,
+					target_slugs,
 					new_slug,
 					link_languages
 				);
@@ -406,51 +367,15 @@ function rewrite_internal_page_hrefs(
 	}
 }
 
-function insert_active_slug(
-	document_id: string,
-	slug: string,
-	insert_slug_stmt: StatementSync,
-	deactivate_slug_stmt: StatementSync
-) {
-	deactivate_slug_stmt.run(document_id);
-	insert_slug_stmt.run(slug, document_id, 1, new Date().toISOString());
-}
-
-function move_active_slug_to_history(
-	document_id: string,
-	insert_slug_stmt: StatementSync,
-	deactivate_slug_stmt: StatementSync,
-	delete_slug_stmt: StatementSync
-) {
-	const current_slug = get_active_slug_for_document_id(document_id);
-	if (!current_slug) return null;
-
-	delete_slug_stmt.run(current_slug);
-	insert_slug_stmt.run(current_slug, document_id, 0, new Date().toISOString());
-	deactivate_slug_stmt.run(document_id);
-	return current_slug;
-}
-
-function assign_active_slug(
-	document_id: string,
-	slug: string,
-	insert_slug_stmt: StatementSync,
-	deactivate_slug_stmt: StatementSync,
-	delete_slug_stmt: StatementSync
-) {
-	delete_slug_stmt.run(slug);
-	insert_active_slug(document_id, slug, insert_slug_stmt, deactivate_slug_stmt);
-}
-
 export const get_translated_document = query(
 	v.object({ document_id: v.string(), language: v.string() }),
 	async (input) => {
-		const result = translated_document(input.document_id, input.language);
+		const result = await translated_document(input.document_id, input.language);
 		return { ...result, document: resolve_hrefs(result.document, site, result.language) };
 	}
 );
 
-export const save_translations = command(
+export const save_page_translation = command(
 	v.object({
 		document_id: v.string(),
 		nodes: v.record(v.string(), v.any()),
@@ -458,25 +383,26 @@ export const save_translations = command(
 		translation_revision: v.string()
 	}),
 	async (input) => {
-		require_admin_session(getRequestEvent().locals);
+		require_user(getRequestEvent().locals);
 		const result = await with_asset_cleanup(() => save_translated_document(input));
 		void snapshot_if_stale();
 		return result;
 	}
 );
 
-export const save_document = command(save_document_input_schema, async (combined_doc) => {
-	require_admin_session(getRequestEvent().locals);
+export const save_page = command(save_page_input_schema, async (combined_doc) => {
+	require_user(getRequestEvent().locals);
 	if (combined_doc.language && combined_doc.language !== site.languages[0])
 		error(400, 'Use the translation save command for additional languages.');
 
-	if (combined_doc.create && get_optional_doc_from_db(combined_doc.document_id)) {
+	const existing = await get_optional_doc_from_db(combined_doc.document_id);
+	if (combined_doc.create && existing) {
 		error(409, `Document already exists: ${combined_doc.document_id}`);
 	}
 
 	// Links come back resolved for the site; stored links never include the base.
-	const baseline = get_optional_doc_from_db(combined_doc.document_id)
-		? get_combined_document(combined_doc.document_id)
+	const baseline = existing
+		? await combine_page_document(existing)
 		: { document_id: combined_doc.document_id, nodes: {} };
 	const { nodes } = normalize_hrefs(
 		{ document_id: combined_doc.document_id, nodes: structuredClone(combined_doc.nodes) },
@@ -489,18 +415,10 @@ export const save_document = command(save_document_input_schema, async (combined
 		({ version } = await persist_document(combined_doc.document_id, nodes, {
 			expected_version:
 				combined_doc.create || combined_doc.force ? undefined : combined_doc.expected_version,
-			on_write: (page_doc) => {
-				if (
-					!combined_doc.create ||
-					get_active_slug_for_document_id(combined_doc.document_id) ||
-					is_home_page_document_id(combined_doc.document_id)
-				)
-					return;
-				create_page_slug(
-					combined_doc.document_id,
-					extract_page_metadata(page_doc).title || 'Untitled page'
-				);
-			}
+			slug_base: combined_doc.create
+				? extract_page_metadata({ document_id: combined_doc.document_id, nodes }).title ||
+					'Untitled page'
+				: undefined
 		}));
 	} catch (err) {
 		if (err instanceof InvalidDocumentError) error(400, err.message);
@@ -514,15 +432,15 @@ export const save_document = command(save_document_input_schema, async (combined
 		ok: true as const,
 		version,
 		document_id: combined_doc.document_id,
-		slug: is_home_page_document_id(combined_doc.document_id)
+		slug: (await is_home_page_document_id(combined_doc.document_id))
 			? null
-			: get_active_slug_for_document_id(combined_doc.document_id),
+			: await backend.get_active_slug(combined_doc.document_id),
 		created: !!combined_doc.create
 	};
 });
 
 export const update_page_slug = command(update_page_slug_input_schema, async (input) => {
-	require_admin_session(getRequestEvent().locals);
+	require_user(getRequestEvent().locals);
 
 	const normalized_slug = slugify(input.slug, { lower: true, strict: true, trim: true });
 
@@ -551,7 +469,7 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		);
 	}
 
-	const existing_doc = get_optional_doc_from_db(input.document_id);
+	const existing_doc = await get_optional_doc_from_db(input.document_id);
 	if (!existing_doc) {
 		return create_page_url_error_result(
 			'page_not_found',
@@ -559,7 +477,7 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		);
 	}
 
-	const home_page_id = get_home_page_id_from_db();
+	const home_page_id = await get_home_page_id_from_db();
 	if (home_page_id === input.document_id) {
 		return create_page_url_error_result(
 			'home_page_url_locked',
@@ -567,7 +485,7 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		);
 	}
 
-	const current_active_slug = get_active_slug_for_document_id(input.document_id);
+	const current_active_slug = await backend.get_active_slug(input.document_id);
 	if (!current_active_slug) {
 		return create_page_url_error_result(
 			'active_slug_missing',
@@ -582,108 +500,73 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		};
 	}
 
-	const existing_slug = db
-		.prepare('SELECT document_id, is_active FROM document_slugs WHERE slug = ?')
-		.get(normalized_slug) as unknown as { document_id: string; is_active: number } | undefined;
-
-	if (
-		existing_slug &&
-		existing_slug.document_id !== input.document_id &&
-		existing_slug.is_active === 1
-	) {
+	const existing_slug = await backend.resolve_slug(normalized_slug);
+	if (existing_slug && existing_slug.document_id !== input.document_id && existing_slug.is_active) {
 		return create_page_url_error_result(
 			'page_url_used_by_other_page',
 			'That Page URL is already in use by another page. Rename that page first.'
 		);
 	}
 
-	const delete_slug = db.prepare('DELETE FROM document_slugs WHERE slug = ?');
-	const deactivate_active_slug = db.prepare(
-		'UPDATE document_slugs SET is_active = 0 WHERE document_id = ? AND is_active = 1'
-	);
-	const insert_slug = db.prepare(
-		'INSERT INTO document_slugs (slug, document_id, is_active, created_at) VALUES (?, ?, ?, ?)'
-	);
+	// The page's earlier slugs stay as redirects to the new active one.
+	const now = new Date().toISOString();
+	const [all_slugs, documents, translations] = await Promise.all([
+		backend.list_slugs(),
+		backend.list_documents(),
+		backend.list_translations()
+	]);
+	const own_slugs = all_slugs.filter((record) => record.document_id === input.document_id);
+	const slugs = [
+		...own_slugs
+			.filter((record) => record.is_active)
+			.map((record) => ({ ...record, is_active: false })),
+		{ slug: normalized_slug, document_id: input.document_id, is_active: true, created_at: now }
+	];
+	const targets = new Map(all_slugs.map((record) => [record.slug, record.document_id]));
+	for (const record of slugs) targets.set(record.slug, record.document_id);
 
-	const new_active_slug = with_transaction(() => {
-		move_active_slug_to_history(
-			input.document_id,
-			insert_slug,
-			deactivate_active_slug,
-			delete_slug
-		);
-		assign_active_slug(
-			input.document_id,
-			normalized_slug,
-			insert_slug,
-			deactivate_active_slug,
-			delete_slug
-		);
-
-		const active_slug = get_active_slug_for_document_id(input.document_id);
-		if (!active_slug) {
-			throw new Error('Failed to assign new active slug');
-		}
-
-		const page_rows = db
-			.prepare('SELECT * FROM documents WHERE type IN (?, ?, ?, ?) ORDER BY document_id')
-			.all('page', 'banner', 'nav', 'footer') as unknown as DocumentRow[];
-
-		// Rewritten links still point at the same page, so this is not a content
-		// change and leaves updated_at alone.
-		const update_data = db.prepare('UPDATE documents SET data = ? WHERE document_id = ?');
-		const delete_document_refs = db.prepare(
-			'DELETE FROM document_refs WHERE source_document_id = ?'
-		);
-		const insert_document_ref = db.prepare(
-			'INSERT OR REPLACE INTO document_refs (target_document_id, source_document_id, ref_order) VALUES (?, ?, ?)'
-		);
-
-		const translations = db.prepare('SELECT rowid, language, value FROM translations').all() as {
-			rowid: number;
-			language: string;
-			value: string;
-		}[];
-		const link_languages = [
-			...new Set([...site.languages, ...translations.map((row) => row.language)])
-		];
-
-		for (const row of page_rows) {
-			const doc = JSON.parse(row.data);
-			rewrite_internal_page_hrefs(doc.nodes, input.document_id, active_slug, link_languages);
-			const data = JSON.stringify(doc);
-			if (data === row.data) continue;
-			update_data.run(data, row.document_id);
-
-			const root_id = row.document_id;
-			const node_ids = collect_node_ids(root_id, doc.nodes);
-			update_document_refs(
-				root_id,
-				collect_document_refs(doc.nodes, node_ids, root_id),
-				delete_document_refs,
-				insert_document_ref
+	// Links through any of the page's slugs now use the new one. They still point
+	// at the same page, so this is not a content change and leaves updated_at alone.
+	const target_slugs = new Set(own_slugs.map((record) => record.slug));
+	const link_languages = [
+		...new Set([...site.languages, ...translations.map((row) => row.language)])
+	];
+	const rewritten = documents.flatMap((record) => {
+		const data = structuredClone(record.data);
+		rewrite_internal_page_hrefs(data.nodes, target_slugs, normalized_slug, link_languages);
+		return JSON.stringify(data) === JSON.stringify(record.data) ? [] : [{ ...record, data }];
+	});
+	const rewritten_translations = translations.flatMap(({ version: _, ...row }) => {
+		const map: TranslationMap = JSON.parse(row.value);
+		for (const payload of translation_payloads(map))
+			rewrite_internal_page_hrefs(
+				payload.nodes ?? {},
+				target_slugs,
+				normalized_slug,
+				link_languages
 			);
-		}
-
-		for (const row of translations) {
-			const map: TranslationMap = JSON.parse(row.value);
-			for (const payload of translation_payloads(map))
-				rewrite_internal_page_hrefs(
-					payload.nodes ?? {},
-					input.document_id,
-					active_slug,
-					link_languages
-				);
-			const value = JSON.stringify(map);
-			if (value !== row.value)
-				db.prepare('UPDATE translations SET value = ? WHERE rowid = ?').run(value, row.rowid);
-		}
-		return active_slug;
+		const value = JSON.stringify(map);
+		return value === row.value ? [] : [{ ...row, value }];
 	});
 
+	try {
+		await backend.save_documents({
+			expect: Object.fromEntries(rewritten.map((record) => [record.document_id, record.version])),
+			documents: rewritten.map(({ version: _, ...record }) => record),
+			document_refs: rewritten.map((record) => document_refs_of(record.data, targets)),
+			translations: { put: rewritten_translations },
+			slugs
+		});
+	} catch (err) {
+		if (!(err instanceof ConflictError)) throw err;
+		return create_page_url_error_result(
+			'page_changed',
+			'A page changed while its links were being updated. Try again.'
+		);
+	}
 	return {
 		ok: true,
 		document_id: input.document_id,
-		page_href: `/${new_active_slug}`
+		page_href: `/${normalized_slug}`
 	};
 });

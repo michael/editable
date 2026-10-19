@@ -33,7 +33,7 @@
 		slug = null,
 		has_backend = false,
 		is_new = false,
-		is_admin: server_is_admin = false,
+		user = null,
 		can_edit = true,
 		origin = null,
 		document_title = null,
@@ -48,7 +48,7 @@
 		slug?: string | null;
 		has_backend?: boolean;
 		is_new?: boolean;
-		is_admin?: boolean;
+		user?: Record<string, unknown> | null;
 		can_edit?: boolean;
 		origin?: string | null;
 		document_title?: string | null;
@@ -76,7 +76,8 @@
 		language: string;
 		doc_json: string;
 	} | null>(null);
-	let is_admin = $derived(server_is_admin);
+	// Whoever is signed in may edit.
+	let is_admin = $derived(!!user);
 	let is_admin_mode = $derived(editable && is_admin);
 	const is_demo_mode = DEMO_MODE;
 
@@ -282,9 +283,10 @@
 
 	set_page_delete_dialog(create_page_delete_dialog());
 
-	$effect(() => {
-		document.documentElement.style.scrollBehavior = editable ? 'auto' : 'smooth';
-	});
+	// Smooth scrolling made jumping to anchors, such as in the manual, feel slow.
+	// $effect(() => {
+	// 	document.documentElement.style.scrollBehavior = editable ? 'auto' : 'smooth';
+	// });
 
 	function focus_canvas() {
 		if (svedit_ref) {
@@ -513,7 +515,7 @@
 				import('#app/asset_upload.js')
 			]);
 
-			const save_document: any = api_module.save_document;
+			const save_page: any = api_module.save_page;
 
 			const {
 				collect_blob_urls,
@@ -567,8 +569,8 @@
 					slug?: string;
 					created?: boolean;
 				} = translation_mode
-					? await api_module.save_translations({ ...doc_json, language, translation_revision })
-					: await save_document({
+					? await api_module.save_page_translation({ ...doc_json, language, translation_revision })
+					: await save_page({
 							...doc_json,
 							create: is_new,
 							language: languages.length ? languages[0] : undefined,
@@ -648,7 +650,7 @@
 
 	function overwrite_after_conflict() {
 		save_conflict_open = false;
-		void app_commands.save_document.execute(true);
+		void app_commands.save_page.execute(true);
 	}
 
 	class LogoutCommand extends Command {
@@ -779,7 +781,7 @@
 		new_page: new NewPageCommand(app_command_context),
 		edit_document: new EditCommand(app_command_context),
 		cancel_editing: new CancelCommand(app_command_context),
-		save_document: new SaveCommand(app_command_context),
+		save_page: new SaveCommand(app_command_context),
 		logout_admin: new LogoutCommand(app_command_context),
 		browse_pages: new BrowsePagesCommand(app_command_context),
 		copy_link_to_block: new CopyLinkToBlockCommand(app_command_context)
@@ -794,7 +796,7 @@
 		'ctrl+shift+m': [app_commands.page_menu],
 		'meta+p,ctrl+p': [app_commands.browse_pages],
 		'ctrl+shift+k': [app_commands.copy_link_to_block],
-		'meta+s,ctrl+s': [app_commands.save_document]
+		'meta+s,ctrl+s': [app_commands.save_page]
 	});
 	key_mapper.push_scope(app_key_map);
 

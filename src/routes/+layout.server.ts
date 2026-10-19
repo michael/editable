@@ -57,15 +57,15 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		]);
 		if (language) {
 			const { translate_shared_document } = await import('#app/server_translations.js');
-			shared_documents.banner_document = translate_shared_document(
+			shared_documents.banner_document = await translate_shared_document(
 				shared_documents.banner_document,
 				language
 			);
-			shared_documents.nav_document = translate_shared_document(
+			shared_documents.nav_document = await translate_shared_document(
 				shared_documents.nav_document,
 				language
 			);
-			shared_documents.footer_document = translate_shared_document(
+			shared_documents.footer_document = await translate_shared_document(
 				shared_documents.footer_document,
 				language
 			);
@@ -80,7 +80,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		languages: site.languages,
 		language,
 		has_backend,
-		is_admin: !!locals.is_admin,
+		user: locals.user,
 		origin: site.origin,
 		site_base: site.base,
 		favicon: site_metadata.favicon,

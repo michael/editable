@@ -95,9 +95,9 @@ async function get_shared_site_documents(language: string) {
 	if (!language) return shared;
 	const { translate_shared_document } = await import('#app/server_translations.js');
 	return {
-		banner_document: translate_shared_document(shared.banner_document, language),
-		nav_document: translate_shared_document(shared.nav_document, language),
-		footer_document: translate_shared_document(shared.footer_document, language)
+		banner_document: await translate_shared_document(shared.banner_document, language),
+		nav_document: await translate_shared_document(shared.nav_document, language),
+		footer_document: await translate_shared_document(shared.footer_document, language)
 	};
 }
 

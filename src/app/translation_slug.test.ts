@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, expect, it, vi } from 'vitest';
 import type { DatabaseSync } from 'node:sqlite';
-import { fill_document_defaults } from 'svedit';
+import { fill_document_defaults, type Document } from 'svedit';
 import { document_schema } from './document_schema.js';
 import {
 	default_page_document,
@@ -9,8 +9,6 @@ import {
 	default_nav_document,
 	default_footer_document
 } from './default_site.js';
-import initial_schema from './migrations/20260803T131059242Z_editable_initial_schema.js';
-import translations_schema from './migrations/20260923T180000000Z_editable_translations.js';
 
 vi.mock('$app/env/private', () => ({
 	LANGUAGES: 'en,de',
@@ -20,7 +18,7 @@ vi.mock('$app/env/private', () => ({
 	NODE_ENV: 'test'
 }));
 vi.mock('$app/server', () => ({
-	getRequestEvent: () => ({ locals: { is_admin: true } }),
+	getRequestEvent: () => ({ locals: { user: { username: 'admin', name: 'Admin' } } }),
 	query: (schema_or_callback: object, callback?: object) =>
 		Object.assign(callback ?? schema_or_callback, { __: { type: 'query' } }),
 	command: (schema_or_callback: object, callback?: object) =>
@@ -29,43 +27,38 @@ vi.mock('$app/server', () => ({
 vi.mock('#lib/server/db_snapshot.js', () => ({ snapshot_if_stale: vi.fn() }));
 vi.mock('./services.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
-	const db = new DatabaseSync(':memory:');
+	const { mkdtempSync } = await import('node:fs');
+	const { tmpdir } = await import('node:os');
+	const { sqlite_backend } = await import('#lib/server/backends/sqlite_backend.js');
+	const sqlite = new DatabaseSync(':memory:');
+	const asset_dir = mkdtempSync(`${tmpdir()}/editable-assets-`);
 	return {
-		db,
-		with_transaction: (callback: () => unknown) => {
-			db.exec('BEGIN');
-			try {
-				const result = callback();
-				db.exec('COMMIT');
-				return result;
-			} catch (err) {
-				db.exec('ROLLBACK');
-				throw err;
-			}
-		},
-		asset_exists: vi.fn(() => true),
-		delete_orphaned_assets: vi.fn(),
-		touch_asset: vi.fn()
+		sqlite,
+		backend: sqlite_backend({ db: sqlite, asset_dir }),
+		asset_exists: vi.fn(async () => true)
 	};
 });
 
-import { db } from './services.js';
+import * as services from './services.js';
+const { sqlite, backend } = services as unknown as typeof services & { sqlite: DatabaseSync };
 import { default_site } from './server_site.js';
 import {
 	update_page_slug,
 	delete_page,
-	save_document,
+	save_page,
 	get_page_browser_data,
 	get_sitemap_entries
 } from './api.remote.js';
 import { warn_about_language_slug_collisions } from './server_language_slugs.js';
+import { document_refs_of, slug_targets } from './server_documents.js';
+import { migrate_storage } from './migrations.js';
 import * as markdown_registry from './markdown/registry.js';
 
 // With no site set by a host, the code under test uses the deployment's own.
 const { languages } = default_site;
 
 it('publishes localized sitemap URLs with translation dates while excluding hidden pages and redirects', async () => {
-	const insert_doc = db.prepare(
+	const insert_doc = sqlite.prepare(
 		'INSERT INTO documents (document_id, type, data, updated_at) VALUES (?, ?, ?, ?)'
 	);
 	for (const doc of [
@@ -80,15 +73,16 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 			JSON.stringify(doc),
 			'2026-10-01T00:00:00Z'
 		);
-	db.prepare('INSERT INTO site_settings VALUES (?, ?)').run(
-		'home_page_id',
-		default_page_document.document_id
-	);
-	db.prepare('UPDATE documents SET updated_at = ? WHERE document_id = ?').run(
-		'2026-10-02T00:00:00Z',
-		default_nav_document.document_id
-	);
-	const insert_slug = db.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)');
+	sqlite
+		.prepare('INSERT INTO site_settings VALUES (?, ?)')
+		.run('home_page_id', default_page_document.document_id);
+	sqlite
+		.prepare('UPDATE documents SET updated_at = ? WHERE document_id = ?')
+		.run('2026-10-02T00:00:00Z', default_nav_document.document_id);
+	const insert_slug = sqlite.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)');
+	// The nav links to every listed page; references are read from its content.
+	const nav = structuredClone(default_nav_document) as Document;
+	const nav_links = Object.values(nav.nodes).filter((node) => node.type === 'nav_link');
 	for (const slug of ['about', 'de', 'manual', 'unlisted']) {
 		const doc = structuredClone(default_page_document);
 		const root = doc.nodes[doc.document_id];
@@ -101,25 +95,23 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 		};
 		insert_doc.run(doc.document_id, 'page', JSON.stringify(doc), '2026-10-01T00:00:00Z');
 		insert_slug.run(slug, doc.document_id, 1, 'now');
-		if (slug !== 'unlisted')
-			db.prepare('INSERT INTO document_refs VALUES (?, ?, ?)').run(
-				doc.document_id,
-				default_nav_document.document_id,
-				0
-			);
+		if (slug !== 'unlisted') nav_links.shift()!.href = `/${slug}`;
 	}
+	sqlite
+		.prepare('UPDATE documents SET data = ? WHERE document_id = ?')
+		.run(JSON.stringify(nav), nav.document_id);
+	await backend.save_documents({ document_refs: [document_refs_of(nav, await slug_targets())] });
 	insert_slug.run('old-about', 'about-page', 0, 'now');
 	for (const [document_id, language, date] of [
 		['about-page', 'de', '2026-10-03T00:00:00Z'],
 		[default_nav_document.document_id, 'de', '2026-10-04T00:00:00Z'],
 		['about-page', 'es', '2026-10-05T00:00:00Z']
 	])
-		db.prepare('INSERT INTO translations VALUES (?, ?, ?, ?)').run(
-			document_id,
-			language,
-			'{}',
-			date
-		);
+		sqlite
+			.prepare(
+				'INSERT INTO translations (document_id, language, value, updated_at) VALUES (?, ?, ?, ?)'
+			)
+			.run(document_id, language, '{}', date);
 	const entries = await get_sitemap_entries();
 	expect(entries.map((entry) => entry.path).sort()).toEqual([
 		'/',
@@ -147,7 +139,8 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 });
 
 // The mocked services export a real database.
-afterAll(() => (db as unknown as DatabaseSync).close());
+afterAll(() => (sqlite as unknown as DatabaseSync).close());
+await migrate_storage(backend as never);
 beforeEach(() => {
 	vi.restoreAllMocks();
 	languages.splice(0, languages.length, 'en', 'de');
@@ -157,41 +150,35 @@ beforeEach(() => {
 		'document_refs',
 		'asset_refs',
 		'document_slugs',
-		'sessions',
 		'translations'
 	])
-		db.exec(`DROP TABLE IF EXISTS ${table}`);
-	initial_schema.up({ db });
-	translations_schema.up({ db });
+		sqlite.exec(`DELETE FROM ${table}`);
 });
 
 it('rejects a language homepage slug without changing the page or its links', async () => {
 	const page = structuredClone(default_page_document);
-	db.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)').run(
-		page.document_id,
-		'page',
-		JSON.stringify(page)
-	);
-	db.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)').run(
-		'about',
-		page.document_id,
-		1,
-		'now'
-	);
+	sqlite
+		.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)')
+		.run(page.document_id, 'page', JSON.stringify(page));
+	sqlite
+		.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)')
+		.run('about', page.document_id, 1, 'now');
 	expect(await update_page_slug({ document_id: page.document_id, slug: ' DE ' })).toMatchObject({
 		ok: false,
 		code: 'page_url_reserved'
 	});
-	expect(db.prepare('SELECT slug FROM document_slugs WHERE is_active = 1').get()).toMatchObject({
-		slug: 'about'
-	});
-	expect(db.prepare('SELECT data FROM documents').get()).toMatchObject({
+	expect(sqlite.prepare('SELECT slug FROM document_slugs WHERE is_active = 1').get()).toMatchObject(
+		{
+			slug: 'about'
+		}
+	);
+	expect(sqlite.prepare('SELECT data FROM documents').get()).toMatchObject({
 		data: JSON.stringify(page)
 	});
 });
 
 it('renames a page without marking any document as modified', async () => {
-	const insert_doc = db.prepare(
+	const insert_doc = sqlite.prepare(
 		'INSERT INTO documents (document_id, type, data, updated_at) VALUES (?, ?, ?, ?)'
 	);
 	const saved_at = '2026-10-01T00:00:00Z';
@@ -211,12 +198,14 @@ it('renames a page without marking any document as modified', async () => {
 		if (href) doc.nodes.link = { id: 'link', type: 'button', href };
 		insert_doc.run(document_id, 'page', JSON.stringify(doc), saved_at);
 	}
-	db.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)').run('about', 'about-page', 1, 'now');
+	sqlite
+		.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)')
+		.run('about', 'about-page', 1, 'now');
 
 	expect(await update_page_slug({ document_id: 'about-page', slug: 'about-us' })).toMatchObject({
 		ok: true
 	});
-	const rows = db
+	const rows = sqlite
 		.prepare('SELECT document_id, data, updated_at FROM documents ORDER BY document_id')
 		.all() as { document_id: string; data: string; updated_at: string }[];
 	expect(rows.map((row) => row.updated_at)).toEqual([saved_at, saved_at, saved_at]);
@@ -225,17 +214,12 @@ it('renames a page without marking any document as modified', async () => {
 
 it('flags language collisions in the page browser and clears the flag after renaming', async () => {
 	const page = structuredClone(default_page_document);
-	db.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)').run(
-		page.document_id,
-		'page',
-		JSON.stringify(page)
-	);
-	db.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)').run(
-		'de',
-		page.document_id,
-		1,
-		'now'
-	);
+	sqlite
+		.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)')
+		.run(page.document_id, 'page', JSON.stringify(page));
+	sqlite
+		.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)')
+		.run('de', page.document_id, 1, 'now');
 	const browser = await get_page_browser_data('https://example.com/');
 	expect(browser.page_forest[0]).toMatchObject({
 		document_id: page.document_id,
@@ -270,33 +254,28 @@ it.each([
 		languages.splice(0, languages.length, ...configured);
 		const page = structuredClone(default_site_document);
 		page.nodes[page.document_id].title = { content: title, marks: [], annotations: [] };
-		db.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)').run(
-			'de-2',
-			'other-page',
-			1,
-			'now'
-		);
-		expect(await save_document({ ...page, create: true })).toMatchObject({
+		sqlite
+			.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)')
+			.run('de-2', 'other-page', 1, 'now');
+		expect(await save_page({ ...page, create: true })).toMatchObject({
 			ok: true,
 			slug: expected
 		});
 	}
 );
 
-it('warns about active pages, historical redirects, and markdown language collisions at startup', () => {
+it('warns about active pages, historical redirects, and markdown language collisions at startup', async () => {
 	const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 	vi.spyOn(markdown_registry, 'get_markdown_page_pathnames').mockReturnValue(['/de', '/manual']);
-	db.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)').run(
-		'page',
-		'page',
-		'{}'
-	);
-	const insert = db.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)');
+	sqlite
+		.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)')
+		.run('page', 'page', '{}');
+	const insert = sqlite.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)');
 	insert.run('de', 'page', 1, 'now');
 	insert.run('es', 'page', 0, 'now');
 	insert.run('en', 'page', 0, 'now');
 	languages.push('es');
-	warn_about_language_slug_collisions();
+	await warn_about_language_slug_collisions();
 	expect(warn.mock.calls.map(([message]) => message)).toEqual([
 		expect.stringContaining('Page "/de" (page)'),
 		expect.stringContaining('Historical redirect "/es" (page)'),
@@ -304,9 +283,9 @@ it('warns about active pages, historical redirects, and markdown language collis
 	]);
 	warn.mockClear();
 	languages.splice(0);
-	warn_about_language_slug_collisions();
+	await warn_about_language_slug_collisions();
 	expect(warn).not.toHaveBeenCalled();
-	expect(db.prepare('SELECT slug FROM document_slugs').all()).toHaveLength(3);
+	expect(sqlite.prepare('SELECT slug FROM document_slugs').all()).toHaveLength(3);
 });
 
 it.each([false, true])(
@@ -316,17 +295,12 @@ it.each([false, true])(
 		const page = fill_document_defaults(structuredClone(default_page_document), document_schema);
 		const id = page.document_id;
 		page.nodes['original_link'] = { id: 'original_link', type: 'link', href: '/fr/about' };
-		db.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)').run(
-			id,
-			'page',
-			JSON.stringify(page)
-		);
-		db.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)').run(
-			'about',
-			id,
-			1,
-			'2026-10-02T00:00:00.000Z'
-		);
+		sqlite
+			.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)')
+			.run(id, 'page', JSON.stringify(page));
+		sqlite
+			.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)')
+			.run('about', id, 1, '2026-10-02T00:00:00.000Z');
 		for (const language of ['de', 'fr']) {
 			const map = {
 				[id]: {
@@ -346,21 +320,22 @@ it.each([false, true])(
 					}
 				}
 			};
-			db.prepare('INSERT INTO translations VALUES (?, ?, ?, ?)').run(
-				id,
-				language,
-				JSON.stringify(map),
-				'2026-10-02T00:00:00.000Z'
-			);
+			sqlite
+				.prepare(
+					'INSERT INTO translations (document_id, language, value, updated_at) VALUES (?, ?, ?, ?)'
+				)
+				.run(id, language, JSON.stringify(map), '2026-10-02T00:00:00.000Z');
 		}
 		const result = await update_page_slug({ document_id: id, slug: 'updated' });
 		expect(result).toMatchObject({ ok: true, page_href: '/updated' });
-		const original_row = db.prepare('SELECT data FROM documents WHERE document_id = ?').get(id) as {
+		const original_row = sqlite
+			.prepare('SELECT data FROM documents WHERE document_id = ?')
+			.get(id) as {
 			data: string;
 		};
 		expect(JSON.parse(original_row.data).nodes.original_link.href).toBe('/fr/updated');
 		for (const language of ['de', 'fr']) {
-			const row = db
+			const row = sqlite
 				.prepare('SELECT value FROM translations WHERE document_id = ? AND language = ?')
 				.get(id, language) as { value: string };
 			const map = JSON.parse(row.value);
@@ -374,22 +349,24 @@ it('deletes all stored translations with the original page when multilingual sup
 	languages.splice(0);
 	const page = fill_document_defaults(structuredClone(default_page_document), document_schema);
 	const id = page.document_id;
-	db.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)').run(
-		id,
-		'page',
-		JSON.stringify(page)
-	);
+	sqlite
+		.prepare('INSERT INTO documents (document_id, type, data) VALUES (?, ?, ?)')
+		.run(id, 'page', JSON.stringify(page));
 	for (const language of ['de', 'es']) {
-		db.prepare('INSERT INTO translations VALUES (?, ?, ?, ?)').run(
-			id,
-			language,
-			JSON.stringify({
-				[id]: { title: { content: 'Translated', nodes: {}, marks: [], annotations: [] } }
-			}),
-			'now'
-		);
+		sqlite
+			.prepare(
+				'INSERT INTO translations (document_id, language, value, updated_at) VALUES (?, ?, ?, ?)'
+			)
+			.run(
+				id,
+				language,
+				JSON.stringify({
+					[id]: { title: { content: 'Translated', nodes: {}, marks: [], annotations: [] } }
+				}),
+				'now'
+			);
 	}
 	await delete_page({ document_id: id });
-	expect(db.prepare('SELECT * FROM translations').all()).toEqual([]);
-	expect(db.prepare('SELECT * FROM documents').all()).toEqual([]);
+	expect(sqlite.prepare('SELECT * FROM translations').all()).toEqual([]);
+	expect(sqlite.prepare('SELECT * FROM documents').all()).toEqual([]);
 });
