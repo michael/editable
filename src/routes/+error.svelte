@@ -3,7 +3,7 @@
 	import { resolve_href } from '#app/document_links.js';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import App from '#app/components/App.svelte';
+	import PageShell from '#app/components/PageShell.svelte';
 
 	let is_not_found = $derived(page.status === 404);
 	// Only offer to go back when there is somewhere to go, which the server cannot know.
@@ -17,18 +17,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<App
-	document={page.data.not_found_document}
-	has_backend={page.data.has_backend}
-	user={page.data.user}
-	is_editor={page.data.is_editor}
-	origin={page.data.origin}
-	languages={page.data.languages}
-	language={page.data.language}
-	document_title={is_not_found ? 'Page not found' : 'Something went wrong'}
-	slug={null}
-	can_edit={false}
->
+<PageShell title={is_not_found ? 'Page not found' : 'Something went wrong'}>
 	<div
 		class="mx-auto flex min-h-[60vh] w-full max-w-7xl items-center justify-center px-5 py-24 sm:px-7 sm:py-32"
 	>
@@ -61,4 +50,4 @@
 			</div>
 		</div>
 	</div>
-</App>
+</PageShell>

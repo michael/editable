@@ -185,51 +185,41 @@ The `pnpm data:*` commands, backups, and Litestream work on `sqlite_backend`'s d
 
 Add pages that are not content, such as a shop's checkout or a list of orders, inside the site's banner, nav, and footer.
 
-Such a page is an ordinary SvelteKit route. Its server load builds a page document with `chrome_document` from `src/app/chrome_document.ts`, which puts the site's shared banner, nav, and footer around an empty body and gives the page a title and description, and the route renders its own content as `App`'s children:
+Such a page is an ordinary SvelteKit route that renders its content in `PageShell`, from `src/app/components/PageShell.svelte`. Its load returns only the route's own data:
 
 ```ts
 // src/routes/orders/+page.server.ts
-import { chrome_document } from '#app/chrome_document.js';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
-	const { get_shared_documents } = await import('#app/api.remote.js');
-	return {
-		document: chrome_document(
-			'orders-page',
-			{ title: 'Your orders', description: 'Everything you ordered, and where it is.' },
-			await get_shared_documents()
-		),
-		slug: 'orders',
-		can_edit: false,
-		// Your own data, read however your app keeps it.
-		orders: await orders_of(locals.user)
-	};
-};
+// Your own data, read however your app keeps it.
+export const load: PageServerLoad = async ({ locals }) => ({
+	orders: await orders_of(locals.user)
+});
 ```
 
 ```svelte
 <!-- src/routes/orders/+page.svelte -->
 <script lang="ts">
-	import App from '#app/components/App.svelte';
+	import PageShell from '#app/components/PageShell.svelte';
 	import Orders from '#app/components/Orders.svelte';
 
 	let { data } = $props();
 </script>
 
-<App {...data}>
+<PageShell title="Your orders" description="Everything you ordered, and where it is.">
 	<Orders orders={data.orders} />
-</App>
+</PageShell>
 ```
 
-- **`chrome_document(document_id, { title, description }, shared_documents)`** returns a validated page document. The id only has to be unique among pages, such as `orders-page`. The title and description become the page's `<title>` and the description in search results and link previews.
-- **`App` renders everything around your content:** the banner, the sticky nav, the footer, the toolbar for people signed in, and the login drawer. Your content takes the place of the page body, inside `<main>`.
-- **`can_edit: false`** keeps ⌘ E from turning the page into an editable document; there is nothing for the editor to edit.
+- **`PageShell` is a page whose body is yours.** It renders everything a content page has around its body: the banner, the sticky nav, the footer, the toolbar for people signed in, and the login drawer. Its children take the body's place, inside `<main>`.
+- **The shell comes with every request.** The root layout builds it from the site's shared banner, nav, and footer, already in the visitor's language, and from the defaults on a static deployment, so the route loads nothing for it. The error page and the design system are built this way too.
+- **`title` and `description`** become the page's `<title>` and its description in search results and link previews.
+- **⌘ E leaves the page alone;** there is nothing for the editor to edit.
 - **Forms work.** The page's content sits inside the editor's canvas, which leaves the typing of inputs, textareas, and selects there to them.
-- **Inside your content,** `get_app_context()` from `src/app/app_context.ts` gives App's state, such as `app.auth_dialog_open = true` to open the login drawer, and `page.data` holds `user` and `is_editor`. Style it with the [design system](README.md#styling)'s recipes; the design system page in `src/routes/design-system` is itself built this way.
+- **Inside your content,** `get_app_context()` from `src/app/app_context.ts` gives App's state, such as `app.auth_dialog_open = true` to open the login drawer, and `page.data` holds `user` and `is_editor`. Style it with the [design system](README.md#styling)'s recipes.
 - **Reserve its path:** add the route's first path segment, such as `orders`, to `RESERVED_ROUTE_SLUGS` in `src/app/config.ts`, or a page could take its URL.
 
-A static deployment has no backend to read the shared documents from; the design system route shows how to fall back to the defaults from `src/app/default_site.js`.
+A route group gives many such pages the shell at once: a `src/routes/(app)/+layout.svelte` that renders `PageShell` around its children, with each page's title from its load, keeps the pages themselves to their content.
 
 ## Sign-in
 
@@ -366,7 +356,7 @@ Editable can be the website of an app with accounts of its own, such as a utilit
 - **Its login dialog covers both cases.** Signed out, it asks for the app's credentials. Signed in without edit rights, which is when ⌘ E still opens it, it can say so and offer the app's own pages or logging out. `page.data.user` and `page.data.is_editor` tell the two apart.
 - **Its pages send signed-out visitors to `/login`** with themselves as `redirect_to`.
 - **The toolbar shows to everyone signed in.** Its menu holds Logout, labeled Page actions for editors and Account for everyone else. Two slots in `system_components` add the app's own: `toolbar_items` renders buttons next to Editable's, receiving the toolbar's `button_class`, and `menu_items` renders entries at the top of the menu, receiving `item_class` and `close` (see `ToolbarItemsProps` and `MenuItemsProps` in `src/app/components/Toolbar.svelte`).
-- **Its pages sit inside the site's chrome,** built with `chrome_document` (see [Pages of your own](#pages-of-your-own)).
+- **Its pages sit inside the site's banner, nav, and footer** with `PageShell` (see [Pages of your own](#pages-of-your-own)).
 - **`pnpm data:push` replaces the live database,** with the accounts and what they reported. Once people use the app, edit the live site instead of pushing.
 
 ### Before you ship it

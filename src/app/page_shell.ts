@@ -9,17 +9,17 @@ export type SharedDocuments = {
 };
 
 /**
- * A page document for a route of its own, such as the design system or an
- * app's page: the site's banner, nav, and footer around the content the route
- * renders as App's children, with a title and description for its metadata.
+ * The shell of a page: the site's banner, nav, and footer around an empty
+ * body. The layout builds it for every request, in the request's language,
+ * and PageShell puts a route's own content and title into it.
  */
-export function chrome_document(
-	document_id: string,
-	{ title, description = '' }: { title: string; description?: string },
-	{ banner_document, nav_document, footer_document }: SharedDocuments
-): Document {
-	const image_id = `${document_id}-image`;
-	const text = (content: string) => ({ content, marks: [], annotations: [] });
+export function page_shell({
+	banner_document,
+	nav_document,
+	footer_document
+}: SharedDocuments): Document {
+	const document_id = 'page-shell';
+	const image_id = 'page-shell-image';
 	const document = fill_document_defaults(
 		{
 			document_id,
@@ -32,8 +32,6 @@ export function chrome_document(
 					id: document_id,
 					type: 'page',
 					image: image_id,
-					title: text(title),
-					description: text(description),
 					banner: banner_document.document_id,
 					nav: nav_document.document_id,
 					footer: footer_document.document_id

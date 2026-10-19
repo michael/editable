@@ -7,7 +7,7 @@ import {
 	default_site_document
 } from '#app/default_site.js';
 import { extract_site_metadata } from '#app/page_metadata.js';
-import { chrome_document, type SharedDocuments } from '#app/chrome_document.js';
+import { page_shell } from '#app/page_shell.js';
 import type { Document } from 'svedit';
 import type { LayoutServerLoad } from './$types';
 
@@ -15,19 +15,12 @@ import type { LayoutServerLoad } from './$types';
 // the existing no-trailing-slash URLs for database-backed routes.
 export const trailingSlash = VERCEL ? 'always' : 'never';
 
-const not_found_document_of = (shared_documents: SharedDocuments) =>
-	chrome_document('notfoundpage000000000', { title: 'Page not found' }, shared_documents);
-
 export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const has_backend = !VERCEL;
 	const language = request_language(url);
 
 	let site_metadata;
-	let not_found_document: Document = not_found_document_of({
-		banner_document: default_banner_document,
-		nav_document: default_nav_document,
-		footer_document: default_footer_document
-	});
+	let shell: Document;
 	if (has_backend) {
 		const { get_shared_documents, get_site_metadata } = await import('#app/api.remote.js');
 		const [shared_documents, next_site_metadata] = await Promise.all([
@@ -49,10 +42,15 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				language
 			);
 		}
-		not_found_document = not_found_document_of(shared_documents);
+		shell = page_shell(shared_documents);
 		site_metadata = next_site_metadata;
 	} else {
 		site_metadata = extract_site_metadata(default_site_document);
+		shell = page_shell({
+			banner_document: default_banner_document,
+			nav_document: default_nav_document,
+			footer_document: default_footer_document
+		});
 	}
 
 	return {
@@ -64,6 +62,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		origin: site.origin,
 		site_base: site.base,
 		favicon: site_metadata.favicon,
-		not_found_document
+		// The site's banner, nav, and footer, for pages whose body is a route's own (see PageShell).
+		page_shell: shell
 	};
 };

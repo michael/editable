@@ -1,8 +1,5 @@
 <script lang="ts">
-	import App from '#app/components/App.svelte';
-	import type { PageData } from './$types';
-
-	let { data }: { data: PageData } = $props();
+	import PageShell from '#app/components/PageShell.svelte';
 </script>
 
 <!--
@@ -10,7 +7,10 @@
 	Keep examples explicit; adapt semantics and behavior in the consuming code.
 	Colors, fonts, and corner radius come from app.css.
 -->
-<App {...data}>
+<PageShell
+	title="The Editable Design System"
+	description="Editable's visual reference, in plain HTML and Tailwind."
+>
 	<div class="bg-(--background) pt-block-generous pb-16 font-sans text-(--foreground)">
 		<div class="mx-auto max-w-7xl space-y-16 px-5 sm:px-7">
 			<header class="space-y-3">
@@ -1781,4 +1781,4 @@ These destinations are real sections on this reference page. Application content
 			</section>
 		</div>
 	</div>
-</App>
+</PageShell>
