@@ -283,9 +283,10 @@
 
 	set_page_delete_dialog(create_page_delete_dialog());
 
-	$effect(() => {
-		document.documentElement.style.scrollBehavior = editable ? 'auto' : 'smooth';
-	});
+	// Smooth scrolling made jumping to anchors, such as in the manual, feel slow.
+	// $effect(() => {
+	// 	document.documentElement.style.scrollBehavior = editable ? 'auto' : 'smooth';
+	// });
 
 	function focus_canvas() {
 		if (svedit_ref) {
