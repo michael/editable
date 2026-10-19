@@ -373,10 +373,10 @@
 		</button>
 	{/if}
 
-	{#if !app_commands.save_document.disabled}
+	{#if !app_commands.save_page.disabled}
 		<button
 			class="pointer-events-auto inline-flex min-h-9 w-9 min-w-9 shrink-0 cursor-pointer items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 text-sm leading-5 font-medium text-(--editing) hover:bg-(--editing-muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--editing)/15 sm:w-auto sm:px-3 sm:py-2"
-			onclick={() => app_commands.save_document.execute()}
+			onclick={() => app_commands.save_page.execute()}
 			use:tooltip={{ label: 'Save changes', keys: ['⌘', 'S'] }}
 			aria-label="Save changes"
 		>

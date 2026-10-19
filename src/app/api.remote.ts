@@ -67,7 +67,7 @@ export type InternalLinkPreview = {
 	preview_media_node: PreviewMediaNode | null;
 };
 
-const save_document_input_schema = v.object({
+const save_page_input_schema = v.object({
 	document_id: v.string(),
 	nodes: v.record(v.string(), v.any()),
 	create: v.optional(v.boolean()),
@@ -375,7 +375,7 @@ export const get_translated_document = query(
 	}
 );
 
-export const save_translations = command(
+export const save_page_translation = command(
 	v.object({
 		document_id: v.string(),
 		nodes: v.record(v.string(), v.any()),
@@ -390,7 +390,7 @@ export const save_translations = command(
 	}
 );
 
-export const save_document = command(save_document_input_schema, async (combined_doc) => {
+export const save_page = command(save_page_input_schema, async (combined_doc) => {
 	require_user(getRequestEvent().locals);
 	if (combined_doc.language && combined_doc.language !== site.languages[0])
 		error(400, 'Use the translation save command for additional languages.');

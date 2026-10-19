@@ -45,7 +45,7 @@ import { default_site } from './server_site.js';
 import {
 	update_page_slug,
 	delete_page,
-	save_document,
+	save_page,
 	get_page_browser_data,
 	get_sitemap_entries
 } from './api.remote.js';
@@ -257,7 +257,7 @@ it.each([
 		sqlite
 			.prepare('INSERT INTO document_slugs VALUES (?, ?, ?, ?)')
 			.run('de-2', 'other-page', 1, 'now');
-		expect(await save_document({ ...page, create: true })).toMatchObject({
+		expect(await save_page({ ...page, create: true })).toMatchObject({
 			ok: true,
 			slug: expected
 		});
