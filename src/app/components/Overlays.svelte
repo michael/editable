@@ -223,7 +223,7 @@
 	{#if app.auth_dialog_open}
 		<Drawer
 			bind:open={app.auth_dialog_open}
-			label="Edit options"
+			label="Log in"
 			drawer_height_mode="auto"
 			center_content
 		>
