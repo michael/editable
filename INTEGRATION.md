@@ -15,8 +15,11 @@ Editable reaches its data in three layers:
 Saving a page, for example, ends in one call that the backend carries out all at once:
 
 ```ts
-await backend.save_documents({
-	expect: { [page_id]: page_version, [nav_id]: nav_version },
+const versions = await backend.save_documents({
+	expect: {
+		documents: { [page_id]: page_version, [nav_id]: nav_version },
+		translations: [{ document_id: page_id, language: 'de', version: de_version }]
+	},
 	documents: [{ document_id: page_id, type: 'page', data, created_at, updated_at }],
 	document_refs: [{ document_id: page_id, target_ids }],
 	asset_refs: [{ document_id: page_id, asset_ids }],
@@ -43,7 +46,7 @@ Editable comes with one backend, `sqlite_backend`: records in `data/db.sqlite3` 
 A backend keeps these promises:
 
 - **Each write is atomic** and none interleave: with SQLite or Postgres, one transaction per call. A backend over stores that cannot commit together comes as close as they allow; see [Writing to two stores](#writing-to-two-stores).
-- **Versions catch concurrent edits.** Each write gives a document or translation a new `version`, such as a random token or a Git blob hash. A save checks its `expect` versions first, `null` meaning the record must not exist, and otherwise throws a `ConflictError` and writes nothing; the editor then asks to reload.
+- **Versions catch concurrent edits.** Each write gives a document or translation a new `version`, such as a random token or a Git blob hash. A save checks its `expect` versions first, of documents and of the translations it changes, `null` meaning the record must not exist, and otherwise throws a `ConflictError` and writes nothing; the editor then asks to reload. `save_documents` returns the new version of each document it wrote, so the editor continues from exactly what it saved.
 - **Private records stay private, and per site.** Sessions, the login throttle, and OAuth records let people in; see [Keep each site's private records apart](#keep-each-sites-private-records-apart).
 - **Expired entries go without a scan:** `delete_expired(now)` removes them in one step, such as one `DELETE … WHERE expires_at <= $1` per table.
 - **Assets are opaque.** Which ones are unused, and when they may go, is the API's decision.
@@ -110,9 +113,14 @@ export function git_backend(storage: GitStorage): Backend {
 		save_documents: (save) =>
 			atomically(storage, async (tx) => {
 				await assert_versions(tx, save.expect);
+				const versions: Record<string, string> = {};
 				for (const record of save.documents ?? [])
-					tx.files.put(`documents/${record.document_id}.edf`, to_edf(record));
+					versions[record.document_id] = tx.files.put(
+						`documents/${record.document_id}.edf`,
+						to_edf(record)
+					);
 				// …references in Postgres, translations, slugs, and settings
+				return versions;
 			}),
 		// Private, never in the repository: one Postgres table each
 		get_session: async (session_id) =>

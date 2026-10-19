@@ -33,7 +33,9 @@ export default function initial_site(migrations: string[]): DocumentSave {
 		['page', default_page_document]
 	] as const;
 	return {
-		expect: Object.fromEntries(documents.map(([, document]) => [document.document_id, null])),
+		expect: {
+			documents: Object.fromEntries(documents.map(([, document]) => [document.document_id, null]))
+		},
 		documents: documents.map(([type, document]) => ({
 			document_id: document.document_id,
 			type,

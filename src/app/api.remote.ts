@@ -536,8 +536,13 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 		rewrite_internal_page_hrefs(data.nodes, target_slugs, normalized_slug, link_languages);
 		return JSON.stringify(data) === JSON.stringify(record.data) ? [] : [{ ...record, data }];
 	});
-	const rewritten_translations = translations.flatMap(({ version: _, ...row }) => {
-		const map: TranslationMap = JSON.parse(row.value);
+	const rewritten_translations = translations.flatMap(({ version, ...row }) => {
+		let map: TranslationMap;
+		try {
+			map = JSON.parse(row.value);
+		} catch {
+			return []; // A malformed translation is replaced on its document's next save.
+		}
 		for (const payload of translation_payloads(map))
 			rewrite_internal_page_hrefs(
 				payload.nodes ?? {},
@@ -546,15 +551,24 @@ export const update_page_slug = command(update_page_slug_input_schema, async (in
 				link_languages
 			);
 		const value = JSON.stringify(map);
-		return value === row.value ? [] : [{ ...row, value }];
+		return value === row.value ? [] : [{ row: { ...row, value }, version }];
 	});
 
 	try {
 		await backend.save_documents({
-			expect: Object.fromEntries(rewritten.map((record) => [record.document_id, record.version])),
+			expect: {
+				documents: Object.fromEntries(
+					rewritten.map((record) => [record.document_id, record.version])
+				),
+				translations: rewritten_translations.map(({ row, version }) => ({
+					document_id: row.document_id,
+					language: row.language,
+					version
+				}))
+			},
 			documents: rewritten.map(({ version: _, ...record }) => record),
 			document_refs: rewritten.map((record) => document_refs_of(record.data, targets)),
-			translations: { put: rewritten_translations },
+			translations: { put: rewritten_translations.map(({ row }) => row) },
 			slugs
 		});
 	} catch (err) {

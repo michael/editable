@@ -14,7 +14,7 @@ import { clean_translations } from './server_translations.js';
 import { assert_safe_hrefs, parse_internal_page_href } from './document_links.js';
 import { RESERVED_ROUTE_SLUGS } from './config.js';
 import { site } from './server_site.js';
-import { ConflictError, type DocumentRecord, type SlugRecord } from '#lib/server/backend.js';
+import { ConflictError, type SlugRecord } from '#lib/server/backend.js';
 import { is_reserved_language_slug } from './languages.js';
 import { is_reserved_markdown_slug } from '#app/markdown/registry.js';
 
@@ -263,9 +263,8 @@ function has_same_nodes(a: DocumentData, b: DocumentData): boolean {
 	);
 }
 
-/** A page's version together with its shared documents', from their stored records. */
-const version_of = (records: (DocumentRecord | null)[]) =>
-	records.map((record) => record?.version).join('.');
+/** A page's version together with its shared documents'. */
+const version_of = (versions: (string | undefined)[]) => versions.join('.');
 
 /**
  * The version of a document as stored, and for a page also of its shared
@@ -275,7 +274,7 @@ export async function get_document_version(document_id: string): Promise<string 
 	const page = await backend.get_document(document_id);
 	if (!page) return null;
 	const shared = shared_ids_of(page.data).map((id) => backend.get_document(id));
-	return version_of([page, ...(await Promise.all(shared))]);
+	return version_of([page, ...(await Promise.all(shared))].map((record) => record?.version));
 }
 
 /**
@@ -329,7 +328,10 @@ export async function persist_document(
 			throw new InvalidDocumentError(
 				`Document ${record.document_id} is a ${record.type}, not a ${documents[index].type}.`
 			);
-	if (expected_version !== undefined && version_of(records) !== expected_version)
+	if (
+		expected_version !== undefined &&
+		version_of(records.map((record) => record?.version)) !== expected_version
+	)
 		throw new VersionConflictError();
 
 	const changed = documents
@@ -350,11 +352,25 @@ export async function persist_document(
 		)
 	);
 
-	await with_asset_cleanup(() =>
+	const rewritten = cleaned.flatMap((result) => [...result.put, ...result.delete]);
+	const written = await with_asset_cleanup(() =>
 		backend.save_documents({
-			expect: Object.fromEntries(
-				documents.map((document, index) => [document.document_id, records[index]?.version ?? null])
-			),
+			expect: {
+				documents: Object.fromEntries(
+					documents.map((document, index) => [
+						document.document_id,
+						records[index]?.version ?? null
+					])
+				),
+				// The translations tidied here, as read, so a translation saved meanwhile is not lost.
+				translations: rewritten.map(({ document_id, language }) => ({
+					document_id,
+					language,
+					version: translations.find(
+						(row) => row.document_id === document_id && row.language === language
+					)!.version
+				}))
+			},
 			documents: changed.map(({ document_id, type, doc, record }) => ({
 				document_id,
 				type,
@@ -379,5 +395,10 @@ export async function persist_document(
 	// safety snapshot (never throws, never blocks the save).
 	void snapshot_if_stale();
 
-	return { doc, version: (await get_document_version(document_id))! };
+	return {
+		doc,
+		version: version_of(
+			documents.map(({ document_id }, index) => written[document_id] ?? records[index]?.version)
+		)
+	};
 }

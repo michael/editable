@@ -199,10 +199,9 @@ export async function save_translated_document(input: {
 	const records = await load_records(input.document_id);
 	const docs = records.map((record) => record.data);
 	const document_ids = docs.map((doc) => doc.document_id);
-	const rows = await backend.list_translations({
-		document_ids: document_ids,
-		language: input.language
-	});
+	// Every language's translations: this one's are edited, the others count for asset references.
+	const all_rows = await backend.list_translations({ document_ids });
+	const rows = all_rows.filter((row) => row.language === input.language);
 	const stale_message =
 		'This page or its translations changed. Keep a copy of your edits and reload before saving.';
 	if (revision(records, rows) !== input.translation_revision) error(409, stale_message);
@@ -255,9 +254,7 @@ export async function save_translated_document(input: {
 		map_change(id, input.language, maps.get(id)!, previous(id)?.value)
 	);
 	// Asset references cover every language, with this one's rows as they will be.
-	const other_languages = (await backend.list_translations({ document_ids })).filter(
-		(row) => row.language !== input.language
-	);
+	const other_languages = all_rows.filter((row) => row.language !== input.language);
 	const rows_after = (document_id: string, index: number) => {
 		const change = changes[index];
 		const own = change.put ?? (change.delete ? undefined : previous(document_id));

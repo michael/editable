@@ -79,7 +79,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	if (authorized_by === 'upload_token' && ext === 'svg') {
-		const stream = await backend.read_asset(asset_id);
+		// The root element comes early; reading a bounded start keeps large uploads out of memory.
+		const stream = await backend.read_asset(asset_id, { range: { start: 0, end: 65535 } });
 		if (!/<svg[\s>]/.test(await new Response(stream).text())) {
 			await backend.delete_asset(asset_id).catch(() => {});
 			error(400, 'The file is not an SVG image.');

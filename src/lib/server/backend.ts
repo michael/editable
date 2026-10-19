@@ -16,8 +16,8 @@ export type Backend = {
 	// Pages and the shared banner, nav, and footer
 	get_document(document_id: string): Promise<DocumentRecord | null>;
 	list_documents(type?: string): Promise<DocumentRecord[]>;
-	/** Store documents and what changes with them, all at once. */
-	save_documents(save: DocumentSave): Promise<void>;
+	/** Store documents and what changes with them, all at once; returns the new version of each document written. */
+	save_documents(save: DocumentSave): Promise<{ [document_id: string]: string }>;
 	/** Delete a page with its slugs, translations, and references, and drop it from others' references. */
 	delete_page(document_id: string): Promise<void>;
 
@@ -86,13 +86,20 @@ export type Backend = {
 	close(): Promise<void>;
 };
 
+/** The versions records had when they were read; null for one that did not exist. */
+export type Expected = {
+	documents?: { [document_id: string]: string | null };
+	translations?: (TranslationKey & { version: string | null })[];
+};
+
 /** What save_documents stores at once. */
 export type DocumentSave = {
 	/**
-	 * The version each document had when it was read, or null if it did not
-	 * exist. Throw a ConflictError and write nothing when one has changed.
+	 * The version each document, and each translation the save changes, had
+	 * when it was read, or null if it did not exist. Throw a ConflictError and
+	 * write nothing when one has changed.
 	 */
-	expect?: { [document_id: string]: string | null };
+	expect?: Expected;
 	/** New and changed documents; the backend gives each a new version. */
 	documents?: NewDocument[];
 	/** What the saved documents now link to and use, replacing what they did before. */
@@ -103,7 +110,10 @@ export type DocumentSave = {
 	 * translation in one language, replacing the stored one; delete removes it.
 	 */
 	translations?: { put?: NewTranslation[]; delete?: TranslationKey[] };
-	/** Slugs added or changed, such as a new page's first one or a renamed page's. */
+	/**
+	 * Slugs added or changed, such as a new page's first one or a renamed page's.
+	 * Throw a ConflictError when one is another page's active slug.
+	 */
 	slugs?: SlugRecord[];
 	/** Settings that change with the documents, such as the content migrations applied. */
 	settings?: SettingRecord[];
@@ -112,10 +122,7 @@ export type DocumentSave = {
 /** What save_translations stores at once: some documents' overrides in one language. */
 export type TranslationSave = {
 	/** Versions as in DocumentSave: of the documents, and of their translations in this language. */
-	expect: {
-		documents: { [document_id: string]: string };
-		translations: (TranslationKey & { version: string | null })[];
-	};
+	expect: Required<Expected>;
 	/** Whole translations written, each replacing the stored one. */
 	put: NewTranslation[];
 	/** Translations removed, such as one whose overrides were all reverted. */

@@ -55,7 +55,13 @@ it('upgrades an old database that kept content progress with its SQLite migratio
 	sqlite
 		.prepare("INSERT INTO site_settings VALUES ('login_throttle', ?)")
 		.run(JSON.stringify({ failed_count: 6, locked_until: 99 }));
-	const page = { document_id: 'p1', nodes: { p1: { id: 'p1', type: 'page' } } };
+	const page = {
+		document_id: 'p1',
+		nodes: {
+			p1: { id: 'p1', type: 'page', image: 'i1' },
+			i1: { id: 'i1', type: 'image', src: 'photo.webp' }
+		}
+	};
 	sqlite
 		.prepare("INSERT INTO documents VALUES ('p1', 'page', ?, 'then', 'then')")
 		.run(JSON.stringify(page));
@@ -72,6 +78,10 @@ it('upgrades an old database that kept content progress with its SQLite migratio
 		'20261009T120000000Z_editable_site_banner'
 	]);
 	expect(await backend.applied_migrations()).toContain('20261010T180000000Z_editable_mcp_oauth');
+	// A migration's save rebuilds the references of what it changed, as every save does.
+	expect(await backend.list_asset_refs()).toEqual([
+		{ document_id: 'p1', asset_ids: ['photo.webp'] }
+	]);
 	// The login throttle left the settings for a table of its own, starting over.
 	expect(await backend.get_setting('login_throttle')).toBeNull();
 	expect(await backend.get_login_throttle('admin')).toBeNull();

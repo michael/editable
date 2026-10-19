@@ -32,10 +32,12 @@ type SiteBackend = Omit<
  * runs in, so code imports it once and uses it inside functions.
  */
 export const backend = new Proxy({} as SiteBackend, {
-	get:
-		(_, name: keyof SiteBackend) =>
-		async (...args: unknown[]) =>
-			((await get_backend())[name] as (...args: unknown[]) => unknown)(...args)
+	get: (_, name: keyof SiteBackend | 'then') =>
+		// Not a promise: awaiting the proxy would otherwise never settle.
+		name === 'then'
+			? undefined
+			: async (...args: unknown[]) =>
+					((await get_backend())[name] as (...args: unknown[]) => unknown)(...args)
 });
 
 /** Whether an asset original, or one of its variants, exists. */

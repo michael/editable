@@ -12,7 +12,13 @@ export function asset_refs_of(
 ): AssetRefsRecord {
 	const payloads = [
 		document,
-		...translations.flatMap((row) => [...translation_payloads(JSON.parse(row.value))])
+		...translations.flatMap((row) => {
+			try {
+				return [...translation_payloads(JSON.parse(row.value))];
+			} catch {
+				return []; // A malformed translation is replaced on its document's next save.
+			}
+		})
 	];
 	return { document_id: document.document_id, asset_ids: [...collect_asset_ids(payloads)] };
 }

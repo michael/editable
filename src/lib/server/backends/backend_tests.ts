@@ -34,16 +34,23 @@ export function test_backend(name: string, create: () => Promise<Backend>) {
 		it('saves documents, gives each write a new version, and refuses stale saves', async () => {
 			const backend = await create();
 			expect(await backend.get_document('p1')).toBeNull();
-			await backend.save_documents({ expect: { p1: null }, documents: [record('p1')] });
+			const written = await backend.save_documents({
+				expect: { documents: { p1: null } },
+				documents: [record('p1')]
+			});
 			const saved = (await backend.get_document('p1'))!;
 			expect(saved).toMatchObject(record('p1'));
 			expect(saved.version).toBeTruthy();
+			expect(written).toEqual({ p1: saved.version });
 
 			await expect(
-				backend.save_documents({ expect: { p1: null }, documents: [record('p1', 'Again')] })
+				backend.save_documents({
+					expect: { documents: { p1: null } },
+					documents: [record('p1', 'Again')]
+				})
 			).rejects.toThrow(ConflictError);
 			await backend.save_documents({
-				expect: { p1: saved.version },
+				expect: { documents: { p1: saved.version } },
 				documents: [record('p1', 'Second')]
 			});
 			const second = (await backend.get_document('p1'))!;
@@ -51,7 +58,7 @@ export function test_backend(name: string, create: () => Promise<Backend>) {
 			// A stale save writes nothing, not even what came with it.
 			await expect(
 				backend.save_documents({
-					expect: { p1: saved.version },
+					expect: { documents: { p1: saved.version } },
 					documents: [record('p1', 'Lost')],
 					settings: [{ key: 'home_page_id', value: 'p1' }]
 				})
@@ -96,6 +103,50 @@ export function test_backend(name: string, create: () => Promise<Backend>) {
 			]);
 			expect((await backend.list_asset_refs()).flatMap((r) => r.asset_ids)).toEqual([]);
 			expect(await backend.list_translations()).toEqual([]);
+		});
+
+		it('refuses a save whose translations changed since they were read', async () => {
+			const backend = await create();
+			const german = { document_id: 'p1', language: 'de', updated_at: 'a' };
+			await backend.save_documents({
+				documents: [record('p1')],
+				translations: { put: [{ ...german, value: '{"a":1}' }] }
+			});
+			const [read] = await backend.list_translations();
+			await backend.save_translations({
+				expect: { documents: {}, translations: [{ ...german, version: read.version }] },
+				put: [{ ...german, value: '{"a":2}' }],
+				delete: [],
+				asset_refs: []
+			});
+			// A save that tidies the translation as it was read must not overwrite the newer one.
+			await expect(
+				backend.save_documents({
+					expect: { translations: [{ ...german, version: read.version }] },
+					translations: { delete: [german] }
+				})
+			).rejects.toThrow(ConflictError);
+			expect((await backend.list_translations())[0].value).toBe('{"a":2}');
+		});
+
+		it('refuses to give a page the active slug of another, but takes over a redirect', async () => {
+			const backend = await create();
+			const slug = (slug: string, document_id: string, is_active = true) => ({
+				slug,
+				document_id,
+				is_active,
+				created_at: 'a'
+			});
+			await backend.save_documents({
+				documents: [record('p1'), record('p2')],
+				slugs: [slug('one', 'p1'), slug('old', 'p1', false), slug('two', 'p2')]
+			});
+			await expect(backend.save_documents({ slugs: [slug('one', 'p2')] })).rejects.toThrow(
+				ConflictError
+			);
+			expect(await backend.get_active_slug('p1')).toBe('one');
+			await backend.save_documents({ slugs: [slug('two', 'p2', false), slug('old', 'p2')] });
+			expect(await backend.get_active_slug('p2')).toBe('old');
 		});
 
 		it('resolves slugs to their page and its active slug', async () => {

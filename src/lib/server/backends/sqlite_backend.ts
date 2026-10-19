@@ -6,6 +6,7 @@ import {
 	ConflictError,
 	type Backend,
 	type DocumentRecord,
+	type Expected,
 	type LoginThrottleRecord,
 	type NewTranslation,
 	type OAuthGrantRecord,
@@ -91,6 +92,18 @@ export function sqlite_backend(storage: SqliteStorage): Backend {
 			throw new ConflictError(`${params.join(' ')} changed since it was read.`);
 	}
 
+	function assert_expected({ documents = {}, translations = [] }: Expected) {
+		for (const [document_id, version] of Object.entries(documents))
+			assert_version('documents', 'document_id = ?', [document_id], version);
+		for (const { document_id, language, version } of translations)
+			assert_version(
+				'translations',
+				'document_id = ? AND language = ?',
+				[document_id, language],
+				version
+			);
+	}
+
 	function put_document_refs(document_id: string, target_ids: string[]) {
 		run('DELETE FROM document_refs WHERE source_document_id = ?', document_id);
 		for (const [ref_order, target_id] of target_ids.entries())
@@ -139,11 +152,12 @@ export function sqlite_backend(storage: SqliteStorage): Backend {
 				? all('SELECT * FROM documents WHERE type = ? ORDER BY document_id', type)
 				: all('SELECT * FROM documents ORDER BY document_id')
 			).map(document),
-		save_documents: async (save) =>
+		save_documents: async (save) => {
+			const versions: { [document_id: string]: string } = {};
 			atomically(() => {
-				for (const [document_id, version] of Object.entries(save.expect ?? {}))
-					assert_version('documents', 'document_id = ?', [document_id], version);
-				for (const record of save.documents ?? [])
+				assert_expected(save.expect ?? {});
+				for (const record of save.documents ?? []) {
+					versions[record.document_id] = randomUUID();
 					run(
 						'INSERT OR REPLACE INTO documents (document_id, type, data, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?)',
 						record.document_id,
@@ -151,15 +165,22 @@ export function sqlite_backend(storage: SqliteStorage): Backend {
 						JSON.stringify(record.data),
 						record.created_at,
 						record.updated_at,
-						randomUUID()
+						versions[record.document_id]
 					);
+				}
 				for (const refs of save.document_refs ?? [])
 					put_document_refs(refs.document_id, refs.target_ids);
 				for (const refs of save.asset_refs ?? []) put_asset_refs(refs.document_id, refs.asset_ids);
 				for (const record of save.translations?.put ?? []) put_translation(record);
 				for (const key of save.translations?.delete ?? []) delete_translation(key);
 				// Inactive slugs first, so a page never has two active ones at a time.
-				for (const record of [...(save.slugs ?? [])].sort((a, b) => +a.is_active - +b.is_active))
+				for (const record of [...(save.slugs ?? [])].sort((a, b) => +a.is_active - +b.is_active)) {
+					const owner = one(
+						'SELECT document_id, is_active FROM document_slugs WHERE slug = ?',
+						record.slug
+					);
+					if (owner && owner.document_id !== record.document_id && owner.is_active === 1)
+						throw new ConflictError(`${record.slug} is another page's slug.`);
 					run(
 						'INSERT OR REPLACE INTO document_slugs (slug, document_id, is_active, created_at) VALUES (?, ?, ?, ?)',
 						record.slug,
@@ -167,9 +188,12 @@ export function sqlite_backend(storage: SqliteStorage): Backend {
 						record.is_active ? 1 : 0,
 						record.created_at
 					);
+				}
 				for (const { key, value } of save.settings ?? [])
 					run('INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)', key, value);
-			}),
+			});
+			return versions;
+		},
 		delete_page: async (document_id) =>
 			atomically(() => {
 				run('DELETE FROM documents WHERE document_id = ?', document_id);
@@ -237,15 +261,7 @@ export function sqlite_backend(storage: SqliteStorage): Backend {
 		},
 		save_translations: async (save) =>
 			atomically(() => {
-				for (const [document_id, version] of Object.entries(save.expect.documents))
-					assert_version('documents', 'document_id = ?', [document_id], version);
-				for (const { document_id, language, version } of save.expect.translations)
-					assert_version(
-						'translations',
-						'document_id = ? AND language = ?',
-						[document_id, language],
-						version
-					);
+				assert_expected(save.expect);
 				for (const record of save.put) put_translation(record);
 				for (const key of save.delete) delete_translation(key);
 				for (const refs of save.asset_refs) put_asset_refs(refs.document_id, refs.asset_ids);
