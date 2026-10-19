@@ -189,11 +189,12 @@ Such a page is an ordinary SvelteKit route that renders its content in `PageShel
 
 ```ts
 // src/routes/orders/+page.server.ts
+import { require_user } from '#app/server_auth.js';
 import type { PageServerLoad } from './$types';
 
 // Your own data, read however your app keeps it.
-export const load: PageServerLoad = async ({ locals }) => ({
-	orders: await orders_of(locals.user)
+export const load: PageServerLoad = async (event) => ({
+	orders: await orders_of(require_user(event))
 });
 ```
 
@@ -214,6 +215,7 @@ export const load: PageServerLoad = async ({ locals }) => ({
 - **`PageShell` is a page whose body is yours.** It renders everything a content page has around its body: the banner, the sticky nav, the footer, the toolbar for people signed in, and the login drawer. Its children take the body's place, inside `<main>`.
 - **The shell comes with every request.** The root layout builds it from the site's shared banner, nav, and footer, already in the visitor's language, and from the defaults on a static deployment, so the route loads nothing for it. The error page and the design system are built this way too.
 - **`title` and `description`** become the page's `<title>` and its description in search results and link previews.
+- **`require_user(event)`** from `src/app/server_auth.ts` returns the signed-in user, and sends anyone else to `/login`, which returns to the page afterwards. A page anyone may see leaves it out and reads `locals.user`.
 - **⌘ E leaves the page alone;** there is nothing for the editor to edit.
 - **Forms work.** The page's content sits inside the editor's canvas, which leaves the typing of inputs, textareas, and selects there to them.
 - **Inside your content,** `get_app_context()` from `src/app/app_context.ts` gives App's state, such as `app.auth_dialog_open = true` to open the login drawer, and `page.data` holds `user` and `is_editor`. Style it with the [design system](README.md#styling)'s recipes.
@@ -349,12 +351,12 @@ Style the button with the design system's primary button recipe. A dialog that a
 
 ### An app whose accounts are not all editors
 
-Editable can be the website of an app with accounts of its own, such as a utility's portal where households log in to report their meter readings and a few staff also edit the website. The app owns its accounts; Editable only learns who is signed in and whether they may edit.
+Editable can be the website of an app with accounts of its own, such as a shop where customers log in to see their orders and a few staff also edit the website. The app owns its accounts; Editable only learns who is signed in and whether they may edit.
 
 - **Accounts and sessions are the app's.** Its tables live in the site's database through a storage migration of its own (`pnpm migration:create <name> --target sqlite`), prefixed so they cannot collide with Editable's, such as `app_accounts`. Backups and restores then cover them. Its code reaches the database through the backend's storage, `(await get_backend()).storage`, which ties the app to the SQLite backend.
 - **The auth returns every signed-in account** from `get_user`, and `is_editor` decides who may edit. The app's own pages use `locals.user` freely; Editable's checks only ever look at `locals.is_editor`.
 - **Its login dialog covers both cases.** Signed out, it asks for the app's credentials. Signed in without edit rights, which is when ⌘ E still opens it, it can say so and offer the app's own pages or logging out. `page.data.user` and `page.data.is_editor` tell the two apart.
-- **Its pages send signed-out visitors to `/login`** with themselves as `redirect_to`.
+- **Its pages call `require_user(event)`,** which returns the signed-in account and sends anyone else to `/login` and back. Its own API endpoints, where a redirect would be wrong, check `locals.user` and answer 401.
 - **The toolbar shows to everyone signed in.** Its menu holds Logout, labeled Page actions for editors and Account for everyone else. Two slots in `system_components` add the app's own: `toolbar_items` renders buttons next to Editable's, receiving the toolbar's `button_class`, and `menu_items` renders entries at the top of the menu, receiving `item_class` and `close` (see `ToolbarItemsProps` and `MenuItemsProps` in `src/app/components/Toolbar.svelte`).
 - **Its pages sit inside the site's banner, nav, and footer** with `PageShell` (see [Pages of your own](#pages-of-your-own)).
 - **`pnpm data:push` replaces the live database,** with the accounts and what they reported. Once people use the app, edit the live site instead of pushing.
@@ -365,7 +367,8 @@ Editable can be the website of an app with accounts of its own, such as a utilit
 - **Sessions are yours.** Editable's `sessions` and `login_throttle` records belong to the admin password; your auth keeps its own sessions, in a signed cookie as above or in a store of your own.
 - **Cookies are scoped to the site's base,** as Editable's own are, when several sites share an origin.
 - **Rate limiting is yours** if your auth checks secrets itself; a provider such as GitHub does it for you.
-- **MCP clients follow your sign-in.** Their consent page shows your login dialog and asks whoever is signed in, and signing out ends their connections.
+- **MCP clients follow your sign-in.** Their consent page shows your login dialog and asks whoever is signed in, and an editor signing out ends their connections.
+- **MCP connections belong to no account.** Only editors approve them, but a connection lasts its 48 hours, or until an editor logs out, even if the editor who approved it loses their rights in between. An app that withdraws someone's editing rights calls `revoke_all_grants()` from `src/app/server_oauth.ts` to end every connection at once.
 
 ## Hosting several sites
 

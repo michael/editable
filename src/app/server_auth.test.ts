@@ -26,7 +26,7 @@ const { sqlite } = services as unknown as { sqlite: DatabaseSync };
 import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
 import throttle_schema from '#app/migrations/20261017T120000000Z_editable_login_throttle.js';
 import oauth_schema from '#app/migrations/20261010T180000000Z_editable_mcp_oauth.js';
-import { get_auth, password_auth, sign_in_state, type Auth } from './server_auth.js';
+import { get_auth, password_auth, require_user, sign_in_state, type Auth } from './server_auth.js';
 import { require_editor } from '#lib/server/auth.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
@@ -136,4 +136,23 @@ it('lets only editors edit: 401 signed out, 403 for someone else', () => {
 		expect.objectContaining({ status: 403 })
 	);
 	expect(() => require_editor({ user: { username: 'anna' }, is_editor: true })).not.toThrow();
+});
+
+it("sends an app's page to /login when nobody is signed in, and back afterwards", () => {
+	const event = (path: string, user: object | null = null) =>
+		({ locals: { user }, url: new URL(`https://example.com${path}`) }) as unknown as RequestEvent;
+	const ben = { username: 'ben' };
+	expect(require_user(event('/orders', ben))).toBe(ben);
+	expect(() => require_user(event('/orders?page=2'))).toThrow(
+		expect.objectContaining({
+			status: 303,
+			location: '/login?redirect_to=%2Forders%3Fpage%3D2'
+		})
+	);
+	// A site under a path keeps its base on /login, and redirect_to leaves it out.
+	request.locals = { site: { origin: 'https://example.com', base: '/alice', languages: [] } };
+	expect(() => require_user(event('/alice/orders'))).toThrow(
+		expect.objectContaining({ location: '/alice/login?redirect_to=%2Forders' })
+	);
+	request.locals = {};
 });

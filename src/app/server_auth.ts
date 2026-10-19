@@ -1,7 +1,8 @@
-import type { RequestEvent } from '@sveltejs/kit';
+import { redirect, type RequestEvent } from '@sveltejs/kit';
 import { backend } from './services.js';
 import { site } from './server_site.js';
 import { create_auth } from './create_auth.js';
+import { normalize_href, resolve_href } from './document_links.js';
 import {
 	clear_admin_session_cookie,
 	get_session_expires_at,
@@ -107,4 +108,15 @@ export async function sign_in_state(
 	const auth = get_auth();
 	const user = await auth.get_user(event);
 	return { user, is_editor: !!user && ((await auth.is_editor?.(user)) ?? true) };
+}
+
+/**
+ * The signed-in user, for an app's own pages: with nobody signed in, the
+ * request goes to /login, which comes back here afterwards. Editable's own
+ * writes check require_editor instead.
+ */
+export function require_user(event: RequestEvent): User {
+	if (event.locals.user) return event.locals.user;
+	const here = normalize_href(event.url.pathname + event.url.search, site);
+	redirect(303, resolve_href(`/login?redirect_to=${encodeURIComponent(here)}`, site));
 }

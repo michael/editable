@@ -14,14 +14,14 @@ const visit = (target: string, user: object | null = null) =>
 	});
 
 it('remembers where to go after logging in, on this site only', async () => {
-	expect(await visit('/meter-readings')).toEqual({ redirect_to: '/meter-readings' });
+	expect(await visit('/orders')).toEqual({ redirect_to: '/orders' });
 	for (const elsewhere of ['//evil.example', 'https://evil.example', 'evil'])
 		expect(await visit(encodeURIComponent(elsewhere))).toEqual({ redirect_to: '/' });
 });
 
 it('sends someone already signed in on', async () => {
-	await expect(visit('/meter-readings', { username: 'ben' })).rejects.toMatchObject({
+	await expect(visit('/orders', { username: 'ben' })).rejects.toMatchObject({
 		status: 303,
-		location: '/meter-readings'
+		location: '/orders'
 	});
 });
