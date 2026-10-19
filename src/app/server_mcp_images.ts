@@ -20,7 +20,8 @@ export async function prepare_image_upload(origin: string, grant_id: string) {
 			'The asset id is the SHA-256 hex digest of the original file plus ".webp".',
 			`POST the original to ${origin}/api/assets with the headers Authorization, Content-Type: image/webp, X-Content-Hash (the digest), X-Asset-Width, and X-Asset-Height, and the file as the body.`,
 			`POST every variant to ${origin}/api/assets/<asset id>/variants with Authorization, Content-Type: image/webp, and X-Variant-Width.`,
-			'Use the image in write_document or create_page as <image src="<asset id>" mime_type="image/webp" width="<original width>" height="<original height>" alt="<description>"/>. Writes are rejected while variants are missing or width and height do not match the file.'
+			'Use the image in write_document or create_page as <image src="<asset id>" mime_type="image/webp" width="<original width>" height="<original height>" alt="<description>"/>. Writes are rejected while variants are missing or width and height do not match the file.',
+			`An SVG is uploaded as it is, with no variants: its asset id is the SHA-256 hex digest of the file plus ".svg", POST it to ${origin}/api/assets with Content-Type: image/svg+xml and X-Asset-Width and X-Asset-Height from its width and height or viewBox, and use it with mime_type="image/svg+xml".`
 		],
 		example: [
 			`curl -X POST ${origin}/api/assets -H "Authorization: ${authorization}" -H "Content-Type: image/webp" -H "X-Content-Hash: $(shasum -a 256 original.webp | cut -d' ' -f1)" -H "X-Asset-Width: 2048" -H "X-Asset-Height: 1365" --data-binary @original.webp`,

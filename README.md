@@ -1249,7 +1249,7 @@ Ids are identity, exactly as in the editor: whatever keeps its id is kept, marks
 
 ### Adding images
 
-Image bytes do not travel through tool calls. `prepare_image_upload` returns a token and the steps to encode a WebP original with its resized variants, as the editor does in the browser, and to upload them over HTTP, so the agent needs a shell with network access to the site. Token uploads must be valid WebP files that match the declared dimensions, and a document can only reference images whose variants are all uploaded. Videos cannot be uploaded through MCP.
+Image bytes do not travel through tool calls. `prepare_image_upload` returns a token and the steps to encode a WebP original with its resized variants, as the editor does in the browser, and to upload them over HTTP, so the agent needs a shell with network access to the site. An SVG is uploaded as it is, with no variants, as in the editor. Token uploads must be valid WebP files that match the declared dimensions, or SVG files, and a document can only reference WebP images whose variants are all uploaded. Videos cannot be uploaded through MCP.
 
 ### Translations
 

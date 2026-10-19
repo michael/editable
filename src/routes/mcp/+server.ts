@@ -122,7 +122,7 @@ const tools = [
 	define_tool({
 		name: 'prepare_image_upload',
 		description:
-			'Get a 30-minute upload token and the steps for adding images, which are uploaded over HTTP rather than through MCP: encode a WebP original and its resized variants, upload them with curl, then reference the asset in write_document or create_page. Needs a shell with network access to the site. Videos cannot be uploaded.',
+			'Get a 30-minute upload token and the steps for adding images, which are uploaded over HTTP rather than through MCP: encode a WebP original and its resized variants, or take an SVG as it is, upload them with curl, then reference the asset in write_document or create_page. Needs a shell with network access to the site. Videos cannot be uploaded.',
 		input: v.strictObject({}),
 		annotations: { readOnlyHint: true },
 		handler: async (_args, { grant_id }) => {

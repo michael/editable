@@ -10,9 +10,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const content_type_raw = request.headers.get('content-type') ?? '';
 	const content_type = content_type_raw.split(';')[0].trim().toLowerCase();
 
-	// Agents prepare images themselves, following the WebP spec from prepare_image_upload.
-	if (authorized_by === 'upload_token' && content_type !== 'image/webp') {
-		error(400, 'Uploads with an upload token must be image/webp.');
+	// Agents prepare images themselves, following prepare_image_upload: WebP, or an SVG as it is.
+	if (
+		authorized_by === 'upload_token' &&
+		content_type !== 'image/webp' &&
+		content_type !== 'image/svg+xml'
+	) {
+		error(400, 'Uploads with an upload token must be image/webp or image/svg+xml.');
 	}
 
 	const ext = UPLOAD_MIME_TO_EXT[content_type];
@@ -74,7 +78,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		error(400, 'Content does not match X-Content-Hash');
 	}
 
-	if (authorized_by === 'upload_token') {
+	if (authorized_by === 'upload_token' && ext === 'svg') {
+		const stream = await backend.read_asset(asset_id);
+		if (!/<svg[\s>]/.test(await new Response(stream).text())) {
+			await backend.delete_asset(asset_id).catch(() => {});
+			error(400, 'The file is not an SVG image.');
+		}
+	} else if (authorized_by === 'upload_token') {
 		const actual = await asset_webp_dimensions(asset_id);
 		const problem = !actual
 			? 'The file is not a valid WebP image.'

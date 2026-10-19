@@ -75,6 +75,26 @@ it('accepts token uploads whose WebP headers match the declared sizes', async ()
 	await expect(variant(asset_id, 320, 640)).rejects.toMatchObject({ status: 400 });
 });
 
+it('accepts SVG token uploads as they are, and refuses other files sent as SVG', async () => {
+	const upload = (text: string) => {
+		const body = new TextEncoder().encode(text);
+		const headers = {
+			'content-type': 'image/svg+xml',
+			'x-content-hash': createHash('sha256').update(body).digest('hex'),
+			'x-asset-width': '24',
+			'x-asset-height': '24'
+		};
+		return (upload_original as any)({ request: request(body, headers), locals: {} });
+	};
+	const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle r="12"/></svg>';
+	expect(await (await upload(svg)).json()).toMatchObject({ deduplicated: false });
+	expect((await (await upload(svg)).json()).asset_id).toMatch(/\.svg$/);
+	await expect(upload('not an image')).rejects.toMatchObject({
+		status: 400,
+		body: { message: 'The file is not an SVG image.' }
+	});
+});
+
 it('rejects uploads without an admin session or a valid token', async () => {
 	const body = webp_bytes(10, 10);
 	await expect(
