@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
-import type { Handle, ServerInit } from '@sveltejs/kit/hooks';
-import { site, request_language, type Site } from '#app/server_site.js';
+import { sequence, type Handle, type ServerInit } from '@sveltejs/kit/hooks';
+import { default_site, site, request_language, type Site } from '#app/server_site.js';
 import { normalize_href, resolve_href } from '#app/document_links.js';
 import { ORIGIN, VERCEL } from '$app/env/private';
 import { dev } from '$app/env';
@@ -38,7 +38,7 @@ export const init: ServerInit = async () => {
 	}
 };
 
-export const handle: Handle = async ({ event, resolve }) => {
+const editable_handle: Handle = async ({ event, resolve }) => {
 	// Navigations only. The target counts as external, so the site's origin is
 	// allowlisted — not `external: true`, which would permit redirecting anywhere.
 	const canonical_origin = URL.parse(site.origin);
@@ -48,9 +48,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	event.locals.user = null;
+	event.locals.is_editor = false;
 	if (!VERCEL) {
 		const { get_auth } = await import('#app/server_auth.js');
-		event.locals.user = await get_auth().get_user(event);
+		const auth = get_auth();
+		const user = await auth.get_user(event);
+		event.locals.user = user;
+		// Everything that edits checks this one answer, never the user itself.
+		event.locals.is_editor = !!user && ((await auth.is_editor?.(user)) ?? true);
 	}
 
 	const language = request_language(event.url) || 'en';
@@ -62,3 +67,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 		response.headers.set('X-Frame-Options', 'DENY');
 	return response;
 };
+
+// The meter readings app signs people in with its own accounts; only its editors may edit the site.
+const meter_readings: Handle = async ({ event, resolve }) => {
+	if (!VERCEL) {
+		const { meter_readings_auth } = await import('#app/meter_readings/auth.js');
+		event.locals.site = { ...default_site, auth: meter_readings_auth };
+	}
+	return resolve(event);
+};
+
+export const handle = sequence(meter_readings, editable_handle);

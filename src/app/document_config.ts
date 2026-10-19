@@ -42,7 +42,9 @@ import {
 } from './commands.svelte.js';
 
 import Overlays from './components/Overlays.svelte';
-import AuthDialog from './components/AuthDialog.svelte';
+import MeterReadingsLoginDialog from './components/MeterReadingsLoginDialog.svelte';
+import MeterReadingsMenuItems from './components/MeterReadingsMenuItems.svelte';
+import MeterReadingsToolbarItems from './components/MeterReadingsToolbarItems.svelte';
 import Page from './components/Page.svelte';
 import Banner from './components/Banner.svelte';
 import Nav from './components/Nav.svelte';
@@ -234,7 +236,12 @@ export const document_config = {
 	// auth_dialog is Editable's login dialog; replace it with your own (see AuthDialogProps).
 	system_components: {
 		overlays: Overlays,
-		auth_dialog: AuthDialog
+		// The meter readings app's own accounts sign in here.
+		auth_dialog: MeterReadingsLoginDialog,
+		// toolbar_items and menu_items add your own buttons to the toolbar and entries to its
+		// menu, for people signed in (see ToolbarItemsProps and MenuItemsProps).
+		toolbar_items: MeterReadingsToolbarItems,
+		menu_items: MeterReadingsMenuItems
 	},
 	// Registry of components for each node type
 	node_components: {

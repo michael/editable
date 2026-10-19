@@ -34,6 +34,7 @@
 		has_backend = false,
 		is_new = false,
 		user = null,
+		is_editor = false,
 		can_edit = true,
 		origin = null,
 		document_title = null,
@@ -48,7 +49,10 @@
 		slug?: string | null;
 		has_backend?: boolean;
 		is_new?: boolean;
+		/** Whoever is signed in, or null. */
 		user?: Record<string, unknown> | null;
+		/** Whether the signed-in user may edit the site. */
+		is_editor?: boolean;
 		can_edit?: boolean;
 		origin?: string | null;
 		document_title?: string | null;
@@ -76,9 +80,7 @@
 		language: string;
 		doc_json: string;
 	} | null>(null);
-	// Whoever is signed in may edit.
-	let is_admin = $derived(!!user);
-	let is_admin_mode = $derived(editable && is_admin);
+	let is_editor_mode = $derived(editable && is_editor);
 	const is_demo_mode = DEMO_MODE;
 
 	let save_progress_visible = $state(false);
@@ -234,8 +236,11 @@
 		get is_demo_mode() {
 			return is_demo_mode;
 		},
-		get is_admin() {
-			return is_admin;
+		get is_signed_in() {
+			return !!user;
+		},
+		get is_editor() {
+			return is_editor;
 		},
 		get origin() {
 			return origin;
@@ -265,7 +270,7 @@
 	const page_browser: PageBrowser = create_page_browser({
 		// Page hrefs are site-relative.
 		goto: (href) => goto(resolve_href(href, site)),
-		is_admin: () => app.is_admin
+		is_editor: () => app.is_editor
 	});
 
 	Object.defineProperty(page_browser, 'version', {
@@ -358,7 +363,7 @@
 			!can_edit ||
 			!is_mobile_touch_device() ||
 			editable ||
-			is_admin ||
+			is_editor ||
 			auth_dialog_open ||
 			!mobile_touch_active
 		) {
@@ -401,7 +406,7 @@
 	}
 
 	function handle_mobile_touchstart() {
-		if (!can_edit || !is_mobile_touch_device() || editable || is_admin || auth_dialog_open) return;
+		if (!can_edit || !is_mobile_touch_device() || editable || is_editor || auth_dialog_open) return;
 		mobile_touch_active = true;
 		mobile_touch_started_at_page_end = is_at_page_end();
 		if (!mobile_touch_started_at_page_end) {
@@ -449,7 +454,7 @@
 				);
 			}
 
-			if (!has_backend || is_admin) {
+			if (!has_backend || is_editor) {
 				enter_edit_mode();
 				return;
 			}
@@ -473,7 +478,7 @@
 
 			const saved_doc_json =
 				has_backend &&
-				!is_admin &&
+				!is_editor &&
 				edit_for_fun_saved_doc?.document_id === loaded_document_id &&
 				edit_for_fun_saved_doc.language === language
 					? edit_for_fun_saved_doc.doc_json
@@ -495,8 +500,8 @@
 			const doc_json = session.to_json();
 			if (dev) console.log('Saved', doc_json);
 
-			if (!has_backend || !is_admin_mode) {
-				if (has_backend && !is_admin) {
+			if (!has_backend || !is_editor_mode) {
+				if (has_backend && !is_editor) {
 					edit_for_fun_saved_doc = {
 						document_id: loaded_document_id,
 						language,
@@ -655,7 +660,7 @@
 
 	class LogoutCommand extends Command {
 		is_enabled() {
-			return has_backend && is_admin && !editable;
+			return has_backend && !!user && !editable;
 		}
 
 		async execute() {
@@ -691,7 +696,7 @@
 
 	class BrowsePagesCommand extends Command {
 		is_enabled() {
-			return has_backend && is_admin && !this.context.editable;
+			return has_backend && is_editor && !this.context.editable;
 		}
 
 		execute() {
@@ -701,7 +706,7 @@
 
 	class NewPageCommand extends Command {
 		is_enabled() {
-			return has_backend && is_admin && !this.context.editable;
+			return has_backend && is_editor && !this.context.editable;
 		}
 
 		execute() {
@@ -714,7 +719,7 @@
 
 	class DuplicatePageCommand extends Command {
 		is_enabled() {
-			return has_backend && is_admin && can_edit && !editable && !!duplicate_source;
+			return has_backend && is_editor && can_edit && !editable && !!duplicate_source;
 		}
 
 		execute() {
@@ -726,7 +731,7 @@
 
 	class EditPageUrlCommand extends Command {
 		is_enabled() {
-			return has_backend && is_admin && can_edit && !editable && !is_home_page;
+			return has_backend && is_editor && can_edit && !editable && !is_home_page;
 		}
 
 		execute() {
@@ -740,7 +745,7 @@
 
 	class PageMenuCommand extends Command {
 		is_enabled() {
-			return has_backend && is_admin && !editable;
+			return has_backend && !!user && !editable;
 		}
 
 		execute() {

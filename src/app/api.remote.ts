@@ -45,7 +45,7 @@ import { is_reserved_markdown_slug, get_markdown_page_pathnames } from '#app/mar
 import { extract_page_metadata, extract_site_metadata } from '#app/page_metadata.js';
 import type { PreviewMediaNode } from '#app/page_metadata.js';
 import type { DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
-import { require_user } from '#lib/server/auth.js';
+import { require_editor } from '#lib/server/auth.js';
 import { get_auth } from './server_auth.js';
 import { revoke_all_grants } from '#app/server_oauth.js';
 
@@ -115,7 +115,7 @@ export const get_document = query(v.string(), async (slug) => {
  * documents, so returning them here would only invite copying them by mistake.
  */
 export const get_page_document_for_duplicate = query(v.string(), async (slug) => {
-	require_user(getRequestEvent().locals);
+	require_editor(getRequestEvent().locals);
 
 	// The home page has no slug row by invariant, so it is addressed as `/` —
 	// the same way the page browser and `page_href` refer to it.
@@ -188,9 +188,11 @@ export const login_admin = command(admin_login_input_schema, async (credentials)
 });
 
 export const logout_admin = command(v.void(), async () => {
-	await get_auth().log_out(getRequestEvent());
-	// Logging out also ends every MCP connection the admin approved.
-	await revoke_all_grants();
+	const event = getRequestEvent();
+	const was_editor = event.locals.is_editor;
+	await get_auth().log_out(event);
+	// An editor logging out also ends every MCP connection, which only editors approve.
+	if (was_editor) await revoke_all_grants();
 	return { ok: true };
 });
 
@@ -199,7 +201,7 @@ export const logout_admin = command(v.void(), async () => {
  */
 export const get_page_browser_data = query(v.string(), async (href) => {
 	const event = getRequestEvent();
-	require_user(event.locals);
+	require_editor(event.locals);
 	const pathname = normalize_href(new URL(href).pathname, site);
 	return build_page_browser_data(language_path(pathname, site.languages).pathname);
 });
@@ -255,7 +257,7 @@ export const get_sitemap_entries = query(async () => {
  * Delete a page document and its related refs.
  */
 export const delete_page = command(delete_page_input_schema, async ({ document_id }) => {
-	require_user(getRequestEvent().locals);
+	require_editor(getRequestEvent().locals);
 
 	const home_page_id = await get_home_page_id_from_db();
 
@@ -383,7 +385,7 @@ export const save_page_translation = command(
 		translation_revision: v.string()
 	}),
 	async (input) => {
-		require_user(getRequestEvent().locals);
+		require_editor(getRequestEvent().locals);
 		const result = await with_asset_cleanup(() => save_translated_document(input));
 		void snapshot_if_stale();
 		return result;
@@ -391,7 +393,7 @@ export const save_page_translation = command(
 );
 
 export const save_page = command(save_page_input_schema, async (combined_doc) => {
-	require_user(getRequestEvent().locals);
+	require_editor(getRequestEvent().locals);
 	if (combined_doc.language && combined_doc.language !== site.languages[0])
 		error(400, 'Use the translation save command for additional languages.');
 
@@ -440,7 +442,7 @@ export const save_page = command(save_page_input_schema, async (combined_doc) =>
 });
 
 export const update_page_slug = command(update_page_slug_input_schema, async (input) => {
-	require_user(getRequestEvent().locals);
+	require_editor(getRequestEvent().locals);
 
 	const normalized_slug = slugify(input.slug, { lower: true, strict: true, trim: true });
 

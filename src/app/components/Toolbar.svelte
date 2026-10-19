@@ -1,3 +1,22 @@
+<script module lang="ts">
+	/** What a component set as system_components.toolbar_items receives, to add buttons to the toolbar. */
+	export type ToolbarItemsProps = {
+		/** The class of the toolbar's own buttons and links; use:tooltip from #app/tooltip.js labels them. */
+		button_class: string;
+	};
+
+	/** What a component set as system_components.menu_items receives, to add entries to the toolbar's menu. */
+	export type MenuItemsProps = {
+		/**
+		 * The class of the menu's own buttons; give each entry role="menuitem" too. Its hover
+		 * styles apply to enabled buttons, so a link adds hover:bg-(--muted) itself.
+		 */
+		item_class: string;
+		/** Closes the menu, such as after following a link. */
+		close: () => void;
+	};
+</script>
+
 <script lang="ts">
 	import { is_media_selection } from '#app/media.js';
 	import { get_app_context } from '#app/app_context.js';
@@ -70,12 +89,17 @@
 
 	let cancel_command = $derived(app_commands.cancel_editing ?? null);
 	let cancel_button_label = $derived(cancel_command?.label || 'Cancel');
-	let can_browse_pages = $derived(app.has_backend && app.is_admin && !editable);
-	let can_create_pages = $derived(app.has_backend && app.is_admin);
-	let can_manage_current_page = $derived(app.has_backend && app.is_admin && app.can_edit);
-	let can_logout = $derived(app.has_backend && app.is_admin && !editable);
+	let can_browse_pages = $derived(app.has_backend && app.is_editor && !editable);
+	let can_create_pages = $derived(app.has_backend && app.is_editor);
+	let can_manage_current_page = $derived(app.has_backend && app.is_editor && app.can_edit);
+	// Anyone signed in gets the menu, to log out; editors also find the page actions there.
+	let can_logout = $derived(app.has_backend && app.is_signed_in && !editable);
+	let page_menu_label = $derived(app.is_editor ? 'Page actions' : 'Account');
+	// Buttons and menu entries an app adds for people signed in, such as links to its own pages.
+	let ToolbarItems = $derived(session.config.system_components?.toolbar_items);
+	let MenuItems = $derived(session.config.system_components?.menu_items);
 	let can_edit_document = $derived(
-		(app.is_demo_mode || !app.has_backend || app.is_admin) && !app_commands.edit_document.disabled
+		(app.is_demo_mode || !app.has_backend || app.is_editor) && !app_commands.edit_document.disabled
 	);
 	let can_show_read_toolbar = $derived(
 		can_create_pages ||
@@ -195,7 +219,7 @@
 	}
 
 	function handle_edit_document_click() {
-		if (app.is_demo_mode && app.has_backend && !app.is_admin) {
+		if (app.is_demo_mode && app.has_backend && !app.is_editor) {
 			app.edit_for_fun();
 			return;
 		}
@@ -500,6 +524,10 @@
 									</button>
 								{/if}
 
+								{#if ToolbarItems && app.is_signed_in}
+									<ToolbarItems button_class="{tw_toolbar_btn} {tw_toolbar_btn_hover}" />
+								{/if}
+
 								{#if can_logout}
 									<button
 										bind:this={page_menu_trigger}
@@ -509,8 +537,8 @@
 										aria-controls="toolbar-page-actions-menu"
 										aria-keyshortcuts="Control+Shift+M"
 										popovertarget="toolbar-page-actions-menu"
-										use:tooltip={{ label: 'Page actions', keys: ['⌃', '⇧', 'M'] }}
-										aria-label="Page actions"
+										use:tooltip={{ label: page_menu_label, keys: ['⌃', '⇧', 'M'] }}
+										aria-label={page_menu_label}
 									>
 										<svg
 											class="size-6"
@@ -533,8 +561,12 @@
 										popover="auto"
 										role="menu"
 										tabindex="-1"
-										aria-label="Page actions"
+										aria-label={page_menu_label}
 									>
+										{#if MenuItems}
+											<MenuItems item_class={tw_page_actions_item} close={close_page_menu} />
+											<div class="my-1 h-px bg-(--stroke)" role="separator"></div>
+										{/if}
 										{#if can_manage_current_page}
 											<button
 												type="button"
