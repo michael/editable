@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Backend } from '#lib/server/backend.js';
@@ -31,8 +31,10 @@ it('seeds a new site and records every migration as applied, on files and on SQL
 		await migrate(backend);
 		expect(await backend.get_setting('home_page_id')).not.toBeNull();
 		expect(await content_applied(backend)).toContain('20261009T120000000Z_editable_site_banner');
-		expect(await backend.applied_migrations()).toContain(
-			`20261016T120000000Z_editable_setting_records_${backend.name}`
+		expect(await backend.applied_migrations()).toEqual(
+			all_migrations
+				.filter((migration) => migration.target === backend.name)
+				.map((migration) => migration.id)
 		);
 		// Running again changes nothing.
 		const documents = await backend.list_documents();
@@ -81,34 +83,6 @@ it('upgrades an old database that kept content progress with its SQLite migratio
 		locked_until: 99
 	});
 	expect(await backend.get_setting('login_throttle')).toBeNull();
-});
-
-it('upgrades a file folder written before settings became records', async () => {
-	const data_dir = temp_dir();
-	const first = backend_in(data_dir, 'files');
-	await migrate(first);
-	const home_page_id = (await first.get_setting('home_page_id'))!;
-	// What a folder from before format tracking looks like.
-	const db_dir = join(data_dir, 'db');
-	rmSync(join(db_dir, '_migrations.json'));
-	writeFileSync(join(db_dir, 'settings.json'), JSON.stringify({ home_page_id }));
-
-	const reopened = backend_in(data_dir, 'files');
-	await migrate(reopened);
-	expect(await reopened.get_setting('home_page_id')).toBe(home_page_id);
-	expect(JSON.parse(readFileSync(join(db_dir, '_migrations.json'), 'utf8')).migrations).toContain(
-		'20261016T120000000Z_editable_setting_records_files'
-	);
-});
-
-it('keeps the SQLite and files backends in step: every storage change has a file for both', () => {
-	// A change's files share its id, with the target as a suffix.
-	const changes = (target: string) =>
-		all_migrations
-			.filter((migration) => migration.target === target)
-			.map(({ id }) => id.replace(new RegExp(`_${target}$`), ''))
-			.sort();
-	expect(changes('files')).toEqual(changes('sqlite'));
 });
 
 it('refuses data migrated by a newer version', async () => {

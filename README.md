@@ -1195,13 +1195,13 @@ The helpers work on the site's documents in memory, and Editable saves the chang
 
 ### Storage migrations
 
-A change to how the built-in backends store records, such as a new table, needs a storage migration for each of them. Generate the pair with `--storage`:
+A change to how a backend stores records, such as a new table, needs a storage migration for that backend. Create one with `--target`:
 
 ```sh
-pnpm migration:create redirects --storage
+pnpm migration:create redirects --target sqlite
 ```
 
-This writes one file per backend, sharing the change's timestamp and name, with the backend as a suffix: `…_redirects_sqlite.ts` and `…_redirects_files.ts`. Each states its target and receives its backend's storage: for SQLite the [node:sqlite](https://nodejs.org/api/sqlite.html) handle as `db`, for files the folder of its records as `db_dir`:
+This writes `…_redirects_sqlite.ts`, with the backend as a suffix. It states its target and receives its backend's storage: for SQLite the [node:sqlite](https://nodejs.org/api/sqlite.html) handle as `db`, for files the folder of its records as `db_dir`:
 
 ```ts
 import type { Migration } from '#lib/server/migrations.js';
@@ -1215,7 +1215,7 @@ export default {
 } satisfies Migration;
 ```
 
-Where a backend needs nothing, its file stays with an empty `up`, the record that someone checked; Editable's tests fail while a change has a file for one of the two and not the other. A backend runs only the storage migrations that target it, and a fresh one replays them all in order. A backend of your own has its own storage migrations, made with `--target <name>`.
+A backend runs only the storage migrations that target it, and a new one replays them all in order. Check a storage change against both built-in backends, SQLite and files: each one whose existing data must change gets a migration, and one that needs nothing gets no file. A backend of your own has its own storage migrations the same way.
 
 ### Placing a migration
 

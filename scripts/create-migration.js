@@ -1,7 +1,6 @@
 // Create a migration in src/app/migrations:
 //
 //   pnpm migration:create <name>                    content, runs on every backend
-//   pnpm migration:create <name> --storage          a file each for SQLite and files
 //   pnpm migration:create <name> --target <target>  one file for one backend
 //   pnpm migration:create <name> --after <id>       dated right after another migration
 //
@@ -15,7 +14,6 @@ const migration_dir = join(process.cwd(), 'src/app/migrations');
 const args = process.argv.slice(2);
 let namespace = 'custom';
 let name = '';
-let storage = false;
 let target = '';
 let after = '';
 
@@ -23,7 +21,6 @@ for (let index = 0; index < args.length; index++) {
 	const argument = args[index];
 	const value = () => args[++index] || fail(`${argument} requires a value.`);
 	if (argument === '--editable') namespace = 'editable';
-	else if (argument === '--storage') storage = true;
 	else if (argument === '--target') target = value();
 	else if (argument === '--after') after = value();
 	else if (argument.startsWith('--')) fail(`Unknown option: ${argument}`);
@@ -31,8 +28,7 @@ for (let index = 0; index < args.length; index++) {
 	else name = argument;
 }
 
-if (!name)
-	fail('Usage: pnpm migration:create <name> [--storage | --target <backend>] [--after <id>]');
+if (!name) fail('Usage: pnpm migration:create <name> [--target <backend>] [--after <id>]');
 const slug = name
 	.trim()
 	.toLowerCase()
@@ -50,31 +46,29 @@ if (after) {
 	timestamp = new Date(Date.parse(parsed) + 1).toISOString().replace(/[-:.]/g, '');
 }
 const change = `${timestamp}_${namespace}_${slug}`;
-const targets = storage ? ['sqlite', 'files'] : [target || 'content'];
-
 const templates = {
 	content:
 		"import type { ContentContext, Migration } from '#lib/server/migrations.js';\n\nexport default {\n\tup({ documents, ensure_document, rename_property, rename_type, replace_value, delete_property, update }: ContentContext) {\n\t\t// Transform content with the helpers, or change `documents` directly.\n\t\t// rename_property('hero', 'image', 'media');\n\t}\n} satisfies Migration;\n",
 	sqlite:
-		"import type { Migration } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: 'sqlite',\n\tup() {\n\t\t// Leave empty if SQLite needs nothing for this change. Otherwise take its\n\t\t// storage: up({ db }: SqliteStorage), from '#lib/server/backends/sqlite_backend.js'.\n\t}\n} satisfies Migration;\n",
+		"import type { Migration } from '#lib/server/migrations.js';\nimport type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';\n\nexport default {\n\ttarget: 'sqlite',\n\tup({ db }: SqliteStorage) {\n\t\t// db.exec('ALTER TABLE ...');\n\t}\n} satisfies Migration;\n",
 	files:
-		"import type { Migration } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: 'files',\n\tup() {\n\t\t// Leave empty if the files backend needs nothing for this change. Otherwise\n\t\t// take its storage: up({ db_dir }: FilesStorage), from '#lib/server/backends/files_backend.js'.\n\t}\n} satisfies Migration;\n"
+		"import type { Migration } from '#lib/server/migrations.js';\nimport type { FilesStorage } from '#lib/server/backends/files_backend.js';\n\nexport default {\n\ttarget: 'files',\n\tup({ db_dir }: FilesStorage) {\n\t\t// Rewrite the record files in db_dir.\n\t}\n} satisfies Migration;\n"
 };
-const template_for = (t) =>
-	templates[t] ??
-	`import type { Migration } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: '${t}',\n\tup() {\n\t\t// Take the ${t} backend's storage, up(storage), and change it.\n\t}\n} satisfies Migration;\n`;
+const template =
+	templates[target || 'content'] ??
+	`import type { Migration } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: '${target}',\n\tup() {\n\t\t// Take the ${target} backend's storage, up(storage), and change it.\n\t}\n} satisfies Migration;\n`;
 
-for (const t of targets) {
-	const id = t === 'content' ? change : `${change}_${t}`;
-	const path = join(migration_dir, `${id}.ts`);
-	try {
-		writeFileSync(path, template_for(t), { flag: 'wx' });
-	} catch (error) {
-		if (error?.code === 'EEXIST') fail(`Migration already exists: ${path}`);
-		throw error;
-	}
-	console.log(`Created ${path}`);
+const path = join(
+	migration_dir,
+	`${target && target !== 'content' ? `${change}_${target}` : change}.ts`
+);
+try {
+	writeFileSync(path, template, { flag: 'wx' });
+} catch (error) {
+	if (error?.code === 'EEXIST') fail(`Migration already exists: ${path}`);
+	throw error;
 }
+console.log(`Created ${path}`);
 
 function fail(message) {
 	console.error(message);
