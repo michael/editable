@@ -1,4 +1,4 @@
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,6 +7,15 @@ import { open_sqlite, sqlite_backend } from './sqlite_backend.js';
 import { test_backend } from './backend_tests.js';
 import { migrate_storage } from '#app/migrations.js';
 import type { Backend } from '../backend.js';
+
+// The site's environment; these tests need none of it, so they run without a .env.
+vi.mock('$app/env/private', () => ({
+	ADMIN_PASSWORD: 'secret',
+	NODE_ENV: 'test',
+	ORIGIN: 'https://example.com',
+	LANGUAGES: '',
+	VERCEL: ''
+}));
 
 const dirs: string[] = [];
 afterEach(() => dirs.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })));

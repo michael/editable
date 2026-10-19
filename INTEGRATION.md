@@ -217,7 +217,7 @@ export const load: PageServerLoad = async ({ locals }) => ({
 - **⌘ E leaves the page alone;** there is nothing for the editor to edit.
 - **Forms work.** The page's content sits inside the editor's canvas, which leaves the typing of inputs, textareas, and selects there to them.
 - **Inside your content,** `get_app_context()` from `src/app/app_context.ts` gives App's state, such as `app.auth_dialog_open = true` to open the login drawer, and `page.data` holds `user` and `is_editor`. Style it with the [design system](README.md#styling)'s recipes.
-- **Reserve its path:** add the route's first path segment, such as `orders`, to `RESERVED_ROUTE_SLUGS` in `src/app/config.ts`, or a page could take its URL.
+- **Reserve its path:** add the route's first path segment, such as `orders`, to `RESERVED_ROUTE_SLUGS` in `src/app/config.ts`, or a page could take its URL. `pnpm test` fails until you do, also for a route inside a route group.
 
 A route group gives many such pages the shell at once: a `src/routes/(app)/+layout.svelte` that renders `PageShell` around its children, with each page's title from its load, keeps the pages themselves to their content.
 
