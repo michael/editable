@@ -4,7 +4,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { open_sqlite, sqlite_backend } from './sqlite_backend.js';
-import { files_backend } from './files_backend.js';
 import { test_backend } from './backend_tests.js';
 import { migrate_storage } from '#app/migrations.js';
 import type { Backend } from '../backend.js';
@@ -31,20 +30,6 @@ const sqlite = () => {
 };
 
 test_backend('sqlite', sqlite);
-
-test_backend('files', () => {
-	const dir = temp_dir();
-	return migrated(
-		files_backend(
-			{ db_dir: join(dir, 'db'), asset_dir: join(dir, 'assets') },
-			{
-				serialize: (document) => JSON.stringify(document),
-				parse: (text) => JSON.parse(text),
-				extension: 'json'
-			}
-		)
-	);
-});
 
 it('rolls a failed SQLite storage migration back with everything it did', async () => {
 	const backend = await sqlite();

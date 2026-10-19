@@ -4,7 +4,7 @@ The [manual](README.md) covers building and running an Editable site. This guide
 
 ## Backends
 
-Store a site wherever you want: in SQLite, in plain files, or in a system of your own, kept in your fork without conflicts when you merge Editable's releases.
+Store a site wherever you want: in SQLite, or in a system of your own, kept in your fork without conflicts when you merge Editable's releases.
 
 Editable reaches its data in three layers:
 
@@ -24,12 +24,7 @@ await backend.save_documents({
 });
 ```
 
-Editable comes with two backends. The deployment's own comes from `create_backend` in `src/app/create_backend.ts`, which picks one by what the data folder holds; a host serving several sites passes one per site (see [Hosting several sites](#hosting-several-sites)).
-
-| Backend          | Records                          | Assets                  | Use                                                                                   |
-| ---------------- | -------------------------------- | ----------------------- | ------------------------------------------------------------------------------------- |
-| `sqlite_backend` | SQLite, in `data/db.sqlite3`     | Files, in `data/assets` | The default, and what deployments, backups, and the `pnpm data:*` commands use        |
-| `files_backend`  | EDF and JSON files, in `data/db` | Files, in `data/assets` | Sites you want to read, diff, and version as files; see [File storage](#file-storage) |
+Editable comes with one backend, `sqlite_backend`: records in `data/db.sqlite3` and asset files in `data/assets`, which deployments, backups, Litestream, and the `pnpm data:*` commands work with. The deployment's own backend comes from `create_backend` in `src/app/create_backend.ts`; a host serving several sites passes one per site (see [Hosting several sites](#hosting-several-sites)).
 
 ### The backend interface
 
@@ -53,7 +48,7 @@ A backend keeps these promises:
 - **Expired entries go without a scan:** `delete_expired(now)` removes them in one step, such as one `DELETE … WHERE expires_at <= $1` per table.
 - **Assets are opaque.** Which ones are unused, and when they may go, is the API's decision.
 
-The built-in backends are synchronous inside, so each call runs to its end before the next.
+The SQLite backend is synchronous inside, so each call runs to its end before the next.
 
 ### Keep a backend in your fork
 
@@ -76,7 +71,7 @@ test_backend('git', async () => {
 });
 ```
 
-- **Its storage migrations are its own.** Your backend runs only the migrations that target its name, and Editable's SQLite and files migrations never run on it. Create one with `pnpm migration:create <name> --target git`.
+- **Its storage migrations are its own.** Your backend runs only the migrations that target its name, and Editable's SQLite migrations never run on it. Create one with `pnpm migration:create <name> --target git`.
 
 ### Merge an Editable release
 
@@ -92,7 +87,13 @@ Editable's content migrations need nothing from you. They change documents throu
 
 ### Write your own backend
 
-As an example, a backend that commits a site's content to a Git repository, so it is versioned and reviewable on any Git host, and keeps everything private, plus the references, in Postgres, and uploads in an S3-compatible bucket. The same shape fits any public document store next to a private database. A sketch, with the small helpers left out:
+As an example, a backend that keeps a site's records by who may see them:
+
+- **Content in Git.** Documents, translations, slugs, and settings are committed to a Git repository, versioned and reviewable on any Git host, and as public as the repository: a site's content is what it publishes anyway.
+- **Private records in Postgres.** Sessions, the login throttle, and OAuth grants and tokens let people in, so they never go into the repository. The references Editable computes stay there too.
+- **Uploads in a bucket,** any S3-compatible one.
+
+The same shape fits any public document store next to a private database. A sketch, with the small helpers left out:
 
 ```ts
 import type { Backend } from '#lib/server/backend.js';
@@ -113,7 +114,7 @@ export function git_backend(storage: GitStorage): Backend {
 					tx.files.put(`documents/${record.document_id}.edf`, to_edf(record));
 				// …references in Postgres, translations, slugs, and settings
 			}),
-		// Private: one Postgres table each
+		// Private, never in the repository: one Postgres table each
 		get_session: async (session_id) =>
 			(await sql`SELECT * FROM sessions WHERE session_id = ${session_id}`)[0] ?? null,
 		// Assets: objects in the bucket
@@ -172,27 +173,6 @@ export default {
 
 The `pnpm data:*` commands, backups, and Litestream work on `sqlite_backend`'s data folder; a backend of your own brings its own backups.
 
-## File storage
-
-Keep a site in plain files instead of a SQLite database: every document as an EDF file, every other record as JSON, so the folder can be read, diffed, and versioned like source code.
-
-Convert your site in place, with the dev server stopped:
-
-```sh
-pnpm data:convert --to files
-```
-
-Editable reads the format from the data folder, so `pnpm dev` then opens the files. The site lives in `data/db`: `documents/<id>.edf` for each page, banner, nav, and footer, `documents.json` with their types and timestamps, and one JSON file each for slugs, settings, translations, references, sessions, the login throttle, and MCP connections. `_migrations.json` lists the storage migrations it has run. Assets stay in `data/assets`, shared by both formats.
-
-The conversion copies the site's content, references, and settings. Sign-ins and MCP connections start over: sign in again, and reconnect MCP clients. The database the conversion replaced moves to `data-backups/` as a regular backup that `pnpm data:backups` lists. `pnpm data:convert --to sqlite` converts back the same way, keeping the files version in a dated folder in `data-backups/`.
-
-A new, empty data folder starts with SQLite, or with files when `STORAGE=files` is set. For an existing folder, `STORAGE` must match the format it holds or be left unset. A folder holding both formats, which an interrupted conversion can leave behind, is refused until one of them is moved out.
-
-Each file is written atomically, but a save that touches several files is not one transaction. Deployments always use SQLite, which a new volume starts with, and so do backups, Litestream, and the `pnpm data:*` commands. File storage suits demos and archiving locally:
-
-- `pnpm data:pull`, `data:pull-cloud`, `data:restore`, and `data:reset` install a SQLite database. A local site kept as files moves to `data-backups/` first, as a dated folder of its records.
-- `pnpm data:push`, `data:backup`, `data:verify`, and `data:translations` stop at a site kept as files and ask you to run `pnpm data:convert --to sqlite` first.
-
 ## Hosting several sites
 
 A deployment normally serves one site, configured by `ORIGIN` and `LANGUAGES`. A hosting service that serves several sites from one process can set the site per request instead: in its own `handle` hook, running before Editable's, it sets `event.locals.site`:
@@ -226,7 +206,7 @@ Requests for `/alice/...` must reach Editable's routes, either through a proxy t
 
 Commands sent by the editor carry the page's path, so `event.url` is the page URL and the host can read the site from it. Queries do not, so for them a path-based host can only find the site through the `Referer` header; a host that gives each site its own hostname has no such gap. Routes the host adds, such as a registration page, need adding to `RESERVED_ROUTE_SLUGS` in `src/app/config.ts`, or a page of the root site could take their path.
 
-Each site is its own MCP server and OAuth authorization server at its origin and base, with its clients and approvals in its own backend. For a site under a path, the discovery documents are expected at the host root with the site's path inserted, as in `/.well-known/oauth-authorization-server/alice` and `/.well-known/oauth-protected-resource/alice/mcp`, so the host's `reroute` maps those to Editable's discovery routes as well.
+Each site is its own MCP server and OAuth authorization server at its origin and base, with its approvals in its own backend. For a site under a path, the discovery documents are expected at the host root with the site's path inserted, as in `/.well-known/oauth-authorization-server/alice` and `/.well-known/oauth-protected-resource/alice/mcp`, so the host's `reroute` maps those to Editable's discovery routes as well.
 
 ### Keep each site's private records apart
 

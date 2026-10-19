@@ -1,6 +1,6 @@
 import type { Backend } from '#lib/server/backend.js';
 import { backend_for } from './server_backend.js';
-import { DATA_DIR, STORAGE } from './server_config.js';
+import { DATA_DIR } from './server_config.js';
 
 /**
  * The backend of the deployment's own site, in DATA_DIR. Return your own here
@@ -9,5 +9,5 @@ import { DATA_DIR, STORAGE } from './server_config.js';
  * a release.
  */
 export function create_backend(): Backend {
-	return backend_for(DATA_DIR, STORAGE);
+	return backend_for(DATA_DIR);
 }

@@ -3,8 +3,8 @@ import type { Backend } from './backend.js';
 
 /**
  * A migration file. Without a target it changes content and runs on every
- * backend. With one, such as 'sqlite' or 'files', it changes that backend's
- * own format and runs only there. Its filename is its permanent id, and
+ * backend. With one, such as 'sqlite', it changes that backend's own format
+ * and runs only there. Its filename is its permanent id, and
  * migrations run in id order.
  */
 export type Migration = { target?: string; up: (context: any) => unknown };

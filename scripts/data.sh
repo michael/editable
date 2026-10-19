@@ -299,35 +299,12 @@ snapshot_local_db() {
 		"$dest" "$DATA_DIR_LOCAL/assets" || die "Local snapshot references missing assets"
 }
 
-# A data folder holds a SQLite database or a site kept as files in db/
-# (INTEGRATION.md → File storage). The data commands work with SQLite.
-local_holds_files() { [ -d "$DATA_DIR_LOCAL/db" ]; }
-
-# Commands that read the local database stop at a site kept as files.
-refuse_files() {
-	if local_holds_files; then
-		die "$DATA_DIR_LOCAL holds a site kept as files, and pnpm data:$1 works with SQLite. Convert it first: pnpm data:convert --to sqlite"
-	fi
-}
-
-# Commands that install a database move a site kept as files aside first, as a
-# dated folder of its records; assets stay, both formats share them.
-set_aside_files() {
-	local_holds_files || return 0
-	mkdir -p "$BACKUP_DIR_LOCAL"
-	local dest
-	dest="$BACKUP_DIR_LOCAL/local-$(date -u +%Y%m%dT%H%M%SZ)-$(printf '%04x' "$RANDOM")-files"
-	mv "$DATA_DIR_LOCAL/db" "$dest"
-	info "Moved the site kept as files to $dest (restart the dev server if it is running)"
-}
-
 list_local_assets() {
 	ls -1 "$DATA_DIR_LOCAL/assets" 2>/dev/null | grep -E "$ASSET_RE" | sort || true
 }
 
 # ---- push: local -> remote -------------------------------------------------
 cmd_push() {
-	refuse_files push
 	need_app push
 	local yes="${1:-}"
 
@@ -438,7 +415,6 @@ cmd_pull() {
 		"$TMP/pull.db" "$DATA_DIR_LOCAL/assets" ||
 		die "Pulled database references assets that are missing locally — nothing was installed"
 
-	set_aside_files
 	if [ -f "$DATA_DIR_LOCAL/db.sqlite3" ]; then
 		info "Backing up current local database…"
 		sqlite3 "$DATA_DIR_LOCAL/db.sqlite3" "VACUUM INTO '$BACKUP_DIR_LOCAL/local-$ts.sqlite3'"
@@ -621,7 +597,6 @@ cmd_pull_cloud() {
 	node --disable-warning=ExperimentalWarning "$SCRIPT_DIR/restore-assets.js" "$TMP/cloud.db" ||
 		die "Could not restore all referenced assets — nothing was installed"
 
-	set_aside_files
 	if [ -f "$DATA_DIR_LOCAL/db.sqlite3" ]; then
 		info "Backing up current local database…"
 		sqlite3 "$DATA_DIR_LOCAL/db.sqlite3" "VACUUM INTO '$BACKUP_DIR_LOCAL/local-$ts.sqlite3'"
@@ -645,7 +620,6 @@ cmd_reset() {
 
 	[ "$yes" = "--yes" ] || confirm "Reset your local database to fresh demo content? (assets stay in place)"
 
-	set_aside_files
 	local ts; ts="$(date -u +%Y%m%dT%H%M%SZ)"
 	if [ -f "$DATA_DIR_LOCAL/db.sqlite3" ]; then
 		info "Backing up current local database…"
@@ -668,7 +642,6 @@ cmd_reset() {
 cmd_backup() {
 	[ "$#" -eq 0 ] || die "Usage: pnpm data:backup [--remote]"
 	if [ "$TARGET_REMOTE" = true ]; then cmd_backup_remote; return; fi
-	refuse_files backup
 	[ -f "$DATA_DIR_LOCAL/db.sqlite3" ] || die "No local database at $DATA_DIR_LOCAL/db.sqlite3"
 	mkdir -p "$BACKUP_DIR_LOCAL"
 	local backup_path="$BACKUP_DIR_LOCAL/local-$(date -u +%Y%m%dT%H%M%SZ)-$(printf '%04x' "$RANDOM").sqlite3"
@@ -691,7 +664,6 @@ cmd_backups() {
 cmd_verify() {
 	[ "$#" -eq 0 ] || die "Usage: pnpm data:verify [--remote]"
 	if [ "$TARGET_REMOTE" = true ]; then cmd_verify_remote; return; fi
-	refuse_files verify
 	[ -f "$DATA_DIR_LOCAL/db.sqlite3" ] || die "No local database at $DATA_DIR_LOCAL/db.sqlite3"
 	[ "$(sqlite3 "$DATA_DIR_LOCAL/db.sqlite3" 'PRAGMA integrity_check')" = "ok" ] || die "Local integrity_check failed"
 	node --disable-warning=ExperimentalWarning "$SCRIPT_DIR/check-assets.js" "$DATA_DIR_LOCAL/db.sqlite3" "$DATA_DIR_LOCAL/assets"
@@ -719,7 +691,6 @@ cmd_restore() {
 	[ "$(sqlite3 "$TMP/restore.db" 'PRAGMA integrity_check')" = "ok" ] || die "Backup failed integrity_check"
 	node --disable-warning=ExperimentalWarning "$SCRIPT_DIR/check-assets.js" "$TMP/restore.db" "$DATA_DIR_LOCAL/assets"
 	[ "$yes" = "--yes" ] || confirm "Restore your local database ($DATA_DIR_LOCAL/db.sqlite3) from '$name'?"
-	set_aside_files
 	if [ -f "$DATA_DIR_LOCAL/db.sqlite3" ]; then cmd_backup; fi
 	mkdir -p "$DATA_DIR_LOCAL"
 	rm -f "$DATA_DIR_LOCAL/db.sqlite3-wal" "$DATA_DIR_LOCAL/db.sqlite3-shm"
@@ -742,7 +713,6 @@ cmd_backup_remote() {
 cmd_translations() {
 	[ "$#" -eq 0 ] || die "Usage: pnpm data:translations [--remote]"
 	if [ "$TARGET_REMOTE" = false ]; then
-		refuse_files translations
 		[ -f "$DATA_DIR_LOCAL/db.sqlite3" ] || die "No local database at $DATA_DIR_LOCAL/db.sqlite3"
 		info "Local translations ($DATA_DIR_LOCAL/db.sqlite3)"
 		node --disable-warning=ExperimentalWarning "$SCRIPT_DIR/translations.js" "$DATA_DIR_LOCAL/db.sqlite3" list
@@ -827,9 +797,6 @@ Data commands (via pnpm; arguments are forwarded directly):
   pnpm litestream:install                   one-time local setup for the cloud commands
 
 Maintenance commands default to local data/. Add --remote to target a deployment.
-Deployments always use SQLite. A local site kept as files is moved to data-backups/
-by pull, restore, and reset; push, backup, verify, and translations ask you to
-convert it first with: pnpm data:convert --to sqlite
 The remote target comes from fly.toml (Fly.io, override with: -a <app>) or from
 DEPLOY_HOST in .env (any VPS over plain ssh — see README → Deploy to a VPS).
 Local backups start with local-. Remote snapshot names (<name>) look like my-site-20260712T143535Z-3f2a (file extension optional) — list them with data:backups.

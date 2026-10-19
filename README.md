@@ -1131,7 +1131,7 @@ Every migration lives in `src/app/migrations`, is discovered when SvelteKit buil
 There are two kinds, with the same shape:
 
 - **Content migrations** change the site's documents. They have no `target` and run on every backend. Which ones have run is stored with the site, so it travels when the site moves to another backend. A new site starts with the current default content and never runs them.
-- **Storage migrations** change how one backend keeps its data, such as a SQLite table. They name their backend as `target: 'sqlite'` or `target: 'files'`, receive its storage, and are recorded by the backend itself.
+- **Storage migrations** change how one backend keeps its data, such as a SQLite table. They name their backend, such as `target: 'sqlite'`, receive its storage, and are recorded by the backend itself.
 
 When a site opens, its pending storage migrations run first, then its content migrations. Each is saved together with the record that it ran, as one atomic step, so a failure stops the upgrade where the last complete migration left the site.
 
@@ -1201,7 +1201,7 @@ A change to how a backend stores records, such as a new table, needs a storage m
 pnpm migration:create redirects --target sqlite
 ```
 
-This writes `…_redirects_sqlite.ts`, with the backend as a suffix. It states its target and receives its backend's storage: for SQLite the [node:sqlite](https://nodejs.org/api/sqlite.html) handle as `db`, for files the folder of its records as `db_dir`:
+This writes `…_redirects_sqlite.ts`, with the backend as a suffix. It states its target and receives its backend's storage, for SQLite the [node:sqlite](https://nodejs.org/api/sqlite.html) handle as `db`:
 
 ```ts
 import type { Migration } from '#lib/server/migrations.js';
@@ -1215,7 +1215,7 @@ export default {
 } satisfies Migration;
 ```
 
-A backend runs only the storage migrations that target it, and a new one replays them all in order. Check a storage change against both built-in backends, SQLite and files: each one whose existing data must change gets a migration, and one that needs nothing gets no file. A backend of your own has its own storage migrations the same way.
+A backend runs only the storage migrations that target it, and a new one replays them all in order. A backend of your own has its own storage migrations the same way.
 
 ### Placing a migration
 

@@ -7,7 +7,7 @@ import type { Backend } from '#lib/server/backend.js';
 import initial_schema from './migrations/20260803T131059242Z_editable_initial_schema.js';
 import translations_schema from './migrations/20260923T180000000Z_editable_translations.js';
 import { all_migrations, migrate } from './migrations.js';
-import { backend_in } from './server_backend.js';
+import { backend_for } from './server_backend.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 const dirs: string[] = [];
@@ -25,22 +25,18 @@ function temp_dir() {
 const content_applied = async (backend: Backend) =>
 	JSON.parse((await backend.get_setting('migrations')) ?? '[]') as string[];
 
-it('seeds a new site and records every migration as applied, on files and on SQLite', async () => {
-	for (const format of ['files', 'sqlite'] as const) {
-		const backend = backend_in(temp_dir(), format);
-		await migrate(backend);
-		expect(await backend.get_setting('home_page_id')).not.toBeNull();
-		expect(await content_applied(backend)).toContain('20261009T120000000Z_editable_site_banner');
-		expect(await backend.applied_migrations()).toEqual(
-			all_migrations
-				.filter((migration) => migration.target === backend.name)
-				.map((migration) => migration.id)
-		);
-		// Running again changes nothing.
-		const documents = await backend.list_documents();
-		await migrate(backend);
-		expect(await backend.list_documents()).toEqual(documents);
-	}
+it('seeds a new site and records every migration as applied', async () => {
+	const backend = backend_for(temp_dir());
+	await migrate(backend);
+	expect(await backend.get_setting('home_page_id')).not.toBeNull();
+	expect(await content_applied(backend)).toContain('20261009T120000000Z_editable_site_banner');
+	expect(await backend.applied_migrations()).toEqual(
+		all_migrations.filter((migration) => migration.target === 'sqlite').map(({ id }) => id)
+	);
+	// Running again changes nothing.
+	const documents = await backend.list_documents();
+	await migrate(backend);
+	expect(await backend.list_documents()).toEqual(documents);
 });
 
 it('upgrades an old database that kept content progress with its SQLite migrations', async () => {
@@ -65,7 +61,7 @@ it('upgrades an old database that kept content progress with its SQLite migratio
 		.run(JSON.stringify(page));
 	sqlite.close();
 
-	const backend = backend_in(data_dir, 'sqlite');
+	const backend = backend_for(data_dir);
 	await migrate(backend);
 	// The banner migration had not run: the site gets its banner, the page refers to it.
 	expect((await backend.get_document('banner_1'))?.type).toBe('banner');
@@ -86,7 +82,7 @@ it('upgrades an old database that kept content progress with its SQLite migratio
 });
 
 it('refuses data migrated by a newer version', async () => {
-	const backend = backend_in(temp_dir(), 'files');
+	const backend = backend_for(temp_dir());
 	await migrate(backend);
 	const future = [...(await content_applied(backend)), '29990101T000000000Z_editable_future'];
 	await backend.save_documents({

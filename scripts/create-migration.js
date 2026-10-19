@@ -50,9 +50,7 @@ const templates = {
 	content:
 		"import type { ContentContext, Migration } from '#lib/server/migrations.js';\n\nexport default {\n\tup({ documents, ensure_document, rename_property, rename_type, replace_value, delete_property, update }: ContentContext) {\n\t\t// Transform content with the helpers, or change `documents` directly.\n\t\t// rename_property('hero', 'image', 'media');\n\t}\n} satisfies Migration;\n",
 	sqlite:
-		"import type { Migration } from '#lib/server/migrations.js';\nimport type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';\n\nexport default {\n\ttarget: 'sqlite',\n\tup({ db }: SqliteStorage) {\n\t\t// db.exec('ALTER TABLE ...');\n\t}\n} satisfies Migration;\n",
-	files:
-		"import type { Migration } from '#lib/server/migrations.js';\nimport type { FilesStorage } from '#lib/server/backends/files_backend.js';\n\nexport default {\n\ttarget: 'files',\n\tup({ db_dir }: FilesStorage) {\n\t\t// Rewrite the record files in db_dir.\n\t}\n} satisfies Migration;\n"
+		"import type { Migration } from '#lib/server/migrations.js';\nimport type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';\n\nexport default {\n\ttarget: 'sqlite',\n\tup({ db }: SqliteStorage) {\n\t\t// db.exec('ALTER TABLE ...');\n\t}\n} satisfies Migration;\n"
 };
 const template =
 	templates[target || 'content'] ??
