@@ -5,13 +5,12 @@ import { error } from '@sveltejs/kit';
 import type { Cookies, RequestEvent } from '@sveltejs/kit';
 import type { Handle } from '@sveltejs/kit/hooks';
 import { NODE_ENV, ORIGIN } from '$app/env/private';
-import { ASSET_ID_REGEX } from '#app/config.js';
-import { ASSET_GRACE_PERIOD_DAYS, DATA_DIR } from '#app/server_config.js';
-import { run_migrations } from '#app/migrations.js';
-import type { SiteStorage } from '#app/services.js';
-import type { AdminAuth } from '#app/server_admin_auth.js';
-import { create_database } from '#lib/server/db.js';
-import { create_asset_storage } from '#lib/server/asset_storage.js';
+import { DATA_DIR } from '#app/server_config.js';
+import { migrate } from '#app/migrations.js';
+import { backend_for } from '#app/server_backend.js';
+import type { Auth } from '#app/server_auth.js';
+import type { Backend } from '#lib/server/backend.js';
+import { open_sqlite } from '#lib/server/backends/sqlite_backend.js';
 import { is_site_name } from './site_names.js';
 
 /**
@@ -35,7 +34,7 @@ let registry: DatabaseSync | undefined;
 
 function get_registry() {
 	if (!registry) {
-		registry = create_database({ data_dir: DATA_DIR, db_path: join(DATA_DIR, 'host.sqlite3') }).db;
+		registry = open_sqlite(join(DATA_DIR, 'host.sqlite3'));
 		registry.exec(
 			'CREATE TABLE IF NOT EXISTS sites (name TEXT PRIMARY KEY, password_hash TEXT NOT NULL, created_at INTEGER NOT NULL)'
 		);
@@ -47,27 +46,22 @@ export function site_exists(name: string) {
 	return !!get_registry().prepare('SELECT 1 FROM sites WHERE name = ?').get(name);
 }
 
-const storages = new Map<string, SiteStorage>();
+const backends = new Map<string, Promise<Backend>>();
 
-/** A site's storage, opened and migrated on first use and kept open. */
-function open_storage(name: string): SiteStorage {
-	let storage = storages.get(name);
-	if (!storage) {
-		const dir = join(DATA_DIR, 'sites', name);
-		const { db, with_transaction } = create_database({
-			data_dir: dir,
-			db_path: join(dir, 'db.sqlite3')
-		});
-		const assets = create_asset_storage({
-			asset_path: join(dir, 'assets'),
-			asset_grace_period_days: ASSET_GRACE_PERIOD_DAYS,
-			asset_id_regex: ASSET_ID_REGEX
-		});
-		storage = { db, with_transaction, assets };
-		run_migrations(storage);
-		storages.set(name, storage);
+/** A site's backend, in DATA_DIR/sites/<name>, opened and migrated on first use and kept open. */
+function open_backend(name: string): Promise<Backend> {
+	let backend = backends.get(name);
+	if (!backend) {
+		backend = (async () => {
+			const opened = backend_for(join(DATA_DIR, 'sites', name));
+			await migrate(opened);
+			return opened;
+		})();
+		// A failed opening is tried again on the next request.
+		backend.catch(() => backends.delete(name));
+		backends.set(name, backend);
 	}
-	return storage;
+	return backend;
 }
 
 function hash_password(password: string, salt = randomBytes(16).toString('hex')) {
@@ -81,7 +75,7 @@ function password_matches(password: string, stored: string) {
 }
 
 /** Register a site and create its storage. Returns a message when the input is not acceptable. */
-export function create_site(name: string, password: string): string | null {
+export async function create_site(name: string, password: string): Promise<string | null> {
 	if (!is_site_name(name))
 		return 'A site name is 3 to 30 lowercase letters, digits, and dashes, starting with a letter.';
 	if (password.length < 8) return 'The password needs at least 8 characters.';
@@ -89,7 +83,7 @@ export function create_site(name: string, password: string): string | null {
 	get_registry()
 		.prepare('INSERT INTO sites (name, password_hash, created_at) VALUES (?, ?, ?)')
 		.run(name, hash_password(password), now());
-	open_storage(name);
+	await open_backend(name);
 	return null;
 }
 
@@ -113,56 +107,50 @@ function current_session(cookies: Cookies): { name: string; session_id: string }
 	return name && session_id ? { name, session_id } : null;
 }
 
-export function start_session(name: string, cookies: Cookies) {
-	end_session(cookies);
+export async function start_session(name: string, cookies: Cookies) {
+	await end_session(cookies);
 	const session_id = randomUUID();
-	open_storage(name)
-		.db.prepare('INSERT INTO sessions (session_id, expires) VALUES (?, ?)')
-		.run(session_id, now() + SESSION_SECONDS);
+	await (await open_backend(name)).save_session({ session_id, expires: now() + SESSION_SECONDS });
 	cookies.set(SESSION_COOKIE, `${name}.${session_id}`, {
 		...cookie_options(),
 		maxAge: SESSION_SECONDS
 	});
 }
 
-function end_session(cookies: Cookies) {
+async function end_session(cookies: Cookies) {
 	const session = current_session(cookies);
 	if (session && site_exists(session.name))
-		open_storage(session.name)
-			.db.prepare('DELETE FROM sessions WHERE session_id = ?')
-			.run(session.session_id);
+		await (await open_backend(session.name)).delete_session(session.session_id);
 	cookies.delete(SESSION_COOKIE, cookie_options());
 }
 
 /** Start a session for the site when the password is right. */
-export function log_in_site(name: string, password: string, cookies: Cookies) {
+export async function log_in_site(name: string, password: string, cookies: Cookies) {
 	const row = get_registry().prepare('SELECT password_hash FROM sites WHERE name = ?').get(name) as
 		{ password_hash: string } | undefined;
 	if (!row || !password_matches(password, row.password_hash)) return false;
-	start_session(name, cookies);
+	await start_session(name, cookies);
 	return true;
 }
 
-/** The site's password, with sessions in the site's own database. */
-function site_auth(name: string): AdminAuth {
+/** The site's password, with sessions in the site's own backend. Its owner may edit it. */
+function site_auth(name: string): Auth {
 	return {
-		is_admin({ cookies }) {
+		async get_user({ cookies }) {
 			const session = current_session(cookies);
-			if (session?.name !== name) return false;
-			const row = open_storage(name)
-				.db.prepare('SELECT expires FROM sessions WHERE session_id = ?')
-				.get(session.session_id) as { expires: number } | undefined;
-			if (row && row.expires > now()) return true;
-			end_session(cookies);
-			return false;
+			if (session?.name !== name) return null;
+			const record = await (await open_backend(name)).get_session(session.session_id);
+			if (record && record.expires > now()) return { username: name, name };
+			await end_session(cookies);
+			return null;
 		},
-		log_in({ cookies }, { password = '' }) {
-			if (!log_in_site(name, password, cookies))
+		async log_in({ cookies }, { password = '' }) {
+			if (!(await log_in_site(name, password, cookies)))
 				return { ok: false, code: 'invalid_password', message: 'Incorrect password.' };
 			return { ok: true };
 		},
-		log_out({ cookies }) {
-			end_session(cookies);
+		async log_out({ cookies }) {
+			await end_session(cookies);
 		}
 	};
 }
@@ -182,7 +170,7 @@ export const host_handle: Handle = async ({ event, resolve }) => {
 			origin: site_origin(name),
 			base: '',
 			languages: [],
-			storage: open_storage(name),
+			backend: await open_backend(name),
 			auth: site_auth(name)
 		};
 	}

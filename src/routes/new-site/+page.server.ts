@@ -19,12 +19,12 @@ export const actions: Actions = {
 		const password = String(data.get('password') ?? '');
 
 		if (site_exists(name)) {
-			if (!log_in_site(name, password, cookies))
+			if (!(await log_in_site(name, password, cookies)))
 				return fail(400, { name, message: 'Incorrect password.' });
 		} else {
-			const message = create_site(name, password);
+			const message = await create_site(name, password);
 			if (message) return fail(400, { name, message });
-			start_session(name, cookies);
+			await start_session(name, cookies);
 		}
 		const origin = site_origin(name);
 		// The site is another origin, so it is allowlisted rather than `external: true`.
