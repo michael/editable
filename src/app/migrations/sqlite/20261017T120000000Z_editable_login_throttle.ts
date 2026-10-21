@@ -4,7 +4,6 @@ import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 // The login throttle moves out of the settings into private records of its
 // own. Recent failed attempts are forgotten.
 export default {
-	target: 'sqlite',
 	up({ db }: SqliteStorage) {
 		db.exec(`
 			CREATE TABLE login_throttle (

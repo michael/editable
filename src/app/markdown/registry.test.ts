@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { MARKDOWN_SOURCES } from '#app/content_config.js';
 import { build_registry, get_markdown_page, is_reserved_markdown_slug } from './registry.js';
+import { convert_markdown } from './convert.js';
 
 describe('build_registry', () => {
 	it('builds an empty registry from an empty mapping', () => {
@@ -43,5 +44,13 @@ describe('is_reserved_markdown_slug', () => {
 
 	it('does not reserve unmapped slugs', () => {
 		expect(is_reserved_markdown_slug('not-mapped-anywhere')).toBe(false);
+	});
+});
+
+describe('configured pages', () => {
+	// They convert on request, so a link the converter refuses, such as one to
+	// a .md file, would otherwise first fail on the deployed site.
+	it('convert without errors', () => {
+		for (const source of MARKDOWN_SOURCES) convert_markdown(source.markdown, source);
 	});
 });

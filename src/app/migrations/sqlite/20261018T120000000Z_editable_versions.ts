@@ -4,7 +4,6 @@ import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 // Documents and translations carry a version that changes with every write,
 // so saves can tell when someone else changed them first.
 export default {
-	target: 'sqlite',
 	up({ db }: SqliteStorage) {
 		db.exec(`
 			ALTER TABLE documents ADD COLUMN version TEXT NOT NULL DEFAULT '';

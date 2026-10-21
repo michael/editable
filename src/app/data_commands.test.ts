@@ -4,8 +4,8 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
-import translations_schema from '#app/migrations/20260923T180000000Z_editable_translations.js';
+import initial_schema from '#app/migrations/sqlite/20260803T131059242Z_editable_initial_schema.js';
+import translations_schema from '#app/migrations/sqlite/20260923T180000000Z_editable_translations.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 const project_dir = resolve('.');

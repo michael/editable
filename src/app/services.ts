@@ -22,10 +22,7 @@ export async function get_backend(): Promise<Backend> {
 }
 
 /** The functions Editable's server code calls. */
-type SiteBackend = Omit<
-	Backend,
-	'name' | 'storage' | 'applied_migrations' | 'run_migration' | 'close'
->;
+type SiteBackend = Omit<Backend, 'name' | 'storage' | 'applied_migrations' | 'migrate' | 'close'>;
 
 /**
  * The current site's backend. Each call goes to the backend of the request it

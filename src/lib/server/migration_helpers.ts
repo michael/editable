@@ -3,8 +3,8 @@
 //
 // The helpers change the site's documents in memory: every helper scans all
 // documents (pages, banner, nav, footer) and applies the change to matching
-// nodes. Editable then saves the documents that changed. `updated_at` is left
-// untouched: a migration is not a content edit.
+// nodes. Editable then writes back the documents that changed. `updated_at`
+// is left untouched: a migration is not a content edit.
 
 import type { Document } from 'svedit';
 import type { NewDocument } from './backend.js';
@@ -24,7 +24,7 @@ export type MigrationHelpers = {
 };
 
 /**
- * Build the helpers spread into every content migration's `up` context, over
+ * Build the helpers spread into every migration's `up` context, over
  * the documents they change.
  */
 export function create_migration_helpers(documents: MigrationDocument[]): MigrationHelpers {

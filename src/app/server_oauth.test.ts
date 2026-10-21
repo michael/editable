@@ -21,8 +21,8 @@ vi.mock('./services.js', async () => {
 import type { DatabaseSync } from 'node:sqlite';
 import * as services from './services.js';
 const { sqlite } = services as unknown as { sqlite: DatabaseSync };
-import migration from '#app/migrations/20261010T180000000Z_editable_mcp_oauth.js';
-import initial_schema from '#app/migrations/20260803T131059242Z_editable_initial_schema.js';
+import migration from '#app/migrations/sqlite/20261010T180000000Z_editable_mcp_oauth.js';
+import initial_schema from '#app/migrations/sqlite/20260803T131059242Z_editable_initial_schema.js';
 import {
 	approve_client,
 	assert_small_body,

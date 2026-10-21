@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { open_sqlite, sqlite_backend } from './sqlite_backend.js';
 import { test_backend } from './backend_tests.js';
-import { migrate_storage } from '#app/migrations.js';
+import { apply_migrations } from '#app/migrations.js';
 import type { Backend } from '../backend.js';
 
 // The site's environment; these tests need none of it, so they run without a .env.
@@ -27,7 +27,7 @@ function temp_dir() {
 }
 
 async function migrated(backend: Backend) {
-	await migrate_storage(backend);
+	await apply_migrations(backend);
 	return backend;
 }
 
@@ -40,11 +40,11 @@ const sqlite = () => {
 
 test_backend('sqlite', sqlite);
 
-it('rolls a failed SQLite storage migration back with everything it did', async () => {
+it('rolls a failed SQLite migration run back with everything it did', async () => {
 	const backend = await sqlite();
 	const { db } = backend.storage as { db: DatabaseSync };
 	await expect(
-		backend.run_migration('29990101T000000000Z_test_half', () => {
+		backend.migrate(async () => {
 			db.exec('CREATE TABLE half_done (id TEXT)');
 			throw new Error('no');
 		})
