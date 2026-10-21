@@ -173,6 +173,18 @@ it('rolls a failing run back as a whole, with what its earlier migrations did', 
 	expect(await backend.applied_migrations()).toEqual(sqlite_ids);
 });
 
+it('reads no documents when the site is up to date', async () => {
+	const { backend } = await new_site();
+	const list_documents = vi.spyOn(backend, 'list_documents');
+	const run_migration = backend.migrate;
+	let reads = 0;
+	backend.migrate = (work) =>
+		run_migration((run) => work({ ...run, read_documents: () => (reads++, run.read_documents()) }));
+	await migrate(backend);
+	expect(list_documents).not.toHaveBeenCalled();
+	expect(reads).toBe(0);
+});
+
 it('refuses data migrated by a newer version', async () => {
 	const { backend, db } = await new_site();
 	db.prepare('INSERT INTO _migrations VALUES (?, ?)').run(

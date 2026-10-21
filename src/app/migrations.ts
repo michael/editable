@@ -38,12 +38,12 @@ export async function apply_migrations(
 	const applied = new Set(await backend.applied_migrations());
 	const is_new = !applied.size;
 	await backend.migrate(async ({ storage, read_documents, write_documents, record_migration }) => {
-		const before = new Map(
-			(is_new ? [] : await read_documents()).map((record) => [record.document_id, snapshot(record)])
-		);
+		let before: Map<string, string> | undefined;
 		const ran = await run_migrations(migrations, backend.name, applied, async (migration) => {
 			const documents = is_new ? [] : await read_documents();
 			const original = new Map(documents.map((record) => [record.document_id, snapshot(record)]));
+			// The first migration's read is the state before the run.
+			before ??= original;
 			await migration.up(migration_context(storage, documents));
 			if (!is_new)
 				await write_documents(
@@ -54,7 +54,7 @@ export async function apply_migrations(
 		if (!ran) return;
 
 		const changed = (await backend.list_documents()).filter(
-			(record) => before.get(record.document_id) !== snapshot(record)
+			(record) => before!.get(record.document_id) !== snapshot(record)
 		);
 		if (!changed.length) return;
 		const [slugs, translations] = await Promise.all([
@@ -78,5 +78,8 @@ export async function apply_migrations(
 /** Bring a site up to date: its backend's migrations, then the default site if it has no documents yet. */
 export async function migrate(backend: Backend) {
 	await apply_migrations(backend);
-	if (!(await backend.list_documents()).length) await backend.save_documents(initial_site());
+	// Seeding sets the home page with the documents, so a site that has one is not new.
+	if ((await backend.get_setting('home_page_id')) || (await backend.list_documents()).length)
+		return;
+	await backend.save_documents(initial_site());
 }
