@@ -1,4 +1,5 @@
 import { getRequestEvent } from '$app/server';
+import { building } from '$app/env';
 import { LANGUAGES, ORIGIN, VERCEL } from '$app/env/private';
 import { language_path, main_language, parse_languages } from './languages.js';
 import { normalize_href } from './document_links.js';
@@ -30,8 +31,9 @@ export const default_site: Site = {
 	origin: ORIGIN,
 	base: '',
 	languages: VERCEL ? [] : parse_languages(LANGUAGES),
-	// Static builds have no backend and need no LANGUAGES.
-	main_language: VERCEL ? 'en' : main_language(LANGUAGES)
+	// Static builds have no backend and need no LANGUAGES. Builds run without the
+	// environment, like env.ts, and render nothing with a backend, so they skip it too.
+	main_language: VERCEL || building ? 'en' : main_language(LANGUAGES)
 };
 
 /** The current request's site; outside a request, such as at startup, the deployment's own. */
