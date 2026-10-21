@@ -1,7 +1,7 @@
 // Create a migration in src/app/migrations:
 //
-//   pnpm migration:create <name>                    content, runs on every backend
-//   pnpm migration:create <name> --target <target>  one file for one backend
+//   pnpm migration:create <name>                    for the SQLite backend
+//   pnpm migration:create <name> --target <target>  for another backend
 //   pnpm migration:create <name> --after <id>       dated right after another migration
 //
 // --editable uses Editable's namespace instead of the project's own.
@@ -14,7 +14,7 @@ const migration_dir = join(process.cwd(), 'src/app/migrations');
 const args = process.argv.slice(2);
 let namespace = 'custom';
 let name = '';
-let target = '';
+let target = 'sqlite';
 let after = '';
 
 for (let index = 0; index < args.length; index++) {
@@ -46,15 +46,10 @@ if (after) {
 	timestamp = new Date(Date.parse(parsed) + 1).toISOString().replace(/[-:.]/g, '');
 }
 const id = `${timestamp}_${namespace}_${slug}`;
-const templates = {
-	content:
-		"import type { ContentContext, Migration } from '#lib/server/migrations.js';\n\nexport default {\n\tup({ documents, ensure_document, rename_property, rename_type, replace_value, delete_property, update }: ContentContext) {\n\t\t// Transform content with the helpers, or change `documents` directly.\n\t\t// rename_property('hero', 'image', 'media');\n\t}\n} satisfies Migration;\n",
-	sqlite:
-		"import type { Migration } from '#lib/server/migrations.js';\nimport type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';\n\nexport default {\n\ttarget: 'sqlite',\n\tup({ db }: SqliteStorage) {\n\t\t// db.exec('ALTER TABLE ...');\n\t}\n} satisfies Migration;\n"
-};
 const template =
-	templates[target || 'content'] ??
-	`import type { Migration } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: '${target}',\n\tup() {\n\t\t// Take the ${target} backend's storage, up(storage), and change it.\n\t}\n} satisfies Migration;\n`;
+	target === 'sqlite'
+		? "import type { Migration, MigrationContext } from '#lib/server/migrations.js';\nimport type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';\n\nexport default {\n\ttarget: 'sqlite',\n\tup({ db, documents, ensure_document, rename_property, rename_type, replace_value, delete_property, update }: MigrationContext<SqliteStorage>) {\n\t\t// Change content with the helpers, such as rename_property('hero', 'image', 'media'),\n\t\t// and storage with db, such as db.exec('ALTER TABLE ...').\n\t}\n} satisfies Migration;\n"
+		: `import type { Migration, MigrationContext } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: '${target}',\n\tup({ rename_property }: MigrationContext) {\n\t\t// Change content with the helpers and the ${target} backend's storage, spread next to them.\n\t}\n} satisfies Migration;\n`;
 
 const path = join(migration_dir, `${id}.ts`);
 try {

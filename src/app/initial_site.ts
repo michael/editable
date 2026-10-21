@@ -20,11 +20,8 @@ function reset_media_nodes(doc: Document): Document {
 	return cloned;
 }
 
-/**
- * The default site, as one save for an empty backend: its documents, the home
- * page, and the content migrations it already has the shape of.
- */
-export default function initial_site(migrations: string[]): DocumentSave {
+/** The default site, as one save for an empty backend: its documents and the home page. */
+export default function initial_site(): DocumentSave {
 	const now = new Date().toISOString();
 	const documents = [
 		['banner', default_banner_document],
@@ -43,9 +40,6 @@ export default function initial_site(migrations: string[]): DocumentSave {
 			created_at: now,
 			updated_at: now
 		})),
-		settings: [
-			{ key: 'home_page_id', value: default_page_document.document_id },
-			{ key: 'migrations', value: JSON.stringify(migrations) }
-		]
+		settings: [{ key: 'home_page_id', value: default_page_document.document_id }]
 	};
 }

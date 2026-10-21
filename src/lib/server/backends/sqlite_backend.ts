@@ -19,7 +19,7 @@ import {
 } from '../backend.js';
 import { asset_files } from './asset_files.js';
 
-/** What sqlite_backend is built on, and what its storage migrations receive. */
+/** What sqlite_backend is built on, and what its migrations receive next to the content helpers. */
 export type SqliteStorage = {
 	/** The site's database, from open_sqlite. */
 	db: DatabaseSync;
@@ -40,9 +40,8 @@ type Row = Record<string, unknown>;
 /**
  * Records in SQLite and asset files in a folder. node:sqlite is synchronous,
  * so each function runs to its end before another starts, and each write is
- * one SQLite transaction. The storage migrations it has applied are recorded
- * in _migrations; databases from before content progress moved into the
- * settings list their content migrations there as well.
+ * one SQLite transaction. The migrations it has applied are recorded in
+ * _migrations.
  */
 export function sqlite_backend(storage: SqliteStorage): Backend {
 	const { db } = storage;
@@ -57,6 +56,8 @@ export function sqlite_backend(storage: SqliteStorage): Backend {
 	const run = (sql: string, ...params: SQLInputValue[]) => db.prepare(sql).run(...params);
 
 	function atomically(work: () => void) {
+		// Writes during a migration run take part in its transaction.
+		if (db.isTransaction) return work();
 		db.exec('BEGIN IMMEDIATE');
 		try {
 			work();
@@ -340,12 +341,37 @@ export function sqlite_backend(storage: SqliteStorage): Backend {
 
 		applied_migrations: async () =>
 			all('SELECT id FROM _migrations ORDER BY id').map((row) => row.id as string),
-		// Storage migrations run at startup, before requests, so awaiting one cannot interleave.
-		run_migration: async (id, up) => {
+		// Migrations run at startup, before requests, so awaiting inside the transaction cannot interleave.
+		migrate: async (work) => {
 			db.exec('BEGIN IMMEDIATE');
 			try {
-				await up(storage);
-				run('INSERT INTO _migrations (id, timestamp) VALUES (?, ?)', id, new Date().toISOString());
+				await work({
+					storage,
+					// Only the columns documents have had since the first migration.
+					read_documents: async () =>
+						all(
+							'SELECT document_id, type, data, created_at, updated_at FROM documents ORDER BY document_id'
+						).map(document),
+					write_documents: async (records) => {
+						for (const record of records)
+							run(
+								`INSERT INTO documents (document_id, type, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?)
+								ON CONFLICT (document_id) DO UPDATE SET type = excluded.type, data = excluded.data`,
+								record.document_id,
+								record.type,
+								JSON.stringify(record.data),
+								record.created_at,
+								record.updated_at
+							);
+					},
+					record_migration: async (id) => {
+						run(
+							'INSERT INTO _migrations (id, timestamp) VALUES (?, ?)',
+							id,
+							new Date().toISOString()
+						);
+					}
+				});
 				db.exec('COMMIT');
 			} catch (error) {
 				db.exec('ROLLBACK');

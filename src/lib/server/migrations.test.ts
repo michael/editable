@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { load_migrations, run_migrations, type Migration } from './migrations.js';
+import {
+	load_migrations,
+	migration_context,
+	run_migrations,
+	type Migration
+} from './migrations.js';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -10,44 +15,47 @@ const load = (files: Record<string, Migration>) =>
 	);
 
 describe('load_migrations', () => {
-	it('orders by id and defaults the target to content', () => {
+	it('orders by id', () => {
 		const migrations = load({
-			'20260102T000000000Z_editable_b': { up },
+			'20260102T000000000Z_editable_b': { target: 'git', up },
 			'20260101T000000000Z_editable_a': { target: 'sqlite', up }
 		});
 		expect(migrations.map(({ id, target }) => [id, target])).toEqual([
 			['20260101T000000000Z_editable_a', 'sqlite'],
-			['20260102T000000000Z_editable_b', 'content']
+			['20260102T000000000Z_editable_b', 'git']
 		]);
 	});
 
-	it('refuses unknown properties, bad targets, and bad names', () => {
+	it('refuses unknown properties, missing or bad targets, and bad names', () => {
 		const one =
 			(migration: Migration, name = '20260101T000000000Z_custom_x') =>
 			() =>
 				load({ [name]: migration });
-		expect(one({ up, before: ['x'] } as Migration)).toThrow('unknown export properties: before');
-		expect(one({ up, after: 'x' } as Migration)).toThrow('unknown export properties: after');
-		expect(one({ target: 'SQLite', up })).toThrow('invalid target');
-		expect(one({ up }, 'add-things')).toThrow('Invalid migration filename');
+		const sqlite = (migration: object) => ({ target: 'sqlite', ...migration }) as Migration;
+		expect(one(sqlite({ up, before: ['x'] }))).toThrow('unknown export properties: before');
+		expect(one(sqlite({ up, after: 'x' }))).toThrow('unknown export properties: after');
+		expect(one({ up } as unknown as Migration)).toThrow('needs a target backend');
+		expect(one({ target: 'SQLite', up })).toThrow('needs a target backend');
+		expect(one(sqlite({ up }), 'add-things')).toThrow('Invalid migration filename');
 	});
 });
 
 describe('run_migrations', () => {
 	const ran: string[] = [];
 	const migrations = load({
-		'20260101T000000000Z_editable_a': { up: () => ran.push('a') },
-		'20260102T000000000Z_editable_b': { target: 'sqlite', up: () => ran.push('b') },
-		'20260103T000000000Z_editable_c': { up: () => ran.push('c') }
+		'20260101T000000000Z_editable_a': { target: 'sqlite', up: () => ran.push('a') },
+		'20260102T000000000Z_editable_b': { target: 'git', up: () => ran.push('b') },
+		'20260103T000000000Z_editable_c': { target: 'sqlite', up: () => ran.push('c') }
 	});
 
 	it('runs the pending migrations of one target in id order and records each', async () => {
 		ran.length = 0;
 		const recorded: string[] = [];
-		await run_migrations(migrations, 'content', new Set(), async ({ id, up }) => {
+		const count = await run_migrations(migrations, 'sqlite', new Set(), async ({ id, up }) => {
 			await up({});
 			recorded.push(id);
 		});
+		expect(count).toBe(2);
 		expect(ran).toEqual(['a', 'c']);
 		expect(recorded).toEqual(['20260101T000000000Z_editable_a', '20260103T000000000Z_editable_c']);
 	});
@@ -58,7 +66,7 @@ describe('run_migrations', () => {
 		vi.spyOn(console, 'log').mockImplementation(() => {});
 		await run_migrations(
 			migrations,
-			'content',
+			'sqlite',
 			new Set(['20260103T000000000Z_editable_c']),
 			async ({ up }) => {
 				await up({});
@@ -68,12 +76,21 @@ describe('run_migrations', () => {
 		expect(warn.mock.calls[0][0]).toContain('after 20260103T000000000Z_editable_c');
 	});
 
-	it('refuses unknown applied ids and reports a failing migration', async () => {
+	it('refuses applied ids outside its chain and reports a failing migration', async () => {
 		await expect(
-			run_migrations(migrations, 'content', new Set(['x']), async () => {})
+			run_migrations(migrations, 'sqlite', new Set(['x']), async () => {})
 		).rejects.toThrow('not present in this application: x');
+		await expect(
+			run_migrations(
+				migrations,
+				'sqlite',
+				new Set(['20260102T000000000Z_editable_b']),
+				async () => {}
+			)
+		).rejects.toThrow('not present in this application: 20260102T000000000Z_editable_b');
 		const failing = load({
 			'20260101T000000000Z_editable_bad': {
+				target: 'sqlite',
 				up: () => {
 					throw new Error('no');
 				}
@@ -81,9 +98,26 @@ describe('run_migrations', () => {
 		});
 		vi.spyOn(console, 'log').mockImplementation(() => {});
 		await expect(
-			run_migrations(failing, 'content', new Set(), async ({ up }) => {
+			run_migrations(failing, 'sqlite', new Set(), async ({ up }) => {
 				await up({});
 			})
 		).rejects.toThrow('Migration "20260101T000000000Z_editable_bad" failed.');
+	});
+});
+
+describe('migration_context', () => {
+	it('spreads the storage next to the documents and helpers', () => {
+		const db = {};
+		const context = migration_context({ db }, []);
+		expect(context.db).toBe(db);
+		expect(context.documents).toEqual([]);
+		expect(typeof context.rename_type).toBe('function');
+	});
+
+	it('refuses storage with a property named like a helper', () => {
+		expect(() => migration_context({ db: {}, update: {} }, [])).toThrow(
+			'Storage properties clash with migration helpers: update.'
+		);
+		expect(() => migration_context({ documents: [] }, [])).toThrow('clash');
 	});
 });

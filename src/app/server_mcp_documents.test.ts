@@ -35,7 +35,7 @@ vi.mock('./services.js', async () => {
 import * as services from './services.js';
 const { backend, sqlite } = services as unknown as typeof services & { sqlite: DatabaseSync };
 import { webp_bytes } from './test_helpers/webp.js';
-import { migrate_storage } from './migrations.js';
+import { apply_migrations } from './migrations.js';
 import {
 	default_page_document,
 	default_banner_document,
@@ -51,7 +51,7 @@ const nav_id = default_nav_document.document_id;
 const footer_id = default_footer_document.document_id;
 
 afterAll(() => (sqlite as DatabaseSync).close());
-await migrate_storage(backend as never);
+await apply_migrations(backend as never);
 
 beforeEach(() => {
 	for (const table of [

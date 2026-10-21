@@ -26,7 +26,7 @@ const text = async (stream: ReadableStream<Uint8Array> | null) =>
 
 /**
  * What every backend must do. Call it from a test file of your own with a
- * function that returns a new backend with its storage migrations applied:
+ * function that returns a new backend with apply_migrations run on it:
  * Editable's releases add to these tests, and they then apply to your backend.
  */
 export function test_backend(name: string, create: () => Promise<Backend>) {
@@ -308,21 +308,30 @@ export function test_backend(name: string, create: () => Promise<Backend>) {
 			expect(await backend.asset_size('a.webp', 'w640.webp')).toBeNull();
 		});
 
-		it('records a storage migration only when it succeeds', async () => {
+		it('keeps a migration run, and the calls made during it, as one step', async () => {
 			const backend = await create();
 			await expect(
-				backend.run_migration('29990101T000000000Z_test_fails', () => {
+				backend.migrate(async ({ write_documents, record_migration }) => {
+					await write_documents([record('m1')]);
+					await backend.save_documents({ documents: [record('m2')] });
+					await record_migration('29990101T000000000Z_test_fails');
 					throw new Error('no');
 				})
 			).rejects.toThrow('no');
-			let received: unknown;
-			await backend.run_migration('29990101T000000000Z_test_works', (storage) => {
-				received = storage;
+			expect(await backend.get_document('m1')).toBeNull();
+			expect(await backend.get_document('m2')).toBeNull();
+			expect(await backend.applied_migrations()).not.toContain('29990101T000000000Z_test_fails');
+
+			await backend.migrate(async ({ read_documents, write_documents, record_migration }) => {
+				await write_documents([record('m1')]);
+				await write_documents([record('m1', 'Changed')]);
+				expect((await read_documents()).map((r) => r.data)).toEqual([page('m1', 'Changed')]);
+				await backend.save_documents({ documents: [record('m2')] });
+				await record_migration('29990101T000000000Z_test_works');
 			});
-			expect(received).toBe(backend.storage);
-			const applied = await backend.applied_migrations();
-			expect(applied).toContain('29990101T000000000Z_test_works');
-			expect(applied).not.toContain('29990101T000000000Z_test_fails');
+			expect((await backend.get_document('m1'))?.data).toEqual(page('m1', 'Changed'));
+			expect(await backend.get_document('m2')).not.toBeNull();
+			expect(await backend.applied_migrations()).toContain('29990101T000000000Z_test_works');
 		});
 	});
 }

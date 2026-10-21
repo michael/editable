@@ -1067,37 +1067,36 @@ The app-specific Editable surface lives in `src/app`, while `src/routes` contain
 
 ## Migrations
 
-Keep stored content in step with changes to your site.
+Keep stored content and storage in step with changes to your site.
 
-Every migration lives in `src/app/migrations`, is discovered when SvelteKit builds the server, and runs automatically when it boots. Framework migrations use the `editable` namespace and project migrations use the `custom` namespace. Migrations run in id order, and an id starts with its UTC timestamp, so a migration's date is its place in the chain.
+Every migration lives in `src/app/migrations`, is discovered when SvelteKit builds the server, and runs automatically when it boots. Framework migrations use the `editable` namespace and project migrations use the `custom` namespace. An id starts with its UTC timestamp, so a migration's date is its place in the chain.
 
-There are two kinds, with the same shape:
-
-- **Content migrations** change the site's documents. They have no `target` and run on every backend. Which ones have run is stored with the site, so it travels when the site moves to another backend. A new site starts with the current default content and never runs them.
-- **Storage migrations** change how one backend keeps its data, such as a SQLite table. They name their backend, such as `target: 'sqlite'`, receive its storage, and are recorded by the backend itself.
-
-When a site opens, its pending storage migrations run first, then its content migrations. Each is saved together with the record that it ran, as one atomic step, so a failure stops the upgrade where the last complete migration left the site.
+Each migration names the backend it is for, such as `target: 'sqlite'`, and each backend has a chain of its own. When a site opens, its backend runs the migrations it has not run yet, in id order and all in one transaction, so an upgrade happens completely or not at all. Read the chain in order, and you know the state it leaves.
 
 Create a project migration with:
 
 ```sh
-pnpm migration:create add-project-metadata
+pnpm migration:create add-redirects
 ```
 
-This creates a timestamped `custom` content migration. Its filename is its permanent ID:
+This creates a timestamped `custom` migration for the SQLite backend. Its filename is its permanent ID:
 
 ```ts
-import type { ContentContext, Migration } from '#lib/server/migrations.js';
+import type { Migration, MigrationContext } from '#lib/server/migrations.js';
+import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 export default {
-	up({ documents, rename_property, update }: ContentContext) {
-		// Transform content with the helpers, or change `documents` directly.
-		// rename_property('hero', 'image', 'media');
+	target: 'sqlite',
+	up({ db, rename_property }: MigrationContext<SqliteStorage>) {
+		db.exec('CREATE TABLE IF NOT EXISTS redirects (path TEXT PRIMARY KEY, target TEXT NOT NULL)');
+		rename_property('hero', 'image', 'media');
 	}
 } satisfies Migration;
 ```
 
-Adding a custom content type usually needs no migration because documents are stored as they are. Write one when existing documents must be transformed.
+`up` receives its backend's storage, for SQLite the [node:sqlite](https://nodejs.org/api/sqlite.html) handle as `db`, next to the content helpers and `documents`. One migration can change both, such as a new table and the content that moves into it.
+
+Adding a custom content type usually needs no migration because documents are stored as they are. Write one when existing documents must be transformed or the storage must change.
 
 ### Content helpers
 
@@ -1105,6 +1104,7 @@ Changing a node type's shape means rewriting stored documents rather than alteri
 
 ```js
 export default {
+	target: 'sqlite',
 	up({ rename_property, rename_type, replace_value, delete_property, update }) {
 		// Rename a property, keeping its value
 		rename_property('hero', 'image', 'media');
@@ -1134,31 +1134,11 @@ They are deliberately tolerant: a node that never had the property is left alone
 
 `ensure_document` adds a whole document unless one with its id exists, such as a new shared document every page will refer to. Its type is its root node's, and it returns whether it added the document.
 
-The helpers work on the site's documents in memory, and Editable saves the changed ones afterwards. `documents` holds the same records, for changes the helpers don't cover; to read anything else, such as slugs, make `up` asynchronous and use `backend` from the context. Migrations may only change the site's documents; filesystem, network, and other external side effects cannot be rolled back. Migrations are forward-only: never rename, delete, or edit one that has been applied. Roll back an upgrade by restoring the backup made before deployment.
+The helpers work on the site's documents in memory, as the migrations before left them, and Editable writes the changed ones back before the next migration runs. `documents` holds the same records, for changes the helpers don't cover. Change documents through the helpers or `documents`, and everything else through the storage: SQL that changes the documents table in the same migration is overwritten when the helpers' changes are written back. At the end of an upgrade, the documents it changed are saved again, which gives them new versions and rebuilds what they refer to. A new site starts with the current default content: its migrations set up its storage and find no content to change.
 
-### Storage migrations
+Migrations may only change the site's data; filesystem, network, and other external side effects cannot be rolled back. Migrations are forward-only: never rename, delete, or edit one that has been applied. Roll back an upgrade by restoring the backup made before deployment.
 
-A change to how a backend stores records, such as a new table, needs a storage migration for that backend. Create one with `--target`:
-
-```sh
-pnpm migration:create redirects --target sqlite
-```
-
-The migration states its target and receives its backend's storage, for SQLite the [node:sqlite](https://nodejs.org/api/sqlite.html) handle as `db`:
-
-```ts
-import type { Migration } from '#lib/server/migrations.js';
-import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
-
-export default {
-	target: 'sqlite',
-	up({ db }: SqliteStorage) {
-		db.exec('CREATE TABLE IF NOT EXISTS redirects (path TEXT PRIMARY KEY, target TEXT NOT NULL)');
-	}
-} satisfies Migration;
-```
-
-A backend runs only the storage migrations that target it, and a new one replays them all in order. A backend of your own has its own storage migrations the same way.
+A backend runs only the migrations that target it, and a new one replays its whole chain. A backend of your own has a chain of its own the same way; see [Keep a backend in your fork](INTEGRATION.md#keep-a-backend-in-your-fork).
 
 ### Placing a migration
 

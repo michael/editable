@@ -8,9 +8,9 @@ import type { Document } from 'svedit';
  * can sit on a network service as easily as on a local file.
  */
 export type Backend = {
-	/** Storage migrations with this name as their target run on this backend. */
+	/** Migrations with this name as their target run on this backend. */
 	name: string;
-	/** What the backend is built on; its storage migrations receive it. */
+	/** What the backend is built on. */
 	storage: unknown;
 
 	// Pages and the shared banner, nav, and footer
@@ -37,7 +37,7 @@ export type Backend = {
 	}): Promise<TranslationRecord[]>;
 	save_translations(save: TranslationSave): Promise<void>;
 
-	// Site settings: the home page, and the content migrations applied
+	// Site settings, such as the home page
 	get_setting(key: string): Promise<string | null>;
 	list_settings(): Promise<SettingRecord[]>;
 
@@ -78,10 +78,14 @@ export type Backend = {
 	/** Every original with when it was last written or touched, in milliseconds. */
 	list_assets(): Promise<{ asset_id: string; last_used: number }[]>;
 
-	/** Ids of the storage migrations it has applied. */
+	/** Ids of the migrations it has applied. */
 	applied_migrations(): Promise<string[]>;
-	/** Run a storage migration with the storage and record it as applied, as one step. */
-	run_migration(id: string, up: (storage: unknown) => unknown): Promise<void>;
+	/**
+	 * Run work as one atomic step: what it does through the run, and every
+	 * other call the backend gets meanwhile, such as the saves at its end,
+	 * happens completely or not at all.
+	 */
+	migrate(work: (run: MigrationRun) => Promise<void>): Promise<void>;
 
 	close(): Promise<void>;
 };
@@ -115,8 +119,22 @@ export type DocumentSave = {
 	 * Throw a ConflictError when one is another page's active slug.
 	 */
 	slugs?: SlugRecord[];
-	/** Settings that change with the documents, such as the content migrations applied. */
+	/** Settings that change with the documents, such as the home page. */
 	settings?: SettingRecord[];
+};
+
+/**
+ * What a backend hands a migration run. Migrations run at every point of the
+ * backend's history, so reading and writing documents here must work with
+ * every way it has stored them, not just the latest.
+ */
+export type MigrationRun = {
+	/** What its migrations receive, spread next to the content helpers. */
+	storage: object;
+	read_documents(): Promise<NewDocument[]>;
+	/** Add or replace documents; their versions and references follow at the end of the run. */
+	write_documents(documents: NewDocument[]): Promise<void>;
+	record_migration(id: string): Promise<void>;
 };
 
 /** What save_translations stores at once: some documents' overrides in one language. */
@@ -173,7 +191,7 @@ export type TranslationRecord = {
 export type NewTranslation = Omit<TranslationRecord, 'version'>;
 export type TranslationKey = { document_id: string; language: string };
 
-/** A site-wide value by key: home_page_id, and migrations, a JSON list of ids. */
+/** A site-wide value by key, such as home_page_id. */
 export type SettingRecord = { key: string; value: string };
 
 /** The pages a document links to, in document order. */

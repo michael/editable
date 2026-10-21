@@ -10,7 +10,7 @@ Editable reaches its data in three layers:
 
 - **The API** is what Editable does: save a document, load a page, upload an asset, sign in. It lives in `src/app`, such as `server_documents.ts` and `server_translations.ts`, and validates content, works out what each document links to and which assets it uses, and rewrites links when a page moves. It is the same for every site and reaches the current one's backend as `backend` from `#app/services.js`.
 - **The backend** stores what the API hands it. It implements the `Backend` interface in `src/lib/server/backend.ts`: one function for each thing the API reads or writes, each write atomic.
-- **The storage** is whatever a backend is built on, such as a SQLite handle or a folder. Each backend defines its own, exposes it as `backend.storage`, and hands it to its storage migrations.
+- **The storage** is whatever a backend is built on, such as a SQLite handle or a folder. Each backend defines its own, exposes it as `backend.storage`, and hands it to its migrations.
 
 Saving a page, for example, ends in one call that the backend carries out all at once:
 
@@ -41,7 +41,7 @@ Editable comes with one backend, `sqlite_backend`: records in `data/db.sqlite3` 
 | Translations and settings | `list_translations`, `save_translations`, `get_setting`, `list_settings`                                                                               |
 | Sign-in and MCP (private) | `get`, `save`, and `delete` for sessions, the login throttle, and OAuth grants and tokens; `take_oauth_token`, `revoke_oauth_grants`, `delete_expired` |
 | Assets                    | `write_asset`, `read_asset`, `asset_size`, `delete_asset`, `touch_asset`, `list_assets`                                                                |
-| Storage migrations        | `applied_migrations`, `run_migration`                                                                                                                  |
+| Migrations                | `applied_migrations`, `migrate`                                                                                                                        |
 
 A backend keeps these promises:
 
@@ -50,6 +50,7 @@ A backend keeps these promises:
 - **Private records stay private, and per site.** Sessions, the login throttle, and OAuth records let people in; see [Keep each site's private records apart](#keep-each-sites-private-records-apart).
 - **Expired entries go without a scan:** `delete_expired(now)` removes them in one step, such as one `DELETE … WHERE expires_at <= $1` per table.
 - **Assets are opaque.** Which ones are unused, and when they may go, is the API's decision.
+- **A migration run is one step.** `migrate(work)` runs an upgrade, and everything the backend does meanwhile, completely or not at all, including the saves Editable makes at its end. Migrations run at every point of the backend's history, so the `read_documents` and `write_documents` it hands them work with every way it has stored documents.
 
 The SQLite backend is synchronous inside, so each call runs to its end before the next.
 
@@ -57,36 +58,33 @@ The SQLite backend is synchronous inside, so each call runs to its end before th
 
 Merging an Editable release never touches a backend of your own:
 
-- **It lives in files of your own,** such as `src/app/backends/git_backend.ts`, with its storage migrations in `src/app/migrations` targeting its name. Editable ships nothing in `src/app/backends`.
+- **It lives in files of your own,** such as `src/app/backends/git_backend.ts`, with its migrations in `src/app/migrations` targeting its name. Editable ships nothing in `src/app/backends`.
 - **One file wires it up:** return it from `create_backend` in `src/app/create_backend.ts`, which Editable keeps to that one function.
 - **Interface changes arrive as type errors,** which `pnpm check` names, not as merge conflicts.
 - **Editable's backend tests run against it,** including those that later releases add:
 
 ```ts
 import { test_backend } from '#lib/server/backends/backend_tests.js';
-import { migrate_storage } from '#app/migrations.js';
+import { apply_migrations } from '#app/migrations.js';
 import { git_backend } from './git_backend.js';
 
 test_backend('git', async () => {
 	const backend = git_backend(await test_storage());
-	await migrate_storage(backend);
+	await apply_migrations(backend);
 	return backend;
 });
 ```
 
-- **Its storage migrations are its own.** Your backend runs only the migrations that target its name, and Editable's SQLite migrations never run on it. Create one with `pnpm migration:create <name> --target git`.
+- **Its migrations are its own.** Your backend runs only the migrations that target its name, and Editable's SQLite migrations never run on it. Create one with `pnpm migration:create <name> --target git`.
 
 ### Merge an Editable release
 
-The contract between Editable and your backend is the `Backend` interface and its tests, not Editable's migrations. After merging a release:
+The contract between Editable and your backend is the `Backend` interface and its tests. Editable's migrations target SQLite and never run on your backend, so you port the ones your backend needs. After merging a release:
 
 1. **Run `pnpm check`.** A changed interface shows up as type errors in your backend. Implement what they name.
 2. **Run your backend tests.** New promises arrive as new tests in `test_backend`, such as a version check on a save. Make them pass.
-3. **Read the release's SQLite migrations.** They show how Editable's own records changed, such as a new column for document versions, and hint at what yours need. They never run on your backend.
-4. **Upgrade your existing data, if it must change.** When the new code cannot read what your backend already stores, such as records without a version, write a storage migration for your backend, dated now. Where your storage already has what is needed, such as a Git blob hash for a version, write nothing.
-5. **Try the upgrade on a copy of a real site.** `test_backend` starts every test with an empty backend, so only real data shows whether step 4 was needed and works.
-
-Editable's content migrations need nothing from you. They change documents through the interface, so they run on your backend once it meets the release's interface, and always after its storage migrations.
+3. **Port the release's migrations.** For each new SQLite migration, create one of yours dated right after it, so your chain keeps Editable's order: `pnpm migration:create site-banner --target git --after 20261009T120000000Z_editable_site_banner`. Content changes copy over as they are, because the helpers are the same on every backend. For a change to SQLite's records, such as a new column for document versions, write what your storage needs; where it already has it, such as a Git blob hash for a version, leave that part out.
+4. **Try the upgrade on a copy of a real site.** `test_backend` starts every test with an empty backend, so only real data shows whether step 3 works.
 
 ### Write your own backend
 
@@ -127,11 +125,16 @@ export function git_backend(storage: GitStorage): Backend {
 			(await sql`SELECT * FROM sessions WHERE session_id = ${session_id}`)[0] ?? null,
 		// Assets: objects in the bucket
 		write_asset: (asset_id, data, variant) => put_object(storage, asset_id, variant, data),
-		run_migration: (id, up) =>
-			atomically(storage, async (tx) => {
-				await up(tx);
-				await tx.sql`INSERT INTO _migrations (id) VALUES (${id})`;
-			})
+		// Migrations: one run as one step, handing them the transaction
+		migrate: (work) =>
+			atomically(storage, (tx) =>
+				work({
+					storage: tx,
+					read_documents: () => read_documents(tx),
+					write_documents: (records) => write_documents(tx, records),
+					record_migration: (id) => tx.sql`INSERT INTO _migrations (id) VALUES (${id})`
+				})
+			)
 		// …
 	};
 }
@@ -161,17 +164,17 @@ async function atomically<T>(storage: GitStorage, work: (tx: GitTransaction) => 
 }
 ```
 
-| Fails at                                    | Afterwards                                                                                                                             |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| The work, or the commit                     | Postgres rolls back and the branch did not move: nothing changed                                                                       |
-| The Postgres commit, after the branch moved | The repository has the commit, Postgres does not; a storage migration runs again on the next start, a save with the editor's next save |
+| Fails at                                    | Afterwards                                                                                                                            |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| The work, or the commit                     | Postgres rolls back and the branch did not move: nothing changed                                                                      |
+| The Postgres commit, after the branch moved | The repository has the commit, Postgres does not; a migration run happens again on the next start, a save with the editor's next save |
 
-Idempotent changes make the last row harmless, such as writing a file with its final content or `ADD COLUMN IF NOT EXISTS`. A storage migration runs through `atomically` too, so one can change both stores as one step:
+Idempotent changes make the last row harmless, such as writing a file with its final content or `ADD COLUMN IF NOT EXISTS`. A migration run goes through `atomically` too, and a real `atomically` joins a step already open, so the saves Editable makes during the run commit with it. One migration can change both stores as one step:
 
 ```ts
 export default {
 	target: 'git',
-	async up({ sql, files }: GitTransaction) {
+	async up({ sql, files }: MigrationContext<GitTransaction>) {
 		await sql`ALTER TABLE document_refs ADD COLUMN IF NOT EXISTS path TEXT`;
 		for (const path of await files.list('pages/'))
 			files.move(path, path.replace(/^pages\//, 'documents/'));
@@ -352,7 +355,7 @@ Style the button with the design system's primary button recipe. A dialog that a
 
 Editable can be the website of an app with accounts of its own, such as a shop where customers log in to see their orders and a few staff also edit the website. The app owns its accounts; Editable only learns who is signed in and whether they may edit.
 
-- **Accounts and sessions are the app's.** Its tables live in the site's database through a storage migration of its own (`pnpm migration:create <name> --target sqlite`), prefixed so they cannot collide with Editable's, such as `app_accounts`. Backups and restores then cover them. Its code reaches the database through the backend's storage, `(await get_backend()).storage`, which ties the app to the SQLite backend.
+- **Accounts and sessions are the app's.** Its tables live in the site's database through a migration of its own (`pnpm migration:create <name>`), prefixed so they cannot collide with Editable's, such as `app_accounts`. Backups and restores then cover them. Its code reaches the database through the backend's storage, `(await get_backend()).storage`, which ties the app to the SQLite backend.
 - **The auth returns every signed-in account** from `get_user`, and `is_editor` decides who may edit. The app's own pages use `locals.user` freely; Editable's checks only ever look at `locals.is_editor`.
 - **Its login dialog only logs people in.** ⌘ E and the gesture at the bottom of a phone screen do nothing for someone signed in who may not edit, so they never learn the site is editable; the dialog shows to visitors who are signed out, and at `/login`. Keep its wording about logging in, not editing, if your users should not hear of it either.
 - **Its pages call `require_user(event)`,** which returns the signed-in account and sends anyone else to `/login` and back. Its own API endpoints, where a redirect would be wrong, check `locals.user` and answer 401.

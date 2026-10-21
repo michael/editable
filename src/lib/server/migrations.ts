@@ -1,22 +1,22 @@
-import type { MigrationDocument, MigrationHelpers } from './migration_helpers.js';
-import type { Backend } from './backend.js';
+import {
+	create_migration_helpers,
+	type MigrationDocument,
+	type MigrationHelpers
+} from './migration_helpers.js';
 
 /**
- * A migration file. Without a target it changes content and runs on every
- * backend. With one, such as 'sqlite', it changes that backend's own format
- * and runs only there. Its filename is its permanent id, and
- * migrations run in id order.
+ * A migration file. Its target names the backend whose chain it belongs to,
+ * such as 'sqlite'. Its filename is its permanent id, and a backend runs its
+ * chain in id order.
  */
-export type Migration = { target?: string; up: (context: any) => unknown };
+export type Migration = { target: string; up: (context: any) => unknown };
 
 /**
- * What a content migration receives: the site's documents in memory, which
- * the helpers change and Editable saves afterwards, and the backend to read
- * anything else.
+ * What a migration receives: its backend's storage, flat, such as `db` for
+ * SQLite, next to the site's documents and the helpers that change them.
  */
-export type ContentContext = {
+export type MigrationContext<Storage = unknown> = Storage & {
 	documents: MigrationDocument[];
-	backend: Backend;
 } & MigrationHelpers;
 
 export type LoadedMigration = { id: string; target: string; up: (context: any) => unknown };
@@ -34,43 +34,39 @@ export function load_migrations(modules: Record<string, Migration>): LoadedMigra
 				throw fail('must have a default object export.');
 			const unknown = Object.keys(migration).filter((key) => !['target', 'up'].includes(key));
 			if (unknown.length) throw fail(`has unknown export properties: ${unknown.join(', ')}.`);
-			if (migration.target !== undefined && !/^[a-z][a-z0-9]*$/.test(migration.target))
-				throw fail(`has an invalid target "${migration.target}".`);
+			if (typeof migration.target !== 'string' || !/^[a-z][a-z0-9]*$/.test(migration.target))
+				throw fail(`needs a target backend, such as 'sqlite', not "${migration.target}".`);
 			if (typeof migration.up !== 'function') throw fail('must have an up function.');
-			return {
-				id: filename.slice(0, -'.ts'.length),
-				target: migration.target ?? 'content',
-				up: migration.up
-			};
+			return { id: filename.slice(0, -'.ts'.length), target: migration.target, up: migration.up };
 		});
 }
 
 /**
  * Run the migrations of one target that have not been applied, in id order,
- * through run, which runs one and records it as applied. Refuses data
- * recording migrations this code does not know. Warns when a migration runs
- * behind a later one already applied, which happens when migrations arrive
- * out of order.
+ * through run, which runs one and records it as applied; returns how many
+ * ran. Refuses data recording migrations the target's chain does not have.
+ * Warns when a migration runs behind a later one already applied, which
+ * happens when migrations arrive out of order.
  */
 export async function run_migrations(
 	migrations: LoadedMigration[],
 	target: string,
 	applied: Set<string>,
 	run: (migration: LoadedMigration) => Promise<void>
-) {
-	const known = new Set(migrations.map((migration) => migration.id));
+): Promise<number> {
+	const chain = migrations.filter((migration) => migration.target === target);
+	const known = new Set(chain.map((migration) => migration.id));
 	const unknown = [...applied].filter((id) => !known.has(id));
 	if (unknown.length)
 		throw new Error(
 			`Data contains migrations not present in this application: ${unknown.join(', ')}.`
 		);
 
-	const of_target = migrations.filter((migration) => migration.target === target);
-	const pending = of_target.filter((migration) => !applied.has(migration.id));
-	if (!pending.length) return;
-	const latest = of_target.filter((migration) => applied.has(migration.id)).at(-1)?.id;
+	const pending = chain.filter((migration) => !applied.has(migration.id));
+	if (!pending.length) return 0;
+	const latest = chain.filter((migration) => applied.has(migration.id)).at(-1)?.id;
 	console.log(
-		`${of_target.length - pending.length} ${target} migrations applied, ${pending.length} to be applied...`
+		`${chain.length - pending.length} ${target} migrations applied, ${pending.length} to be applied...`
 	);
 
 	for (const migration of pending) {
@@ -83,4 +79,21 @@ export async function run_migrations(
 			throw new Error(`Migration "${migration.id}" failed.`, { cause: error });
 		}
 	}
+	return pending.length;
+}
+
+/**
+ * The context a migration's up receives. The storage is spread flat, so a
+ * backend whose storage has a property named like a helper is refused rather
+ * than having one hide the other.
+ */
+export function migration_context<Storage extends object>(
+	storage: Storage,
+	documents: MigrationDocument[]
+): MigrationContext<Storage> {
+	const content = { documents, ...create_migration_helpers(documents) };
+	const clashes = Object.keys(storage).filter((key) => key in content);
+	if (clashes.length)
+		throw new Error(`Storage properties clash with migration helpers: ${clashes.join(', ')}.`);
+	return { ...storage, ...content };
 }

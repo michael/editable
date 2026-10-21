@@ -29,8 +29,8 @@ import * as services from './services.js';
 const { sqlite, asset_exists, backend } = services as unknown as typeof services & {
 	sqlite: DatabaseSync;
 };
-await migrate_storage(backend as never);
-import { migrate_storage } from './migrations.js';
+await apply_migrations(backend as never);
+import { apply_migrations } from './migrations.js';
 import { asset_refs_of } from './server_asset_refs.js';
 import {
 	default_page_document,

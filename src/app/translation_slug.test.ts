@@ -53,7 +53,7 @@ import {
 } from './api.remote.js';
 import { warn_about_language_slug_collisions } from './server_language_slugs.js';
 import { document_refs_of, slug_targets } from './server_documents.js';
-import { migrate_storage } from './migrations.js';
+import { apply_migrations } from './migrations.js';
 import * as markdown_registry from './markdown/registry.js';
 
 // With no site set by a host, the code under test uses the deployment's own.
@@ -142,7 +142,7 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 
 // The mocked services export a real database.
 afterAll(() => (sqlite as unknown as DatabaseSync).close());
-await migrate_storage(backend as never);
+await apply_migrations(backend as never);
 beforeEach(() => {
 	vi.restoreAllMocks();
 	languages.splice(0, languages.length, 'en', 'de');
