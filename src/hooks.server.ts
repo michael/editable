@@ -54,7 +54,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		Object.assign(event.locals, await sign_in_state(event));
 	}
 
-	const language = request_language(event.url) || 'en';
+	const language = request_language(event.url) || site.main_language;
 	const response = await resolve(event, {
 		transformPageChunk: ({ html }) => html.replace('%lang%', language)
 	});

@@ -15,7 +15,7 @@ const visit = (target: string, user: object | null = null) =>
 
 it('remembers where to go after logging in, on this site only', async () => {
 	expect(await visit('/orders')).toEqual({ redirect_to: '/orders' });
-	for (const elsewhere of ['//evil.example', 'https://evil.example', 'evil'])
+	for (const elsewhere of ['//evil.example', '/\\evil.example', 'https://evil.example', 'evil'])
 		expect(await visit(encodeURIComponent(elsewhere))).toEqual({ redirect_to: '/' });
 });
 

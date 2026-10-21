@@ -444,6 +444,8 @@ append_bucket_creds() {
 
 if [ "$FIRST_RUN" = true ]; then
 	info "Creating the server's .env"
+	LANGS="$(local_env_val LANGUAGES)"
+	[ -n "$LANGS" ] || die "set LANGUAGES in your local .env first, such as LANGUAGES=\"en\""
 	GENERATED="$(openssl rand -base64 18 2>/dev/null || head -c 18 /dev/urandom | base64)"
 	printf 'Admin password for %s [enter for generated: %s]: ' "$DOMAIN" "$GENERATED"
 	read -r ADMIN_PW </dev/tty
@@ -454,6 +456,7 @@ if [ "$FIRST_RUN" = true ]; then
 	{
 		printf 'ADMIN_PASSWORD="%s"\n' "$ADMIN_PW"
 		printf 'ORIGIN="https://%s"\n' "$DOMAIN"
+		printf 'LANGUAGES="%s"\n' "$LANGS"
 	} >"$TMP/env"
 	append_bucket_creds "$TMP/env"
 	rssh "$SUDO tee $SRV/.env >/dev/null && $SUDO chmod 600 $SRV/.env" <"$TMP/env"

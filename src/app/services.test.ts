@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { sqlite_backend } from '#lib/server/backends/sqlite_backend.js';
 
 const request = vi.hoisted(() => ({ locals: {} as Record<string, unknown> }));
-vi.mock('$app/env/private', () => ({ ORIGIN: 'https://example.com', LANGUAGES: '', VERCEL: '' }));
+vi.mock('$app/env/private', () => ({ ORIGIN: 'https://example.com', LANGUAGES: 'en', VERCEL: '' }));
 vi.mock('$app/server', () => ({ getRequestEvent: () => ({ locals: request.locals }) }));
 
 afterEach(() => {

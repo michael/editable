@@ -203,7 +203,7 @@ export type AssetRefsRecord = { document_id: string; asset_ids: string[] };
 
 export type SessionRecord = { session_id: string; expires: number };
 
-/** Failed sign-ins and the lockout they caused, under 'admin' for the password. */
+/** Failed sign-ins and the lockout they caused, under 'admin' for the password or an app's own key. */
 export type LoginThrottleRecord = { key: string; failed_count: number; locked_until: number };
 
 export type OAuthGrantRecord = {

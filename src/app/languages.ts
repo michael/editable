@@ -1,7 +1,7 @@
-/** Experimental language configuration. */
-export function parse_languages(value: string | undefined): string[] {
+/** The tags in LANGUAGES, canonical and without repeats. */
+function language_tags(value: string | undefined): string[] {
 	if (!value?.trim()) return [];
-	const languages = [
+	return [
 		...new Set(
 			value.split(',').map((tag) => {
 				const trimmed = tag.trim();
@@ -11,7 +11,22 @@ export function parse_languages(value: string | undefined): string[] {
 			})
 		)
 	];
+}
+
+/** Experimental language configuration: translations need two languages or more. */
+export function parse_languages(value: string | undefined): string[] {
+	const languages = language_tags(value);
 	return languages.length > 1 ? languages : [];
+}
+
+/** The language a site is written in: the first in LANGUAGES, which every site with a backend sets. */
+export function main_language(value: string | undefined): string {
+	const [language] = language_tags(value);
+	if (!language)
+		throw new Error(
+			"LANGUAGES must name the site's language, such as en, or several, original first."
+		);
+	return language;
 }
 
 export function select_language(languages: string[], requested: string | null | undefined) {

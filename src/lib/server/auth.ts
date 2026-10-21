@@ -28,8 +28,10 @@ export const session_renewal_interval_seconds = 24 * 60 * 60;
 
 // Login throttle: the first `free_attempts` failures are free, then each
 // failure locks login for `base_lockout_seconds`, doubling per failure up to
-// `max_lockout_seconds`. Global (there is only one admin), persisted in
-// the backend so restarts don't reset it.
+// `max_lockout_seconds`. Kept per key, 'admin' for the admin password, and
+// persisted in the backend so restarts don't reset it. An app with accounts of
+// its own throttles each under a key of its own, such as 'app:<username>'.
+// Keys are kept until reset, so it throttles unknown usernames under one key.
 const LOGIN_THROTTLE = {
 	free_attempts: 5,
 	base_lockout_seconds: 30,
@@ -46,21 +48,24 @@ export function passwords_match(a: string, b: string): boolean {
 	return crypto.timingSafeEqual(digest(a), digest(b));
 }
 
-async function get_login_throttle_state(records: AuthRecords) {
-	const state = await records.get_login_throttle(LOGIN_THROTTLE_KEY);
-	return state ?? { key: LOGIN_THROTTLE_KEY, failed_count: 0, locked_until: 0 };
+async function get_login_throttle_state(records: AuthRecords, key: string) {
+	const state = await records.get_login_throttle(key);
+	return state ?? { key, failed_count: 0, locked_until: 0 };
 }
 
 /**
  * Seconds until login attempts are accepted again (0 when unlocked).
  */
-export async function get_login_lockout_seconds(records: AuthRecords): Promise<number> {
-	const { locked_until } = await get_login_throttle_state(records);
+export async function get_login_lockout_seconds(
+	records: AuthRecords,
+	key = LOGIN_THROTTLE_KEY
+): Promise<number> {
+	const { locked_until } = await get_login_throttle_state(records, key);
 	return Math.max(locked_until - Math.floor(Date.now() / 1000), 0);
 }
 
-export async function register_failed_login(records: AuthRecords) {
-	const state = await get_login_throttle_state(records);
+export async function register_failed_login(records: AuthRecords, key = LOGIN_THROTTLE_KEY) {
+	const state = await get_login_throttle_state(records, key);
 	state.failed_count += 1;
 
 	const throttled_failures = state.failed_count - LOGIN_THROTTLE.free_attempts;
@@ -75,8 +80,8 @@ export async function register_failed_login(records: AuthRecords) {
 	await records.save_login_throttle(state);
 }
 
-export async function reset_login_throttle(records: AuthRecords) {
-	await records.save_login_throttle({ key: LOGIN_THROTTLE_KEY, failed_count: 0, locked_until: 0 });
+export async function reset_login_throttle(records: AuthRecords, key = LOGIN_THROTTLE_KEY) {
+	await records.save_login_throttle({ key, failed_count: 0, locked_until: 0 });
 }
 
 export function get_required_admin_password(): string {
@@ -110,6 +115,16 @@ export function set_session_cookie(
 
 export function clear_session_cookie(cookies: Cookies, name: string) {
 	set_session_cookie(cookies, name, '', 0);
+}
+
+/**
+ * Where to go after signing in, from a URL's redirect_to: a path on this site,
+ * the fallback otherwise. Pages that sign people in, such as /login, use it.
+ */
+export function redirect_target(url: URL, fallback = '/') {
+	const target = url.searchParams.get('redirect_to') ?? fallback;
+	// A path only, never another site: browsers read //example.com and /\example.com as one.
+	return target.startsWith('/') && !/^\/[/\\]/.test(target) ? target : fallback;
 }
 
 /** Refuse the request unless an editor is signed in: 401 when nobody is, 403 for someone else. */

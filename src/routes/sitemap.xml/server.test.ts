@@ -2,7 +2,7 @@ import { expect, it, vi } from 'vitest';
 
 vi.mock('$app/env/private', () => ({
 	ORIGIN: 'https://example.com',
-	LANGUAGES: '',
+	LANGUAGES: 'en',
 	VERCEL: undefined
 }));
 vi.mock('#app/api.remote.js', () => ({

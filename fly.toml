@@ -11,6 +11,8 @@ primary_region = "fra"
 [env]
   DATA_DIR = "/data"
   PROTOCOL_HEADER = "fly-forwarded-proto"
+  # The site's language, such as "de"; several for translations, original first ("en,de").
+  LANGUAGES = "en"
 
 [deploy]
   strategy = "immediate"

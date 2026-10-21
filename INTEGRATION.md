@@ -375,10 +375,10 @@ Style the button with the design system's primary button recipe. A dialog that a
 
 Editable can be the website of an app with accounts of its own, such as a shop where customers log in to see their orders and a few staff also edit the website. The app owns its accounts; Editable only learns who is signed in and whether they may edit.
 
-- **Accounts and sessions are the app's.** Its tables live in the site's database through a migration of its own (`pnpm migration:create <name>`), prefixed so they cannot collide with Editable's, such as `app_accounts`. Backups and restores then cover them. Its code reaches the database through the backend's storage, `(await get_backend()).storage`, which ties the app to the SQLite backend.
+- **Accounts and sessions are the app's.** Its tables live in the site's database through a migration of its own (`pnpm migration:create <name>`), prefixed so they cannot collide with Editable's, such as `app_accounts`. Backups and restores then cover them. Its code reaches the database through the backend's storage, `(await get_backend()).storage`, which ties the app to the SQLite backend. It stores passwords salted and hashed, such as with `scrypt` from `node:crypto`, and compares them in constant time.
 - **The auth returns every signed-in account** from `get_user`, and `is_editor` decides who may edit. The app's own pages use `locals.user` freely; Editable's checks only ever look at `locals.is_editor`.
 - **Its login dialog only logs people in.** ⌘ E and the gesture at the bottom of a phone screen do nothing for someone signed in who may not edit, so they never learn the site is editable; the dialog shows to visitors who are signed out, and at `/login`. Keep its wording about logging in, not editing, if your users should not hear of it either.
-- **Its pages call `require_user(event)`,** which returns the signed-in account and sends anyone else to `/login` and back. Its own API endpoints, where a redirect would be wrong, check `locals.user` and answer 401.
+- **Its pages call `require_user(event)`,** which returns the signed-in account and sends anyone else to `/login` and back. Its own API endpoints, where a redirect would be wrong, check `locals.user` and answer 401. A page of its own that signs people in, such as a sign-up, sends them on with `redirect_target(url)` from `#lib/server/auth.js`, the check `/login` uses.
 - **The toolbar shows to everyone signed in.** Its menu holds Logout, labeled Page actions for editors and Account for everyone else. Two slots in `system_components` add the app's own: `toolbar_items` renders buttons next to Editable's, receiving the toolbar's `button_class`, and `menu_items` renders entries at the top of the menu, receiving `item_class` and `close` (see `ToolbarItemsProps` and `MenuItemsProps` in `src/app/components/Toolbar.svelte`).
 - **Its pages sit inside the site's banner, nav, and footer** with `PageShell` (see [Pages of your own](#pages-of-your-own)).
 - **`pnpm data:push` replaces the live database,** with the accounts and what they reported. Once people use the app, edit the live site instead of pushing.
@@ -386,9 +386,9 @@ Editable can be the website of an app with accounts of its own, such as a shop w
 ### Before you ship it
 
 - **Only editors may edit.** Anyone `is_editor` allows, or anyone `get_user` returns when there is no `is_editor`, may change every page, the shared navigation, and the assets.
-- **Sessions are yours.** Editable's `sessions` and `login_throttle` records belong to the admin password; your auth keeps its own sessions, in a signed cookie as above or in a store of your own.
+- **Sessions are yours.** Editable's `sessions` records belong to the admin password; your auth keeps its own sessions, in a signed cookie as above or in a store of your own.
 - **Cookies are scoped to the site's base,** as Editable's own are, when several sites share an origin.
-- **Rate limiting is yours** if your auth checks secrets itself; a provider such as GitHub does it for you.
+- **Throttle the passwords you check.** Editable's login throttle takes a key: `get_login_lockout_seconds`, `register_failed_login`, and `reset_login_throttle` from `#lib/server/auth.js` count failures per account under keys of your own, such as `app:<username>`, apart from the admin password's. Keys are kept until reset, so throttle unknown usernames under one shared key. A provider such as GitHub does it for you.
 - **MCP clients follow your sign-in.** Their consent page shows your login dialog and asks whoever is signed in, and an editor signing out ends their connections.
 - **MCP connections belong to no account.** Only editors approve them, but a connection lasts its 48 hours, or until an editor logs out, even if the editor who approved it loses their rights in between. An app that withdraws someone's editing rights calls `revoke_all_grants()` from `src/app/server_oauth.ts` to end every connection at once.
 
@@ -401,6 +401,7 @@ event.locals.site = {
 	origin: 'https://host.example',
 	base: '/alice',
 	languages: [],
+	main_language: 'en',
 	backend,
 	auth
 };
@@ -408,7 +409,8 @@ event.locals.site = {
 
 - `origin` is the public origin, used for canonical URLs, the sitemap, and the canonical host redirect.
 - `base` is the path the site is served under, or `''` at the root. Stored links never include it: `/about` stays `/about` in the database, reaches the browser as `/alice/about` the way language prefixes do, and is stored without it again, so a site can move to another path or its own domain without changing content. Components render `node.href` as is; asset URLs and the editor's own navigation go through `resolve_href(href, site)`.
-- `languages` lists the site's languages, the main language first, or none.
+- `languages` lists the site's languages for translations, the main language first, or none.
+- `main_language` is the language the site is written in, which its pages declare, such as `de`.
 - `backend` is where the site's records and asset files go (see [Backends](#backends)), such as a data folder's from `backend_for(dir)` in `src/app/server_backend.ts`. Run `migrate` from `src/app/migrations.ts` on it first, which also seeds a new site. Editable caches nothing between requests; opening, caching, and closing backends is up to the host. Asset cleanup deletes files no record refers to, so a host sharing asset files between sites gives each a `delete_asset` that keeps them.
 - `auth` decides who is signed in and how, in place of the admin password (see [Sign-in](#sign-in)).
 

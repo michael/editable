@@ -33,10 +33,11 @@ pnpm install
 cp .env.example .env
 ```
 
-Set an admin password in `.env`:
+Set an admin password and your site's language in `.env`:
 
 ```sh
 ADMIN_PASSWORD='change-me'
+LANGUAGES='en'
 ```
 
 And run the development server:
@@ -756,6 +757,8 @@ fly secrets set \
   ADMIN_PASSWORD='pick-a-strong-password'
 ```
 
+Set your site's language in `fly.toml` under `[env]`, such as `LANGUAGES = "de"`. It's not a secret, so it lives with the app's configuration.
+
 `ORIGIN` should exactly match the canonical URL you use in the browser, including the scheme and subdomain (for example, `https://example.com` and `https://www.example.com` are different origins), so generated canonical and social metadata stays correct. Update this secret whenever you switch to a custom domain.
 
 Optionally set `ASSET_GRACE_PERIOD_DAYS` (default 7): unreferenced asset files are kept on disk this many days after losing their last reference. This is also the safe window for rolling back a database backup against the live assets folder without ending up with dead image references.
@@ -906,7 +909,7 @@ pnpm vps:env set ALIAS_DOMAINS="www.my-site.example.com,alias.example.com"
 
 Caddy then terminates TLS for all of them and the app redirects each to `ORIGIN`, so visitors and search engines end up on one address and you don't get a separate login per domain. Point each name's DNS at the server **before** setting it — Caddy verifies every name when it requests the certificate.
 
-**Doing it by hand instead:** the script is optional — `docker-compose.yml` runs on any docker host. Clone your site on the server, `cp .env.example .env` and set `ADMIN_PASSWORD` and `ORIGIN="https://my-site.example.com"`, then `docker compose up -d --build`. The app listens on `127.0.0.1:3000`; put a reverse proxy with TLS in front (with Caddy that's the whole config: `my-site.example.com { reverse_proxy 127.0.0.1:3000 }`). Ship updates with `git pull && docker compose up -d --build`. For the data commands, a hand-managed setup has nothing to auto-discover, so set the explicit keys alongside `DEPLOY_HOST` in your local `.env`: `RESTART_CMD="docker restart editable"`, `REMOTE_EXEC="docker exec editable"`, and `HOST_DATA_DIR` pointing at the `./data` bind mount as an absolute path (without the script, the container keeps the default name `editable`).
+**Doing it by hand instead:** the script is optional — `docker-compose.yml` runs on any docker host. Clone your site on the server, `cp .env.example .env` and set `ADMIN_PASSWORD`, `ORIGIN="https://my-site.example.com"`, and `LANGUAGES`, then `docker compose up -d --build`. The app listens on `127.0.0.1:3000`; put a reverse proxy with TLS in front (with Caddy that's the whole config: `my-site.example.com { reverse_proxy 127.0.0.1:3000 }`). Ship updates with `git pull && docker compose up -d --build`. For the data commands, a hand-managed setup has nothing to auto-discover, so set the explicit keys alongside `DEPLOY_HOST` in your local `.env`: `RESTART_CMD="docker restart editable"`, `REMOTE_EXEC="docker exec editable"`, and `HOST_DATA_DIR` pointing at the `./data` bind mount as an absolute path (without the script, the container keeps the default name `editable`).
 
 What Fly.io still does for you that a VPS doesn't: scale-to-zero with sub-second wake-ups (a VPS runs — and bills — around the clock), TLS and anycast routing without a reverse proxy, and volume snapshots. The VPS path trades that for a fixed monthly price and no platform dependency.
 
@@ -1152,7 +1155,7 @@ Editable's own migrations use the `editable` source name; `custom` migrations be
 
 Publish your website in multiple languages.
 
-`LANGUAGES` (optional) accepts a comma-separated list of BCP 47 language tags in `.env` or your deployment environment. Put the original language first; each tag is a separate content variant:
+`LANGUAGES` names your site's language as a BCP 47 tag, such as `de`, which its pages declare to browsers, screen readers, and search engines. Every site with a backend sets it. To translate, list several tags in `.env` or your deployment environment, the original language first; each tag is a separate content variant:
 
 ```dotenv
 LANGUAGES="en,de"
@@ -1164,7 +1167,7 @@ Choose a language before entering edit mode, edit its text or media, and save. T
 
 On backend deployments, language versions are included automatically in the sitemap and page metadata for search engines.
 
-Removing a language from the list hides its translations without deleting them. Leave `LANGUAGES` unset or blank for a single-language site.
+Removing a language from the list hides its translations without deleting them. A list of one, such as `LANGUAGES="de"`, is a single-language site.
 
 This feature is experimental: its behavior and storage format may change. Back up your database before upgrading.
 

@@ -1,6 +1,6 @@
 import { getRequestEvent } from '$app/server';
 import { LANGUAGES, ORIGIN, VERCEL } from '$app/env/private';
-import { language_path, parse_languages } from './languages.js';
+import { language_path, main_language, parse_languages } from './languages.js';
 import { normalize_href } from './document_links.js';
 import type { Backend } from '#lib/server/backend.js';
 import type { Auth } from './server_auth.js';
@@ -17,6 +17,8 @@ export type Site = {
 	base: string;
 	/** Enabled languages, the main language first; empty for a single-language site. */
 	languages: string[];
+	/** The language the site is written in, such as 'de', which its pages declare. */
+	main_language: string;
 	/** Where the site's records and asset files go, migrated; the deployment's own when unset. */
 	backend?: Backend;
 	/** Who may edit the site and how they sign in; the admin password when unset. */
@@ -27,7 +29,9 @@ export type Site = {
 export const default_site: Site = {
 	origin: ORIGIN,
 	base: '',
-	languages: VERCEL ? [] : parse_languages(LANGUAGES)
+	languages: VERCEL ? [] : parse_languages(LANGUAGES),
+	// Static builds have no backend and need no LANGUAGES.
+	main_language: VERCEL ? 'en' : main_language(LANGUAGES)
 };
 
 /** The current request's site; outside a request, such as at startup, the deployment's own. */
@@ -49,6 +53,9 @@ export const site: Site = {
 	},
 	get languages() {
 		return current_site().languages;
+	},
+	get main_language() {
+		return current_site().main_language;
 	},
 	get backend() {
 		return current_site().backend;

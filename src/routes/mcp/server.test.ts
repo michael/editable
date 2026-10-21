@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest';
 const metadata_url = 'https://example.com/.well-known/oauth-protected-resource/mcp';
 vi.mock('$app/env/private', () => ({
 	ORIGIN: 'https://example.com',
-	LANGUAGES: '',
+	LANGUAGES: 'en',
 	VERCEL: undefined
 }));
 vi.mock('#app/server_oauth.js', () => ({

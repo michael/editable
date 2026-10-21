@@ -48,8 +48,10 @@ const where =
 export const variables = defineEnvVars({
 	LANGUAGES: {
 		description:
-			'Experimental translations: comma-separated language tags, original first (en,de).',
-		schema: optional((value) => value ?? '')
+			"The site's language (de), or for experimental translations comma-separated language tags, original first (en,de). Required whenever the backend is enabled.",
+		schema: required_with_backend(
+			'Set the site\'s language, such as LANGUAGES="en", or several for translations, original first: in .env locally, under [env] in fly.toml on Fly, or in the server .env on a VPS.'
+		)
 	},
 	ADMIN_PASSWORD: {
 		description:

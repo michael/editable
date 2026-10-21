@@ -6,7 +6,7 @@ vi.mock('$app/env/private', () => ({
 	ADMIN_PASSWORD: 'secret',
 	NODE_ENV: 'test',
 	ORIGIN: 'https://example.com',
-	LANGUAGES: '',
+	LANGUAGES: 'en',
 	VERCEL: ''
 }));
 vi.mock('$app/server', () => ({ getRequestEvent: () => ({ locals: request.locals }) }));
@@ -27,7 +27,13 @@ import initial_schema from '#app/migrations/sqlite/20260803T131059242Z_editable_
 import throttle_schema from '#app/migrations/sqlite/20261017T120000000Z_editable_login_throttle.js';
 import oauth_schema from '#app/migrations/sqlite/20261010T180000000Z_editable_mcp_oauth.js';
 import { get_auth, password_auth, require_user, sign_in_state, type Auth } from './server_auth.js';
-import { require_editor } from '#lib/server/auth.js';
+import {
+	get_login_lockout_seconds,
+	register_failed_login,
+	require_editor,
+	reset_login_throttle
+} from '#lib/server/auth.js';
+import type { Backend } from '#lib/server/backend.js';
 import { create_auth } from './create_auth.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
@@ -159,4 +165,14 @@ it("sends an app's page to /login when nobody is signed in, and back afterwards"
 		expect.objectContaining({ location: '/alice/login?redirect_to=%2Forders' })
 	);
 	request.locals = {};
+});
+
+it('throttles failed logins per key, the admin password under its own', async () => {
+	const { backend } = services as unknown as { backend: Backend };
+	for (let attempt = 0; attempt < 6; attempt++) await register_failed_login(backend, 'app:ben');
+	expect(await get_login_lockout_seconds(backend, 'app:ben')).toBeGreaterThan(0);
+	expect(await get_login_lockout_seconds(backend, 'app:anna')).toBe(0);
+	expect(await get_login_lockout_seconds(backend)).toBe(0);
+	await reset_login_throttle(backend, 'app:ben');
+	expect(await get_login_lockout_seconds(backend, 'app:ben')).toBe(0);
 });
