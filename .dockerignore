@@ -9,3 +9,6 @@
 Dockerfile
 fly.toml
 vite.config.js.timestamp-*
+/data-backups
+/.pnpm-store
+/.vercel
