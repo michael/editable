@@ -58,7 +58,7 @@ The SQLite backend is synchronous inside, so each call runs to its end before th
 
 Merging an Editable release never touches a backend of your own:
 
-- **It lives in files of your own,** such as `src/app/backends/git_backend.ts`, with its migrations in `src/app/migrations` targeting its name. Editable ships nothing in `src/app/backends`.
+- **It lives in files of your own,** such as `src/app/backends/git_backend.ts`, with its migrations in a folder named after it, `src/app/migrations/git`. Editable ships nothing in `src/app/backends`.
 - **One file wires it up:** return it from `create_backend` in `src/app/create_backend.ts`, which Editable keeps to that one function.
 - **Interface changes arrive as type errors,** which `pnpm check` names, not as merge conflicts.
 - **Editable's backend tests run against it,** including those that later releases add:
@@ -75,15 +75,15 @@ test_backend('git', async () => {
 });
 ```
 
-- **Its migrations are its own.** Your backend runs only the migrations that target its name, and Editable's SQLite migrations never run on it. Create one with `pnpm migration:create <name> --target git`.
+- **Its migrations are its own.** Your backend runs only the migrations in its folder, and Editable's, in `src/app/migrations/sqlite`, never run on it. Create one with `pnpm migration:create <name> --backend git`.
 
 ### Merge an Editable release
 
-The contract between Editable and your backend is the `Backend` interface and its tests. Editable's migrations target SQLite and never run on your backend, so you port the ones your backend needs. After merging a release:
+The contract between Editable and your backend is the `Backend` interface and its tests. Editable's migrations are in SQLite's folder and never run on your backend, so you port the ones your backend needs. After merging a release:
 
 1. **Run `pnpm check`.** A changed interface shows up as type errors in your backend. Implement what they name.
 2. **Run your backend tests.** New promises arrive as new tests in `test_backend`, such as a version check on a save. Make them pass.
-3. **Port the release's migrations.** For each new SQLite migration, create one of yours dated right after it, so your chain keeps Editable's order: `pnpm migration:create site-banner --target git --after 20261009T120000000Z_editable_site_banner`. Content changes copy over as they are, because the helpers are the same on every backend. For a change to SQLite's records, such as a new column for document versions, write what your storage needs; where it already has it, such as a Git blob hash for a version, leave that part out.
+3. **Port the release's migrations.** For each new SQLite migration, create one of yours dated right after it, so your chain keeps Editable's order: `pnpm migration:create site-banner --backend git --after 20261009T120000000Z_editable_site_banner`. Content changes copy over as they are, because the helpers are the same on every backend. For a change to SQLite's records, such as a new column for document versions, write what your storage needs; where it already has it, such as a Git blob hash for a version, leave that part out.
 4. **Try the upgrade on a copy of a real site.** `test_backend` starts every test with an empty backend, so only real data shows whether step 3 works.
 
 ### Write your own backend
@@ -173,7 +173,6 @@ Idempotent changes make the last row harmless, such as writing a file with its f
 
 ```ts
 export default {
-	target: 'git',
 	async up({ sql, files }: MigrationContext<GitTransaction>) {
 		await sql`ALTER TABLE document_refs ADD COLUMN IF NOT EXISTS path TEXT`;
 		for (const path of await files.list('pages/'))

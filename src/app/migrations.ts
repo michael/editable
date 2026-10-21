@@ -11,9 +11,10 @@ import initial_site from './initial_site.js';
 import { document_refs_of } from './server_documents.js';
 import { asset_refs_of } from './server_asset_refs.js';
 
-/** Every migration in src/app/migrations, in id order. */
+/** Every migration in src/app/migrations, each in its backend's folder, in id order. */
 export const all_migrations = load_migrations(
-	import.meta.glob('./migrations/*.ts', { eager: true, import: 'default' }) as Record<
+	// Any depth, so a file outside a backend's folder is refused rather than ignored.
+	import.meta.glob('./migrations/**/*.ts', { eager: true, import: 'default' }) as Record<
 		string,
 		Migration
 	>

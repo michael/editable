@@ -9,46 +9,51 @@ import {
 afterEach(() => vi.restoreAllMocks());
 
 const up = () => {};
+/** Migrations by their path under ./migrations, such as 'sqlite/<id>'. */
 const load = (files: Record<string, Migration>) =>
 	load_migrations(
-		Object.fromEntries(Object.entries(files).map(([name, m]) => [`./migrations/${name}.ts`, m]))
+		Object.fromEntries(Object.entries(files).map(([path, m]) => [`./migrations/${path}.ts`, m]))
 	);
 
 describe('load_migrations', () => {
-	it('orders by id', () => {
+	it('takes the backend from the folder and orders by id', () => {
 		const migrations = load({
-			'20260102T000000000Z_editable_b': { target: 'git', up },
-			'20260101T000000000Z_editable_a': { target: 'sqlite', up }
+			'git/20260102T000000000Z_editable_b': { up },
+			'sqlite/20260101T000000000Z_editable_a': { up }
 		});
-		expect(migrations.map(({ id, target }) => [id, target])).toEqual([
+		expect(migrations.map(({ id, backend }) => [id, backend])).toEqual([
 			['20260101T000000000Z_editable_a', 'sqlite'],
 			['20260102T000000000Z_editable_b', 'git']
 		]);
 	});
 
-	it('refuses unknown properties, missing or bad targets, and bad names', () => {
+	it('refuses unknown properties, files outside a backend folder, and bad names', () => {
 		const one =
-			(migration: Migration, name = '20260101T000000000Z_custom_x') =>
+			(migration: object, path = 'sqlite/20260101T000000000Z_custom_x') =>
 			() =>
-				load({ [name]: migration });
-		const sqlite = (migration: object) => ({ target: 'sqlite', ...migration }) as Migration;
-		expect(one(sqlite({ up, before: ['x'] }))).toThrow('unknown export properties: before');
-		expect(one(sqlite({ up, after: 'x' }))).toThrow('unknown export properties: after');
-		expect(one({ up } as unknown as Migration)).toThrow('needs a target backend');
-		expect(one({ target: 'SQLite', up })).toThrow('needs a target backend');
-		expect(one(sqlite({ up }), 'add-things')).toThrow('Invalid migration filename');
+				load({ [path]: migration as Migration });
+		expect(one({ up, before: ['x'] })).toThrow('unknown export properties: before');
+		expect(one({ up, target: 'sqlite' })).toThrow('unknown export properties: target');
+		expect(one({ up }, '20260101T000000000Z_custom_x')).toThrow("must be in its backend's folder");
+		expect(one({ up }, 'sqlite/old/20260101T000000000Z_custom_x')).toThrow(
+			"must be in its backend's folder"
+		);
+		expect(one({ up }, 'SQLite/20260101T000000000Z_custom_x')).toThrow(
+			"must be in its backend's folder"
+		);
+		expect(one({ up }, 'sqlite/add-things')).toThrow('Invalid migration filename');
 	});
 });
 
 describe('run_migrations', () => {
 	const ran: string[] = [];
 	const migrations = load({
-		'20260101T000000000Z_editable_a': { target: 'sqlite', up: () => ran.push('a') },
-		'20260102T000000000Z_editable_b': { target: 'git', up: () => ran.push('b') },
-		'20260103T000000000Z_editable_c': { target: 'sqlite', up: () => ran.push('c') }
+		'sqlite/20260101T000000000Z_editable_a': { up: () => ran.push('a') },
+		'git/20260102T000000000Z_editable_b': { up: () => ran.push('b') },
+		'sqlite/20260103T000000000Z_editable_c': { up: () => ran.push('c') }
 	});
 
-	it('runs the pending migrations of one target in id order and records each', async () => {
+	it('runs the pending migrations of one backend in id order and records each', async () => {
 		ran.length = 0;
 		const recorded: string[] = [];
 		const count = await run_migrations(migrations, 'sqlite', new Set(), async ({ id, up }) => {
@@ -89,8 +94,7 @@ describe('run_migrations', () => {
 			)
 		).rejects.toThrow('not present in this application: 20260102T000000000Z_editable_b');
 		const failing = load({
-			'20260101T000000000Z_editable_bad': {
-				target: 'sqlite',
+			'sqlite/20260101T000000000Z_editable_bad': {
 				up: () => {
 					throw new Error('no');
 				}

@@ -1069,9 +1069,9 @@ The app-specific Editable surface lives in `src/app`, while `src/routes` contain
 
 Keep stored content and storage in step with changes to your site.
 
-Every migration lives in `src/app/migrations`, is discovered when SvelteKit builds the server, and runs automatically when it boots. Framework migrations use the `editable` namespace and project migrations use the `custom` namespace. An id starts with its UTC timestamp, so a migration's date is its place in the chain.
+Every migration lives in `src/app/migrations/sqlite`, the folder for the SQLite database that stores your site, is discovered when SvelteKit builds the server, and runs automatically when it boots. Framework migrations use the `editable` namespace and project migrations use the `custom` namespace. An id starts with its UTC timestamp, so a migration's date is its place in the chain.
 
-Each migration names the backend it is for, `target: 'sqlite'`. When a site opens, it runs the migrations it has not run yet, in id order and all in one transaction, so an upgrade happens completely or not at all. Read the chain in order, and you know the state it leaves.
+When a site opens, it runs the migrations it has not run yet, in id order and all in one transaction, so an upgrade happens completely or not at all. Read the chain in order, and you know the state it leaves.
 
 Create a project migration with:
 
@@ -1086,7 +1086,6 @@ import type { Migration, MigrationContext } from '#lib/server/migrations.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 export default {
-	target: 'sqlite',
 	up({ db, rename_property }: MigrationContext<SqliteStorage>) {
 		db.exec('CREATE TABLE IF NOT EXISTS redirects (path TEXT PRIMARY KEY, target TEXT NOT NULL)');
 		rename_property('hero', 'image', 'media');
@@ -1104,7 +1103,6 @@ Changing a node type's shape means rewriting stored documents rather than alteri
 
 ```js
 export default {
-	target: 'sqlite',
 	up({ rename_property, rename_type, replace_value, delete_property, update }) {
 		// Rename a property, keeping its value
 		rename_property('hero', 'image', 'media');

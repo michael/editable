@@ -1,5 +1,4 @@
 export default {
-	target: 'sqlite',
 	up({ replace_value }) {
 		// Prose grid layouts became a matrix of box style and text alignment,
 		// following the prose naming convention: an unmarked layout means

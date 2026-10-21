@@ -1,34 +1,36 @@
-// Create a migration in src/app/migrations:
+// Create a migration in its backend's folder, src/app/migrations/<backend>:
 //
-//   pnpm migration:create <name>                    for the SQLite backend
-//   pnpm migration:create <name> --target <target>  for another backend
-//   pnpm migration:create <name> --after <id>       dated right after another migration
+//   pnpm migration:create <name>                      for the SQLite backend
+//   pnpm migration:create <name> --backend <backend>  for another backend
+//   pnpm migration:create <name> --after <id>         dated right after another migration,
+//                                                     in any backend's folder
 //
 // --editable uses Editable's namespace instead of the project's own.
 
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const MIGRATION_ID = /^(\d{8}T\d{9}Z)_([a-z][a-z0-9-]*)_([a-z0-9]+(?:_[a-z0-9]+)*)$/;
-const migration_dir = join(process.cwd(), 'src/app/migrations');
+const migrations_dir = join(process.cwd(), 'src/app/migrations');
 const args = process.argv.slice(2);
 let namespace = 'custom';
 let name = '';
-let target = 'sqlite';
+let backend = 'sqlite';
 let after = '';
 
 for (let index = 0; index < args.length; index++) {
 	const argument = args[index];
 	const value = () => args[++index] || fail(`${argument} requires a value.`);
 	if (argument === '--editable') namespace = 'editable';
-	else if (argument === '--target') target = value();
+	else if (argument === '--backend') backend = value();
 	else if (argument === '--after') after = value();
 	else if (argument.startsWith('--')) fail(`Unknown option: ${argument}`);
 	else if (name) fail('Provide exactly one migration name.');
 	else name = argument;
 }
 
-if (!name) fail('Usage: pnpm migration:create <name> [--target <backend>] [--after <id>]');
+if (!name) fail('Usage: pnpm migration:create <name> [--backend <backend>] [--after <id>]');
+if (!/^[a-z][a-z0-9]*$/.test(backend)) fail(`Invalid backend name: ${backend}`);
 const slug = name
 	.trim()
 	.toLowerCase()
@@ -37,7 +39,11 @@ const slug = name
 if (!slug) fail('Migration name must contain a letter or number.');
 let timestamp = new Date().toISOString().replace(/[-:.]/g, '');
 if (after) {
-	if (!existsSync(join(migration_dir, `${after}.ts`))) fail(`No migration ${after}.`);
+	const folders = readdirSync(migrations_dir, { withFileTypes: true }).filter((entry) =>
+		entry.isDirectory()
+	);
+	if (!folders.some(({ name }) => existsSync(join(migrations_dir, name, `${after}.ts`))))
+		fail(`No migration ${after}.`);
 	const [, stamp] = MIGRATION_ID.exec(after) ?? fail(`Invalid migration id: ${after}`);
 	const parsed = stamp.replace(
 		/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(\d{3})Z$/,
@@ -47,11 +53,12 @@ if (after) {
 }
 const id = `${timestamp}_${namespace}_${slug}`;
 const template =
-	target === 'sqlite'
-		? "import type { Migration, MigrationContext } from '#lib/server/migrations.js';\nimport type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';\n\nexport default {\n\ttarget: 'sqlite',\n\tup({ db, documents, ensure_document, rename_property, rename_type, replace_value, delete_property, update }: MigrationContext<SqliteStorage>) {\n\t\t// Change content with the helpers, such as rename_property('hero', 'image', 'media'),\n\t\t// and storage with db, such as db.exec('ALTER TABLE ...').\n\t}\n} satisfies Migration;\n"
-		: `import type { Migration, MigrationContext } from '#lib/server/migrations.js';\n\nexport default {\n\ttarget: '${target}',\n\tup({ rename_property }: MigrationContext) {\n\t\t// Change content with the helpers and the ${target} backend's storage, spread next to them.\n\t}\n} satisfies Migration;\n`;
+	backend === 'sqlite'
+		? "import type { Migration, MigrationContext } from '#lib/server/migrations.js';\nimport type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';\n\nexport default {\n\tup({ db, documents, ensure_document, rename_property, rename_type, replace_value, delete_property, update }: MigrationContext<SqliteStorage>) {\n\t\t// Change content with the helpers, such as rename_property('hero', 'image', 'media'),\n\t\t// and storage with db, such as db.exec('ALTER TABLE ...').\n\t}\n} satisfies Migration;\n"
+		: `import type { Migration, MigrationContext } from '#lib/server/migrations.js';\n\nexport default {\n\tup({ rename_property }: MigrationContext) {\n\t\t// Change content with the helpers and the ${backend} backend's storage, spread next to them.\n\t}\n} satisfies Migration;\n`;
 
-const path = join(migration_dir, `${id}.ts`);
+mkdirSync(join(migrations_dir, backend), { recursive: true });
+const path = join(migrations_dir, backend, `${id}.ts`);
 try {
 	writeFileSync(path, template, { flag: 'wx' });
 } catch (error) {

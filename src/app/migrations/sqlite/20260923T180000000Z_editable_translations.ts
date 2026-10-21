@@ -2,7 +2,6 @@ import type { Migration } from '#lib/server/migrations.js';
 import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 
 export default {
-	target: 'sqlite',
 	up({ db }: SqliteStorage) {
 		db.exec(`
 			CREATE TABLE translations (

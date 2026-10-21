@@ -3,8 +3,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import initial_schema from './migrations/20260803T131059242Z_editable_initial_schema.js';
-import translations_schema from './migrations/20260923T180000000Z_editable_translations.js';
+import initial_schema from './migrations/sqlite/20260803T131059242Z_editable_initial_schema.js';
+import translations_schema from './migrations/sqlite/20260923T180000000Z_editable_translations.js';
 import { all_migrations, apply_migrations, migrate } from './migrations.js';
 import initial_site from './initial_site.js';
 import { backend_for } from './server_backend.js';
@@ -33,7 +33,7 @@ function temp_dir() {
 }
 
 const sqlite_ids = all_migrations
-	.filter((migration) => migration.target === 'sqlite')
+	.filter((migration) => migration.backend === 'sqlite')
 	.map(({ id }) => id);
 
 /** Migrations dated after Editable's own, for a chain of a test's making. */
@@ -44,8 +44,8 @@ const later = (
 	...load_migrations(
 		Object.fromEntries(
 			Object.entries(migrations).map(([name, up]) => [
-				`./migrations/29990101T00000000${name}Z_custom_test.ts`,
-				{ target: 'sqlite', up }
+				`./migrations/sqlite/29990101T00000000${name}Z_custom_test.ts`,
+				{ up }
 			])
 		)
 	)

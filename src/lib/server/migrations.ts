@@ -5,11 +5,11 @@ import {
 } from './migration_helpers.js';
 
 /**
- * A migration file. Its target names the backend whose chain it belongs to,
- * such as 'sqlite'. Its filename is its permanent id, and a backend runs its
- * chain in id order.
+ * A migration file. It lives in its backend's folder, such as
+ * src/app/migrations/sqlite, whose files are that backend's chain. Its
+ * filename is its permanent id, and a backend runs its chain in id order.
  */
-export type Migration = { target: string; up: (context: any) => unknown };
+export type Migration = { up: (context: any) => unknown };
 
 /**
  * What a migration receives: its backend's storage, flat, such as `db` for
@@ -19,42 +19,45 @@ export type MigrationContext<Storage = unknown> = Storage & {
 	documents: MigrationDocument[];
 } & MigrationHelpers;
 
-export type LoadedMigration = { id: string; target: string; up: (context: any) => unknown };
+export type LoadedMigration = { id: string; backend: string; up: (context: any) => unknown };
 
 const FILENAME = /^\d{8}T\d{9}Z_[a-z][a-z0-9-]*_[a-z0-9]+(?:_[a-z0-9]+)*\.ts$/;
 
+/** Load migration modules by their paths, such as ./migrations/sqlite/<id>.ts, in id order. */
 export function load_migrations(modules: Record<string, Migration>): LoadedMigration[] {
 	return Object.entries(modules)
-		.sort(([left], [right]) => left.localeCompare(right))
 		.map(([path, migration]) => {
-			const filename = path.split('/').at(-1) ?? '';
+			const [backend, filename, ...deeper] = path.split('migrations/').at(-1)!.split('/');
+			if (!filename || deeper.length || !/^[a-z][a-z0-9]*$/.test(backend))
+				throw new Error(
+					`Migration "${path}" must be in its backend's folder, such as src/app/migrations/sqlite.`
+				);
 			const fail = (problem: string) => new Error(`Migration "${filename}" ${problem}`);
 			if (!FILENAME.test(filename)) throw new Error(`Invalid migration filename "${filename}".`);
 			if (!migration || typeof migration !== 'object')
 				throw fail('must have a default object export.');
-			const unknown = Object.keys(migration).filter((key) => !['target', 'up'].includes(key));
+			const unknown = Object.keys(migration).filter((key) => key !== 'up');
 			if (unknown.length) throw fail(`has unknown export properties: ${unknown.join(', ')}.`);
-			if (typeof migration.target !== 'string' || !/^[a-z][a-z0-9]*$/.test(migration.target))
-				throw fail(`needs a target backend, such as 'sqlite', not "${migration.target}".`);
 			if (typeof migration.up !== 'function') throw fail('must have an up function.');
-			return { id: filename.slice(0, -'.ts'.length), target: migration.target, up: migration.up };
-		});
+			return { id: filename.slice(0, -'.ts'.length), backend, up: migration.up };
+		})
+		.sort((left, right) => left.id.localeCompare(right.id));
 }
 
 /**
- * Run the migrations of one target that have not been applied, in id order,
+ * Run the migrations of one backend that have not been applied, in id order,
  * through run, which runs one and records it as applied; returns how many
- * ran. Refuses data recording migrations the target's chain does not have.
+ * ran. Refuses data recording migrations the backend's chain does not have.
  * Warns when a migration runs behind a later one already applied, which
  * happens when migrations arrive out of order.
  */
 export async function run_migrations(
 	migrations: LoadedMigration[],
-	target: string,
+	backend: string,
 	applied: Set<string>,
 	run: (migration: LoadedMigration) => Promise<void>
 ): Promise<number> {
-	const chain = migrations.filter((migration) => migration.target === target);
+	const chain = migrations.filter((migration) => migration.backend === backend);
 	const known = new Set(chain.map((migration) => migration.id));
 	const unknown = [...applied].filter((id) => !known.has(id));
 	if (unknown.length)
@@ -66,7 +69,7 @@ export async function run_migrations(
 	if (!pending.length) return 0;
 	const latest = chain.filter((migration) => applied.has(migration.id)).at(-1)?.id;
 	console.log(
-		`${chain.length - pending.length} ${target} migrations applied, ${pending.length} to be applied...`
+		`${chain.length - pending.length} ${backend} migrations applied, ${pending.length} to be applied...`
 	);
 
 	for (const migration of pending) {

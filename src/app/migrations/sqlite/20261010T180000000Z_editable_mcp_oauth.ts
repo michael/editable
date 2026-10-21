@@ -5,7 +5,6 @@ import type { SqliteStorage } from '#lib/server/backends/sqlite_backend.js';
 // issued under them (stored as hashes only). Clients are not stored: a
 // client_id carries its registration.
 export default {
-	target: 'sqlite',
 	up({ db }: SqliteStorage) {
 		db.exec(`
 			CREATE TABLE oauth_grants (
