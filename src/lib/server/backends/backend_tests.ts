@@ -326,6 +326,10 @@ export function test_backend(name: string, create: () => Promise<Backend>) {
 				await write_documents([record('m1')]);
 				await write_documents([record('m1', 'Changed')]);
 				expect((await read_documents()).map((r) => r.data)).toEqual([page('m1', 'Changed')]);
+				// The backend's own reads during the run see its writes.
+				expect((await backend.list_documents()).map((r) => r.data)).toEqual([
+					page('m1', 'Changed')
+				]);
 				await backend.save_documents({ documents: [record('m2')] });
 				await record_migration('29990101T000000000Z_test_works');
 			});

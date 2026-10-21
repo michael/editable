@@ -10,7 +10,7 @@ Editable reaches its data in three layers:
 
 - **The API** is what Editable does: save a document, load a page, upload an asset, sign in. It lives in `src/app`, such as `server_documents.ts` and `server_translations.ts`, and validates content, works out what each document links to and which assets it uses, and rewrites links when a page moves. It is the same for every site and reaches the current one's backend as `backend` from `#app/services.js`.
 - **The backend** stores what the API hands it. It implements the `Backend` interface in `src/lib/server/backend.ts`: one function for each thing the API reads or writes, each write atomic.
-- **The storage** is whatever a backend is built on, such as a SQLite handle or a folder. Each backend defines its own, exposes it as `backend.storage`, and hands it to its migrations.
+- **The storage** is whatever a backend is built on, such as a SQLite handle or a folder. Each backend defines its own, exposes it as `backend.storage`, and hands it, or a transaction over it, to its migrations.
 
 Saving a page, for example, ends in one call that the backend carries out all at once:
 
@@ -50,7 +50,9 @@ A backend keeps these promises:
 - **Private records stay private, and per site.** Sessions, the login throttle, and OAuth records let people in; see [Keep each site's private records apart](#keep-each-sites-private-records-apart).
 - **Expired entries go without a scan:** `delete_expired(now)` removes them in one step, such as one `DELETE … WHERE expires_at <= $1` per table.
 - **Assets are opaque.** Which ones are unused, and when they may go, is the API's decision.
-- **A migration run is one step.** `migrate(work)` runs an upgrade, and everything the backend does meanwhile, completely or not at all, including the saves Editable makes at its end. Migrations run at every point of the backend's history, so the `read_documents` and `write_documents` it hands them work with every way it has stored documents.
+- **A migration run is one step.** `migrate(work)` runs an upgrade completely or not at all. While `work` runs, the backend's other functions take part in it: their reads see what the run has written so far, and their writes commit or roll back with it. Editable relies on both at the end of a run, when it reads the documents the run changed and saves them again with new versions and references.
+- **Migrations meet every past layout.** A site that is behind runs old migrations before newer ones change how documents are stored, so the `read_documents` and `write_documents` a backend hands a run work with every way it has stored documents.
+- **The migration record exists from the start.** `applied_migrations` is called on fresh storage, and a first migration cannot record itself where nothing exists yet, so the backend sets up the record itself, as the SQLite backend creates its `_migrations` table when it opens.
 
 The SQLite backend is synchronous inside, so each call runs to its end before the next.
 
@@ -76,6 +78,7 @@ test_backend('git', async () => {
 ```
 
 - **Its migrations are its own.** Your backend runs only the migrations in its folder, and Editable's, in `src/app/migrations/sqlite`, never run on it. Create one with `pnpm migration:create <name> --backend git`.
+- **Its chain starts with today's shape.** Its first migration creates its storage as Editable needs it now, dated when you write it, so none of SQLite's earlier migrations apply. A new site runs it and then gets the default site; a site copied in from SQLite arrives in today's shape already. From then on, you port each release's migrations.
 
 ### Merge an Editable release
 
@@ -102,12 +105,12 @@ import type { Backend } from '#lib/server/backend.js';
 export type GitStorage = { git: GitRepository; sql: Sql; bucket: Bucket };
 
 export function git_backend(storage: GitStorage): Backend {
-	const { git, sql } = storage;
 	return {
 		name: 'git',
 		storage,
-		// Content: one file per record, such as documents/<id>.edf; its version is the blob hash
-		get_document: (document_id) => read_document(git, document_id),
+		// Content: one file per record, such as documents/<id>.edf; its version is the blob hash.
+		// Reads go through the step open in this call, if any, so they see its writes.
+		get_document: (document_id) => read_document(current(storage), document_id),
 		save_documents: (save) =>
 			atomically(storage, async (tx) => {
 				await assert_versions(tx, save.expect);
@@ -122,10 +125,15 @@ export function git_backend(storage: GitStorage): Backend {
 			}),
 		// Private, never in the repository: one Postgres table each
 		get_session: async (session_id) =>
-			(await sql`SELECT * FROM sessions WHERE session_id = ${session_id}`)[0] ?? null,
+			(await current(storage).sql`SELECT * FROM sessions WHERE session_id = ${session_id}`)[0] ??
+			null,
 		// Assets: objects in the bucket
 		write_asset: (asset_id, data, variant) => put_object(storage, asset_id, variant, data),
-		// Migrations: one run as one step, handing them the transaction
+		// Migrations: a record that exists from the start, and one run as one step
+		applied_migrations: async () => {
+			await storage.sql`CREATE TABLE IF NOT EXISTS _migrations (id TEXT PRIMARY KEY)`;
+			return (await storage.sql`SELECT id FROM _migrations ORDER BY id`).map((row) => row.id);
+		},
 		migrate: (work) =>
 			atomically(storage, (tx) =>
 				work({
@@ -147,12 +155,23 @@ How a backend meets the interface is its own business: a real one would cache re
 No transaction spans Postgres and a Git repository, and a pushed commit can only be reverted. `atomically` comes close to all or nothing by making Postgres the anchor and committing to the repository last: the SQL runs in one Postgres transaction, file changes are collected, they become one commit that moves the branch only if it still points where it did when the work began, and Postgres commits after that.
 
 ```ts
+import { AsyncLocalStorage } from 'node:async_hooks';
+
+const open_step = new AsyncLocalStorage<GitTransaction>();
+
+/** The step open in this call, such as a migration run, or else the storage. */
+const current = (storage: GitStorage) => open_step.getStore() ?? storage;
+
 async function atomically<T>(storage: GitStorage, work: (tx: GitTransaction) => Promise<T>) {
+	// A call made during a step, such as Editable's saves in a migration run, joins it.
+	const open = open_step.getStore();
+	if (open) return work(open);
 	const parent = await storage.git.head();
 	// sql.begin commits when the callback resolves and rolls back when it throws.
 	return storage.sql.begin(async (sql) => {
 		const files = collected_files(storage.git, parent);
-		const result = await work({ ...storage, sql, files });
+		const tx = { ...storage, sql, files };
+		const result = await open_step.run(tx, () => work(tx));
 		if (files.changes.length)
 			await storage.git
 				.commit({ parent, changes: files.changes, message: 'Save from Editable' })
@@ -169,7 +188,7 @@ async function atomically<T>(storage: GitStorage, work: (tx: GitTransaction) => 
 | The work, or the commit                     | Postgres rolls back and the branch did not move: nothing changed                                                                      |
 | The Postgres commit, after the branch moved | The repository has the commit, Postgres does not; a migration run happens again on the next start, a save with the editor's next save |
 
-Idempotent changes make the last row harmless, such as writing a file with its final content or `ADD COLUMN IF NOT EXISTS`. A migration run goes through `atomically` too, and a real `atomically` joins a step already open, so the saves Editable makes during the run commit with it. One migration can change both stores as one step:
+Idempotent changes make the last row harmless, such as writing a file with its final content or `ADD COLUMN IF NOT EXISTS`. A migration run is one step of `atomically` too, so one migration can change both stores at once:
 
 ```ts
 export default {
@@ -180,6 +199,8 @@ export default {
 	}
 } satisfies Migration;
 ```
+
+Because it changes where documents live, the backend's `read_documents` looks in both folders: on a site that is behind, the migrations before this one still find documents in `pages/`.
 
 The `pnpm data:*` commands, backups, and Litestream work on `sqlite_backend`'s data folder; a backend of your own brings its own backups.
 

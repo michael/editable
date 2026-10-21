@@ -8,7 +8,7 @@ import type { Document } from 'svedit';
  * can sit on a network service as easily as on a local file.
  */
 export type Backend = {
-	/** Migrations with this name as their target run on this backend. */
+	/** Its migrations are the ones in src/app/migrations/<name>. */
 	name: string;
 	/** What the backend is built on. */
 	storage: unknown;
@@ -78,12 +78,13 @@ export type Backend = {
 	/** Every original with when it was last written or touched, in milliseconds. */
 	list_assets(): Promise<{ asset_id: string; last_used: number }[]>;
 
-	/** Ids of the migrations it has applied. */
+	/** Ids of the migrations it has applied; works on fresh storage, before any has run. */
 	applied_migrations(): Promise<string[]>;
 	/**
-	 * Run work as one atomic step: what it does through the run, and every
-	 * other call the backend gets meanwhile, such as the saves at its end,
-	 * happens completely or not at all.
+	 * Run work as one atomic step, completely or not at all. The backend's other
+	 * functions called meanwhile take part in it: their reads see what the run
+	 * has written so far, and their writes commit or roll back with it, such as
+	 * the saves Editable makes at the end of a run.
 	 */
 	migrate(work: (run: MigrationRun) => Promise<void>): Promise<void>;
 
