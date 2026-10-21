@@ -86,7 +86,7 @@ The contract between Editable and your backend is the `Backend` interface and it
 
 1. **Run `pnpm check`.** A changed interface shows up as type errors in your backend. Implement what they name.
 2. **Run your backend tests.** New promises arrive as new tests in `test_backend`, such as a version check on a save. Make them pass.
-3. **Port the release's migrations.** For each new SQLite migration, create one of yours dated right after it, so your chain keeps Editable's order: `pnpm migration:create site-banner --backend git --after 20261009T120000000Z_editable_site_banner`. Content changes copy over as they are, because the helpers are the same on every backend. For a change to SQLite's records, such as a new column for document versions, write what your storage needs; where it already has it, such as a Git blob hash for a version, leave that part out.
+3. **Port the release's migrations.** For each new SQLite migration, create one of yours dated right after it, so your chain keeps Editable's order: `pnpm migration:create site-banner --backend git --after 20261009T120000000Z_editable_site_banner`. Content changes copy over as they are, because the helpers are the same on every backend. For a change to SQLite's records, such as a new column for document versions, write what your storage needs; where it already has it, such as a Git blob hash for a version, leave that part out. When your version of a migration builds on one of your own migrations, date it now instead. Nothing checks that you ported everything: a content change you miss leaves your sites in the old shape.
 4. **Try the upgrade on a copy of a real site.** `test_backend` starts every test with an empty backend, so only real data shows whether step 3 works.
 
 ### Write your own backend
