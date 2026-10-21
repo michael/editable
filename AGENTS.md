@@ -4,6 +4,8 @@ Repository-specific guidance for coding agents working on Svedit.
 
 `README.md` is the user-facing manual and source of truth for setup, customization, and usage patterns. `INTEGRATION.md` covers running Editable inside larger systems: backends, hosting several sites, and custom sign-in. Consult only the relevant sections when working on those areas; keep agent-specific guidance here.
 
+`README.md` is also served as the manual at `/manual`, for people building sites. Never link to `.md` files from it, and leave out what `INTEGRATION.md` covers, such as backends, custom sign-in, and hosting several sites; a test converts every configured Markdown page and fails on links it cannot render.
+
 ## Principles
 
 Editable is minimalistic by design: less, but better.

@@ -1071,7 +1071,7 @@ Keep stored content and storage in step with changes to your site.
 
 Every migration lives in `src/app/migrations`, is discovered when SvelteKit builds the server, and runs automatically when it boots. Framework migrations use the `editable` namespace and project migrations use the `custom` namespace. An id starts with its UTC timestamp, so a migration's date is its place in the chain.
 
-Each migration names the backend it is for, such as `target: 'sqlite'`, and each backend has a chain of its own. When a site opens, its backend runs the migrations it has not run yet, in id order and all in one transaction, so an upgrade happens completely or not at all. Read the chain in order, and you know the state it leaves.
+Each migration names the backend it is for, `target: 'sqlite'`. When a site opens, it runs the migrations it has not run yet, in id order and all in one transaction, so an upgrade happens completely or not at all. Read the chain in order, and you know the state it leaves.
 
 Create a project migration with:
 
@@ -1137,8 +1137,6 @@ They are deliberately tolerant: a node that never had the property is left alone
 The helpers work on the site's documents in memory, as the migrations before left them, and Editable writes the changed ones back before the next migration runs. `documents` holds the same records, for changes the helpers don't cover. Change documents through the helpers or `documents`, and everything else through the storage: SQL that changes the documents table in the same migration is overwritten when the helpers' changes are written back. At the end of an upgrade, the documents it changed are saved again, which gives them new versions and rebuilds what they refer to. A new site starts with the current default content: its migrations set up its storage and find no content to change.
 
 Migrations may only change the site's data; filesystem, network, and other external side effects cannot be rolled back. Migrations are forward-only: never rename, delete, or edit one that has been applied. Roll back an upgrade by restoring the backup made before deployment.
-
-A backend runs only the migrations that target it, and a new one replays its whole chain. A backend of your own has a chain of its own the same way; see [Keep a backend in your fork](INTEGRATION.md#keep-a-backend-in-your-fork).
 
 ### Placing a migration
 
