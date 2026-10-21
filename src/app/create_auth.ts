@@ -1,4 +1,5 @@
-import { password_auth, type Auth } from './server_auth.js';
+import type { Auth } from './server_auth.js';
+import { meter_readings_auth } from './meter_readings/auth.js';
 
 /**
  * How people sign in to the deployment's own site: the admin password from
@@ -7,5 +8,6 @@ import { password_auth, type Auth } from './server_auth.js';
  * conflicts with a release.
  */
 export function create_auth(): Auth {
-	return password_auth;
+	// The meter readings app's accounts; only its editors may edit the website.
+	return meter_readings_auth;
 }

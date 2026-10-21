@@ -42,7 +42,9 @@ import {
 } from './commands.svelte.js';
 
 import Overlays from './components/Overlays.svelte';
-import AuthDialog from './components/AuthDialog.svelte';
+import MeterReadingsLoginDialog from './components/MeterReadingsLoginDialog.svelte';
+import MeterReadingsMenuItems from './components/MeterReadingsMenuItems.svelte';
+import MeterReadingsToolbarItems from './components/MeterReadingsToolbarItems.svelte';
 import Page from './components/Page.svelte';
 import Banner from './components/Banner.svelte';
 import Nav from './components/Nav.svelte';
@@ -236,7 +238,10 @@ export const document_config = {
 	// for people signed in (see ToolbarItemsProps and MenuItemsProps).
 	system_components: {
 		overlays: Overlays,
-		auth_dialog: AuthDialog
+		// The meter readings app: its accounts log in here, and its button and menu entry.
+		auth_dialog: MeterReadingsLoginDialog,
+		toolbar_items: MeterReadingsToolbarItems,
+		menu_items: MeterReadingsMenuItems
 	},
 	// Registry of components for each node type
 	node_components: {
