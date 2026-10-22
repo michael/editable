@@ -83,7 +83,7 @@
 	/* Rounded corners for controls; reference pills and popovers derive their shape from this. */
 	--button-border-radius: 3rem;
 	/* Rounded corners for images. */
-	--image-border-radius: 2.2rem;
+	--image-border-radius: 0rem;
 }
 
 /* Native syntax ranges leave the editable text and selection DOM untouched. */

@@ -34,7 +34,7 @@
 {#snippet code()}
 	<!-- The anchor places the code block controls in Overlays. -->
 	<div
-		class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 border border-(--stroke) bg-(--muted) p-3 font-mono text-sm subpixel-antialiased lg:p-6"
+		class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 bg-(--muted) p-3 font-mono text-sm subpixel-antialiased lg:p-6"
 		style:border-radius="var(--image-border-radius)"
 		style:anchor-name="--code-{node.id}"
 		use:highlight_editable_code={{
