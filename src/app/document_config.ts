@@ -602,7 +602,8 @@ export const document_config = {
 			const new_code_block = {
 				id: nanoid(),
 				type: 'code_block',
-				layout: 'plain',
+				layout: 'narrow-left',
+				language: 'plain',
 				content: { ...content, marks: [], annotations: [] }
 			};
 			tr.create(new_code_block);

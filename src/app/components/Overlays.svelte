@@ -9,6 +9,7 @@
 	import EditLink from './EditLink.svelte';
 	import EditMedia from './EditMedia.svelte';
 	import LinkPreview from './LinkPreview.svelte';
+	import CodeLanguagePicker from './CodeLanguagePicker.svelte';
 	import Drawer from './Drawer.svelte';
 	import PageUrlDialog from './PageUrlDialog.svelte';
 	import PageDeleteDialog from './PageDeleteDialog.svelte';
@@ -134,6 +135,13 @@
 
 	let link_preview = $derived(get_link_preview());
 
+	// The caret in a code block, or the block selected, shows its language picker.
+	let code_block = $derived(
+		app.allow_structural_changes && svedit.session.selected_node?.type === 'code_block'
+			? svedit.session.selected_node
+			: null
+	);
+
 	function get_link_anchor_path(node, path) {
 		// These node wrappers are wider than their visible media frames, so their
 		// link UI anchors to the media property instead.
@@ -208,6 +216,10 @@
 
 	{#if link_preview && !svedit.session.commands?.edit_link?.show_prompt && !is_dragging}
 		<LinkPreview node={link_preview.node} path={link_preview.path} />
+	{/if}
+
+	{#if code_block && !is_dragging}
+		<CodeLanguagePicker node={code_block} />
 	{/if}
 
 	{#if svedit.session.commands?.toggle_link?.show_prompt}

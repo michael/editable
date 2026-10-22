@@ -92,8 +92,19 @@ it('upgrades an older database in id order, content and storage alike', async ()
 	const page = {
 		document_id: 'p1',
 		nodes: {
-			p1: { id: 'p1', type: 'page', image: 'i1' },
-			i1: { id: 'i1', type: 'image', src: 'photo.webp' }
+			p1: {
+				id: 'p1',
+				type: 'page',
+				image: 'i1',
+				body: { nodes: ['c1'], marks: [], annotations: [] }
+			},
+			i1: { id: 'i1', type: 'image', src: 'photo.webp' },
+			c1: {
+				id: 'c1',
+				type: 'code_block',
+				layout: 'typescript',
+				content: { content: 'const one = 1;', marks: [], annotations: [] }
+			}
 		}
 	};
 	sqlite
@@ -108,6 +119,8 @@ it('upgrades an older database in id order, content and storage alike', async ()
 	const p1 = await backend.get_document('p1');
 	expect(p1?.data.nodes.p1.banner).toBe('banner_1');
 	expect(p1?.version).not.toBe('');
+	// Code blocks moved their language out of layout and keep their full width.
+	expect(p1?.data.nodes.c1).toMatchObject({ language: 'typescript', layout: 'wide' });
 	expect(await backend.applied_migrations()).toEqual(sqlite_ids);
 	// What a run changed is saved again at its end, which rebuilds its references.
 	expect(await backend.list_asset_refs()).toEqual([

@@ -2,7 +2,7 @@
  * The application's document model: node types, properties, marks, and defaults.
  * Keep content-shape decisions here so the session and components share one schema.
  */
-import { code_layouts } from './code_languages.js';
+import { code_language_ids } from './code_languages.js';
 import { define_document_schema, type NodeMap } from 'svedit';
 
 /** Default values for media node properties (image and video). */
@@ -291,7 +291,12 @@ export const document_schema = define_document_schema({
 	code_block: {
 		kind: 'block',
 		properties: {
-			layout: { type: 'string', values: code_layouts, default: 'plain' },
+			layout: {
+				type: 'string',
+				values: ['narrow-left', 'narrow-center', 'narrow-right', 'wide'],
+				default: 'narrow-left'
+			},
+			language: { type: 'string', values: code_language_ids, default: 'plain' },
 			content: {
 				type: 'text',
 				mark_types: NO_MARKS,
