@@ -9,6 +9,7 @@ import { DATA_DIR } from '#app/server_config.js';
 import { migrate } from '#app/migrations.js';
 import { backend_for } from '#app/server_backend.js';
 import type { Auth } from '#app/server_auth.js';
+import { default_site } from '#app/server_site.js';
 import type { Backend } from '#lib/server/backend.js';
 import { open_sqlite } from '#lib/server/backends/sqlite_backend.js';
 import { is_site_name } from './site_names.js';
@@ -170,6 +171,8 @@ export const host_handle: Handle = async ({ event, resolve }) => {
 			origin: site_origin(name),
 			base: '',
 			languages: [],
+			// Until a site can choose its own, it is in the deployment's language.
+			main_language: default_site.main_language,
 			backend: await open_backend(name),
 			auth: site_auth(name)
 		};
