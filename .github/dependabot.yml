@@ -1,0 +1,13 @@
+# Pull requests for new Node.js releases of the Docker base image, such as
+# security releases. Bump devEngines in package.json to match, then run
+# pnpm install so the lockfile pins the same runtime for development.
+version: 2
+updates:
+  - package-ecosystem: 'docker'
+    directory: '/'
+    schedule:
+      interval: 'daily'
+    ignore:
+      # A new major Node.js line is a decision of its own, not a routine update.
+      - dependency-name: 'node'
+        update-types: ['version-update:semver-major']

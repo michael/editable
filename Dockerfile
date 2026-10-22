@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile:1
 
-ARG NODE_VERSION=26.10.0
-FROM node:${NODE_VERSION}-slim AS base
+# Pinned to an exact release; Dependabot proposes updates (.github/dependabot.yml).
+FROM node:26.12.1-slim AS base
 
 LABEL fly_launch_runtime="Node.js"
 
