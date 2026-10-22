@@ -119,8 +119,12 @@ it('upgrades an older database in id order, content and storage alike', async ()
 	const p1 = await backend.get_document('p1');
 	expect(p1?.data.nodes.p1.banner).toBe('banner_1');
 	expect(p1?.version).not.toBe('');
-	// Code blocks moved their language out of layout and keep their full width.
-	expect(p1?.data.nodes.c1).toMatchObject({ language: 'typescript', layout: 'wide' });
+	// Code blocks moved their language out of layout, keep their full width, and do not wrap.
+	expect(p1?.data.nodes.c1).toMatchObject({
+		language: 'typescript',
+		layout: 'wide',
+		wrap_lines: false
+	});
 	expect(await backend.applied_migrations()).toEqual(sqlite_ids);
 	// What a run changed is saved again at its end, which rebuilds its references.
 	expect(await backend.list_asset_refs()).toEqual([

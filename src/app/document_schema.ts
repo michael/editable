@@ -297,6 +297,7 @@ export const document_schema = define_document_schema({
 				default: 'narrow-left'
 			},
 			language: { type: 'string', values: code_language_ids, default: 'plain' },
+			wrap_lines: { type: 'boolean', default: false },
 			content: {
 				type: 'text',
 				mark_types: NO_MARKS,

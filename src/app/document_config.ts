@@ -604,6 +604,7 @@ export const document_config = {
 				type: 'code_block',
 				layout: 'narrow-left',
 				language: 'plain',
+				wrap_lines: false,
 				content: { ...content, marks: [], annotations: [] }
 			};
 			tr.create(new_code_block);

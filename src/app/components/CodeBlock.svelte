@@ -11,13 +11,19 @@
 	let layout = $derived(node.layout || 'narrow-left');
 	let padding_top_generous = $derived(!section || section.is_start);
 	let padding_bottom_generous = $derived(!section || section.is_end);
+	// Svedit's text styles wrap and are unlayered, so either choice overrides them.
+	let line_classes = $derived(
+		node.wrap_lines
+			? 'whitespace-pre-wrap! wrap-anywhere!'
+			: 'overflow-x-auto! whitespace-pre! wrap-normal!'
+	);
 	let highlighted_segments = $derived(
 		!svedit.editable ? await highlight_code(node.content?.content ?? '', node.language) : null
 	);
 </script>
 
 {#snippet code()}
-	<!-- The anchor places the language picker in Overlays. -->
+	<!-- The anchor places the code block controls in Overlays. -->
 	<div
 		class="border border-(--stroke) bg-(--muted) p-3 font-mono text-sm subpixel-antialiased lg:p-6"
 		style:border-radius="var(--image-border-radius)"
@@ -31,14 +37,14 @@
 	>
 		{#if highlighted_segments}
 			<pre
-				class="overflow-x-auto wrap-normal whitespace-pre tab-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)">{#each highlighted_segments as segment, index (index)}<span
+				class="{line_classes} tab-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)">{#each highlighted_segments as segment, index (index)}<span
 						class={segment.class_name}>{segment.text}</span
 					>{/each}</pre>
 		{:else}
 			<TextProperty
 				tag="pre"
 				spellcheck={false}
-				class="overflow-x-auto! wrap-normal! whitespace-pre! tab-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
+				class="{line_classes} tab-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 				path={[...path, 'content']}
 				placeholder="Code or plain text"
 			/>

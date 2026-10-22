@@ -175,6 +175,7 @@ export function convert_markdown(
 					type: 'code_block',
 					layout: 'narrow-left',
 					language: normalize_code_language(block.lang),
+					wrap_lines: false,
 					content: { content: block.value ?? '', marks: [], annotations: [] }
 				};
 				body_ids.push(id);
