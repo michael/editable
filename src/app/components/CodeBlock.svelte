@@ -59,15 +59,15 @@
 			/>
 		{/if}
 		<!-- A column of its own keeps the button off the code; it takes no more height than a line. -->
-		<div class="-my-1.5 -mr-1.5 flex lg:-my-2 lg:-mr-2" contenteditable="false">
+		<div class="-mt-1 -mr-1 -mb-2 flex lg:-my-2 lg:-mr-2" contenteditable="false">
 			<button
 				type="button"
-				class="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) text-(--foreground) transition-colors duration-150 hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
+				class="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) text-(--foreground) transition-colors duration-150 hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 lg:size-9"
 				title="Copy code"
 				aria-label="Copy code"
 				onclick={copy_code}
 			>
-				<svg class="size-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+				<svg class="size-5 lg:size-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 					{#if copied}
 						<path
 							d="M5 12.5L9.5 17L19 7.5"
