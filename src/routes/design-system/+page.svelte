@@ -1207,20 +1207,42 @@
 					<h2 id="boxed-prose-heading" class="display-5">Boxed items</h2>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Boxed items use a muted surface and the image radius. Secondary buttons need no
-						override: they rest on the background color, so they stand out from the box.
+						override: they rest on the background color, so they stand out from the box. The accent
+						variant fills the box with the accent color and remaps the color tokens inside: text
+						uses the accent foreground, primary buttons invert to stay visible, and the editing
+						colors flip too. The ew-native-selection class gives the caret and text selection native
+						colors, which work on any surface.
 					</p>
 				</div>
-				<div
-					class="max-w-sm rounded-(--image-border-radius) bg-(--muted) px-6 py-8 sm:px-8 sm:py-10"
-				>
-					<div class="flex flex-col items-center gap-5 text-center text-balance sm:gap-7">
-						<h3 class="display-5">Make it your own</h3>
-						<p class="body-base">Start with the shared styles and adapt them to your site.</p>
-						<a
-							href="#buttons"
-							class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
-							>Explore buttons</a
+				<div class="grid items-start gap-5 sm:grid-cols-2 sm:gap-7 lg:max-w-3xl">
+					<div class="rounded-(--image-border-radius) bg-(--muted) px-6 py-8 sm:px-8 sm:py-10">
+						<div class="flex flex-col items-center gap-5 text-center text-balance sm:gap-7">
+							<h3 class="display-5">Make it your own</h3>
+							<p class="body-base">Start with the shared styles and adapt them to your site.</p>
+							<a
+								href="#buttons"
+								class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
+								>Explore buttons</a
+							>
+						</div>
+					</div>
+					<!-- Accent box: keep the accent pair in --ew-box*, then remap every token inside so content stays readable. -->
+					<div
+						class="rounded-(--image-border-radius) bg-(--accent) px-6 py-8 text-(--accent-foreground) [--ew-box-foreground:var(--accent-foreground)] [--ew-box:var(--accent)] sm:px-8 sm:py-10"
+					>
+						<div
+							class="ew-native-selection flex flex-col items-center gap-5 text-center text-balance [--accent-foreground:var(--ew-box)] [--accent:var(--ew-box-foreground)] [--background:var(--ew-box)] [--editing-foreground:var(--ew-box)] [--editing-muted:color-mix(in_srgb,var(--ew-box-foreground)_25%,transparent)] [--editing:var(--ew-box-foreground)] [--foreground:var(--ew-box-foreground)] [--muted-foreground:color-mix(in_srgb,var(--ew-box-foreground)_75%,var(--ew-box))] [--muted:color-mix(in_srgb,var(--ew-box-foreground)_12%,var(--ew-box))] [--stroke:color-mix(in_srgb,var(--ew-box-foreground)_35%,var(--ew-box))] sm:gap-7"
 						>
+							<h3 class="display-5">Make it stand out</h3>
+							<p class="body-base text-(--muted-foreground)">
+								Accent boxes flip the palette, so every recipe inside stays readable.
+							</p>
+							<a
+								href="#buttons"
+								class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-5 py-2 text-base leading-6 font-normal wrap-anywhere text-(--accent-foreground) transition hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)]"
+								>Get started</a
+							>
+						</div>
 					</div>
 				</div>
 			</section>

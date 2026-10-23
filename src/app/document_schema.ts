@@ -246,7 +246,14 @@ export const document_schema = define_document_schema({
 		properties: {
 			layout: {
 				type: 'string',
-				values: ['plain', 'plain-centered-text', 'boxed', 'boxed-centered-text'],
+				values: [
+					'plain',
+					'plain-centered-text',
+					'boxed',
+					'boxed-centered-text',
+					'boxed-accent',
+					'boxed-accent-centered-text'
+				],
 				default: 'plain'
 			},
 			items: {

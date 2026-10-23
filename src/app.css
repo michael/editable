@@ -143,6 +143,26 @@
 	color: var(--code-punctuation);
 }
 
+/* Inside surfaces with their own colors, such as accent boxes, the editing color may not contrast.
+There the caret follows the text color and text selection uses the system colors.
+The selectors skip the states where Svedit hides the caret or the native selection. */
+.svedit-canvas:not(.hide-selection, .node-caret, .property-selection) .ew-native-selection {
+	caret-color: auto;
+}
+
+.svedit-canvas:not(.hide-selection) .ew-native-selection ::selection {
+	background-color: Highlight;
+	color: HighlightText;
+}
+
+/* Frames sit outside the content's DOM, so they can't follow local colors. Page-colored edges on
+both sides of the line keep them visible on any surface, even one in the editing color itself. */
+.svedit :is(.selected-node-overlay, .selected-property-overlay) {
+	box-shadow:
+		0 0 0 1.5px var(--background),
+		inset 0 0 0 1.5px var(--background);
+}
+
 /* Dim custom selection frames when the editor canvas loses focus. */
 .svedit:not(:has(.svedit-canvas:focus-within))
 	:is(.selected-node-overlay, .selected-property-overlay) {
