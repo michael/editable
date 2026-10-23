@@ -877,6 +877,23 @@
 											</svg>
 										</button>
 									{/if}
+									{#if session.selection?.type === 'node' && !is_node_caret && !session.commands.toggle_section_accent?.disabled}
+										<button
+											class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
+											class:!text-(--editing)={session.commands.toggle_section_accent?.active}
+											class:!bg-(--editing-muted)={session.commands.toggle_section_accent?.active}
+											onmousedown={handle_btn_mousedown}
+											onclick={(e) => handle_btn_click(e, session.commands.toggle_section_accent)}
+											use:tooltip={{ label: 'Accent section' }}
+											aria-label="Accent section"
+											aria-pressed={session.commands.toggle_section_accent?.active}
+										>
+											<svg class="size-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+												<circle cx="12" cy="12" r="7.5" stroke="currentColor" />
+												<path d="M12 4.5a7.5 7.5 0 0 1 0 15z" fill="currentColor" />
+											</svg>
+										</button>
+									{/if}
 									<button
 										class="{tw_toolbar_btn} aspect-square {tw_toolbar_btn_hover}"
 										onmousedown={handle_btn_mousedown}

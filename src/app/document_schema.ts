@@ -747,7 +747,13 @@ export const document_schema = define_document_schema({
 	},
 	section: {
 		kind: 'mark',
-		properties: {}
+		properties: {
+			layout: {
+				type: 'string',
+				values: ['regular', 'accent'],
+				default: 'regular'
+			}
+		}
 	}
 });
 

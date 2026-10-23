@@ -1213,6 +1213,12 @@
 						colors flip too. The ew-native-selection class gives the caret and text selection native
 						colors, which work on any surface.
 					</p>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
+						Sections use the same recipe for their accent color scheme: the section element keeps
+						the accent pair, and a wrapper inside remaps the tokens, so every block in the section
+						renders on the accent without changes of its own. An accent box inside an accent section
+						inverts again: the page background with accent-colored text.
+					</p>
 				</div>
 				<div class="grid items-start gap-5 sm:grid-cols-2 sm:gap-7 lg:max-w-3xl">
 					<div class="rounded-(--image-border-radius) bg-(--muted) px-6 py-8 sm:px-8 sm:py-10">
