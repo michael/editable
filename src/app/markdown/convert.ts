@@ -173,7 +173,9 @@ export function convert_markdown(
 				ctx.nodes[id] = {
 					id,
 					type: 'code_block',
-					layout: normalize_code_language(block.lang),
+					layout: 'narrow-left',
+					language: normalize_code_language(block.lang),
+					wrap_lines: false,
 					content: { content: block.value ?? '', marks: [], annotations: [] }
 				};
 				body_ids.push(id);

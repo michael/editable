@@ -1177,9 +1177,7 @@
 						the box.
 					</p>
 				</div>
-				<div
-					class="max-w-sm rounded-(--image-border-radius) border border-(--stroke) bg-(--muted) px-8 py-10"
-				>
+				<div class="max-w-sm rounded-(--image-border-radius) bg-(--muted) px-8 py-10">
 					<div class="flex flex-col items-center gap-5 text-center text-balance sm:gap-7">
 						<h3 class="display-5">Make it your own</h3>
 						<p class="body-base">Start with the shared styles and adapt them to your site.</p>

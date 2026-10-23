@@ -426,10 +426,12 @@ heading_1_xl, heading_1 … heading_4 {
 list { layout: square | check | decimal | lower-alpha, list_items: [list_item] }
 list_item { content: text }                        // marks: strong, emphasis, code, highlight, link
 
-code_block { layout: plain | [language id], content: text } // monospaced, preserves whitespace, no marks
+code_block { layout: narrow-left | narrow-center | narrow-right | wide,
+             language: plain | [language id], wrap_lines: boolean,
+             content: text } // monospaced, preserves whitespace, no marks
 ```
 
-Code blocks use `layout` to select a language in the toolbar variant picker. `plain` (the default) leaves highlighting off. Twinkleplop highlights selected languages in both view and edit mode. Language grammars load on demand, and the native range painter loads only when editing. View rendering awaits its grammar during server rendering and hydration; editing stays plain until the grammar loads. Editing uses native CSS highlight ranges without changing Svedit’s text DOM. Updates are batched to animation frames and pause during IME composition. Blocks exceeding 50,000 UTF-16 code units or 4,000 syntax ranges use plain text editing to keep highlighting work bounded; they still highlight in view mode. Highlighting resumes automatically when the block is shortened. Browsers without the CSS Custom Highlight API retain plain text editing. Supported language ids are listed in [src/app/code_languages.ts](src/app/code_languages.ts). Markdown imports preserve supported fence languages and common aliases such as `js`, `ts`, and `sh`. Existing preformatted nodes migrate to plain code blocks.
+Code blocks are placed with `layout`, like prose, and always keep their text left-aligned. Their `language` and `wrap_lines` are set in a popover above the block, which appears while the caret is in the block or the block is selected. `plain` (the default) leaves highlighting off. Long lines scroll sideways unless `wrap_lines` is on. A copy button sits beside the first line, in a column of its own, so it never covers code. Twinkleplop highlights selected languages in both view and edit mode. Language grammars load on demand, and the native range painter loads only when editing. View rendering awaits its grammar during server rendering and hydration; editing stays plain until the grammar loads. Editing uses native CSS highlight ranges without changing Svedit’s text DOM. Updates are batched to animation frames and pause during IME composition. Blocks exceeding 50,000 UTF-16 code units or 4,000 syntax ranges use plain text editing to keep highlighting work bounded; they still highlight in view mode. Highlighting resumes automatically when the block is shortened. Browsers without the CSS Custom Highlight API retain plain text editing. Supported language ids are listed in [src/app/code_languages.ts](src/app/code_languages.ts). Markdown imports preserve supported fence languages and common aliases such as `js`, `ts`, and `sh`. Existing preformatted nodes migrate to plain code blocks.
 
 **Media** — `image` and `video` share one shape and are interchangeable wherever media is allowed:
 
@@ -1289,7 +1291,7 @@ The converter accepts the subset of CommonMark that maps onto the built-in conte
 - paragraphs and headings 1–4, mapped directly to Editable's Heading 1–4 (Markdown headings 5 and 6 are rejected)
 - `**strong**`, `*emphasis*`, `` `inline code` ``, and `[links](/page)` — but not nested inside one another (marks are mutually exclusive in the content model, so e.g. bold text inside a link is rejected)
 - unordered lists (rendered with square markers) and ordered lists (rendered numbered); nested lists and multi-paragraph items are rejected
-- fenced and indented code blocks (no syntax highlighting)
+- fenced and indented code blocks, highlighted when the fence names a supported language
 - HTML comments (skipped — they render as nothing, same as everywhere else)
 - link targets: `http(s):`, `mailto:`, site-absolute paths, and `#fragments`; other protocols and links to `.md` files are rejected
 

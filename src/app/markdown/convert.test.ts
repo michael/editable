@@ -49,7 +49,7 @@ describe('convert_markdown', () => {
 		const body = page_body_nodes(doc);
 		expect(body.map((node) => node.type)).toEqual(['prose', 'code_block', 'prose']);
 		expect(body[1].content.content).toBe('code');
-		expect(body[1].layout).toBe('plain');
+		expect(body[1].language).toBe('plain');
 	});
 
 	it.each([
@@ -59,9 +59,9 @@ describe('convert_markdown', () => {
 		['svelte', 'svelte'],
 		['yml', 'yaml'],
 		['unknown', 'plain']
-	])('imports a %s fence as %s', (language, layout) => {
-		const doc = convert('```' + language + '\nconst value = 1;\n```');
-		expect(page_body_nodes(doc)[0]).toMatchObject({ type: 'code_block', layout });
+	])('imports a %s fence as %s', (fence, language) => {
+		const doc = convert('```' + fence + '\nconst value = 1;\n```');
+		expect(page_body_nodes(doc)[0]).toMatchObject({ type: 'code_block', language });
 		expect(() => compose_markdown_document(doc, SHARED_DOCUMENTS)).not.toThrow();
 	});
 

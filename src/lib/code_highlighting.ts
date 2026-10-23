@@ -28,36 +28,36 @@ const language_loaders: Record<string, () => Promise<{ tokenize: LanguageFactory
 const tokenizers = new Map<string, ReturnType<LanguageFactory> | null>();
 const pending_languages = new Map<string, Promise<void>>();
 
-export function code_language_loaded(layout: string) {
-	return tokenizers.has(layout) || !Object.hasOwn(language_loaders, layout);
+export function code_language_loaded(language: string) {
+	return tokenizers.has(language) || !Object.hasOwn(language_loaders, language);
 }
 
-export async function load_code_language(layout: string): Promise<void> {
-	if (code_language_loaded(layout)) return;
-	let pending = pending_languages.get(layout);
+export async function load_code_language(language: string): Promise<void> {
+	if (code_language_loaded(language)) return;
+	let pending = pending_languages.get(language);
 	if (!pending) {
-		pending = language_loaders[layout]()
+		pending = language_loaders[language]()
 			.then(({ tokenize }) => {
-				tokenizers.set(layout, tokenize());
+				tokenizers.set(language, tokenize());
 			})
 			.catch((error) => {
 				// Keep content readable if a grammar chunk cannot be downloaded.
-				console.warn(`Could not load code language ${layout}`, error);
-				tokenizers.set(layout, null);
+				console.warn(`Could not load code language ${language}`, error);
+				tokenizers.set(language, null);
 			})
-			.finally(() => pending_languages.delete(layout));
-		pending_languages.set(layout, pending);
+			.finally(() => pending_languages.delete(language));
+		pending_languages.set(language, pending);
 	}
 	await pending;
 }
 
-export function tokenize_code(content: string, layout: string) {
-	return tokenizers.get(layout)?.(content) ?? null;
+export function tokenize_code(content: string, language: string) {
+	return tokenizers.get(language)?.(content) ?? null;
 }
 
-export async function highlight_code(content: string, layout: string) {
-	await load_code_language(layout);
-	const result = tokenize_code(content, layout);
+export async function highlight_code(content: string, language: string) {
+	await load_code_language(language);
+	const result = tokenize_code(content, language);
 	if (!result) return null;
 	const { tokens, token_types } = result;
 	const segments: { text: string; class_name: string }[] = [];

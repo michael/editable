@@ -1,16 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { code_layouts } from '#app/code_languages.js';
+import { code_language_ids } from '#app/code_languages.js';
 import { highlight_code } from './code_highlighting.js';
 
 describe('code highlighting', () => {
-	it.each(code_layouts.filter((layout) => layout !== 'plain'))(
+	it.each(code_language_ids.filter((language) => language !== 'plain'))(
 		'preserves source text for %s',
-		async (layout) => {
+		async (language) => {
 			const source = '\tconst message = "<script>alert(1)</script> & 🦊";\r\n// comment\n';
-			const segments = await highlight_code(source, layout);
+			const segments = await highlight_code(source, language);
 			expect(segments).not.toBeNull();
 			expect(segments?.map((segment) => segment.text).join('')).toBe(source);
-			expect(await highlight_code('', layout)).toEqual([]);
+			expect(await highlight_code('', language)).toEqual([]);
 		}
 	);
 
