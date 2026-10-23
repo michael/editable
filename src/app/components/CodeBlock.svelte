@@ -63,7 +63,7 @@
 		<div class="-mt-1 -mr-1 -mb-2 flex lg:-my-2 lg:-mr-2" contenteditable="false">
 			<button
 				type="button"
-				class="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) text-(--foreground) transition-colors duration-150 hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 lg:size-9"
+				class="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) text-(--foreground) transition duration-150 hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 lg:size-9"
 				aria-label="Copy code"
 				use:tooltip={{ label: 'Copy code' }}
 				onclick={copy_code}

@@ -16,7 +16,11 @@
 		>
 			<div class="flex items-center justify-between gap-4">
 				<div class="min-w-0">
-					<TextProperty class="body-base" path={[...path, 'title']} placeholder="Title" />
+					<TextProperty
+						class="body-base font-medium"
+						path={[...path, 'title']}
+						placeholder="Title"
+					/>
 				</div>
 				<div
 					class="pointer-events-auto flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center text-(--muted-foreground) outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"

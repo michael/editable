@@ -39,7 +39,7 @@
 			</svelte:element>
 			<TextProperty
 				tag="figcaption"
-				class="mt-4 text-sm leading-6 sm:text-base"
+				class="mt-3 text-sm leading-6 text-(--muted-foreground) sm:text-base"
 				path={[...path, 'caption']}
 				placeholder="Caption"
 			/>

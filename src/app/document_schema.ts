@@ -246,7 +246,14 @@ export const document_schema = define_document_schema({
 		properties: {
 			layout: {
 				type: 'string',
-				values: ['plain', 'plain-centered-text', 'boxed', 'boxed-centered-text'],
+				values: [
+					'plain',
+					'plain-centered-text',
+					'boxed',
+					'boxed-centered-text',
+					'boxed-accent',
+					'boxed-accent-centered-text'
+				],
 				default: 'plain'
 			},
 			items: {
@@ -740,7 +747,14 @@ export const document_schema = define_document_schema({
 	},
 	section: {
 		kind: 'mark',
-		properties: {}
+		properties: {
+			// Color set 1 keeps the surrounding colors; 2 and 3 switch to their colors from app.css.
+			colorset: {
+				type: 'string',
+				values: ['colorset-1', 'colorset-2', 'colorset-3'],
+				default: 'colorset-1'
+			}
+		}
 	}
 });
 
