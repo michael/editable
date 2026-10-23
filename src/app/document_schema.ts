@@ -750,7 +750,7 @@ export const document_schema = define_document_schema({
 		properties: {
 			layout: {
 				type: 'string',
-				values: ['regular', 'accent'],
+				values: ['regular', 'muted', 'accent'],
 				default: 'regular'
 			}
 		}

@@ -105,16 +105,16 @@ export class CycleLayoutCommand extends Command {
 }
 
 /**
- * Command that switches the section covering the selected nodes between the regular
- * and the accent color scheme.
+ * Command that cycles the section covering the selected nodes through its color schemes,
+ * in the order the schema lists them.
  */
-export class ToggleSectionAccentCommand extends Command {
+export class CycleSectionLayoutCommand extends Command {
 	section = $derived(
 		this.context.session.active_mark?.node?.type === 'section'
 			? this.context.session.active_mark.node
 			: null
 	);
-	active = $derived(this.section?.layout === 'accent');
+	active = $derived(Boolean(this.section) && this.section.layout !== 'regular');
 
 	is_enabled() {
 		return this.context.editable && this.section !== null;
@@ -122,9 +122,12 @@ export class ToggleSectionAccentCommand extends Command {
 
 	execute() {
 		if (!this.is_enabled()) return;
-		const tr = this.context.session.tr;
-		tr.set([this.section.id, 'layout'], this.active ? 'regular' : 'accent');
-		this.context.session.apply(tr);
+		const session = this.context.session;
+		const layouts = session.schema.section.properties.layout.values;
+		const next_layout = layouts[(layouts.indexOf(this.section.layout) + 1) % layouts.length];
+		const tr = session.tr;
+		tr.set([this.section.id, 'layout'], next_layout);
+		session.apply(tr);
 	}
 }
 

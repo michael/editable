@@ -877,16 +877,15 @@
 											</svg>
 										</button>
 									{/if}
-									{#if session.selection?.type === 'node' && !is_node_caret && !session.commands.toggle_section_accent?.disabled}
+									{#if session.selection?.type === 'node' && !is_node_caret && !session.commands.cycle_section_layout?.disabled}
 										<button
 											class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
-											class:!text-(--editing)={session.commands.toggle_section_accent?.active}
-											class:!bg-(--editing-muted)={session.commands.toggle_section_accent?.active}
+											class:!text-(--editing)={session.commands.cycle_section_layout?.active}
+											class:!bg-(--editing-muted)={session.commands.cycle_section_layout?.active}
 											onmousedown={handle_btn_mousedown}
-											onclick={(e) => handle_btn_click(e, session.commands.toggle_section_accent)}
-											use:tooltip={{ label: 'Accent section' }}
-											aria-label="Accent section"
-											aria-pressed={session.commands.toggle_section_accent?.active}
+											onclick={(e) => handle_btn_click(e, session.commands.cycle_section_layout)}
+											use:tooltip={{ label: 'Section colors' }}
+											aria-label="Section colors"
 										>
 											<svg class="size-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 												<circle cx="12" cy="12" r="7.5" stroke="currentColor" />

@@ -7,22 +7,29 @@
 	const svedit = get_svedit_context();
 	let { path, children }: { path: DocumentPath; children?: Snippet } = $props();
 	let node: Nodes['section'] = $derived(svedit.session.get(path));
-	let accent = $derived(node.layout === 'accent');
+	let layout = $derived(node.layout || 'regular');
 
 	const bracket_class =
 		'pointer-events-none absolute left-1 right-1 z-1 h-2 select-none sm:left-2 sm:right-2 sm:h-4';
 	const corner_class = 'absolute size-2 border-(--stroke) sm:size-3.5';
 </script>
 
-<!-- An accent section keeps its colors in --ew-box*, so the content can remap every token to them,
-including the editing colors. Blocks inside then render on the accent without changes of their own. -->
+<!-- A colored section keeps its colors in --ew-*, so the content can remap the tokens to them.
+Blocks inside then render on the section's color without changes of their own.
+Muted swaps the background and muted surfaces; accent remaps every token, including the editing colors. -->
 <section
-	class={accent &&
-		'bg-(--accent) text-(--accent-foreground) [--ew-box-foreground:var(--accent-foreground)] [--ew-box:var(--accent)]'}
+	class={[
+		layout === 'muted' && 'bg-(--muted) [--ew-box:var(--muted)] [--ew-page:var(--background)]',
+		layout === 'accent' &&
+			'bg-(--accent) text-(--accent-foreground) [--ew-box-foreground:var(--accent-foreground)] [--ew-box:var(--accent)]'
+	]}
 >
 	<div
-		class={accent &&
-			'ew-native-selection [--accent-foreground:var(--ew-box)] [--accent:var(--ew-box-foreground)] [--background:var(--ew-box)] [--editing-foreground:var(--ew-box)] [--editing-muted:color-mix(in_srgb,var(--ew-box-foreground)_25%,transparent)] [--editing:var(--ew-box-foreground)] [--foreground:var(--ew-box-foreground)] [--muted-foreground:color-mix(in_srgb,var(--ew-box-foreground)_75%,var(--ew-box))] [--muted:color-mix(in_srgb,var(--ew-box-foreground)_12%,var(--ew-box))] [--stroke:color-mix(in_srgb,var(--ew-box-foreground)_35%,var(--ew-box))]'}
+		class={[
+			layout === 'muted' && '[--background:var(--ew-box)] [--muted:var(--ew-page)]',
+			layout === 'accent' &&
+				'ew-native-selection [--accent-foreground:var(--ew-box)] [--accent:var(--ew-box-foreground)] [--background:var(--ew-box)] [--editing-foreground:var(--ew-box)] [--editing-muted:color-mix(in_srgb,var(--ew-box-foreground)_25%,transparent)] [--editing:var(--ew-box-foreground)] [--foreground:var(--ew-box-foreground)] [--muted-foreground:color-mix(in_srgb,var(--ew-box-foreground)_75%,var(--ew-box))] [--muted:color-mix(in_srgb,var(--ew-box-foreground)_12%,var(--ew-box))] [--stroke:color-mix(in_srgb,var(--ew-box-foreground)_35%,var(--ew-box))]'
+		]}
 	>
 		{#if svedit.editable}
 			<div class="relative">

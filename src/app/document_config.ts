@@ -31,7 +31,7 @@ import type { AppCommandContext } from './commands.svelte.js';
 import nanoid from './nanoid.js';
 import {
 	CycleLayoutCommand,
-	ToggleSectionAccentCommand,
+	CycleSectionLayoutCommand,
 	CycleNodeTypeCommand,
 	ToggleLinkCommand,
 	RemoveLinkCommand,
@@ -415,7 +415,7 @@ export const document_config = {
 			toggle_code: new ToggleMarkCommand('code', context),
 			toggle_highlight: new ToggleMarkCommand('highlight', context),
 			toggle_section: new ToggleMarkCommand('section', structural_context),
-			toggle_section_accent: new ToggleSectionAccentCommand(structural_context),
+			cycle_section_layout: new CycleSectionLayoutCommand(structural_context),
 			undo: new UndoCommand(context),
 			redo: new RedoCommand(context),
 			select_parent: new SelectParentCommand(context),

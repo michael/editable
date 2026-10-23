@@ -1214,9 +1214,10 @@
 						colors, which work on any surface.
 					</p>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
-						Sections use the same recipe for their accent color scheme: the section element keeps
-						the accent pair, and a wrapper inside remaps the tokens, so every block in the section
-						renders on the accent without changes of its own. An accent box inside an accent section
+						Sections can be regular, muted, or accent. The section element keeps its colors, and a
+						wrapper inside remaps the tokens, so every block renders on the section's color without
+						changes of its own. Muted sections swap the background and muted surfaces, so boxed
+						items turn white. Accent sections use the accent recipe above; an accent box inside one
 						inverts again: the page background with accent-colored text.
 					</p>
 				</div>
