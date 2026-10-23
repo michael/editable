@@ -40,7 +40,11 @@
 	font-display: swap;
 }
 
-:root {
+:root,
+.ew-colorset-1,
+.ew-colorset-3 .ew-accent-surface {
+	/* Color set 1: the page, and the accent surface inside color set 3. */
+	/* Sections can switch to color set 2 or 3. */
 	/* Main page background color. */
 	--background: oklch(1 0 0);
 	/* Main text and foreground color. */
@@ -55,14 +59,45 @@
 	--accent: var(--editing);
 	/* Text color used on the accent color. */
 	--accent-foreground: var(--editing-foreground);
-
 	/* Primary accent for active editing controls, carets, and selections. */
 	--editing: #9747ff;
 	/* Low-opacity version of the editing accent for passive highlights. */
 	--editing-muted: oklch(from var(--editing) l c h / 0.1);
 	/* Foreground color for content displayed on the editing accent. */
 	--editing-foreground: var(--background);
+}
 
+/* Color set 2: a light grey surface. Its muted surface is white, so boxes lift off it. */
+.ew-colorset-2 {
+	--background: oklch(0.965 0 0);
+	--foreground: oklch(0 0 0);
+	--muted: oklch(1 0 0);
+	--stroke: oklch(0.9 0 0);
+	--muted-foreground: oklch(0.52 0 0);
+	--accent: var(--editing);
+	--accent-foreground: var(--editing-foreground);
+	--editing: #9747ff;
+	--editing-muted: oklch(from var(--editing) l c h / 0.1);
+	--editing-foreground: oklch(1 0 0);
+}
+
+/* Color set 3: the accent as a surface, and the accent surface inside color sets 1 and 2.
+Accent and editing colors invert to stay visible. */
+.ew-colorset-3,
+.ew-accent-surface {
+	--background: #9747ff;
+	--foreground: oklch(1 0 0);
+	--muted: color-mix(in srgb, var(--foreground) 12%, var(--background));
+	--stroke: color-mix(in srgb, var(--foreground) 35%, var(--background));
+	--muted-foreground: color-mix(in srgb, var(--foreground) 75%, var(--background));
+	--accent: var(--foreground);
+	--accent-foreground: var(--background);
+	--editing: var(--foreground);
+	--editing-muted: oklch(from var(--editing) l c h / 0.25);
+	--editing-foreground: var(--background);
+}
+
+:root {
 	/* Syntax palette from Zed's One Light theme. */
 	/* https://github.com/zed-industries/zed/blob/main/assets/themes/one/one.json */
 	--code-foreground: #242529;
@@ -143,14 +178,20 @@
 	color: var(--code-punctuation);
 }
 
-/* Inside surfaces with their own colors, such as accent boxes, the editing color may not contrast.
-There the caret follows the text color and text selection uses the system colors.
+/* Svedit sets the caret color once on the canvas; color sets set it again for their content.
 The selectors skip the states where Svedit hides the caret or the native selection. */
+.svedit-canvas:not(.hide-selection, .node-caret, .property-selection)
+	:is(.ew-colorset-1, .ew-colorset-2, .ew-colorset-3, .ew-accent-surface) {
+	caret-color: var(--editing);
+}
+
+/* On accent backgrounds, such as primary buttons and highlights, the editing color may match the
+background. There the caret follows the text color and text selection uses the system colors. */
 .svedit-canvas:not(.hide-selection, .node-caret, .property-selection) .ew-native-selection {
 	caret-color: auto;
 }
 
-.svedit-canvas:not(.hide-selection) .ew-native-selection ::selection {
+.svedit-canvas:not(.hide-selection) :is(.ew-native-selection, .ew-native-selection *)::selection {
 	background-color: Highlight;
 	color: HighlightText;
 }

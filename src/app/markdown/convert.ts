@@ -219,7 +219,7 @@ export function convert_markdown(
 		const end = section_boundaries[boundary_index + 1] ?? body_ids.length;
 		if (end <= start) continue;
 		const section_id = next_id(ctx);
-		ctx.nodes[section_id] = { id: section_id, type: 'section', layout: 'regular' };
+		ctx.nodes[section_id] = { id: section_id, type: 'section', colorset: 'colorset-1' };
 		body_marks.push({ start_offset: start, end_offset: end, node_id: section_id });
 	}
 

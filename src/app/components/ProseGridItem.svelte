@@ -45,24 +45,15 @@
 {/snippet}
 
 {#snippet card()}
-	<!-- The accent box keeps its colors in --ew-box*, so the content can remap every token to them,
-	including the editing colors. -->
+	<!-- Boxes use the muted surface of their section, or the section's accent surface. -->
 	<div
 		class={[
 			'ew-boxed-prose h-full px-6 py-8 sm:px-8 sm:py-10',
-			accent
-				? 'bg-(--accent) text-(--accent-foreground) [--ew-box-foreground:var(--accent-foreground)] [--ew-box:var(--accent)]'
-				: 'bg-(--muted)'
+			accent ? 'ew-accent-surface bg-(--background) text-(--foreground)' : 'bg-(--muted)'
 		]}
 		style:border-radius="var(--image-border-radius)"
 	>
-		<div
-			class={[
-				centered && 'text-center text-balance',
-				accent &&
-					'ew-native-selection [--accent-foreground:var(--ew-box)] [--accent:var(--ew-box-foreground)] [--background:var(--ew-box)] [--editing-foreground:var(--ew-box)] [--editing-muted:color-mix(in_srgb,var(--ew-box-foreground)_25%,transparent)] [--editing:var(--ew-box-foreground)] [--foreground:var(--ew-box-foreground)] [--muted-foreground:color-mix(in_srgb,var(--ew-box-foreground)_75%,var(--ew-box))] [--muted:color-mix(in_srgb,var(--ew-box-foreground)_12%,var(--ew-box))] [--stroke:color-mix(in_srgb,var(--ew-box-foreground)_35%,var(--ew-box))]'
-			]}
-		>
+		<div class={[centered && 'text-center text-balance']}>
 			{@render body()}
 		</div>
 	</div>

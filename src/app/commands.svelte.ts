@@ -105,16 +105,16 @@ export class CycleLayoutCommand extends Command {
 }
 
 /**
- * Command that cycles the section covering the selected nodes through its color schemes,
+ * Command that cycles the section covering the selected nodes through its color sets,
  * in the order the schema lists them.
  */
-export class CycleSectionLayoutCommand extends Command {
+export class CycleColorsetCommand extends Command {
 	section = $derived(
 		this.context.session.active_mark?.node?.type === 'section'
 			? this.context.session.active_mark.node
 			: null
 	);
-	active = $derived(Boolean(this.section) && this.section.layout !== 'regular');
+	active = $derived(Boolean(this.section) && this.section.colorset !== 'colorset-1');
 
 	is_enabled() {
 		return this.context.editable && this.section !== null;
@@ -123,10 +123,10 @@ export class CycleSectionLayoutCommand extends Command {
 	execute() {
 		if (!this.is_enabled()) return;
 		const session = this.context.session;
-		const layouts = session.schema.section.properties.layout.values;
-		const next_layout = layouts[(layouts.indexOf(this.section.layout) + 1) % layouts.length];
+		const colorsets = session.schema.section.properties.colorset.values;
+		const next = colorsets[(colorsets.indexOf(this.section.colorset) + 1) % colorsets.length];
 		const tr = session.tr;
-		tr.set([this.section.id, 'layout'], next_layout);
+		tr.set([this.section.id, 'colorset'], next);
 		session.apply(tr);
 	}
 }

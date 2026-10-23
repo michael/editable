@@ -80,12 +80,13 @@ With the development server running, open the [design system](http://localhost:5
 
 When customizing your Editable site, ideally update the design system first, then apply those changes to the actual site components. This gives you a concrete visual reference to work from and helps keep the site consistent, whether you build it with an agent or edit the code manually.
 
-Adjust the colors and fonts directly in `src/app.css`:
+Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets: set 1 is the page, and sections can switch to set 2 or 3. Each set assigns every color token, so everything inside it stays readable:
 
 ```css
 /* src/app.css */
 
-:root {
+:root,
+.ew-colorset-1 {
 	/* Main page background color. */
 	--background: oklch(1 0 0);
 	/* Main text and foreground color. */
@@ -100,14 +101,22 @@ Adjust the colors and fonts directly in `src/app.css`:
 	--accent: var(--editing);
 	/* Text color used on the accent color. */
 	--accent-foreground: var(--editing-foreground);
-
 	/* Primary accent for active editing controls, carets, and selections. */
 	--editing: #9747ff;
 	/* Low-opacity version of the editing accent for passive highlights. */
 	--editing-muted: oklch(from var(--editing) l c h / 0.1);
 	/* Foreground color for content displayed on the editing accent. */
 	--editing-foreground: var(--background);
+}
 
+/* Color set 2: a light grey surface. Color set 3 turns the accent into a surface. */
+.ew-colorset-2 {
+	--background: oklch(0.965 0 0);
+	--muted: oklch(1 0 0);
+	/* … and the other tokens, as in color set 1 */
+}
+
+:root {
 	/* Rounded corners for buttons and navigation items. */
 	--button-border-radius: 3rem;
 	/* Rounded corners for images and cards. */
@@ -116,7 +125,7 @@ Adjust the colors and fonts directly in `src/app.css`:
 
 /* Type scale — adjust any of these utilities to match your style. */
 @utility display-1 {
-	@apply font-sans text-5xl leading-[1.05] font-semibold tracking-[-0.035em] text-balance sm:text-6xl lg:text-7xl;
+	@apply font-sans text-5xl leading-[1.05] font-medium tracking-[-0.028em] text-balance sm:text-6xl lg:text-7xl;
 }
 ```
 

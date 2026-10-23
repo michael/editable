@@ -748,10 +748,11 @@ export const document_schema = define_document_schema({
 	section: {
 		kind: 'mark',
 		properties: {
-			layout: {
+			// Color set 1 keeps the surrounding colors; 2 and 3 switch to their colors from app.css.
+			colorset: {
 				type: 'string',
-				values: ['regular', 'muted', 'accent'],
-				default: 'regular'
+				values: ['colorset-1', 'colorset-2', 'colorset-3'],
+				default: 'colorset-1'
 			}
 		}
 	}
