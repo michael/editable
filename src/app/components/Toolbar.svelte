@@ -251,14 +251,15 @@
 	const tw_toolbar_position =
 		'bottom-[max(1rem,env(safe-area-inset-bottom,0px))] left-5 right-5 sm:left-7 sm:right-7 md:left-10 md:right-10 lg:left-14 lg:right-14';
 	const tw_toolbar_surface =
-		'pointer-events-auto min-w-0 rounded-(--button-border-radius) border border-(--stroke) bg-(--background) p-1 text-(--foreground)';
+		'pointer-events-auto min-w-0 rounded-(--button-border-radius) border border-(--stroke) bg-(--background) p-1 shadow-overlay text-(--foreground)';
 
 	const tw_toolbar_btn =
 		'pointer-events-auto inline-flex size-9 flex-none items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)';
 	const tw_toolbar_btn_disabled = 'cursor-default opacity-40';
-	const tw_toolbar_btn_hover = 'cursor-pointer hover:bg-(--muted) active:bg-(--foreground)/10';
+	const tw_toolbar_btn_hover =
+		'cursor-pointer hover:bg-(--muted) active:bg-(--foreground)/10 transition';
 	const tw_page_actions_item =
-		'flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal whitespace-nowrap text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) not-disabled:cursor-pointer not-disabled:hover:bg-(--muted) not-disabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11';
+		'flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal whitespace-nowrap text-(--foreground) transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) not-disabled:cursor-pointer not-disabled:hover:bg-(--muted) not-disabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11';
 
 	// preventDefault keeps focus and selection in the canvas; the command runs on
 	// click, which fires for both mouse and keyboard.
@@ -381,7 +382,7 @@
 	{/if}
 	{#if cancel_command && !cancel_command.disabled}
 		<button
-			class="pointer-events-auto inline-flex min-h-9 w-9 min-w-9 shrink-0 cursor-pointer items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 text-sm leading-5 font-medium text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 sm:w-auto sm:px-3 sm:py-2"
+			class="pointer-events-auto inline-flex min-h-9 w-9 min-w-9 shrink-0 cursor-pointer items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 text-sm leading-5 font-medium text-(--foreground) transition hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 sm:w-auto sm:px-3 sm:py-2"
 			onclick={() => cancel_command.execute()}
 			use:tooltip={{ label: 'Cancel editing', keys: ['⌃', '⎋'] }}
 			aria-label={cancel_button_label}
@@ -396,7 +397,7 @@
 
 	{#if !app_commands.save_page.disabled}
 		<button
-			class="pointer-events-auto inline-flex min-h-9 w-9 min-w-9 shrink-0 cursor-pointer items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 text-sm leading-5 font-medium text-(--editing) hover:bg-(--editing-muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--editing)/15 sm:w-auto sm:px-3 sm:py-2"
+			class="pointer-events-auto inline-flex min-h-9 w-9 min-w-9 shrink-0 cursor-pointer items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 text-sm leading-5 font-medium text-(--editing) transition hover:bg-(--editing-muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--editing)/15 sm:w-auto sm:px-3 sm:py-2"
 			onclick={() => app_commands.save_page.execute()}
 			use:tooltip={{ label: 'Save changes', keys: ['⌘', 'S'] }}
 			aria-label="Save changes"
@@ -554,7 +555,7 @@
 										bind:this={page_menu}
 										ontoggle={handle_page_menu_toggle}
 										onkeydown={handle_page_menu_keydown}
-										class="page-actions-menu w-max min-w-44 rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-1 text-(--foreground)"
+										class="page-actions-menu w-max min-w-44 rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-1 text-(--foreground) shadow-overlay"
 										popover="auto"
 										role="menu"
 										tabindex="-1"

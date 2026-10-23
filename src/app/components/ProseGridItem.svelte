@@ -36,7 +36,7 @@
 {/snippet}
 
 {#snippet plain()}
-	<div class="py-10 sm:py-14 md:py-16 lg:py-28">
+	<div class="pt-block-generous pb-block-generous">
 		<div class={['max-w-4xl', centered && 'text-center text-balance']}>
 			{@render body()}
 		</div>
@@ -45,7 +45,7 @@
 
 {#snippet card()}
 	<div
-		class="ew-boxed-prose h-full bg-(--muted) px-8 py-10"
+		class="ew-boxed-prose h-full bg-(--muted) px-6 py-8 sm:px-8 sm:py-10"
 		style:border-radius="var(--image-border-radius)"
 	>
 		<div class={[centered && 'text-center text-balance']}>
@@ -61,17 +61,3 @@
 		{@render plain()}
 	{/if}
 </Node>
-
-<style>
-	.ew-boxed-prose :global(.ew-button-secondary) {
-		background: var(--background);
-	}
-
-	.ew-boxed-prose :global(a.ew-button-secondary:hover) {
-		background: var(--muted);
-	}
-
-	.ew-boxed-prose :global(a.ew-button-secondary:active) {
-		background: color-mix(in srgb, var(--foreground) 10%, transparent);
-	}
-</style>

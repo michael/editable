@@ -39,7 +39,7 @@
 >
 	{#if open}
 		<div
-			class="fixed top-1/2 left-1/2 flex max-h-[calc(100dvh-2.5rem)] w-[min(32rem,calc(100vw-2.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-6 overflow-y-auto rounded-[min(1.5rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) px-6 py-8 text-center text-(--foreground)"
+			class="fixed top-1/2 left-1/2 flex max-h-[calc(100dvh-2.5rem)] w-[min(32rem,calc(100vw-2.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-6 overflow-y-auto rounded-[min(1.5rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) px-6 py-8 text-center text-(--foreground) shadow-overlay"
 		>
 			<div class="flex flex-col gap-2">
 				<h2 id="ew-save-conflict-title" class="m-0 display-5">
@@ -53,12 +53,12 @@
 			<div class="flex flex-wrap items-center justify-center gap-3">
 				<button
 					type="button"
-					class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-11.5"
+					class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 text-sm leading-5 whitespace-nowrap text-(--foreground) transition duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-11.5"
 					onclick={onreload}>Use their version</button
 				>
 				<button
 					type="button"
-					class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--editing) px-5 text-sm leading-5 whitespace-nowrap text-(--editing-foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)] disabled:cursor-default disabled:opacity-40 sm:h-11.5"
+					class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--editing) px-5 text-sm leading-5 whitespace-nowrap text-(--editing-foreground) transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)] disabled:cursor-default disabled:opacity-40 sm:h-11.5"
 					onclick={onoverwrite}>Save my version</button
 				>
 			</div>

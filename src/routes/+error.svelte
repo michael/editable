@@ -35,7 +35,7 @@
 				{#if can_go_back}
 					<button
 						type="button"
-						class="ew-button ew-button-secondary inline-flex min-h-11 max-w-full min-w-11 cursor-pointer items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent px-5 py-2 text-base leading-6 font-normal wrap-anywhere text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
+						class="ew-button ew-button-secondary inline-flex min-h-11 max-w-full min-w-11 cursor-pointer items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 py-2 text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
 						onclick={() => history.back()}
 					>
 						← Go back
@@ -43,7 +43,7 @@
 				{/if}
 				<a
 					href={resolve_href('/', site)}
-					class="ew-button inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-5 py-2 text-base leading-6 font-normal wrap-anywhere text-(--accent-foreground) hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)]"
+					class="ew-button inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-5 py-2 text-base leading-6 font-normal wrap-anywhere text-(--accent-foreground) transition hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)]"
 				>
 					Go to home page
 				</a>

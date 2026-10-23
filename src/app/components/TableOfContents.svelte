@@ -83,13 +83,13 @@
 	>
 		<div
 			style:anchor-name={`--toc-${toc_id}`}
-			class="group relative max-w-[calc(100vw-2.5rem)] min-w-0 rounded-(--button-border-radius) border border-(--stroke) bg-(--background) p-1 text-sm leading-5 text-(--foreground)"
+			class="group relative max-w-[calc(100vw-2.5rem)] min-w-0 rounded-(--button-border-radius) border border-(--stroke) bg-(--background) p-1 text-sm leading-5 text-(--foreground) shadow-overlay"
 		>
 			<button
 				type="button"
 				popovertarget={toc_id}
 				aria-expanded={toc_open}
-				class="relative flex min-h-9 min-w-0 cursor-pointer items-center gap-2 rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] px-3 py-2 font-medium whitespace-nowrap hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
+				class="relative flex min-h-9 min-w-0 cursor-pointer items-center gap-2 rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] px-3 py-2 font-medium whitespace-nowrap transition hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
 			>
 				<span class="min-w-0 truncate">{entries[active_entry_index]?.title}</span>
 				<svg
@@ -108,13 +108,13 @@
 				popover="auto"
 				style:position-anchor={`--toc-${toc_id}`}
 				ontoggle={(event) => (toc_open = event.newState === 'open')}
-				class="toc-menu max-h-[min(24rem,calc(100vh-6rem))] w-[min(24rem,calc(100vw-2.5rem))] flex-col overflow-y-auto overscroll-contain rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-1 text-(--foreground) focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing) [&:popover-open]:flex"
+				class="toc-menu max-h-[min(24rem,calc(100vh-6rem))] w-[min(24rem,calc(100vw-2.5rem))] flex-col overflow-y-auto overscroll-contain rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-1 text-(--foreground) shadow-overlay focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing) [&:popover-open]:flex"
 				aria-label="Table of contents"
 			>
 				{#each entries as entry, index (entry.href)}
 					<a
 						href={entry.href}
-						class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere whitespace-normal text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
+						class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere whitespace-normal text-(--foreground) transition hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
 						aria-current={index === active_entry_index ? 'location' : undefined}
 						onclick={close_toc_menu}
 					>

@@ -21,11 +21,11 @@
 </script>
 
 <div
-	class="pointer-events-auto absolute z-30 mb-3 inline-flex max-w-[calc(100vw-2.5rem)] gap-1 rounded-(--button-border-radius) border border-(--stroke) bg-(--background) p-1 text-(--foreground)"
+	class="pointer-events-auto absolute z-30 mb-3 inline-flex max-w-[calc(100vw-2.5rem)] gap-1 rounded-(--button-border-radius) border border-(--stroke) bg-(--background) p-1 text-(--foreground) shadow-overlay"
 	style="position-anchor: --code-{node.id}; position-area: block-start span-inline-end;"
 >
 	<label
-		class="relative inline-flex min-h-9 min-w-0 cursor-pointer items-center gap-2 rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] px-3 text-sm leading-5 font-medium hover:bg-(--muted) active:bg-(--foreground)/10 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-(--editing)"
+		class="has-transition relative inline-flex min-h-9 min-w-0 cursor-pointer items-center gap-2 rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] px-3 text-sm leading-5 font-medium transition hover:bg-(--muted) focus-visible:outline-2 active:bg-(--foreground)/10 has-focus-visible:outline-offset-2 has-focus-visible:outline-(--editing)"
 	>
 		<span class="truncate">{code_languages[node.language]}</span>
 		<svg
@@ -52,7 +52,7 @@
 		</select>
 	</label>
 	<label
-		class="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-2 rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] px-3 text-sm leading-5 font-medium hover:bg-(--muted) active:bg-(--foreground)/10"
+		class="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-2 rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] px-3 text-sm leading-5 font-medium transition hover:bg-(--muted) active:bg-(--foreground)/10"
 	>
 		<input
 			type="checkbox"

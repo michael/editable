@@ -16,8 +16,7 @@
 			this={render_as_link ? 'a' : 'div'}
 			href={render_as_link ? node.href : undefined}
 			target={render_as_link && node.target !== '_self' ? node.target : undefined}
-			class="inline-block decoration-transparent underline-offset-2 outline-2 outline-transparent hover:text-(--foreground) hover:underline hover:decoration-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
-			class:hover:underline={render_as_link}
+			class="inline-block text-(--muted-foreground) outline-2 outline-transparent transition hover:text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
 		>
 			<TextProperty class="inline" path={[...path, 'label']} placeholder="Link" />
 		</svelte:element>

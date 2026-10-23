@@ -25,6 +25,6 @@
 		href: !svedit.editable ? get_link_href(node?.href) : undefined,
 		target: !svedit.editable && node?.target !== '_self' ? node?.target : undefined
 	}}
-	class="underline decoration-[0.0625em] underline-offset-[0.125em] hover:decoration-[0.125em] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:decoration-[0.125em]"
+	class="underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition hover:decoration-current focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
 	style="anchor-name: --{serialize_path(path)};">{content}</svelte:element
 >

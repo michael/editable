@@ -859,7 +859,7 @@ Updated: ${updated_at_label}`;
 			<button
 				bind:this={menu_item_refs[0]}
 				type="button"
-				class="menu-item flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
+				class="menu-item flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
 				onclick={open_in_new_tab}
 				onfocus={() => {
 					menu_selected_index = 0;
@@ -870,7 +870,7 @@ Updated: ${updated_at_label}`;
 			<button
 				bind:this={menu_item_refs[1]}
 				type="button"
-				class="menu-item flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11 {menu_item.is_home_page
+				class="menu-item flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11 {menu_item.is_home_page
 					? 'menu-item-disabled'
 					: ''}"
 				onclick={open_page_url_dialog}
@@ -884,7 +884,7 @@ Updated: ${updated_at_label}`;
 			<button
 				bind:this={menu_item_refs[2]}
 				type="button"
-				class="menu-item flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11 {menu_item.is_home_page
+				class="menu-item flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11 {menu_item.is_home_page
 					? 'menu-item-disabled'
 					: 'menu-item-danger'}"
 				onclick={open_confirm}
@@ -915,7 +915,7 @@ Updated: ${updated_at_label}`;
 			<div class="confirm-actions">
 				<button
 					type="button"
-					class="confirm-btn inline-flex min-h-9 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+					class="confirm-btn inline-flex min-h-9 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 					onclick={close_unlisted_info}
 				>
 					Got it
@@ -953,7 +953,7 @@ Updated: ${updated_at_label}`;
 			<div class="confirm-actions">
 				<button
 					type="button"
-					class="confirm-btn inline-flex min-h-9 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+					class="confirm-btn inline-flex min-h-9 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 					onclick={close_shadowed_info}
 				>
 					Got it
@@ -1476,7 +1476,7 @@ Updated: ${updated_at_label}`;
 		border-radius: min(1rem, var(--button-border-radius));
 		background: var(--background);
 		color: var(--foreground);
-		box-shadow: none;
+		box-shadow: var(--shadow-overlay);
 	}
 
 	.menu-item-danger {
@@ -1498,7 +1498,7 @@ Updated: ${updated_at_label}`;
 		border-radius: min(1rem, var(--button-border-radius));
 		background: var(--background);
 		color: var(--foreground);
-		box-shadow: none;
+		box-shadow: var(--shadow-overlay);
 	}
 
 	.unlisted-info-panel {
