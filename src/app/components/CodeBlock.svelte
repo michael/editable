@@ -4,6 +4,7 @@
 	import { Node, TextProperty } from 'svedit';
 	import { lazy_highlight_editable_code as highlight_editable_code } from '#lib/lazy_highlight_editable_code.js';
 	import { highlight_code } from '#lib/code_highlighting.js';
+	import { tooltip } from '#app/tooltip.js';
 
 	const svedit = get_svedit_context();
 	let { path, mark: section = null } = $props();
@@ -63,8 +64,8 @@
 			<button
 				type="button"
 				class="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) text-(--foreground) transition-colors duration-150 hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 lg:size-9"
-				title="Copy code"
 				aria-label="Copy code"
+				use:tooltip={{ label: 'Copy code' }}
 				onclick={copy_code}
 			>
 				<svg class="size-5 lg:size-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
