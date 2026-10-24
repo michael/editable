@@ -106,7 +106,9 @@ export class CycleLayoutCommand extends Command {
 
 /**
  * Command that cycles the selected section through its color sets,
- * in the order the schema lists them.
+ * in the order the schema lists them. A single block outside a section
+ * gets a section of its own with the second color set. Several blocks
+ * need a section first, since grouping them changes their spacing.
  */
 export class CycleColorsetCommand extends Command {
 	section = $derived.by(() => {
@@ -114,27 +116,38 @@ export class CycleColorsetCommand extends Command {
 		return mark?.node?.type === 'section' ? mark : null;
 	});
 	active = $derived(this.section !== null && this.section.node.colorset !== 'colorset-1');
+	unsectioned_blocks = $derived.by(() => {
+		const { selection, selected_marks, available_mark_types } = this.context.session;
+		if (selection?.type !== 'node' || selected_marks.length > 0) return 0;
+		if (!available_mark_types.includes('section')) return 0;
+		return Math.abs(selection.focus_offset - selection.anchor_offset);
+	});
+	needs_section = $derived(this.context.editable && this.unsectioned_blocks > 1);
 
 	is_enabled() {
-		return this.context.editable && this.section !== null;
+		return this.context.editable && (this.section !== null || this.unsectioned_blocks === 1);
 	}
 
 	execute() {
 		const session = this.context.session;
 		const selection = session.selection;
-		if (!this.is_enabled() || !this.section || selection?.type !== 'node') return;
-		const { node, start_offset, end_offset } = this.section;
+		if (!this.is_enabled() || selection?.type !== 'node') return;
 		const colorsets = session.schema.section.properties.colorset.values;
-		const index = colorsets.indexOf(node.colorset);
 		const tr = session.tr;
-		// Select the whole section so it's clear which blocks changed color
-		tr.set_selection({
-			type: 'node',
-			path: selection.path,
-			anchor_offset: start_offset,
-			focus_offset: end_offset
-		});
-		tr.set([node.id, 'colorset'], colorsets[(index + 1) % colorsets.length]);
+		if (this.section) {
+			const { node, start_offset, end_offset } = this.section;
+			const index = colorsets.indexOf(node.colorset);
+			// Select the whole section so it's clear which blocks changed color
+			tr.set_selection({
+				type: 'node',
+				path: selection.path,
+				anchor_offset: start_offset,
+				focus_offset: end_offset
+			});
+			tr.set([node.id, 'colorset'], colorsets[(index + 1) % colorsets.length]);
+		} else {
+			tr.toggle_mark('section', { colorset: colorsets[1] });
+		}
 		session.apply(tr);
 	}
 }

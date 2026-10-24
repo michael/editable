@@ -80,7 +80,7 @@ With the development server running, open the [design system](http://localhost:5
 
 When customizing your Editable site, ideally update the design system first, then apply those changes to the actual site components. This gives you a concrete visual reference to work from and helps keep the site consistent, whether you build it with an agent or edit the code manually.
 
-Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets: set 1 is the page, and a section can switch to set 2 or 3 from the editor toolbar. Each set assigns every color token, so everything inside it stays readable:
+Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets: set 1 is the page, and the color button in the editor toolbar switches a section, or a single block, to set 2 or 3. Each set assigns every color token, so everything inside it stays readable:
 
 ```css
 /* src/app.css */
