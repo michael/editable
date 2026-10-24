@@ -152,6 +152,78 @@
 					</div>
 				</div>
 
+				<div id="colorsets" class="space-y-5 sm:space-y-7">
+					<h3 class="text-sm font-medium">Color sets</h3>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
+						Each color set assigns every color token, so everything inside it stays readable without
+						changes of its own. Color set 1 is the page; sections switch to set 2 or 3. Code keeps
+						set 1, which its syntax colors are made for. Editable text on an accent fill, such as a
+						primary button or a highlight, adds
+						<code
+							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
+							>ew-native-selection</code
+						>, so its caret and text selection stay visible.
+					</p>
+					<!-- Each specimen is one element with its color set class, background, and foreground. -->
+					<div class="grid grid-cols-1 gap-5 sm:gap-7 lg:grid-cols-3">
+						<div
+							class="ew-colorset-1 flex flex-col gap-4 rounded-(--image-border-radius) border border-(--stroke) bg-(--background) p-5 text-(--foreground)"
+						>
+							<p class="body-base">Color set 1</p>
+							<p class="body-sm text-(--muted-foreground)">The page.</p>
+							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
+							<div class="flex flex-wrap gap-2">
+								<span
+									class="inline-flex min-h-9 items-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-3 text-sm leading-5 text-(--accent-foreground)"
+									>Primary</span
+								>
+								<span
+									class="inline-flex min-h-9 items-center rounded-(--button-border-radius) border border-(--stroke) px-3 text-sm leading-5"
+									>Secondary</span
+								>
+							</div>
+						</div>
+						<div
+							class="ew-colorset-2 flex flex-col gap-4 rounded-(--image-border-radius) border border-(--stroke) bg-(--background) p-5 text-(--foreground)"
+						>
+							<p class="body-base">Color set 2</p>
+							<p class="body-sm text-(--muted-foreground)">
+								Light grey. Its muted surface is white, so boxes lift off it.
+							</p>
+							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
+							<div class="flex flex-wrap gap-2">
+								<span
+									class="inline-flex min-h-9 items-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-3 text-sm leading-5 text-(--accent-foreground)"
+									>Primary</span
+								>
+								<span
+									class="inline-flex min-h-9 items-center rounded-(--button-border-radius) border border-(--stroke) px-3 text-sm leading-5"
+									>Secondary</span
+								>
+							</div>
+						</div>
+						<div
+							class="ew-colorset-3 flex flex-col gap-4 rounded-(--image-border-radius) border border-(--stroke) bg-(--background) p-5 text-(--foreground)"
+						>
+							<p class="body-base">Color set 3</p>
+							<p class="body-sm text-(--muted-foreground)">
+								The accent as a surface. Accent and editing colors turn to the foreground.
+							</p>
+							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
+							<div class="flex flex-wrap gap-2">
+								<span
+									class="inline-flex min-h-9 items-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-3 text-sm leading-5 text-(--accent-foreground)"
+									>Primary</span
+								>
+								<span
+									class="inline-flex min-h-9 items-center rounded-(--button-border-radius) border border-(--stroke) px-3 text-sm leading-5"
+									>Secondary</span
+								>
+							</div>
+						</div>
+					</div>
+				</div>
+
 				<div class="space-y-5 sm:space-y-7">
 					<h3 class="text-sm font-medium">Font families</h3>
 					<div class="grid grid-cols-1 gap-x-5 gap-y-8 sm:gap-x-7 lg:grid-cols-3 lg:gap-y-7">
@@ -828,7 +900,7 @@
 					-->
 						<p class="max-w-prose body-base">
 							Highlight <mark
-								class="rounded-[min(var(--button-border-radius),0.25em)] bg-(--accent) box-decoration-clone px-[0.25em] py-[0.125em] text-(--accent-foreground)"
+								class="ew-native-selection rounded-[min(var(--button-border-radius),0.25em)] bg-(--accent) box-decoration-clone px-[0.25em] py-[0.125em] text-(--accent-foreground)"
 								>the part worth remembering</mark
 							>, not the whole paragraph.
 						</p>
@@ -897,7 +969,7 @@
 						<!-- Main action. Mix in sRGB for visible feedback even with black accents; keep text opaque. -->
 						<button
 							type="button"
-							class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
+							class="ew-native-selection inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
 						>
 							Continue
 						</button>
@@ -956,7 +1028,7 @@
 						<!-- Main action. Mix in sRGB for visible feedback even with black accents; keep text opaque. -->
 						<button
 							type="button"
-							class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-3 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
+							class="ew-native-selection inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-3 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
 						>
 							Continue
 						</button>
@@ -1002,7 +1074,7 @@
 						<button
 							type="button"
 							disabled
-							class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
+							class="ew-native-selection inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
 							>Continue</button
 						>
 					</div>
@@ -1020,7 +1092,7 @@
 						<button
 							type="button"
 							disabled
-							class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-3 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
+							class="ew-native-selection inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-3 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
 							>Continue</button
 						>
 					</div>

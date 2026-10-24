@@ -740,7 +740,14 @@ export const document_schema = define_document_schema({
 	},
 	section: {
 		kind: 'mark',
-		properties: {}
+		properties: {
+			// Color sets are defined in app.css; color set 1 is the page's own.
+			colorset: {
+				type: 'string',
+				values: ['colorset-1', 'colorset-2', 'colorset-3'],
+				default: 'colorset-1'
+			}
+		}
 	}
 });
 

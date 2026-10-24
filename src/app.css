@@ -40,7 +40,10 @@
 	font-display: swap;
 }
 
-:root {
+/* Color sets: each one assigns every color token. Color set 1 is the page; sections can switch to
+another set, and everything inside follows its tokens. */
+:root,
+.ew-colorset-1 {
 	/* Main page background color. */
 	--background: oklch(1 0 0);
 	/* Main text and foreground color. */
@@ -62,7 +65,38 @@
 	--editing-muted: oklch(from var(--editing) l c h / 0.1);
 	/* Foreground color for content displayed on the editing accent. */
 	--editing-foreground: var(--background);
+}
 
+/* Color set 2: a light grey surface. Its muted surface is white, so boxes lift off it. */
+.ew-colorset-2 {
+	--background: oklch(0.97 0 0);
+	--foreground: oklch(0 0 0);
+	--muted: oklch(1 0 0);
+	--stroke: oklch(0.9 0 0);
+	--muted-foreground: oklch(0.52 0 0);
+	--accent: oklch(0 0 0);
+	--accent-foreground: oklch(1 0 0);
+	--editing: oklch(60% 0.22 283);
+	--editing-muted: oklch(from var(--editing) l c h / 0.1);
+	--editing-foreground: oklch(1 0 0);
+}
+
+/* Color set 3: the accent as a surface. Accent and editing colors turn to the foreground to stay
+visible. */
+.ew-colorset-3 {
+	--background: oklch(0 0 0);
+	--foreground: oklch(1 0 0);
+	--muted: color-mix(in srgb, var(--foreground) 12%, var(--background));
+	--stroke: color-mix(in srgb, var(--foreground) 35%, var(--background));
+	--muted-foreground: color-mix(in srgb, var(--foreground) 75%, var(--background));
+	--accent: var(--foreground);
+	--accent-foreground: var(--background);
+	--editing: var(--foreground);
+	--editing-muted: oklch(from var(--editing) l c h / 0.25);
+	--editing-foreground: var(--background);
+}
+
+:root {
 	/* Syntax palette from Zed's One Light theme. */
 	/* https://github.com/zed-industries/zed/blob/main/assets/themes/one/one.json */
 	--code-foreground: #242529;
@@ -141,6 +175,32 @@
 
 .ew-code-block ::highlight(ew-code-punctuation) {
 	color: var(--code-punctuation);
+}
+
+/* Svedit sets the caret color on the canvas; color sets set it again for their content.
+The selectors skip the states where Svedit hides the caret. */
+.svedit-canvas:not(.hide-selection, .node-caret, .property-selection)
+	:is(.ew-colorset-1, .ew-colorset-2, .ew-colorset-3) {
+	caret-color: var(--editing);
+}
+
+/* On accent fills, such as primary buttons and highlights, the editing color may match the fill.
+There the caret follows the text color and text selection uses the system colors. */
+.svedit-canvas:not(.hide-selection, .node-caret, .property-selection) .ew-native-selection {
+	caret-color: auto;
+}
+
+.svedit-canvas:not(.hide-selection) :is(.ew-native-selection, .ew-native-selection *)::selection {
+	background-color: Highlight;
+	color: HighlightText;
+}
+
+/* Selection frames sit outside the content and keep the page's editing color. Edges in the page
+background keep them visible on any color set, even one in the editing color itself. */
+.svedit :is(.selected-node-overlay, .selected-property-overlay) {
+	box-shadow:
+		0 0 0 1.5px var(--background),
+		inset 0 0 0 1.5px var(--background);
 }
 
 /* Dim custom selection frames when the editor canvas loses focus. */

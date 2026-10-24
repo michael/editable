@@ -105,6 +105,32 @@ export class CycleLayoutCommand extends Command {
 }
 
 /**
+ * Command that cycles the selected section through its color sets,
+ * in the order the schema lists them.
+ */
+export class CycleColorsetCommand extends Command {
+	section = $derived.by(() => {
+		const node = this.context.session.active_mark?.node;
+		return node?.type === 'section' ? node : null;
+	});
+	active = $derived(this.section !== null && this.section.colorset !== 'colorset-1');
+
+	is_enabled() {
+		return this.context.editable && this.section !== null;
+	}
+
+	execute() {
+		if (!this.is_enabled() || !this.section) return;
+		const session = this.context.session;
+		const colorsets = session.schema.section.properties.colorset.values;
+		const index = colorsets.indexOf(this.section.colorset);
+		const tr = session.tr;
+		tr.set([this.section.id, 'colorset'], colorsets[(index + 1) % colorsets.length]);
+		session.apply(tr);
+	}
+}
+
+/**
  * Command that cycles through available node types in a node array.
  * Direction can be 'next' or 'previous'.
  */
