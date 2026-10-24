@@ -15,8 +15,7 @@ import {
 	BreakTextNodeCommand,
 	ToggleMarkCommand,
 	UndoCommand,
-	RedoCommand,
-	SelectParentCommand
+	RedoCommand
 } from 'svedit';
 import type {
 	DocumentNode,
@@ -32,6 +31,7 @@ import nanoid from './nanoid.js';
 import {
 	CycleLayoutCommand,
 	CycleColorsetCommand,
+	SelectParentCommand,
 	CycleNodeTypeCommand,
 	ToggleLinkCommand,
 	RemoveLinkCommand,

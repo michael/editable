@@ -110,23 +110,71 @@ export class CycleLayoutCommand extends Command {
  */
 export class CycleColorsetCommand extends Command {
 	section = $derived.by(() => {
-		const node = this.context.session.active_mark?.node;
-		return node?.type === 'section' ? node : null;
+		const mark = this.context.session.active_mark;
+		return mark?.node?.type === 'section' ? mark : null;
 	});
-	active = $derived(this.section !== null && this.section.colorset !== 'colorset-1');
+	active = $derived(this.section !== null && this.section.node.colorset !== 'colorset-1');
 
 	is_enabled() {
 		return this.context.editable && this.section !== null;
 	}
 
 	execute() {
-		if (!this.is_enabled() || !this.section) return;
 		const session = this.context.session;
+		const selection = session.selection;
+		if (!this.is_enabled() || !this.section || selection?.type !== 'node') return;
+		const { node, start_offset, end_offset } = this.section;
 		const colorsets = session.schema.section.properties.colorset.values;
-		const index = colorsets.indexOf(this.section.colorset);
+		const index = colorsets.indexOf(node.colorset);
 		const tr = session.tr;
-		tr.set([this.section.id, 'colorset'], colorsets[(index + 1) % colorsets.length]);
+		// Select the whole section so it's clear which blocks changed color
+		tr.set_selection({
+			type: 'node',
+			path: selection.path,
+			anchor_offset: start_offset,
+			focus_offset: end_offset
+		});
+		tr.set([node.id, 'colorset'], colorsets[(index + 1) % colorsets.length]);
 		session.apply(tr);
+	}
+}
+
+/**
+ * Command that selects the parent of the current selection. Blocks inside a
+ * section select the whole section first.
+ */
+export class SelectParentCommand extends Command {
+	section = $derived.by(() => {
+		const { selection, active_mark } = this.context.session;
+		if (selection?.type !== 'node' || active_mark?.node?.type !== 'section') return null;
+		const start = Math.min(selection.anchor_offset, selection.focus_offset);
+		const end = Math.max(selection.anchor_offset, selection.focus_offset);
+		const { start_offset, end_offset } = active_mark;
+		const inside = start >= start_offset && end <= end_offset;
+		const whole = start === start_offset && end === end_offset;
+		return inside && !whole ? active_mark : null;
+	});
+
+	is_enabled() {
+		const selection = this.context.session.selection;
+		return (
+			this.context.editable && Boolean(this.section || (selection && selection.path.length > 3))
+		);
+	}
+
+	execute() {
+		if (!this.is_enabled()) return;
+		const session = this.context.session;
+		if (this.section && session.selection) {
+			session.selection = {
+				type: 'node',
+				path: session.selection.path,
+				anchor_offset: this.section.start_offset,
+				focus_offset: this.section.end_offset
+			};
+		} else {
+			session.select_parent();
+		}
 	}
 }
 
