@@ -500,7 +500,7 @@
 		height: 32px;
 		max-height: 50%;
 		border-radius: 2px;
-		background: var(--editing, oklch(60% 0.22 283));
+		background: var(--editing, oklch(55.8% 0.185 282));
 		opacity: 0.8;
 	}
 
@@ -509,7 +509,7 @@
 		width: 32px;
 		max-width: 50%;
 		border-radius: 2px;
-		background: var(--editing, oklch(60% 0.22 283));
+		background: var(--editing, oklch(55.8% 0.185 282));
 		opacity: 0.8;
 	}
 
@@ -519,7 +519,7 @@
 		top: -24px;
 		left: 50%;
 		transform: translateX(-50%);
-		background: var(--editing, oklch(60% 0.22 283));
+		background: var(--editing, oklch(55.8% 0.185 282));
 		color: var(--background);
 		font-size: 11px;
 		font-weight: 600;

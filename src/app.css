@@ -55,12 +55,12 @@ another set, and everything inside follows its tokens. */
 	/* Text color for secondary or de-emphasized content. */
 	--muted-foreground: oklch(0.55 0 0);
 	/* Strong accent color for primary actions and highlights. */
-	--accent: oklch(0 0 0);
+	--accent: var(--editing);
 	/* Text color used on the accent color. */
-	--accent-foreground: oklch(1 0 0);
+	--accent-foreground: var(--editing-foreground);
 
 	/* Primary accent for active editing controls, carets, and selections. */
-	--editing: oklch(60% 0.22 283);
+	--editing: oklch(55.8% 0.185 282);
 	/* Low-opacity version of the editing accent for passive highlights. */
 	--editing-muted: oklch(from var(--editing) l c h / 0.1);
 	/* Foreground color for content displayed on the editing accent. */
@@ -74,26 +74,48 @@ another set, and everything inside follows its tokens. */
 	--muted: oklch(1 0 0);
 	--stroke: oklch(0.9 0 0);
 	--muted-foreground: oklch(0.52 0 0);
-	--accent: oklch(0 0 0);
-	--accent-foreground: oklch(1 0 0);
-	--editing: oklch(60% 0.22 283);
+	--accent: var(--editing);
+	--accent-foreground: var(--editing-foreground);
+	--editing: oklch(55.8% 0.185 282);
 	--editing-muted: oklch(from var(--editing) l c h / 0.1);
 	--editing-foreground: oklch(1 0 0);
 }
 
-/* Color set 3: the accent as a surface. Accent and editing colors turn to the foreground to stay
-visible. */
+/* Color set 3: the accent as a surface. Accent and editing colors turn to the foreground to stay visible. */
 .ew-colorset-3 {
-	--background: oklch(0 0 0);
+	--background: oklch(55.8% 0.185 282);
 	--foreground: oklch(1 0 0);
-	--muted: color-mix(in srgb, var(--foreground) 12%, var(--background));
-	--stroke: color-mix(in srgb, var(--foreground) 35%, var(--background));
-	--muted-foreground: color-mix(in srgb, var(--foreground) 75%, var(--background));
+	--muted: oklch(61% 0.16 283);
+	--stroke: oklch(71% 0.12 285);
+	--muted-foreground: oklch(89% 0.045 288);
 	--accent: var(--foreground);
 	--accent-foreground: var(--background);
 	--editing: var(--foreground);
 	--editing-muted: oklch(from var(--editing) l c h / 0.25);
 	--editing-foreground: var(--background);
+}
+
+/* An accent surface, such as a boxed accent item, fills with the accent of its color set. Its children
+take every token from that accent pair, so the color set controls them; only muted is derived. The surface
+keeps the pair in --ew-surface*, since the children can't redefine tokens from themselves. */
+.ew-accent-surface {
+	--ew-surface: var(--accent);
+	--ew-surface-foreground: var(--accent-foreground);
+	background: var(--ew-surface);
+	color: var(--ew-surface-foreground);
+}
+
+.ew-accent-surface > * {
+	--background: var(--ew-surface);
+	--foreground: var(--ew-surface-foreground);
+	--muted: oklch(from var(--ew-surface-foreground) l c h / 0.15);
+	--stroke: var(--ew-surface-foreground);
+	--muted-foreground: var(--ew-surface-foreground);
+	--accent: var(--ew-surface-foreground);
+	--accent-foreground: var(--ew-surface);
+	--editing: var(--ew-surface-foreground);
+	--editing-muted: oklch(from var(--editing) l c h / 0.25);
+	--editing-foreground: var(--ew-surface);
 }
 
 :root {
@@ -177,10 +199,10 @@ visible. */
 	color: var(--code-punctuation);
 }
 
-/* Svedit sets the caret color on the canvas; color sets set it again for their content.
-The selectors skip the states where Svedit hides the caret. */
+/* Svedit sets the caret color on the canvas; color sets and accent surfaces set it again for their
+content. The selectors skip the states where Svedit hides the caret. */
 .svedit-canvas:not(.hide-selection, .node-caret, .property-selection)
-	:is(.ew-colorset-1, .ew-colorset-2, .ew-colorset-3) {
+	:is(.ew-colorset-1, .ew-colorset-2, .ew-colorset-3, .ew-accent-surface > *) {
 	caret-color: var(--editing);
 }
 

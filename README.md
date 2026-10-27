@@ -98,12 +98,12 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 	/* Text color for secondary or de-emphasized content. */
 	--muted-foreground: oklch(0.55 0 0);
 	/* Strong accent color for primary actions and highlights. */
-	--accent: oklch(0 0 0);
+	--accent: var(--editing);
 	/* Text color used on the accent color. */
-	--accent-foreground: oklch(1 0 0);
+	--accent-foreground: var(--editing-foreground);
 
 	/* Primary accent for active editing controls, carets, and selections. */
-	--editing: oklch(60% 0.22 283);
+	--editing: oklch(55.8% 0.185 282);
 	/* Low-opacity version of the editing accent for passive highlights. */
 	--editing-muted: oklch(from var(--editing) l c h / 0.1);
 	/* Foreground color for content displayed on the editing accent. */

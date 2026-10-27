@@ -12,6 +12,7 @@
 	let prose_grid_node: Nodes['prose_grid'] = $derived(svedit.session.get(prose_grid_path));
 	let layout = $derived(prose_grid_node.layout || 'plain');
 	let boxed = $derived(layout.startsWith('boxed'));
+	let accent = $derived(layout.startsWith('boxed-accent'));
 	let centered = $derived(layout.endsWith('centered-text'));
 
 	setContext('prose', {
@@ -44,8 +45,9 @@
 {/snippet}
 
 {#snippet card()}
+	<!-- Accent boxes fill with the accent of their color set; app.css gives their children matching tokens. -->
 	<div
-		class="ew-boxed-prose h-full bg-(--muted) px-8 py-10"
+		class={['ew-boxed-prose h-full px-8 py-10', accent ? 'ew-accent-surface' : 'bg-(--muted)']}
 		style:border-radius="var(--image-border-radius)"
 	>
 		<div class={[centered && 'text-center text-balance']}>

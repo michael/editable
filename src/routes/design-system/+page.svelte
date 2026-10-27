@@ -170,7 +170,9 @@
 							class="ew-colorset-1 flex flex-col gap-4 rounded-(--image-border-radius) border border-(--stroke) bg-(--background) p-5 text-(--foreground)"
 						>
 							<p class="body-base">Color set 1</p>
-							<p class="body-sm text-(--muted-foreground)">The page.</p>
+							<p class="body-sm text-(--muted-foreground)">
+								The page. Its accent is the editing color.
+							</p>
 							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
 							<div class="flex flex-wrap gap-2">
 								<span
@@ -188,7 +190,8 @@
 						>
 							<p class="body-base">Color set 2</p>
 							<p class="body-sm text-(--muted-foreground)">
-								Light grey. Its muted surface is white, so boxes lift off it.
+								Light grey. Its muted surface is white, so boxes lift off it; its accent is the
+								editing color.
 							</p>
 							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
 							<div class="flex flex-wrap gap-2">
@@ -1246,17 +1249,37 @@
 					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
 						Boxed items use a muted surface. Their secondary buttons use the background color at
 						rest and the muted color on hover. This styling applies only to secondary buttons inside
-						the box.
+						the box. Accent boxes use
+						<code
+							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
+							>ew-accent-surface</code
+						>: they fill with the accent of their color set, and their children get matching tokens,
+						so every recipe inside stays readable.
 					</p>
 				</div>
-				<div class="max-w-sm rounded-(--image-border-radius) bg-(--muted) px-8 py-10">
-					<div class="flex flex-col items-center gap-5 text-center text-balance sm:gap-7">
-						<h3 class="display-5">Make it your own</h3>
-						<p class="body-base">Start with the shared styles and adapt them to your site.</p>
+				<div class="grid items-start gap-5 sm:grid-cols-2 sm:gap-7 lg:max-w-3xl">
+					<div class="rounded-(--image-border-radius) bg-(--muted) px-8 py-10">
+						<div class="flex flex-col items-center gap-5 text-center text-balance sm:gap-7">
+							<h3 class="display-5">Make it your own</h3>
+							<p class="body-base">Start with the shared styles and adapt them to your site.</p>
+							<a
+								href="#buttons"
+								class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 py-2 text-center text-base leading-6 font-medium wrap-anywhere text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
+								>Explore buttons</a
+							>
+						</div>
+					</div>
+					<div
+						class="ew-accent-surface flex flex-col items-center gap-5 rounded-(--image-border-radius) px-8 py-10 text-center text-balance sm:gap-7"
+					>
+						<h3 class="display-5">Make it stand out</h3>
+						<p class="body-base text-(--muted-foreground)">
+							The accent of the color set, with every recipe inside still readable.
+						</p>
 						<a
 							href="#buttons"
-							class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 py-2 text-center text-base leading-6 font-medium wrap-anywhere text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
-							>Explore buttons</a
+							class="ew-native-selection inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--accent-foreground) hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)]"
+							>Get started</a
 						>
 					</div>
 				</div>
