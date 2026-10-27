@@ -18,12 +18,9 @@ rather than a border, so switching to the accent surface causes no layout shift.
 		{path}
 		class={is_empty
 			? 'bg-(--muted) text-(--foreground) shadow-[inset_0_-1px_0_var(--stroke)]'
-			: 'ew-native-selection bg-(--accent) text-(--accent-foreground)'}
+			: 'ew-accent-surface'}
 	>
-		<!-- Highlight uses the accent colors, so invert them to stay visible on the accent surface. -->
-		<div
-			class="mx-auto max-w-7xl px-5 py-2.5 text-center [--accent-foreground:var(--foreground)] [--accent:var(--background)] sm:px-7 [&_code]:text-(--foreground)"
-		>
+		<div class="mx-auto max-w-7xl px-5 py-2.5 text-center sm:px-7">
 			<TextProperty
 				tag="p"
 				class="block body-sm"
