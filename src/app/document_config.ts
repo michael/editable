@@ -448,6 +448,7 @@ export const document_config = {
 			'meta+b,ctrl+b': [commands.toggle_strong],
 			'meta+i,ctrl+i': [commands.toggle_emphasis],
 			'meta+shift+c,ctrl+shift+c': [commands.toggle_code],
+			'ctrl+shift+f': [commands.cycle_colorset],
 			'meta+u,ctrl+u': [commands.toggle_highlight],
 			'meta+shift+s,ctrl+shift+s': [commands.toggle_section],
 			'meta+d,ctrl+d': [commands.duplicate_nodes],

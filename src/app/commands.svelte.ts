@@ -106,9 +106,10 @@ export class CycleLayoutCommand extends Command {
 
 /**
  * Command that cycles the selected section through its color sets,
- * in the order the schema lists them. A single block outside a section
- * gets a section of its own with the second color set. Several blocks
- * need a section first, since grouping them changes their spacing.
+ * in the order the schema lists them. A selection inside a block selects
+ * that block first. A single block outside a section gets a section of
+ * its own with the second color set. Several blocks need a section first,
+ * since grouping them changes their spacing.
  */
 export class CycleColorsetCommand extends Command {
 	section = $derived.by(() => {
@@ -123,15 +124,43 @@ export class CycleColorsetCommand extends Command {
 		return Math.abs(selection.focus_offset - selection.anchor_offset);
 	});
 	needs_section = $derived(this.context.editable && this.unsectioned_blocks > 1);
+	// For a selection that isn't one of blocks, the block it sits in
+	block_selection = $derived.by(() => {
+		const { selection, available_mark_types } = this.context.session;
+		if (!selection || (selection.type === 'node' && available_mark_types.includes('section'))) {
+			return null;
+		}
+		for (let i = selection.path.length - 1; i > 0; i--) {
+			const index = selection.path[i];
+			const node_array_path = selection.path.slice(0, i);
+			if (typeof index !== 'number') continue;
+			if (this.context.session.inspect(node_array_path).mark_types?.includes('section')) {
+				return {
+					type: 'node' as const,
+					path: node_array_path,
+					anchor_offset: index,
+					focus_offset: index + 1
+				};
+			}
+		}
+		return null;
+	});
 
 	is_enabled() {
-		return this.context.editable && (this.section !== null || this.unsectioned_blocks === 1);
+		if (!this.context.editable) return false;
+		if (this.block_selection) return true;
+		return (
+			this.context.session.selection?.type === 'node' &&
+			(this.section !== null || this.unsectioned_blocks === 1)
+		);
 	}
 
 	execute() {
+		if (!this.is_enabled()) return;
 		const session = this.context.session;
+		if (this.block_selection) session.selection = this.block_selection;
 		const selection = session.selection;
-		if (!this.is_enabled() || selection?.type !== 'node') return;
+		if (selection?.type !== 'node') return;
 		const colorsets = session.schema.section.properties.colorset.values;
 		const tr = session.tr;
 		if (this.section) {

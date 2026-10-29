@@ -888,7 +888,7 @@
 											onclick={(e) => handle_btn_click(e, session.commands.cycle_colorset)}
 											use:tooltip={session.commands.cycle_colorset?.needs_section
 												? { label: 'Create a section first', keys: ['⌘', '⇧', 'S'] }
-												: { label: 'Section color' }}
+												: { label: 'Section color', keys: ['⌃', '⇧', 'F'] }}
 											aria-label="Section color"
 											aria-disabled={session.commands.cycle_colorset?.disabled}
 										>
