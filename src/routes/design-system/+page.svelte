@@ -541,17 +541,17 @@
 								>
 								<tr class="border-t border-(--stroke)"
 									><th scope="row" class="py-3 pr-6 text-left font-normal">1024px and above</th><td
-										class="py-3 pr-6">7rem · 112px</td
-									><td class="py-3">1.75rem · 28px</td></tr
+										class="py-3 pr-6">8rem · 128px</td
+									><td class="py-3">2rem · 32px</td></tr
 								></tbody
 							>
 						</table>
 					</div>
 					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
 						Pixel equivalents assume the default 16px root font size. Adjacent padding adds up: two
-						compact edges create a 48px gap, 56px from 1024px, always wider than the gap between
+						compact edges create a 48px gap, 64px from 1024px, always wider than the gap between
 						elements inside a block. Two generous edges create a gap four times as wide: 192px, or
-						224px from 1024px.
+						256px from 1024px.
 					</p>
 				</div>
 
@@ -566,7 +566,7 @@
 						<div class="border border-(--stroke)">
 							<div>
 								<div
-									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-28"
+									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-32"
 								>
 									Generous
 								</div>
@@ -574,7 +574,7 @@
 									<p class="body-base">Independent content</p>
 								</div>
 								<div
-									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-28"
+									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-32"
 								>
 									Generous
 								</div>
@@ -586,7 +586,7 @@
 						<div class="divide-y divide-(--stroke) border border-(--stroke)">
 							<div>
 								<div
-									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-28"
+									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-32"
 								>
 									Generous
 								</div>
@@ -594,14 +594,14 @@
 									<p class="body-base">First block</p>
 								</div>
 								<div
-									class="flex h-6 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-7"
+									class="flex h-6 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-8"
 								>
 									Compact
 								</div>
 							</div>
 							<div>
 								<div
-									class="flex h-6 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-7"
+									class="flex h-6 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-8"
 								>
 									Compact
 								</div>
@@ -609,14 +609,14 @@
 									<p class="body-base">Middle block</p>
 								</div>
 								<div
-									class="flex h-6 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-7"
+									class="flex h-6 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-8"
 								>
 									Compact
 								</div>
 							</div>
 							<div>
 								<div
-									class="flex h-6 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-7"
+									class="flex h-6 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-8"
 								>
 									Compact
 								</div>
@@ -624,7 +624,7 @@
 									<p class="body-base">Last block</p>
 								</div>
 								<div
-									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-28"
+									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-32"
 								>
 									Generous
 								</div>
