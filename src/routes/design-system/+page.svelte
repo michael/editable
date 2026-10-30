@@ -755,9 +755,9 @@
 
 				<!--
 				Use the typography utilities directly; their Tailwind definitions live in app.css.
-				Display sizes step up at sm and lg. Headings are semibold, so they stand apart from body text
-				at modest sizes; leading tightens as they grow. Weight, line height, and tracking belong to the
-				utility.
+				Display sizes are one step smaller on phones and reach full size at lg. Headings are semibold,
+				so they stand apart from body text; leading tightens as they grow. Weight, line height, and
+				tracking belong to the utility.
 				Choose the heading element for the document hierarchy, independently of its visual size.
 				These specimens are all h3 because they sit within the Typography section.
 			-->

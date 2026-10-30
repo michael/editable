@@ -126,7 +126,7 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 
 /* Type scale — adjust any of these utilities to match your style. */
 @utility display-1 {
-	@apply font-sans text-4xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl;
+	@apply font-sans text-5xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-6xl lg:text-7xl;
 }
 ```
 

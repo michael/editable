@@ -248,31 +248,31 @@ background keep them visible on any color set, even one in the editing color its
 /* Typography system */
 /******************************************************************/
 
-/* Headings use semibold, so they stand apart from regular body text at modest sizes. */
+/* Headings use semibold, so they stand apart from regular body text. */
 /* Leading tightens as headings grow. */
 /* Heading1XL */
 @utility display-1 {
-	@apply font-sans text-4xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl;
+	@apply font-sans text-5xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-6xl lg:text-7xl;
 }
 
 /* Heading1 */
 @utility display-2 {
-	@apply font-sans text-3xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl;
+	@apply font-sans text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl;
 }
 
 /* Heading2 */
 @utility display-3 {
-	@apply font-sans text-2xl leading-[1.1] font-semibold tracking-tight text-balance sm:text-3xl lg:text-4xl;
+	@apply font-sans text-3xl leading-[1.1] font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl;
 }
 
 /* Heading3 */
 @utility display-4 {
-	@apply font-sans text-xl leading-[1.15] font-semibold tracking-tight text-balance sm:text-2xl lg:text-3xl;
+	@apply font-sans text-2xl leading-[1.15] font-semibold tracking-tight text-balance sm:text-3xl lg:text-4xl;
 }
 
 /* Heading4 and gallery titles */
 @utility display-5 {
-	@apply font-sans text-lg leading-[1.25] font-semibold tracking-tight text-balance sm:text-xl lg:text-2xl;
+	@apply font-sans text-xl leading-[1.25] font-semibold tracking-tight text-balance sm:text-2xl lg:text-3xl;
 }
 
 /* Body text uses regular weight and a consistent 1.5 line height. */
