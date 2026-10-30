@@ -177,7 +177,7 @@
 	}
 
 	.media-controls:global(.touch-locked) {
-		outline: 2px solid var(--editing, oklch(60% 0.22 283));
+		outline: 2px solid var(--editing, oklch(55.8% 0.185 282));
 		outline-offset: -2px;
 	}
 

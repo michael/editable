@@ -15,8 +15,7 @@ import {
 	BreakTextNodeCommand,
 	ToggleMarkCommand,
 	UndoCommand,
-	RedoCommand,
-	SelectParentCommand
+	RedoCommand
 } from 'svedit';
 import type {
 	DocumentNode,
@@ -31,6 +30,8 @@ import type { AppCommandContext } from './commands.svelte.js';
 import nanoid from './nanoid.js';
 import {
 	CycleLayoutCommand,
+	CycleColorsetCommand,
+	SelectParentCommand,
 	CycleNodeTypeCommand,
 	ToggleLinkCommand,
 	RemoveLinkCommand,
@@ -414,6 +415,7 @@ export const document_config = {
 			toggle_code: new ToggleMarkCommand('code', context),
 			toggle_highlight: new ToggleMarkCommand('highlight', context),
 			toggle_section: new ToggleMarkCommand('section', structural_context),
+			cycle_colorset: new CycleColorsetCommand(structural_context),
 			undo: new UndoCommand(context),
 			redo: new RedoCommand(context),
 			select_parent: new SelectParentCommand(context),
@@ -446,6 +448,7 @@ export const document_config = {
 			'meta+b,ctrl+b': [commands.toggle_strong],
 			'meta+i,ctrl+i': [commands.toggle_emphasis],
 			'meta+shift+c,ctrl+shift+c': [commands.toggle_code],
+			'ctrl+shift+f': [commands.cycle_colorset],
 			'meta+u,ctrl+u': [commands.toggle_highlight],
 			'meta+shift+s,ctrl+shift+s': [commands.toggle_section],
 			'meta+d,ctrl+d': [commands.duplicate_nodes],

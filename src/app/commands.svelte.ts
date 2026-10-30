@@ -105,6 +105,122 @@ export class CycleLayoutCommand extends Command {
 }
 
 /**
+ * Command that cycles the selected section through its color sets,
+ * in the order the schema lists them. A selection inside a block selects
+ * that block first. A single block outside a section gets a section of
+ * its own with the second color set. Several blocks need a section first,
+ * since grouping them changes their spacing.
+ */
+export class CycleColorsetCommand extends Command {
+	section = $derived.by(() => {
+		const mark = this.context.session.active_mark;
+		return mark?.node?.type === 'section' ? mark : null;
+	});
+	active = $derived(this.section !== null && this.section.node.colorset !== 'colorset-1');
+	unsectioned_blocks = $derived.by(() => {
+		const { selection, selected_marks, available_mark_types } = this.context.session;
+		if (selection?.type !== 'node' || selected_marks.length > 0) return 0;
+		if (!available_mark_types.includes('section')) return 0;
+		return Math.abs(selection.focus_offset - selection.anchor_offset);
+	});
+	needs_section = $derived(this.context.editable && this.unsectioned_blocks > 1);
+	// For a selection that isn't one of blocks, the block it sits in
+	block_selection = $derived.by(() => {
+		const { selection, available_mark_types } = this.context.session;
+		if (!selection || (selection.type === 'node' && available_mark_types.includes('section'))) {
+			return null;
+		}
+		for (let i = selection.path.length - 1; i > 0; i--) {
+			const index = selection.path[i];
+			const node_array_path = selection.path.slice(0, i);
+			if (typeof index !== 'number') continue;
+			if (this.context.session.inspect(node_array_path).mark_types?.includes('section')) {
+				return {
+					type: 'node' as const,
+					path: node_array_path,
+					anchor_offset: index,
+					focus_offset: index + 1
+				};
+			}
+		}
+		return null;
+	});
+
+	is_enabled() {
+		if (!this.context.editable) return false;
+		if (this.block_selection) return true;
+		return (
+			this.context.session.selection?.type === 'node' &&
+			(this.section !== null || this.unsectioned_blocks === 1)
+		);
+	}
+
+	execute() {
+		if (!this.is_enabled()) return;
+		const session = this.context.session;
+		if (this.block_selection) session.selection = this.block_selection;
+		const selection = session.selection;
+		if (selection?.type !== 'node') return;
+		const colorsets = session.schema.section.properties.colorset.values;
+		const tr = session.tr;
+		if (this.section) {
+			const { node, start_offset, end_offset } = this.section;
+			const index = colorsets.indexOf(node.colorset);
+			// Select the whole section so it's clear which blocks changed color
+			tr.set_selection({
+				type: 'node',
+				path: selection.path,
+				anchor_offset: start_offset,
+				focus_offset: end_offset
+			});
+			tr.set([node.id, 'colorset'], colorsets[(index + 1) % colorsets.length]);
+		} else {
+			tr.toggle_mark('section', { colorset: colorsets[1] });
+		}
+		session.apply(tr);
+	}
+}
+
+/**
+ * Command that selects the parent of the current selection. Blocks inside a
+ * section select the whole section first.
+ */
+export class SelectParentCommand extends Command {
+	section = $derived.by(() => {
+		const { selection, active_mark } = this.context.session;
+		if (selection?.type !== 'node' || active_mark?.node?.type !== 'section') return null;
+		const start = Math.min(selection.anchor_offset, selection.focus_offset);
+		const end = Math.max(selection.anchor_offset, selection.focus_offset);
+		const { start_offset, end_offset } = active_mark;
+		const inside = start >= start_offset && end <= end_offset;
+		const whole = start === start_offset && end === end_offset;
+		return inside && !whole ? active_mark : null;
+	});
+
+	is_enabled() {
+		const selection = this.context.session.selection;
+		return (
+			this.context.editable && Boolean(this.section || (selection && selection.path.length > 3))
+		);
+	}
+
+	execute() {
+		if (!this.is_enabled()) return;
+		const session = this.context.session;
+		if (this.section && session.selection) {
+			session.selection = {
+				type: 'node',
+				path: session.selection.path,
+				anchor_offset: this.section.start_offset,
+				focus_offset: this.section.end_offset
+			};
+		} else {
+			session.select_parent();
+		}
+	}
+}
+
+/**
  * Command that cycles through available node types in a node array.
  * Direction can be 'next' or 'previous'.
  */
