@@ -301,19 +301,19 @@ background keep them visible on any color set, even one in the editing color its
 
 /* Defaults for each edge. Replace the utility with explicit classes for custom spacing. */
 @utility pt-block-generous {
-	@apply pt-20 sm:pt-24 lg:pt-28;
+	@apply pt-24 lg:pt-28;
 }
 
 @utility pt-block-compact {
-	@apply pt-5 sm:pt-6 lg:pt-7;
+	@apply pt-6 lg:pt-7;
 }
 
 @utility pb-block-generous {
-	@apply pb-20 sm:pb-24 lg:pb-28;
+	@apply pb-24 lg:pb-28;
 }
 
 @utility pb-block-compact {
-	@apply pb-5 sm:pb-6 lg:pb-7;
+	@apply pb-6 lg:pb-7;
 }
 
 /* EW-specific utilities */
