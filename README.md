@@ -112,7 +112,7 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 
 /* Color set 2: a light grey surface. Color set 3 turns the accent into a surface. */
 .ew-colorset-2 {
-	--background: oklch(97% 0 0);
+	--background: oklch(98% 0 0);
 	--muted: oklch(100% 0 0);
 	/* … and the other color tokens, as in color set 1 */
 }

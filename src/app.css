@@ -69,7 +69,7 @@ another set, and everything inside follows its tokens. */
 
 /* Color set 2: a light grey surface. Its muted surface is white, so boxes lift off it. */
 .ew-colorset-2 {
-	--background: oklch(97% 0 0);
+	--background: oklch(98% 0 0);
 	--foreground: oklch(0% 0 0);
 	--muted: oklch(100% 0 0);
 	--stroke: oklch(90% 0 0);
