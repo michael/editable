@@ -43,7 +43,7 @@
 	<div class="grid grid-cols-[2rem_minmax(0,1fr)] gap-3 py-0" role="listitem">
 		<div
 			contenteditable="false"
-			class="text-right text-sm leading-7 text-[color-mix(in_oklch,var(--foreground)_60%,transparent)] select-none"
+			class="text-right text-sm leading-7 text-(--accent) select-none"
 			aria-hidden="true"
 		>
 			{marker}
