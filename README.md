@@ -88,15 +88,15 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 :root,
 .ew-colorset-1 {
 	/* Main page background color. */
-	--background: oklch(1 0 0);
+	--background: oklch(100% 0 0);
 	/* Main text and foreground color. */
-	--foreground: oklch(0 0 0);
+	--foreground: oklch(0% 0 0);
 	/* Subtle background for secondary surfaces and hover states. */
-	--muted: oklch(0.98 0 0);
+	--muted: oklch(98% 0 0);
 	/* Color for borders, dividers, and other visual lines. */
-	--stroke: oklch(0.92 0 0);
+	--stroke: oklch(92% 0 0);
 	/* Text color for secondary or de-emphasized content. */
-	--muted-foreground: oklch(0.55 0 0);
+	--muted-foreground: oklch(55% 0 0);
 	/* Strong accent color for primary actions and highlights. */
 	--accent: var(--editing);
 	/* Text color used on the accent color. */
@@ -112,8 +112,8 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 
 /* Color set 2: a light grey surface. Color set 3 turns the accent into a surface. */
 .ew-colorset-2 {
-	--background: oklch(0.97 0 0);
-	--muted: oklch(1 0 0);
+	--background: oklch(97% 0 0);
+	--muted: oklch(100% 0 0);
 	/* … and the other color tokens, as in color set 1 */
 }
 

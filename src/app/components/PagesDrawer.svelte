@@ -1206,13 +1206,13 @@ Updated: ${updated_at_label}`;
 	.draft-illustration {
 		width: 100%;
 		aspect-ratio: 1;
-		background: oklch(from var(--editing, oklch(55.8% 0.185 282)) 0.985 0.012 h);
+		background: oklch(from var(--editing, oklch(55.8% 0.185 282)) 98.5% 0.012 h);
 		box-shadow: none;
 	}
 
 	.create-illustration {
-		background: oklch(from var(--editing, oklch(55.8% 0.185 282)) 0.985 0.012 h);
-		border: 1px dashed oklch(from var(--editing, oklch(55.8% 0.185 282)) 0.8 0.08 h / 0.45);
+		background: oklch(from var(--editing, oklch(55.8% 0.185 282)) 98.5% 0.012 h);
+		border: 1px dashed oklch(from var(--editing, oklch(55.8% 0.185 282)) 80% 0.08 h / 0.45);
 		box-shadow: none;
 	}
 

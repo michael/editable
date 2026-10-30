@@ -45,15 +45,15 @@ another set, and everything inside follows its tokens. */
 :root,
 .ew-colorset-1 {
 	/* Main page background color. */
-	--background: oklch(1 0 0);
+	--background: oklch(100% 0 0);
 	/* Main text and foreground color. */
-	--foreground: oklch(0 0 0);
+	--foreground: oklch(0% 0 0);
 	/* Subtle background for secondary surfaces and hover states. */
-	--muted: oklch(0.98 0 0);
+	--muted: oklch(98% 0 0);
 	/* Color for borders, dividers, and other visual lines. */
-	--stroke: oklch(0.92 0 0);
+	--stroke: oklch(92% 0 0);
 	/* Text color for secondary or de-emphasized content. */
-	--muted-foreground: oklch(0.55 0 0);
+	--muted-foreground: oklch(55% 0 0);
 	/* Strong accent color for primary actions and highlights. */
 	--accent: var(--editing);
 	/* Text color used on the accent color. */
@@ -69,22 +69,22 @@ another set, and everything inside follows its tokens. */
 
 /* Color set 2: a light grey surface. Its muted surface is white, so boxes lift off it. */
 .ew-colorset-2 {
-	--background: oklch(0.97 0 0);
-	--foreground: oklch(0 0 0);
-	--muted: oklch(1 0 0);
-	--stroke: oklch(0.9 0 0);
-	--muted-foreground: oklch(0.52 0 0);
+	--background: oklch(97% 0 0);
+	--foreground: oklch(0% 0 0);
+	--muted: oklch(100% 0 0);
+	--stroke: oklch(90% 0 0);
+	--muted-foreground: oklch(52% 0 0);
 	--accent: var(--editing);
 	--accent-foreground: var(--editing-foreground);
 	--editing: oklch(55.8% 0.185 282);
 	--editing-muted: oklch(from var(--editing) l c h / 0.1);
-	--editing-foreground: oklch(1 0 0);
+	--editing-foreground: oklch(100% 0 0);
 }
 
 /* Color set 3: the accent as a surface. Accent and editing colors turn to the foreground to stay visible. */
 .ew-colorset-3 {
 	--background: oklch(55.8% 0.185 282);
-	--foreground: oklch(1 0 0);
+	--foreground: oklch(100% 0 0);
 	--muted: oklch(61% 0.16 283);
 	--stroke: oklch(71% 0.12 285);
 	--muted-foreground: oklch(89% 0.045 288);
