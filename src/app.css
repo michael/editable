@@ -248,30 +248,31 @@ background keep them visible on any color set, even one in the editing color its
 /* Typography system */
 /******************************************************************/
 
-/* Large display headings use medium weight; smaller headings use semibold. */
+/* Headings use semibold, so they stand apart from regular body text at modest sizes. */
+/* Leading tightens as headings grow. */
 /* Heading1XL */
 @utility display-1 {
-	@apply font-sans text-6xl leading-tight font-medium tracking-tight text-balance lg:text-7xl;
+	@apply font-sans text-4xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl;
 }
 
 /* Heading1 */
 @utility display-2 {
-	@apply font-sans text-5xl leading-tight font-medium tracking-tight text-balance lg:text-6xl;
+	@apply font-sans text-3xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl;
 }
 
 /* Heading2 */
 @utility display-3 {
-	@apply font-sans text-4xl leading-tight font-medium tracking-tight text-balance lg:text-5xl;
+	@apply font-sans text-2xl leading-[1.1] font-semibold tracking-tight text-balance sm:text-3xl lg:text-4xl;
 }
 
 /* Heading3 */
 @utility display-4 {
-	@apply font-sans text-3xl leading-tight font-medium tracking-tight text-balance lg:text-4xl;
+	@apply font-sans text-xl leading-[1.15] font-semibold tracking-tight text-balance sm:text-2xl lg:text-3xl;
 }
 
 /* Heading4 and gallery titles */
 @utility display-5 {
-	@apply font-sans text-2xl leading-tight font-medium tracking-tight text-balance lg:text-3xl;
+	@apply font-sans text-lg leading-[1.25] font-semibold tracking-tight text-balance sm:text-xl lg:text-2xl;
 }
 
 /* Body text uses regular weight and a consistent 1.5 line height. */
@@ -300,19 +301,19 @@ background keep them visible on any color set, even one in the editing color its
 
 /* Defaults for each edge. Replace the utility with explicit classes for custom spacing. */
 @utility pt-block-generous {
-	@apply pt-10 sm:pt-14 md:pt-16 lg:pt-28;
+	@apply pt-12 sm:pt-16 md:pt-20 lg:pt-28;
 }
 
 @utility pt-block-compact {
-	@apply pt-4 lg:pt-7;
+	@apply pt-4 sm:pt-5 lg:pt-7;
 }
 
 @utility pb-block-generous {
-	@apply pb-10 sm:pb-14 md:pb-16 lg:pb-28;
+	@apply pb-12 sm:pb-16 md:pb-20 lg:pb-28;
 }
 
 @utility pb-block-compact {
-	@apply pb-4 lg:pb-7;
+	@apply pb-4 sm:pb-5 lg:pb-7;
 }
 
 /* EW-specific utilities */
