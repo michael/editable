@@ -81,7 +81,7 @@
 				aria-controls={carousel_id}
 				disabled={!can_go_previous}
 				onclick={() => scroll_carousel(-1)}
-				class="inline-flex size-11 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+				class="inline-flex size-11 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 			>
 				<svg
 					class="size-5 rtl:rotate-180"
@@ -100,7 +100,7 @@
 				aria-controls={carousel_id}
 				disabled={!can_go_next}
 				onclick={() => scroll_carousel(1)}
-				class="inline-flex size-11 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+				class="inline-flex size-11 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 			>
 				<svg
 					class="size-5 rtl:rotate-180"

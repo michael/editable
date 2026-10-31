@@ -20,24 +20,14 @@
 			return centered;
 		}
 	});
-
-	const heading_spacing = `
-		[&>div:has(h1)~div>h1]:pt-8
-		[&>div:has(h2)~div>h2]:pt-6
-		[&>div:has(h3)~div>h3]:pt-6
-		[&>span:has(.ew-eyebrow)~div>span.ew-eyebrow]:pt-6
-	`;
 </script>
 
 {#snippet body()}
-	<NodeArrayProperty
-		class="flex flex-col gap-5 [--row:0] sm:gap-7 {heading_spacing}"
-		path={[...path, 'body']}
-	/>
+	<NodeArrayProperty class="flex flex-col gap-5 [--row:0] sm:gap-7" path={[...path, 'body']} />
 {/snippet}
 
 {#snippet plain()}
-	<div class="py-10 sm:py-14 md:py-16 lg:py-28">
+	<div class="pt-block-generous pb-block-generous">
 		<div class={['max-w-4xl', centered && 'text-center text-balance']}>
 			{@render body()}
 		</div>
@@ -47,7 +37,7 @@
 {#snippet card()}
 	<!-- Accent boxes fill with the accent of their color set; app.css gives their children matching tokens. -->
 	<div
-		class={['ew-boxed-prose h-full px-8 py-10', accent ? 'ew-accent-surface' : 'bg-(--muted)']}
+		class={['h-full px-6 py-8 sm:px-8 sm:py-10', accent ? 'ew-accent-surface' : 'bg-(--muted)']}
 		style:border-radius="var(--image-border-radius)"
 	>
 		<div class={[centered && 'text-center text-balance']}>
@@ -63,17 +53,3 @@
 		{@render plain()}
 	{/if}
 </Node>
-
-<style>
-	.ew-boxed-prose :global(.ew-button-secondary) {
-		background: var(--background);
-	}
-
-	.ew-boxed-prose :global(a.ew-button-secondary:hover) {
-		background: var(--muted);
-	}
-
-	.ew-boxed-prose :global(a.ew-button-secondary:active) {
-		background: color-mix(in srgb, var(--foreground) 10%, transparent);
-	}
-</style>

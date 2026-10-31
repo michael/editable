@@ -17,16 +17,16 @@
 		this={render_as_link ? 'a' : 'div'}
 		href={render_as_link ? node.href : undefined}
 		target={render_as_link && node.target !== '_self' ? node.target : undefined}
-		class="group/listing-link block py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) sm:py-2 md:py-3"
+		class="group/listing-link block py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) md:py-5"
 		use:reveal
 	>
 		<div class="flex items-center justify-between gap-6">
 			<div class="min-w-2/3 flex-1">
 				<TextProperty
-					class="body-base {node.href
-						? 'underline decoration-[0.0625em] underline-offset-[0.125em]'
+					class="body-base font-semibold {node.href
+						? 'underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors'
 						: ''} {render_as_link
-						? 'group-hover/listing-link:decoration-[0.125em] group-active/listing-link:decoration-[0.125em]'
+						? 'group-hover/listing-link:decoration-current group-active/listing-link:decoration-current'
 						: ''}"
 					path={[...path, 'title']}
 					placeholder="Title"

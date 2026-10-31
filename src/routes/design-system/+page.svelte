@@ -26,8 +26,8 @@
 				class="space-y-12 lg:space-y-16"
 			>
 				<div class="space-y-2">
-					<h2 id="foundations-heading" class="text-xl font-medium">Foundations</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="foundations-heading" class="display-5">Foundations</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Colors, fonts, and corner radii come from the shared tokens in
 						<code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
@@ -37,7 +37,7 @@
 				</div>
 
 				<div class="space-y-5 sm:space-y-7">
-					<h3 class="text-sm font-medium">Colors and surfaces</h3>
+					<h3 class="body-sm font-semibold">Colors and surfaces</h3>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Keep each surface with its foreground color. Neutral controls use the muted surface on
 						hover and a 10% foreground tint on press. Primary actions and editing actions use their
@@ -153,7 +153,7 @@
 				</div>
 
 				<div id="colorsets" class="space-y-5 sm:space-y-7">
-					<h3 class="text-sm font-medium">Color sets</h3>
+					<h3 class="body-sm font-semibold">Color sets</h3>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Each color set assigns every color token, so everything inside it stays readable without
 						changes of its own. Color set 1 is the page; sections switch to set 2 or 3. Code keeps
@@ -228,7 +228,7 @@
 				</div>
 
 				<div class="space-y-5 sm:space-y-7">
-					<h3 class="text-sm font-medium">Font families</h3>
+					<h3 class="body-sm font-semibold">Font families</h3>
 					<div class="grid grid-cols-1 gap-x-5 gap-y-8 sm:gap-x-7 lg:grid-cols-3 lg:gap-y-7">
 						<div class="space-y-3">
 							<p class="font-sans text-2xl">Clear words.</p>
@@ -261,7 +261,7 @@
 				</div>
 
 				<div class="space-y-5 sm:space-y-7">
-					<h3 class="text-sm font-medium">Corner radii</h3>
+					<h3 class="body-sm font-semibold">Corner radii</h3>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Buttons and pill shells use the button radius. Popovers cap it at 1rem; their inner rows
 						and pill controls subtract 4px padding and a 1px border, clamped at zero. Images use
@@ -327,8 +327,8 @@
 
 			<section id="page-limiter" aria-labelledby="page-limiter-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="page-limiter-heading" class="text-xl font-medium">Page limiter</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="page-limiter-heading" class="display-5">Page limiter</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Center each block with <code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>mx-auto max-w-7xl</code
@@ -369,7 +369,7 @@
 	&lt;/div&gt;
 &lt;/div&gt;</code
 					></pre>
-				<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+				<p class="max-w-prose body-sm text-(--muted-foreground)">
 					Keep full-width backgrounds outside the limiter and choose vertical spacing per block.
 					Narrower reading columns can sit inside this shared page width. Apply the side padding
 					once so adjacent blocks line up.
@@ -378,7 +378,7 @@
 
 			<section id="content-tracks" aria-labelledby="content-tracks-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="content-tracks-heading" class="text-xl font-medium">Content tracks</h2>
+					<h2 id="content-tracks-heading" class="display-5">Content tracks</h2>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						A track controls how much of the page limiter a block occupies and where it sits. Prose
 						and descriptive listings share narrow left, center, and right tracks, plus a wide
@@ -503,8 +503,8 @@
 
 			<section id="block-spacing" aria-labelledby="block-spacing-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="block-spacing-heading" class="text-xl font-medium">Vertical block spacing</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="block-spacing-heading" class="display-5">Vertical block spacing</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Generous spacing separates sections. Compact spacing pulls related blocks together. Each
 						block has its own top and bottom padding, chosen independently.
 					</p>
@@ -521,7 +521,7 @@
 				</ul>
 
 				<div class="space-y-3">
-					<h3 class="text-sm font-medium">Padding per edge</h3>
+					<h3 class="body-sm font-semibold">Padding per edge</h3>
 					<div class="overflow-x-auto">
 						<table class="w-full max-w-3xl text-sm leading-6">
 							<caption class="sr-only">Responsive generous and compact padding values</caption>
@@ -535,32 +535,23 @@
 							>
 							<tbody
 								><tr class="border-t border-(--stroke)"
-									><th scope="row" class="py-3 pr-6 text-left font-normal">Below 640px</th><td
-										class="py-3 pr-6">2.5rem · 40px</td
-									><td class="py-3">1rem · 16px</td></tr
-								>
-								<tr class="border-t border-(--stroke)"
-									><th scope="row" class="py-3 pr-6 text-left font-normal">640–767px</th><td
-										class="py-3 pr-6">3.5rem · 56px</td
-									><td class="py-3">1rem · 16px</td></tr
-								>
-								<tr class="border-t border-(--stroke)"
-									><th scope="row" class="py-3 pr-6 text-left font-normal">768–1023px</th><td
-										class="py-3 pr-6">4rem · 64px</td
-									><td class="py-3">1rem · 16px</td></tr
+									><th scope="row" class="py-3 pr-6 text-left font-normal">Below 1024px</th><td
+										class="py-3 pr-6">6rem · 96px</td
+									><td class="py-3">1.5rem · 24px</td></tr
 								>
 								<tr class="border-t border-(--stroke)"
 									><th scope="row" class="py-3 pr-6 text-left font-normal">1024px and above</th><td
-										class="py-3 pr-6">7rem · 112px</td
-									><td class="py-3">1.75rem · 28px</td></tr
+										class="py-3 pr-6">8rem · 128px</td
+									><td class="py-3">2rem · 32px</td></tr
 								></tbody
 							>
 						</table>
 					</div>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Pixel equivalents assume the default 16px root font size. Adjacent padding adds up: two
-						compact edges create a 32px gap, or 56px from 1024px. Two generous edges create an 80px,
-						112px, 128px, or 224px gap across the same viewport ranges.
+						compact edges create a 48px gap, 64px from 1024px, always wider than the gap between
+						elements inside a block. Two generous edges create a gap four times as wide: 192px, or
+						256px from 1024px.
 					</p>
 				</div>
 
@@ -571,11 +562,11 @@
 			-->
 				<div class="grid items-start gap-10 md:grid-cols-2">
 					<div class="space-y-4">
-						<h3 class="text-sm font-medium">Standalone block</h3>
+						<h3 class="body-sm font-semibold">Standalone block</h3>
 						<div class="border border-(--stroke)">
 							<div>
 								<div
-									class="flex h-10 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) sm:h-14 md:h-16 lg:h-28"
+									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-32"
 								>
 									Generous
 								</div>
@@ -583,7 +574,7 @@
 									<p class="body-base">Independent content</p>
 								</div>
 								<div
-									class="flex h-10 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) sm:h-14 md:h-16 lg:h-28"
+									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-32"
 								>
 									Generous
 								</div>
@@ -591,11 +582,11 @@
 						</div>
 					</div>
 					<div class="space-y-4">
-						<h3 class="text-sm font-medium">Three blocks in one section</h3>
+						<h3 class="body-sm font-semibold">Three blocks in one section</h3>
 						<div class="divide-y divide-(--stroke) border border-(--stroke)">
 							<div>
 								<div
-									class="flex h-10 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) sm:h-14 md:h-16 lg:h-28"
+									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-32"
 								>
 									Generous
 								</div>
@@ -603,14 +594,14 @@
 									<p class="body-base">First block</p>
 								</div>
 								<div
-									class="flex h-4 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-7"
+									class="flex h-6 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-8"
 								>
 									Compact
 								</div>
 							</div>
 							<div>
 								<div
-									class="flex h-4 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-7"
+									class="flex h-6 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-8"
 								>
 									Compact
 								</div>
@@ -618,14 +609,14 @@
 									<p class="body-base">Middle block</p>
 								</div>
 								<div
-									class="flex h-4 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-7"
+									class="flex h-6 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-8"
 								>
 									Compact
 								</div>
 							</div>
 							<div>
 								<div
-									class="flex h-4 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-7"
+									class="flex h-6 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-8"
 								>
 									Compact
 								</div>
@@ -633,7 +624,7 @@
 									<p class="body-base">Last block</p>
 								</div>
 								<div
-									class="flex h-10 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) sm:h-14 md:h-16 lg:h-28"
+									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-32"
 								>
 									Generous
 								</div>
@@ -641,15 +632,15 @@
 						</div>
 					</div>
 				</div>
-				<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+				<p class="max-w-prose body-sm text-(--muted-foreground)">
 					Shaded bands show the padding at its actual size. Resize the window to compare the scale.
 					Spacing within a block, such as the gap between a heading and a paragraph, is a separate
 					choice.
 				</p>
 				<div id="block-spacing-api" class="space-y-6">
 					<div class="space-y-2">
-						<h3 class="text-sm font-medium">Sample block implementation</h3>
-						<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+						<h3 class="body-sm font-semibold">Sample block implementation</h3>
+						<p class="max-w-prose body-sm text-(--muted-foreground)">
 							A top-level block receives its section context through <code
 								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>mark</code
@@ -719,7 +710,7 @@
 						</li>
 						<li>A one-block section is both the start and the end, so both edges are generous.</li>
 					</ul>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						The app uses shared utilities in <code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>src/app.css</code
@@ -738,7 +729,7 @@
 							>pb-</code
 						> equivalents. They apply the values above to existing elements without adding a wrapper component.
 					</p>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						For a custom rhythm, replace the default utility on that edge with explicit responsive
 						classes, such as <code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
@@ -751,15 +742,17 @@
 
 			<section id="typography" aria-labelledby="typography-heading" class="space-y-10">
 				<div class="space-y-2">
-					<h2 id="typography-heading" class="text-xl font-medium">Typography</h2>
-					<p class="text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="typography-heading" class="display-5">Typography</h2>
+					<p class="body-sm text-(--muted-foreground)">
 						A shared scale for headings and body text.
 					</p>
 				</div>
 
 				<!--
 				Use the typography utilities directly; their Tailwind definitions live in app.css.
-				Display sizes grow at lg. Weight, line height, and tracking belong to the utility.
+				Display sizes are one step smaller on phones and reach full size at lg. Headings are semibold,
+				so they stand apart from body text; leading tightens as they grow. Weight, line height, and
+				tracking belong to the utility.
 				Choose the heading element for the document hierarchy, independently of its visual size.
 				These specimens are all h3 because they sit within the Typography section.
 			-->
@@ -825,12 +818,25 @@
 						</p>
 					</div>
 				</div>
+
+				<!--
+				An eyebrow labels the heading below it: body-sm, 12px on phones, on a muted box with accent
+				corner marks. The marks are a border masked down to its corners, on the wrapper's ::before.
+			-->
+				<div id="type-eyebrow" class="space-y-3">
+					<p class="text-sm text-(--muted-foreground)">eyebrow</p>
+					<div
+						class="relative inline-block bg-(--muted) px-3 py-1 before:pointer-events-none before:absolute before:inset-0 before:border before:border-(--accent) before:[mask:conic-gradient(at_5px_5px,#0000_75%,#000_0)_0_0/calc(100%-5px)_calc(100%-5px)]"
+					>
+						<p class="body-sm text-(--muted-foreground) max-sm:text-xs">Visual builder</p>
+					</div>
+				</div>
 			</section>
 
 			<section id="formatting" aria-labelledby="formatting-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="formatting-heading" class="text-xl font-medium">Inline formatting</h2>
-					<p class="text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="formatting-heading" class="display-5">Inline formatting</h2>
+					<p class="body-sm text-(--muted-foreground)">
 						Emphasis and detail within the flow of a sentence.
 					</p>
 				</div>
@@ -853,9 +859,10 @@
 
 					<div id="format-strong" class="space-y-3">
 						<h3 class="text-sm text-(--muted-foreground)">Bold · strong</h3>
-						<!-- Semibold distinguishes important text within regular body copy. -->
+						<!-- One step bolder than the surrounding text, so it also stands out in semibold headings. -->
 						<p class="max-w-prose body-base">
-							Keep the <strong class="font-semibold">most important information</strong> easy to find.
+							Keep the <strong class="font-[weight:bolder]">most important information</strong> easy to
+							find.
 						</p>
 					</div>
 
@@ -865,14 +872,15 @@
 						Prose links have no padding, minimum size, or flex display.
 						Inherit the surrounding text color and retain a visible underline.
 						Scale underline thickness and offset with the font size using em units.
-						At 16px, thickness is 1px normally and 2px on hover or press.
+						The underline uses 30% of the text color and turns full on hover or press; its
+						thickness never changes.
 						Use the shared editing outline for keyboard focus.
 					-->
 						<p class="max-w-prose body-base">
 							Explore the
 							<a
 								href="#typography"
-								class="underline decoration-[0.0625em] underline-offset-[0.125em] hover:decoration-[0.125em] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:decoration-[0.125em]"
+								class="underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors hover:decoration-current focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:decoration-current"
 								>typography styles</a
 							>
 							to see how the scale works.
@@ -888,9 +896,9 @@
 						<p class="max-w-prose body-base">
 							Use <code
 								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
-								>font-medium</code
+								>font-semibold</code
 							>
-							for button labels.
+							for item titles.
 						</p>
 					</div>
 
@@ -913,13 +921,13 @@
 
 			<section id="card" aria-labelledby="card-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="card-heading" class="text-xl font-medium">Card</h2>
+					<h2 id="card-heading" class="display-5">Card</h2>
 					<p class="body-sm text-(--muted-foreground)">
-						A 4:3 media area, title, and optional description. Shared by gallery cards; width and
-						arrangement belong to the surrounding layout. Linked cards underline the title and make
-						the whole card clickable. Use a div and omit the underline for an unlinked card.
-						Keyboard focus uses a 2px editing-color outline with a 2px offset; scroll containers use
-						an inset outline to prevent clipping.
+						A 4:3 media area, semibold title, and optional description. Shared by gallery cards;
+						width and arrangement belong to the surrounding layout. Linked cards underline the title
+						and make the whole card clickable. Use a div and omit the underline for an unlinked
+						card. Keyboard focus uses a 2px editing-color outline with a 2px offset; scroll
+						containers use an inset outline to prevent clipping.
 					</p>
 				</div>
 				<div class="max-w-sm">
@@ -940,7 +948,7 @@
 						</div>
 						<div class="pt-4">
 							<h3
-								class="body-base underline decoration-[0.0625em] underline-offset-[0.125em] group-hover/card:decoration-[0.125em] group-active/card:decoration-[0.125em]"
+								class="body-base font-semibold underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors group-hover/card:decoration-current group-active/card:decoration-current"
 							>
 								Card title
 							</h3>
@@ -954,8 +962,8 @@
 
 			<section id="buttons" aria-labelledby="buttons-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="buttons-heading" class="text-xl font-medium">Buttons</h2>
-					<p class="text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="buttons-heading" class="display-5">Buttons</h2>
+					<p class="body-sm text-(--muted-foreground)">
 						Standard size. Hover, press, or tab to explore the states.
 					</p>
 				</div>
@@ -964,6 +972,7 @@
 				Shared typography: 1rem text and 1.5 line height, with a 2.75rem minimum height.
 				Primary and secondary share horizontal padding, a reserved 1px border, and normal font weight.
 				Standalone links align with surrounding text instead of inheriting button padding.
+				Hover and press change colors only, easing over 150ms with transition-colors.
 				Use an offset outline for keyboard focus, with no shadows or movement.
 			-->
 				<div class="grid gap-10 sm:grid-cols-3 sm:gap-8">
@@ -972,7 +981,7 @@
 						<!-- Main action. Mix in sRGB for visible feedback even with black accents; keep text opaque. -->
 						<button
 							type="button"
-							class="ew-native-selection inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
+							class="ew-native-selection inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--accent-foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
 						>
 							Continue
 						</button>
@@ -980,10 +989,10 @@
 
 					<div id="button-secondary" class="min-w-0 space-y-4">
 						<h3 class="text-sm text-(--muted-foreground)">Secondary</h3>
-						<!-- Supporting action. Use the shared stroke border, muted hover surface, and foreground tint on press. -->
+						<!-- Supporting action. Background fill with the stroke border, muted hover surface, and foreground tint on press. -->
 						<button
 							type="button"
-							class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+							class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 						>
 							Continue
 						</button>
@@ -1002,7 +1011,7 @@
 					-->
 						<a
 							href="#buttons"
-							class="inline-flex min-h-11 max-w-full min-w-6 items-center justify-start py-2.5 text-start text-base leading-6 font-normal wrap-anywhere text-(--foreground) underline decoration-1 underline-offset-4 hover:decoration-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:decoration-2 pointer-coarse:min-w-11"
+							class="inline-flex min-h-11 max-w-full min-w-6 items-center justify-start py-2.5 text-start text-base leading-6 font-normal wrap-anywhere text-(--foreground) underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-1 underline-offset-4 transition-colors hover:decoration-current focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:decoration-current pointer-coarse:min-w-11"
 						>
 							Continue
 						</a>
@@ -1012,15 +1021,15 @@
 
 			<section id="buttons-small" aria-labelledby="buttons-small-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="buttons-small-heading" class="text-xl font-medium">Small buttons</h2>
-					<p class="text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="buttons-small-heading" class="display-5">Small buttons</h2>
+					<p class="body-sm text-(--muted-foreground)">
 						For navigation and compact layouts. Small buttons keep a 36px minimum height on all
 						devices.
 					</p>
 				</div>
 
 				<!--
-				Compact geometry: 0.875rem text, 1.25rem line height, and a 2.25rem minimum height.
+				Compact geometry: 0.875rem text, 1.25rem line height, 1rem horizontal padding, and a 2.25rem minimum height.
 				All button variants use normal weight, matching inline text links.
 				Keep the same dimensions for mouse and touch. Let content wrap and increase the height.
 				These are explicit recipes, with the same colors and states as the standard size.
@@ -1031,7 +1040,7 @@
 						<!-- Main action. Mix in sRGB for visible feedback even with black accents; keep text opaque. -->
 						<button
 							type="button"
-							class="ew-native-selection inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-3 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
+							class="ew-native-selection inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--accent-foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
 						>
 							Continue
 						</button>
@@ -1039,10 +1048,10 @@
 
 					<div id="button-secondary-small" class="min-w-0 space-y-4">
 						<h3 class="text-sm text-(--muted-foreground)">Secondary</h3>
-						<!-- Supporting action. Use the shared stroke border, muted hover surface, and foreground tint on press. -->
+						<!-- Supporting action. Background fill with the stroke border, muted hover surface, and foreground tint on press. -->
 						<button
 							type="button"
-							class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent px-3 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+							class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 						>
 							Continue
 						</button>
@@ -1053,7 +1062,7 @@
 						<!-- Standalone link: preserve start alignment and omit horizontal padding at both sizes. -->
 						<a
 							href="#buttons"
-							class="inline-flex min-h-9 max-w-full min-w-6 items-center justify-start py-2 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) underline decoration-1 underline-offset-4 hover:decoration-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:decoration-2"
+							class="inline-flex min-h-9 max-w-full min-w-6 items-center justify-start py-2 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-1 underline-offset-4 transition-colors hover:decoration-current focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:decoration-current"
 						>
 							Continue
 						</a>
@@ -1063,8 +1072,8 @@
 
 			<section id="buttons-disabled" aria-labelledby="buttons-disabled-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="buttons-disabled-heading" class="text-xl font-medium">Disabled buttons</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="buttons-disabled-heading" class="display-5">Disabled buttons</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Buttons and pill controls use 40% opacity with the default cursor. Native disabled
 						buttons skip keyboard focus and suppress hover and press feedback. Menu rows instead use
 						muted text to keep unavailable actions legible.
@@ -1077,7 +1086,7 @@
 						<button
 							type="button"
 							disabled
-							class="ew-native-selection inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
+							class="ew-native-selection inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--accent-foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
 							>Continue</button
 						>
 					</div>
@@ -1086,7 +1095,7 @@
 						<button
 							type="button"
 							disabled
-							class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+							class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 							>Continue</button
 						>
 					</div>
@@ -1095,7 +1104,7 @@
 						<button
 							type="button"
 							disabled
-							class="ew-native-selection inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-3 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
+							class="ew-native-selection inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--accent-foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
 							>Continue</button
 						>
 					</div>
@@ -1104,7 +1113,7 @@
 						<button
 							type="button"
 							disabled
-							class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-transparent px-3 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+							class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 							>Continue</button
 						>
 					</div>
@@ -1117,7 +1126,7 @@
 						<button
 							type="button"
 							disabled
-							class="inline-flex min-h-9 max-w-full min-w-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent px-8 py-2 text-sm leading-5 font-medium wrap-anywhere text-(--editing) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--editing-muted) enabled:active:bg-(--editing)/15 disabled:cursor-default disabled:opacity-40"
+							class="inline-flex min-h-9 max-w-full min-w-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent px-8 py-2 text-sm leading-5 font-medium wrap-anywhere text-(--editing) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--editing-muted) enabled:active:bg-(--editing)/15 disabled:cursor-default disabled:opacity-40"
 							>Create link</button
 						>
 					</div>
@@ -1130,11 +1139,11 @@
 				class="space-y-8"
 			>
 				<div class="space-y-2">
-					<h2 id="descriptive-listing-heading" class="text-xl font-medium">Descriptive listing</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
-						A linked row with a title, description, and optional metadata. Hover or press anywhere
-						on the row to strengthen the title underline; keyboard focus outlines the whole row. A
-						plain listing uses the same recipe with the description omitted.
+					<h2 id="descriptive-listing-heading" class="display-5">Descriptive listing</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
+						A linked row with a semibold title, description, and optional metadata. Hover or press
+						anywhere on the row to show the title underline in full; keyboard focus outlines the
+						whole row. A plain listing uses the same recipe with the description omitted.
 					</p>
 				</div>
 				<!-- Keep the row as one link. Description and metadata have no underline of their own. -->
@@ -1142,12 +1151,12 @@
 					<div class="border-b border-(--stroke)">
 						<a
 							href="#typography"
-							class="group/listing-link block py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) sm:py-2 md:py-3"
+							class="group/listing-link block py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) md:py-5"
 						>
 							<div class="flex items-center justify-between gap-6">
 								<div class="min-w-2/3 flex-1">
 									<p
-										class="body-base underline decoration-[0.0625em] underline-offset-[0.125em] group-hover/listing-link:decoration-[0.125em] group-active/listing-link:decoration-[0.125em]"
+										class="body-base font-semibold underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors group-hover/listing-link:decoration-current group-active/listing-link:decoration-current"
 									>
 										Typography
 									</p>
@@ -1164,12 +1173,12 @@
 					<div class="border-b border-(--stroke)">
 						<a
 							href="#buttons"
-							class="group/listing-link block py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) sm:py-2 md:py-3"
+							class="group/listing-link block py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) md:py-5"
 						>
 							<div class="flex items-center justify-between gap-6">
 								<div class="min-w-2/3 flex-1">
 									<p
-										class="body-base underline decoration-[0.0625em] underline-offset-[0.125em] group-hover/listing-link:decoration-[0.125em] group-active/listing-link:decoration-[0.125em]"
+										class="body-base font-semibold underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors group-hover/listing-link:decoration-current group-active/listing-link:decoration-current"
 									>
 										Buttons
 									</p>
@@ -1185,8 +1194,8 @@
 
 			<section id="dialog-buttons" aria-labelledby="dialog-buttons-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="dialog-buttons-heading" class="text-xl font-medium">Dialog buttons</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="dialog-buttons-heading" class="display-5">Dialog buttons</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						For the editing dialogs outside the toolbar: the login dialog, the save conflict dialog,
 						and the OAuth consent page. The primary action uses the editing colors, since these
 						dialogs belong to editing rather than to the site.
@@ -1206,7 +1215,7 @@
 						<!-- Main action. Mix in sRGB for visible feedback; keep text opaque. -->
 						<button
 							type="button"
-							class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--editing) px-5 text-sm leading-5 whitespace-nowrap text-(--editing-foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)] disabled:cursor-default disabled:opacity-40 sm:h-11.5"
+							class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--editing) px-5 text-sm leading-5 whitespace-nowrap text-(--editing-foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--editing),var(--editing-foreground)_30%)] disabled:cursor-default disabled:opacity-40 sm:h-11.5"
 							>Login</button
 						>
 					</div>
@@ -1216,7 +1225,7 @@
 						<!-- Supporting action on the opaque background surface, with the stroke border. -->
 						<button
 							type="button"
-							class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-11.5"
+							class="inline-flex h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-11.5"
 							>Deny</button
 						>
 					</div>
@@ -1226,7 +1235,7 @@
 						<!-- Square secondary button for a single icon, such as the back arrow in the login dialog. -->
 						<button
 							type="button"
-							class="inline-flex aspect-square h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-11.5"
+							class="inline-flex aspect-square h-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) text-sm leading-5 whitespace-nowrap text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:h-11.5"
 							title="Back"
 							aria-label="Back"
 						>
@@ -1245,11 +1254,10 @@
 
 			<section id="boxed-prose" aria-labelledby="boxed-prose-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="boxed-prose-heading" class="text-xl font-medium">Boxed items</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
-						Boxed items use a muted surface. Their secondary buttons use the background color at
-						rest and the muted color on hover. This styling applies only to secondary buttons inside
-						the box. Accent boxes use
+					<h2 id="boxed-prose-heading" class="display-5">Boxed items</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
+						Boxed items use a muted surface. Secondary buttons fill with the background color, so
+						they lift off it. Accent boxes use
 						<code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>ew-accent-surface</code
@@ -1258,19 +1266,19 @@
 					</p>
 				</div>
 				<div class="grid items-start gap-5 sm:grid-cols-2 sm:gap-7 lg:max-w-3xl">
-					<div class="rounded-(--image-border-radius) bg-(--muted) px-8 py-10">
+					<div class="rounded-(--image-border-radius) bg-(--muted) px-6 py-8 sm:px-8 sm:py-10">
 						<div class="flex flex-col items-center gap-5 text-center text-balance sm:gap-7">
 							<h3 class="display-5">Make it your own</h3>
 							<p class="body-base">Start with the shared styles and adapt them to your site.</p>
 							<a
 								href="#buttons"
-								class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 py-2 text-center text-base leading-6 font-medium wrap-anywhere text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
+								class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 py-2 text-center text-base leading-6 font-medium wrap-anywhere text-(--foreground) transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
 								>Explore buttons</a
 							>
 						</div>
 					</div>
 					<div
-						class="ew-accent-surface flex flex-col items-center gap-5 rounded-(--image-border-radius) px-8 py-10 text-center text-balance sm:gap-7"
+						class="ew-accent-surface flex flex-col items-center gap-5 rounded-(--image-border-radius) px-6 py-8 text-center text-balance sm:gap-7 sm:px-8 sm:py-10"
 					>
 						<h3 class="display-5">Make it stand out</h3>
 						<p class="body-base text-(--muted-foreground)">
@@ -1278,7 +1286,7 @@
 						</p>
 						<a
 							href="#buttons"
-							class="ew-native-selection inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--accent-foreground) hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)]"
+							class="ew-native-selection inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--accent-foreground) transition-colors hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)]"
 							>Get started</a
 						>
 					</div>
@@ -1287,9 +1295,10 @@
 
 			<section id="navigation" aria-labelledby="navigation-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="navigation-heading" class="text-xl font-medium">Navigation</h2>
-					<p class="text-sm leading-relaxed text-(--muted-foreground)">
-						A placeholder logo, main links, and small primary and secondary buttons.
+					<h2 id="navigation-heading" class="display-5">Navigation</h2>
+					<p class="body-sm text-(--muted-foreground)">
+						A placeholder logo, main links, and small primary and secondary buttons. Links are muted
+						and turn to the foreground color on hover and press, without an underline.
 					</p>
 				</div>
 
@@ -1324,28 +1333,28 @@
 						<li>
 							<a
 								href="#typography"
-								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--foreground) underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:underline"
+								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--muted-foreground) transition-colors hover:text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:text-(--foreground)"
 								>Product</a
 							>
 						</li>
 						<li>
 							<a
 								href="#buttons-small"
-								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--foreground) underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:underline"
+								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--muted-foreground) transition-colors hover:text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:text-(--foreground)"
 								>Quickstart</a
 							>
 						</li>
 						<li>
 							<a
 								href="#formatting"
-								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--foreground) underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:underline"
+								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--muted-foreground) transition-colors hover:text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:text-(--foreground)"
 								>Manual</a
 							>
 						</li>
 						<li>
 							<a
 								href="#pills"
-								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--foreground) underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:underline"
+								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--muted-foreground) transition-colors hover:text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:text-(--foreground)"
 								>Contact</a
 							>
 						</li>
@@ -1355,12 +1364,12 @@
 					>
 						<button
 							type="button"
-							class="ew-native-selection inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-3 py-1.5 text-center text-sm leading-5 font-medium wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
+							class="ew-native-selection inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--accent-foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] enabled:active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)] disabled:cursor-default disabled:opacity-40"
 							>Try</button
 						>
 						<button
 							type="button"
-							class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center gap-1.5 rounded-(--button-border-radius) border border-(--stroke) bg-transparent px-3 py-1.5 text-center text-sm leading-5 font-medium wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+							class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center gap-1.5 rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 						>
 							Install
 							<svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -1376,7 +1385,7 @@
 					</div>
 				</nav>
 				<div id="navigation-mobile" class="space-y-4">
-					<h3 class="text-sm font-medium">Mobile navigation controls</h3>
+					<h3 class="body-sm font-semibold">Mobile navigation controls</h3>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						The application switches to a menu on small screens. Use an opaque page background,
 						these icon buttons, and larger navigation links. Controls share the 2px focus outline
@@ -1386,7 +1395,7 @@
 						<button
 							type="button"
 							aria-label="Open menu"
-							class="inline-flex size-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border-0 bg-transparent p-0 text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+							class="inline-flex size-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border-0 bg-transparent p-0 text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 						>
 							<svg class="size-6" viewBox="0 0 24 24" fill="none" aria-hidden="true"
 								><path
@@ -1401,7 +1410,7 @@
 						<button
 							type="button"
 							aria-label="Close menu"
-							class="inline-flex size-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border-0 bg-transparent p-0 text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+							class="inline-flex size-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border-0 bg-transparent p-0 text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 						>
 							<svg class="size-6" viewBox="0 0 24 24" fill="none" aria-hidden="true"
 								><path
@@ -1417,12 +1426,12 @@
 					<nav aria-label="Example mobile navigation" class="flex flex-col gap-1">
 						<a
 							href="#typography"
-							class="flex min-h-11 items-center py-2 text-3xl leading-tight font-normal wrap-anywhere text-(--foreground) underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:underline"
+							class="flex min-h-11 items-center py-2 text-3xl leading-tight font-normal wrap-anywhere text-(--foreground) transition-colors hover:text-(--muted-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:text-(--muted-foreground)"
 							>Product</a
 						>
 						<a
 							href="#buttons-small"
-							class="flex min-h-11 items-center py-2 text-3xl leading-tight font-normal wrap-anywhere text-(--foreground) underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:underline"
+							class="flex min-h-11 items-center py-2 text-3xl leading-tight font-normal wrap-anywhere text-(--foreground) transition-colors hover:text-(--muted-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:text-(--muted-foreground)"
 							>Quickstart</a
 						>
 					</nav>
@@ -1431,8 +1440,8 @@
 
 			<section id="pills" aria-labelledby="pills-heading" class="space-y-10">
 				<div class="space-y-2">
-					<h2 id="pills-heading" class="text-xl font-medium">Editor pills</h2>
-					<p class="text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="pills-heading" class="display-5">Editor pills</h2>
+					<p class="body-sm text-(--muted-foreground)">
 						Compact surfaces for tools, actions, and previews.
 					</p>
 				</div>
@@ -1459,7 +1468,7 @@ Use a group here; production toolbar keyboard behavior belongs to the consuming 
 								type="button"
 								aria-label="New page"
 								title="New page"
-								class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+								class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 								><svg class="size-6 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true"
 									><path d="M12 5V19M5 12H19" stroke="currentColor" /></svg
 								></button
@@ -1467,7 +1476,7 @@ Use a group here; production toolbar keyboard behavior belongs to the consuming 
 								type="button"
 								aria-label="Browse pages"
 								title="Browse pages"
-								class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+								class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 								><svg class="size-6 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true"
 									><rect x="4.5" y="4.5" width="6" height="6" rx="1" stroke="currentColor" /><rect
 										x="13.5"
@@ -1489,7 +1498,7 @@ Use a group here; production toolbar keyboard behavior belongs to the consuming 
 								type="button"
 								aria-label="Edit page"
 								title="Edit page"
-								class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+								class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 								><svg class="size-6 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true"
 									><path
 										d="M4.5 19.5L5.25 15.25L15.75 4.75C16.7165 3.7835 18.2835 3.7835 19.25 4.75C20.2165 5.7165 20.2165 7.2835 19.25 8.25L8.75 18.75L4.5 19.5ZM14 6.5L17.5 10"
@@ -1502,7 +1511,7 @@ Use a group here; production toolbar keyboard behavior belongs to the consuming 
 								type="button"
 								aria-label="More page actions"
 								title="More page actions"
-								class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+								class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 								><svg class="size-6 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true"
 									><circle cx="6" cy="12" r="1" fill="currentColor" /><circle
 										cx="12"
@@ -1547,7 +1556,7 @@ Use a group here; production toolbar keyboard behavior belongs to the consuming 
 						>
 							<button
 								type="button"
-								class="inline-flex min-h-9 max-w-full min-w-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent px-8 py-2 text-sm leading-5 font-medium wrap-anywhere text-(--editing) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--editing-muted) enabled:active:bg-(--editing)/15 disabled:cursor-default disabled:opacity-40"
+								class="inline-flex min-h-9 max-w-full min-w-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent px-8 py-2 text-sm leading-5 font-medium wrap-anywhere text-(--editing) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--editing-muted) enabled:active:bg-(--editing)/15 disabled:cursor-default disabled:opacity-40"
 								>Create link</button
 							>
 						</div>
@@ -1564,7 +1573,7 @@ Use a group here; production toolbar keyboard behavior belongs to the consuming 
 								type="button"
 								aria-label="Select parent"
 								title="Select parent"
-								class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+								class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 								><svg class="size-6 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true"
 									><path
 										d="M6.5 12.5C6.5 15.8137 9.18629 18.5 12.5 18.5C15.8137 18.5 18.5 15.8137 18.5 12.5C18.5 9.18629 15.8137 6.5 12.5 6.5M4.48278 4.48206L13 12.9993M9.44657 4.48173L4.48278 4.48206V9.44727"
@@ -1576,7 +1585,7 @@ Use a group here; production toolbar keyboard behavior belongs to the consuming 
 							><span aria-hidden="true" class="mx-1 h-5 w-px shrink-0 bg-(--stroke)"></span><button
 								type="button"
 								aria-label="Choose gallery variant, mixed selection"
-								class="inline-flex min-h-9 min-w-0 items-center justify-center gap-2 rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+								class="inline-flex min-h-9 min-w-0 items-center justify-center gap-2 rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 								><span class="min-w-0 truncate max-sm:min-w-24"
 									>Gallery <span class="font-mono text-xs font-normal text-(--muted-foreground)"
 										>(mixed)</span
@@ -1612,7 +1621,7 @@ The local href is a specimen destination. Production links retain their own dest
 						>
 							<a
 								href="#pills"
-								class="inline-flex min-h-9 max-w-70 min-w-0 items-center gap-2 rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] pr-3 text-sm leading-5 font-medium hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
+								class="inline-flex min-h-9 max-w-70 min-w-0 items-center gap-2 rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] pr-3 text-sm leading-5 font-medium transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
 								><span
 									aria-hidden="true"
 									class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] bg-(--muted) text-xs font-medium text-(--muted-foreground)"
@@ -1622,7 +1631,7 @@ The local href is a specimen destination. Production links retain their own dest
 								type="button"
 								aria-label="Edit link"
 								title="Edit link"
-								class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+								class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 								><svg class="size-6 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true"
 									><path
 										d="M4.5 19.5L5.25 15.25L15.75 4.75C16.7165 3.7835 18.2835 3.7835 19.25 4.75C20.2165 5.7165 20.2165 7.2835 19.25 8.25L8.75 18.75L4.5 19.5ZM14 6.5L17.5 10"
@@ -1635,7 +1644,7 @@ The local href is a specimen destination. Production links retain their own dest
 								type="button"
 								aria-label="Remove link"
 								title="Remove link"
-								class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+								class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] border-0 bg-transparent p-0 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 								><svg class="size-6 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true"
 									><path
 										d="M5.5 7.5H18.5M9.5 4.5H14.5L15.5 7.5M7 7.5L7.75 19.5H16.25L17 7.5M10 10.5V16M14 10.5V16"
@@ -1651,8 +1660,8 @@ The local href is a specimen destination. Production links retain their own dest
 			</section>
 			<section id="editor-forms" aria-labelledby="editor-forms-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="editor-forms-heading" class="text-xl font-medium">Editor forms</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="editor-forms-heading" class="display-5">Editor forms</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Link and media prompts use an opaque surface with 4px padding, no shadow, and the button
 						radius capped at 1rem. Fields and actions subtract the padding and border from that
 						radius. Text inputs and textareas use 16px text and an editing-color border on focus.
@@ -1678,7 +1687,7 @@ The local href is a specimen destination. Production links retain their own dest
 						</label>
 						<button
 							type="button"
-							class="inline-flex min-h-9 shrink-0 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium text-(--editing) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--editing-muted) enabled:active:bg-(--editing)/15 disabled:cursor-default disabled:opacity-40"
+							class="inline-flex min-h-9 shrink-0 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium text-(--editing) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--editing-muted) enabled:active:bg-(--editing)/15 disabled:cursor-default disabled:opacity-40"
 							>Update</button
 						>
 					</div>
@@ -1687,7 +1696,7 @@ The local href is a specimen destination. Production links retain their own dest
 
 			<section id="page-browser" aria-labelledby="page-browser-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="page-browser-heading" class="text-xl font-medium">Page browser</h2>
+					<h2 id="page-browser-heading" class="display-5">Page browser</h2>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						A muted editing fill marks the result Enter will open. Only keyboard-focused rows get a
 						ring, drawn inside the row to keep tree guides and adjacent rows clear. Search focus
@@ -1730,7 +1739,7 @@ The local href is a specimen destination. Production links retain their own dest
 						<button
 							type="button"
 							aria-label="Example page actions"
-							class="inline-flex size-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border-0 bg-transparent p-0 text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--background) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+							class="inline-flex size-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border-0 bg-transparent p-0 text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--background) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 						>
 							<svg class="size-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
 								<circle cx="6" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle
@@ -1746,8 +1755,8 @@ The local href is a specimen destination. Production links retain their own dest
 
 			<section id="popovers" aria-labelledby="popovers-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="popovers-heading" class="text-xl font-medium">List popovers</h2>
-					<p class="text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="popovers-heading" class="display-5">List popovers</h2>
+					<p class="body-sm text-(--muted-foreground)">
 						Compact lists with a shared surface and aligned rows.
 					</p>
 				</div>
@@ -1771,23 +1780,23 @@ and menu keyboard behavior belong to the application; do not add menu roles with
 						>
 							<button
 								type="button"
-								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) not-disabled:cursor-pointer not-disabled:hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) not-disabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
+								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors not-disabled:cursor-pointer not-disabled:hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) not-disabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
 								>Duplicate page</button
 							><button
 								type="button"
 								disabled
-								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) not-disabled:cursor-pointer not-disabled:hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) not-disabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
+								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors not-disabled:cursor-pointer not-disabled:hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) not-disabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
 								>Edit URL</button
 							><button
 								type="button"
 								disabled
-								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) not-disabled:cursor-pointer not-disabled:hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) not-disabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
+								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors not-disabled:cursor-pointer not-disabled:hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) not-disabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
 								>Delete page</button
 							>
 							<hr class="my-1 border-0 border-t border-(--stroke)" />
 							<button
 								type="button"
-								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) not-disabled:cursor-pointer not-disabled:hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) not-disabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
+								class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors not-disabled:cursor-pointer not-disabled:hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) not-disabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
 								>Logout</button
 							>
 						</div>
@@ -1807,63 +1816,63 @@ These destinations are real sections on this reference page. Application content
 								<li>
 									<a
 										href="#foundations"
-										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
+										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
 										>Foundations</a
 									>
 								</li>
 								<li>
 									<a
 										href="#typography"
-										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
+										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
 										>Typography</a
 									>
 								</li>
 								<li>
 									<a
 										href="#formatting"
-										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
+										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
 										>Inline formatting</a
 									>
 								</li>
 								<li>
 									<a
 										href="#buttons"
-										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
+										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
 										>Standard buttons</a
 									>
 								</li>
 								<li>
 									<a
 										href="#buttons-small"
-										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
+										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
 										>Small buttons</a
 									>
 								</li>
 								<li>
 									<a
 										href="#buttons-disabled"
-										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
+										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
 										>Disabled buttons</a
 									>
 								</li>
 								<li>
 									<a
 										href="#descriptive-listing"
-										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
+										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
 										>Descriptive listing</a
 									>
 								</li>
 								<li>
 									<a
 										href="#pills"
-										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
+										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
 										>Editor pills</a
 									>
 								</li>
 								<li>
 									<a
 										href="#popovers"
-										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
+										class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
 										>List popovers</a
 									>
 								</li>

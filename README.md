@@ -112,7 +112,7 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 
 /* Color set 2: a light grey surface. Color set 3 turns the accent into a surface. */
 .ew-colorset-2 {
-	--background: oklch(97% 0 0);
+	--background: oklch(98% 0 0);
 	--muted: oklch(100% 0 0);
 	/* … and the other color tokens, as in color set 1 */
 }
@@ -121,12 +121,12 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 	/* Rounded corners for buttons and navigation items. */
 	--button-border-radius: 3rem;
 	/* Rounded corners for images. */
-	--image-border-radius: 2.2rem;
+	--image-border-radius: 0rem;
 }
 
 /* Type scale — adjust any of these utilities to match your style. */
 @utility display-1 {
-	@apply font-serif text-6xl leading-tight tracking-tight text-balance lg:text-7xl;
+	@apply font-sans text-5xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-6xl lg:text-7xl;
 }
 ```
 
@@ -418,7 +418,8 @@ footer_link { href, target, label: text }
 
 ```ts
 // rich content = paragraph_sm | paragraph | paragraph_lg | paragraph_xl |
-//                heading_1_xl | heading_1 … heading_4 | list | supporting_media | button_group
+//                heading_1_xl | heading_1 … heading_4 | eyebrow | list | supporting_media |
+//                button_group
 
 prose { layout: narrow-left | narrow-center | narrow-right | narrow-centered-text |
                 wide-left | wide-centered-text, body: [rich content] }
@@ -428,7 +429,7 @@ prose_grid_item { body: [rich content] }
 
 // the paragraph and heading family share one shape:
 paragraph, paragraph_sm, paragraph_lg, paragraph_xl,
-heading_1_xl, heading_1 … heading_4 {
+heading_1_xl, heading_1 … heading_4, eyebrow {
 	layout: regular | muted
 	content: text      // marks: strong, emphasis, code, highlight, link
 }
