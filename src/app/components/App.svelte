@@ -117,13 +117,12 @@
 	}
 
 	beforeNavigate((navigation) => {
-		if (navigation.shallow) return;
-		if (!languages.length || switching_language) return;
 		if (
 			save_progress_visible ||
 			(editable &&
-				JSON.stringify(session.to_json()) !== initial_doc_json &&
-				!confirm('Discard your unsaved changes?'))
+				session.can_undo &&
+				// On unload, cancel() shows the browser's own prompt; confirm() is blocked there.
+				(navigation.type === 'leave' || !confirm('Discard your unsaved changes?')))
 		)
 			navigation.cancel();
 	});
@@ -290,6 +289,8 @@
 
 	$effect(() => {
 		document.documentElement.style.scrollBehavior = editable ? 'auto' : 'smooth';
+		// Stops the trackpad swipe back while editing in Chromium and Firefox, not in Safari.
+		document.documentElement.style.overscrollBehaviorX = editable ? 'none' : '';
 	});
 
 	function focus_canvas() {
@@ -471,6 +472,7 @@
 
 		async execute() {
 			session.selection = null;
+			this.context.editable = false;
 
 			if (is_new) {
 				await goto(resolve_href('/', site));
@@ -485,7 +487,6 @@
 					? edit_for_fun_saved_doc.doc_json
 					: initial_doc_json;
 			session = create_session(JSON.parse(saved_doc_json), app);
-			this.context.editable = false;
 		}
 	}
 
