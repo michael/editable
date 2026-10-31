@@ -418,7 +418,8 @@ footer_link { href, target, label: text }
 
 ```ts
 // rich content = paragraph_sm | paragraph | paragraph_lg | paragraph_xl |
-//                heading_1_xl | heading_1 … heading_4 | list | supporting_media | button_group
+//                heading_1_xl | heading_1 … heading_4 | eyebrow | list | supporting_media |
+//                button_group
 
 prose { layout: narrow-left | narrow-center | narrow-right | narrow-centered-text |
                 wide-left | wide-centered-text, body: [rich content] }
@@ -428,7 +429,7 @@ prose_grid_item { body: [rich content] }
 
 // the paragraph and heading family share one shape:
 paragraph, paragraph_sm, paragraph_lg, paragraph_xl,
-heading_1_xl, heading_1 … heading_4 {
+heading_1_xl, heading_1 … heading_4, eyebrow {
 	layout: regular | muted
 	content: text      // marks: strong, emphasis, code, highlight, link
 }

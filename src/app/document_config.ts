@@ -67,6 +67,7 @@ import Heading1 from './components/Heading1.svelte';
 import Heading2 from './components/Heading2.svelte';
 import Heading3 from './components/Heading3.svelte';
 import Heading4 from './components/Heading4.svelte';
+import Eyebrow from './components/Eyebrow.svelte';
 import List from './components/List.svelte';
 import ListItem from './components/ListItem.svelte';
 import Gallery from './components/Gallery.svelte';
@@ -266,6 +267,7 @@ export const document_config = {
 		heading_2: Heading2,
 		heading_3: Heading3,
 		heading_4: Heading4,
+		eyebrow: Eyebrow,
 		list: List,
 		list_item: ListItem,
 		image: Image,
@@ -377,6 +379,7 @@ export const document_config = {
 		heading_2: (node, session) => `<h2>${export_text_html(node.content, session)}</h2>\n`,
 		heading_3: (node, session) => `<h3>${export_text_html(node.content, session)}</h3>\n`,
 		heading_4: (node, session) => `<h4>${export_text_html(node.content, session)}</h4>\n`,
+		eyebrow: (node, session) => `<p>${export_text_html(node.content, session)}</p>\n`,
 		code_block: (node) => `<pre>${escape_html(node.content.content)}</pre>\n`,
 		list: (node, session, html_exporters) => {
 			const tag = ['decimal', 'lower-alpha'].includes(node.layout) ? 'ol' : 'ul';
@@ -600,6 +603,9 @@ export const document_config = {
 		},
 		heading_4: function (tr, content = { content: '', marks: [], annotations: [] }) {
 			insert_text_node(tr, 'heading_4', content, 'regular');
+		},
+		eyebrow: function (tr, content = { content: '', marks: [], annotations: [] }) {
+			insert_text_node(tr, 'eyebrow', content, 'muted');
 		},
 		code_block: function (tr, content = { content: '', marks: [], annotations: [] }) {
 			const new_code_block = {

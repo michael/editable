@@ -30,7 +30,8 @@ const TEXT_NODE_TYPES = [
 	'heading_1',
 	'heading_2',
 	'heading_3',
-	'heading_4'
+	'heading_4',
+	'eyebrow'
 ];
 const RICH_CONTENT_NODE_TYPES = [...TEXT_NODE_TYPES, 'list', 'supporting_media', 'button_group'];
 const RICH_CONTENT_NODE_TYPES_WITHOUT_HEADINGS = [
@@ -403,6 +404,18 @@ export const document_schema = define_document_schema({
 		}
 	},
 	heading_4: {
+		kind: 'text',
+		properties: {
+			layout: { type: 'string', values: ['regular', 'muted'], default: 'regular' },
+			content: {
+				type: 'text',
+				mark_types: ALL_MARKS,
+				allow_newlines: true
+			}
+		}
+	},
+	// A short label above a heading. Same shape as the text family, so text can cycle into it.
+	eyebrow: {
 		kind: 'text',
 		properties: {
 			layout: { type: 'string', values: ['regular', 'muted'], default: 'regular' },
