@@ -121,6 +121,7 @@
 			save_progress_visible ||
 			(editable &&
 				session.can_undo &&
+				session.doc !== saved_doc &&
 				// On unload, cancel() shows the browser's own prompt; confirm() is blocked there.
 				(navigation.type === 'leave' || !confirm('Discard your unsaved changes?')))
 		)
@@ -511,6 +512,7 @@
 					};
 				}
 				session.selection = null;
+				saved_doc = session.doc;
 				this.context.editable = false;
 				return;
 			}
@@ -612,6 +614,7 @@
 				}
 
 				session.selection = null;
+				saved_doc = session.doc;
 
 				// When a new document has been created, return and redirect to the new url
 				if (result?.created && result.document_id && result.slug) {
@@ -813,6 +816,11 @@
 		const doc_json = initial_doc_json;
 		// Session construction reads reactive internals. Only load data belongs in this dependency list.
 		return untrack(() => create_session(JSON.parse(doc_json), app));
+	});
+	// The doc is immutable, so a new reference means an edit since loading or the last save.
+	let saved_doc = $derived.by(() => {
+		const current_session = session;
+		return untrack(() => current_session.doc);
 	});
 	let loaded_document_id = $derived(initial_doc.document_id);
 
