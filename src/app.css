@@ -118,6 +118,19 @@ keeps the pair in --ew-surface*, since the children can't redefine tokens from t
 	--editing-foreground: var(--ew-surface);
 }
 
+/* A muted surface, such as a boxed item, fills with the muted color. Its children swap background
+and muted, so muted elements inside it, such as an eyebrow or inline code, stand out from the box. */
+.ew-muted-surface {
+	--ew-surface: var(--muted);
+	--ew-surface-muted: var(--background);
+	background: var(--ew-surface);
+}
+
+.ew-muted-surface > * {
+	--background: var(--ew-surface);
+	--muted: var(--ew-surface-muted);
+}
+
 :root {
 	/* Syntax palette from Zed's One Light theme. */
 	/* https://github.com/zed-industries/zed/blob/main/assets/themes/one/one.json */

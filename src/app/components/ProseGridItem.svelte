@@ -35,9 +35,10 @@
 {/snippet}
 
 {#snippet card()}
-	<!-- Accent boxes fill with the accent of their color set; app.css gives their children matching tokens. -->
+	<!-- Boxes fill with the muted color, accent boxes with the accent of their color set; app.css gives
+	their children matching tokens. -->
 	<div
-		class={['h-full px-6 py-8 sm:px-8 sm:py-10', accent ? 'ew-accent-surface' : 'bg-(--muted)']}
+		class={['h-full px-6 py-8 sm:px-8 sm:py-10', accent ? 'ew-accent-surface' : 'ew-muted-surface']}
 		style:border-radius="var(--image-border-radius)"
 	>
 		<div class={[centered && 'text-center text-balance']}>

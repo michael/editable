@@ -1256,8 +1256,12 @@
 				<div class="space-y-2">
 					<h2 id="boxed-prose-heading" class="display-5">Boxed items</h2>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
-						Boxed items use a muted surface. Secondary buttons fill with the background color, so
-						they lift off it. Accent boxes use
+						Boxed items use
+						<code
+							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
+							>ew-muted-surface</code
+						>: they fill with the muted color, and their children swap background and muted, so an
+						eyebrow or inline code stands out from the box. Accent boxes use
 						<code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>ew-accent-surface</code
@@ -1266,13 +1270,18 @@
 					</p>
 				</div>
 				<div class="grid items-start gap-5 sm:grid-cols-2 sm:gap-7 lg:max-w-3xl">
-					<div class="rounded-(--image-border-radius) bg-(--muted) px-6 py-8 sm:px-8 sm:py-10">
+					<div class="ew-muted-surface rounded-(--image-border-radius) px-6 py-8 sm:px-8 sm:py-10">
 						<div class="flex flex-col items-center gap-5 text-center text-balance sm:gap-7">
+							<div
+								class="relative inline-block bg-(--muted) px-3 py-1 before:pointer-events-none before:absolute before:inset-0 before:border before:border-(--accent) before:[mask:conic-gradient(at_5px_5px,#0000_75%,#000_0)_0_0/calc(100%-5px)_calc(100%-5px)]"
+							>
+								<p class="body-sm text-(--muted-foreground) max-sm:text-xs">Personal</p>
+							</div>
 							<h3 class="display-5">Make it your own</h3>
 							<p class="body-base">Start with the shared styles and adapt them to your site.</p>
 							<a
 								href="#buttons"
-								class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 py-2 text-center text-base leading-6 font-medium wrap-anywhere text-(--foreground) transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
+								class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
 								>Explore buttons</a
 							>
 						</div>
