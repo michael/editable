@@ -26,8 +26,8 @@
 				class="space-y-12 lg:space-y-16"
 			>
 				<div class="space-y-2">
-					<h2 id="foundations-heading" class="text-xl font-medium">Foundations</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="foundations-heading" class="display-5">Foundations</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Colors, fonts, and corner radii come from the shared tokens in
 						<code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
@@ -37,7 +37,7 @@
 				</div>
 
 				<div class="space-y-5 sm:space-y-7">
-					<h3 class="text-sm font-medium">Colors and surfaces</h3>
+					<h3 class="body-sm font-semibold">Colors and surfaces</h3>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Keep each surface with its foreground color. Neutral controls use the muted surface on
 						hover and a 10% foreground tint on press. Primary actions and editing actions use their
@@ -153,7 +153,7 @@
 				</div>
 
 				<div id="colorsets" class="space-y-5 sm:space-y-7">
-					<h3 class="text-sm font-medium">Color sets</h3>
+					<h3 class="body-sm font-semibold">Color sets</h3>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Each color set assigns every color token, so everything inside it stays readable without
 						changes of its own. Color set 1 is the page; sections switch to set 2 or 3. Code keeps
@@ -228,7 +228,7 @@
 				</div>
 
 				<div class="space-y-5 sm:space-y-7">
-					<h3 class="text-sm font-medium">Font families</h3>
+					<h3 class="body-sm font-semibold">Font families</h3>
 					<div class="grid grid-cols-1 gap-x-5 gap-y-8 sm:gap-x-7 lg:grid-cols-3 lg:gap-y-7">
 						<div class="space-y-3">
 							<p class="font-sans text-2xl">Clear words.</p>
@@ -261,7 +261,7 @@
 				</div>
 
 				<div class="space-y-5 sm:space-y-7">
-					<h3 class="text-sm font-medium">Corner radii</h3>
+					<h3 class="body-sm font-semibold">Corner radii</h3>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Buttons and pill shells use the button radius. Popovers cap it at 1rem; their inner rows
 						and pill controls subtract 4px padding and a 1px border, clamped at zero. Images use
@@ -327,8 +327,8 @@
 
 			<section id="page-limiter" aria-labelledby="page-limiter-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="page-limiter-heading" class="text-xl font-medium">Page limiter</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="page-limiter-heading" class="display-5">Page limiter</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Center each block with <code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>mx-auto max-w-7xl</code
@@ -369,7 +369,7 @@
 	&lt;/div&gt;
 &lt;/div&gt;</code
 					></pre>
-				<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+				<p class="max-w-prose body-sm text-(--muted-foreground)">
 					Keep full-width backgrounds outside the limiter and choose vertical spacing per block.
 					Narrower reading columns can sit inside this shared page width. Apply the side padding
 					once so adjacent blocks line up.
@@ -378,7 +378,7 @@
 
 			<section id="content-tracks" aria-labelledby="content-tracks-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="content-tracks-heading" class="text-xl font-medium">Content tracks</h2>
+					<h2 id="content-tracks-heading" class="display-5">Content tracks</h2>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						A track controls how much of the page limiter a block occupies and where it sits. Prose
 						and descriptive listings share narrow left, center, and right tracks, plus a wide
@@ -503,8 +503,8 @@
 
 			<section id="block-spacing" aria-labelledby="block-spacing-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="block-spacing-heading" class="text-xl font-medium">Vertical block spacing</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="block-spacing-heading" class="display-5">Vertical block spacing</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Generous spacing separates sections. Compact spacing pulls related blocks together. Each
 						block has its own top and bottom padding, chosen independently.
 					</p>
@@ -521,7 +521,7 @@
 				</ul>
 
 				<div class="space-y-3">
-					<h3 class="text-sm font-medium">Padding per edge</h3>
+					<h3 class="body-sm font-semibold">Padding per edge</h3>
 					<div class="overflow-x-auto">
 						<table class="w-full max-w-3xl text-sm leading-6">
 							<caption class="sr-only">Responsive generous and compact padding values</caption>
@@ -547,7 +547,7 @@
 							>
 						</table>
 					</div>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Pixel equivalents assume the default 16px root font size. Adjacent padding adds up: two
 						compact edges create a 48px gap, 64px from 1024px, always wider than the gap between
 						elements inside a block. Two generous edges create a gap four times as wide: 192px, or
@@ -562,7 +562,7 @@
 			-->
 				<div class="grid items-start gap-10 md:grid-cols-2">
 					<div class="space-y-4">
-						<h3 class="text-sm font-medium">Standalone block</h3>
+						<h3 class="body-sm font-semibold">Standalone block</h3>
 						<div class="border border-(--stroke)">
 							<div>
 								<div
@@ -582,7 +582,7 @@
 						</div>
 					</div>
 					<div class="space-y-4">
-						<h3 class="text-sm font-medium">Three blocks in one section</h3>
+						<h3 class="body-sm font-semibold">Three blocks in one section</h3>
 						<div class="divide-y divide-(--stroke) border border-(--stroke)">
 							<div>
 								<div
@@ -632,15 +632,15 @@
 						</div>
 					</div>
 				</div>
-				<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+				<p class="max-w-prose body-sm text-(--muted-foreground)">
 					Shaded bands show the padding at its actual size. Resize the window to compare the scale.
 					Spacing within a block, such as the gap between a heading and a paragraph, is a separate
 					choice.
 				</p>
 				<div id="block-spacing-api" class="space-y-6">
 					<div class="space-y-2">
-						<h3 class="text-sm font-medium">Sample block implementation</h3>
-						<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+						<h3 class="body-sm font-semibold">Sample block implementation</h3>
+						<p class="max-w-prose body-sm text-(--muted-foreground)">
 							A top-level block receives its section context through <code
 								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>mark</code
@@ -710,7 +710,7 @@
 						</li>
 						<li>A one-block section is both the start and the end, so both edges are generous.</li>
 					</ul>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						The app uses shared utilities in <code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>src/app.css</code
@@ -729,7 +729,7 @@
 							>pb-</code
 						> equivalents. They apply the values above to existing elements without adding a wrapper component.
 					</p>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						For a custom rhythm, replace the default utility on that edge with explicit responsive
 						classes, such as <code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
@@ -742,8 +742,8 @@
 
 			<section id="typography" aria-labelledby="typography-heading" class="space-y-10">
 				<div class="space-y-2">
-					<h2 id="typography-heading" class="text-xl font-medium">Typography</h2>
-					<p class="text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="typography-heading" class="display-5">Typography</h2>
+					<p class="body-sm text-(--muted-foreground)">
 						A shared scale for headings and body text.
 					</p>
 				</div>
@@ -835,8 +835,8 @@
 
 			<section id="formatting" aria-labelledby="formatting-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="formatting-heading" class="text-xl font-medium">Inline formatting</h2>
-					<p class="text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="formatting-heading" class="display-5">Inline formatting</h2>
+					<p class="body-sm text-(--muted-foreground)">
 						Emphasis and detail within the flow of a sentence.
 					</p>
 				</div>
@@ -921,7 +921,7 @@
 
 			<section id="card" aria-labelledby="card-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="card-heading" class="text-xl font-medium">Card</h2>
+					<h2 id="card-heading" class="display-5">Card</h2>
 					<p class="body-sm text-(--muted-foreground)">
 						A 4:3 media area, semibold title, and optional description. Shared by gallery cards;
 						width and arrangement belong to the surrounding layout. Linked cards underline the title
@@ -962,8 +962,8 @@
 
 			<section id="buttons" aria-labelledby="buttons-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="buttons-heading" class="text-xl font-medium">Buttons</h2>
-					<p class="text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="buttons-heading" class="display-5">Buttons</h2>
+					<p class="body-sm text-(--muted-foreground)">
 						Standard size. Hover, press, or tab to explore the states.
 					</p>
 				</div>
@@ -1021,8 +1021,8 @@
 
 			<section id="buttons-small" aria-labelledby="buttons-small-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="buttons-small-heading" class="text-xl font-medium">Small buttons</h2>
-					<p class="text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="buttons-small-heading" class="display-5">Small buttons</h2>
+					<p class="body-sm text-(--muted-foreground)">
 						For navigation and compact layouts. Small buttons keep a 36px minimum height on all
 						devices.
 					</p>
@@ -1072,8 +1072,8 @@
 
 			<section id="buttons-disabled" aria-labelledby="buttons-disabled-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="buttons-disabled-heading" class="text-xl font-medium">Disabled buttons</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="buttons-disabled-heading" class="display-5">Disabled buttons</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Buttons and pill controls use 40% opacity with the default cursor. Native disabled
 						buttons skip keyboard focus and suppress hover and press feedback. Menu rows instead use
 						muted text to keep unavailable actions legible.
@@ -1139,8 +1139,8 @@
 				class="space-y-8"
 			>
 				<div class="space-y-2">
-					<h2 id="descriptive-listing-heading" class="text-xl font-medium">Descriptive listing</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="descriptive-listing-heading" class="display-5">Descriptive listing</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						A linked row with a semibold title, description, and optional metadata. Hover or press
 						anywhere on the row to show the title underline in full; keyboard focus outlines the
 						whole row. A plain listing uses the same recipe with the description omitted.
@@ -1194,8 +1194,8 @@
 
 			<section id="dialog-buttons" aria-labelledby="dialog-buttons-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="dialog-buttons-heading" class="text-xl font-medium">Dialog buttons</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="dialog-buttons-heading" class="display-5">Dialog buttons</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						For the editing dialogs outside the toolbar: the login dialog, the save conflict dialog,
 						and the OAuth consent page. The primary action uses the editing colors, since these
 						dialogs belong to editing rather than to the site.
@@ -1254,8 +1254,8 @@
 
 			<section id="boxed-prose" aria-labelledby="boxed-prose-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="boxed-prose-heading" class="text-xl font-medium">Boxed items</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="boxed-prose-heading" class="display-5">Boxed items</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Boxed items use a muted surface. Secondary buttons fill with the background color, so
 						they lift off it. Accent boxes use
 						<code
@@ -1295,8 +1295,8 @@
 
 			<section id="navigation" aria-labelledby="navigation-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="navigation-heading" class="text-xl font-medium">Navigation</h2>
-					<p class="text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="navigation-heading" class="display-5">Navigation</h2>
+					<p class="body-sm text-(--muted-foreground)">
 						A placeholder logo, main links, and small primary and secondary buttons. Links are muted
 						and turn to the foreground color on hover and press, without an underline.
 					</p>
@@ -1385,7 +1385,7 @@
 					</div>
 				</nav>
 				<div id="navigation-mobile" class="space-y-4">
-					<h3 class="text-sm font-medium">Mobile navigation controls</h3>
+					<h3 class="body-sm font-semibold">Mobile navigation controls</h3>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						The application switches to a menu on small screens. Use an opaque page background,
 						these icon buttons, and larger navigation links. Controls share the 2px focus outline
@@ -1440,8 +1440,8 @@
 
 			<section id="pills" aria-labelledby="pills-heading" class="space-y-10">
 				<div class="space-y-2">
-					<h2 id="pills-heading" class="text-xl font-medium">Editor pills</h2>
-					<p class="text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="pills-heading" class="display-5">Editor pills</h2>
+					<p class="body-sm text-(--muted-foreground)">
 						Compact surfaces for tools, actions, and previews.
 					</p>
 				</div>
@@ -1660,8 +1660,8 @@ The local href is a specimen destination. Production links retain their own dest
 			</section>
 			<section id="editor-forms" aria-labelledby="editor-forms-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="editor-forms-heading" class="text-xl font-medium">Editor forms</h2>
-					<p class="max-w-prose text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="editor-forms-heading" class="display-5">Editor forms</h2>
+					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Link and media prompts use an opaque surface with 4px padding, no shadow, and the button
 						radius capped at 1rem. Fields and actions subtract the padding and border from that
 						radius. Text inputs and textareas use 16px text and an editing-color border on focus.
@@ -1696,7 +1696,7 @@ The local href is a specimen destination. Production links retain their own dest
 
 			<section id="page-browser" aria-labelledby="page-browser-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="page-browser-heading" class="text-xl font-medium">Page browser</h2>
+					<h2 id="page-browser-heading" class="display-5">Page browser</h2>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						A muted editing fill marks the result Enter will open. Only keyboard-focused rows get a
 						ring, drawn inside the row to keep tree guides and adjacent rows clear. Search focus
@@ -1755,8 +1755,8 @@ The local href is a specimen destination. Production links retain their own dest
 
 			<section id="popovers" aria-labelledby="popovers-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="popovers-heading" class="text-xl font-medium">List popovers</h2>
-					<p class="text-sm leading-relaxed text-(--muted-foreground)">
+					<h2 id="popovers-heading" class="display-5">List popovers</h2>
+					<p class="body-sm text-(--muted-foreground)">
 						Compact lists with a shared surface and aligned rows.
 					</p>
 				</div>
