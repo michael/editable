@@ -20,7 +20,7 @@ text property uses its own pseudo-elements for the placeholder. -->
 	>
 		<TextProperty
 			tag="p"
-			class={`body-sm ${layout === 'muted' ? 'text-(--muted-foreground)' : ''}`}
+			class={`body-sm max-sm:text-xs ${layout === 'muted' ? 'text-(--muted-foreground)' : ''}`}
 			path={[...path, 'content']}
 			placeholder="Eyebrow"
 		/>

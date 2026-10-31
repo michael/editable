@@ -818,6 +818,19 @@
 						</p>
 					</div>
 				</div>
+
+				<!--
+				An eyebrow labels the heading below it: body-sm, 12px on phones, on a muted box with accent
+				corner marks. The marks are a border masked down to its corners, on the wrapper's ::before.
+			-->
+				<div id="type-eyebrow" class="space-y-3">
+					<p class="text-sm text-(--muted-foreground)">eyebrow</p>
+					<div
+						class="relative inline-block bg-(--muted) px-3 py-1 before:pointer-events-none before:absolute before:inset-0 before:border before:border-(--accent) before:[mask:conic-gradient(at_5px_5px,#0000_75%,#000_0)_0_0/calc(100%-5px)_calc(100%-5px)]"
+					>
+						<p class="body-sm text-(--muted-foreground) max-sm:text-xs">Visual builder</p>
+					</div>
+				</div>
 			</section>
 
 			<section id="formatting" aria-labelledby="formatting-heading" class="space-y-8">

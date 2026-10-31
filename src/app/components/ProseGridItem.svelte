@@ -20,20 +20,10 @@
 			return centered;
 		}
 	});
-
-	const heading_spacing = `
-		[&>div:has(h1)~div>h1]:pt-8
-		[&>div:has(h2)~div>h2]:pt-6
-		[&>div:has(h3)~div>h3]:pt-6
-		[&>span:has(.ew-eyebrow)~div>span.ew-eyebrow]:pt-6
-	`;
 </script>
 
 {#snippet body()}
-	<NodeArrayProperty
-		class="flex flex-col gap-5 [--row:0] sm:gap-7 {heading_spacing}"
-		path={[...path, 'body']}
-	/>
+	<NodeArrayProperty class="flex flex-col gap-5 [--row:0] sm:gap-7" path={[...path, 'body']} />
 {/snippet}
 
 {#snippet plain()}
