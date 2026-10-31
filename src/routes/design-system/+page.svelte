@@ -1297,8 +1297,9 @@
 				<div class="space-y-2">
 					<h2 id="navigation-heading" class="display-5">Navigation</h2>
 					<p class="body-sm text-(--muted-foreground)">
-						A placeholder logo, main links, and small primary and secondary buttons. Links are muted
-						and turn to the foreground color on hover and press, without an underline.
+						A placeholder logo, main links, and small primary and secondary buttons. Links use the
+						foreground color and fade to muted on hover and press, without an underline, like the
+						mobile menu.
 					</p>
 				</div>
 
@@ -1333,28 +1334,28 @@
 						<li>
 							<a
 								href="#typography"
-								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--muted-foreground) transition-colors hover:text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:text-(--foreground)"
+								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--foreground) transition-colors hover:text-(--muted-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:text-(--muted-foreground)"
 								>Product</a
 							>
 						</li>
 						<li>
 							<a
 								href="#buttons-small"
-								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--muted-foreground) transition-colors hover:text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:text-(--foreground)"
+								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--foreground) transition-colors hover:text-(--muted-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:text-(--muted-foreground)"
 								>Quickstart</a
 							>
 						</li>
 						<li>
 							<a
 								href="#formatting"
-								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--muted-foreground) transition-colors hover:text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:text-(--foreground)"
+								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--foreground) transition-colors hover:text-(--muted-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:text-(--muted-foreground)"
 								>Manual</a
 							>
 						</li>
 						<li>
 							<a
 								href="#pills"
-								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--muted-foreground) transition-colors hover:text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:text-(--foreground)"
+								class="inline-flex min-h-9 items-center py-1.5 text-sm leading-5 text-(--foreground) transition-colors hover:text-(--muted-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:text-(--muted-foreground)"
 								>Contact</a
 							>
 						</li>
