@@ -41,8 +41,8 @@
 		this={render_as_link ? 'a' : 'div'}
 		href={render_as_link ? node.href : undefined}
 		target={render_as_link && node.target !== '_self' ? node.target : undefined}
-		class="ew-button inline-flex max-w-full items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) text-center font-normal wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {button_size} {render_as_link
-			? 'cursor-pointer transition-colors hover:bg-(--muted) active:bg-(--foreground)/10'
+		class="ew-button inline-flex max-w-full items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) text-center font-normal wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {button_size} {render_as_link
+			? 'cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] active:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)]'
 			: ''}"
 	>
 		<TextProperty path={[...path, 'label']} placeholder="Button" />

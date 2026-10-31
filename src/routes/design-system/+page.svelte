@@ -989,10 +989,10 @@
 
 					<div id="button-secondary" class="min-w-0 space-y-4">
 						<h3 class="text-sm text-(--muted-foreground)">Secondary</h3>
-						<!-- Supporting action. Background fill with the stroke border, muted hover surface, and foreground tint on press. -->
+						<!-- Supporting action. Muted fill with the stroke border, so it stands apart on any surface. Hover and press mix the fill toward the text color, like the main action. -->
 						<button
 							type="button"
-							class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+							class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] enabled:active:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)] disabled:cursor-default disabled:opacity-40"
 						>
 							Continue
 						</button>
@@ -1048,10 +1048,10 @@
 
 					<div id="button-secondary-small" class="min-w-0 space-y-4">
 						<h3 class="text-sm text-(--muted-foreground)">Secondary</h3>
-						<!-- Supporting action. Background fill with the stroke border, muted hover surface, and foreground tint on press. -->
+						<!-- Supporting action. Muted fill with the stroke border, so it stands apart on any surface. Hover and press mix the fill toward the text color, like the main action. -->
 						<button
 							type="button"
-							class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+							class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] enabled:active:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)] disabled:cursor-default disabled:opacity-40"
 						>
 							Continue
 						</button>
@@ -1095,7 +1095,7 @@
 						<button
 							type="button"
 							disabled
-							class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+							class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] enabled:active:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)] disabled:cursor-default disabled:opacity-40"
 							>Continue</button
 						>
 					</div>
@@ -1113,7 +1113,7 @@
 						<button
 							type="button"
 							disabled
-							class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+							class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] enabled:active:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)] disabled:cursor-default disabled:opacity-40"
 							>Continue</button
 						>
 					</div>
@@ -1261,7 +1261,7 @@
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>ew-muted-surface</code
 						>: they fill with the muted color, and their children swap background and muted, so an
-						eyebrow or inline code stands out from the box. Accent boxes use
+						eyebrow, inline code, or a secondary button stands out from the box. Accent boxes use
 						<code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>ew-accent-surface</code
@@ -1281,7 +1281,7 @@
 							<p class="body-base">Start with the shared styles and adapt them to your site.</p>
 							<a
 								href="#buttons"
-								class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
+								class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)]"
 								>Explore buttons</a
 							>
 						</div>
@@ -1379,7 +1379,7 @@
 						>
 						<button
 							type="button"
-							class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center gap-1.5 rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+							class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center gap-1.5 rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] enabled:active:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)] disabled:cursor-default disabled:opacity-40"
 						>
 							Install
 							<svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">

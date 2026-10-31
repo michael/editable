@@ -35,7 +35,7 @@
 				{#if can_go_back}
 					<button
 						type="button"
-						class="ew-button inline-flex min-h-11 max-w-full min-w-11 cursor-pointer items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--background) px-5 py-2 text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
+						class="ew-button inline-flex min-h-11 max-w-full min-w-11 cursor-pointer items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) px-5 py-2 text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)]"
 						onclick={() => history.back()}
 					>
 						← Go back
