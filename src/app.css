@@ -236,12 +236,10 @@ There the caret follows the text color and text selection uses the system colors
 	content: none;
 }
 
-/* Selection frames sit outside the content and keep the page's editing color. Edges in the page
-background keep them visible on any color set, even one in the editing color itself. */
+/* Selection frames sit outside the content and keep the page's editing color. An outer ring in the
+page background keeps them visible on any color set, even one in the editing color itself. */
 .svedit :is(.selected-node-overlay, .selected-property-overlay) {
-	box-shadow:
-		0 0 0 1.5px var(--background),
-		inset 0 0 0 1.5px var(--background);
+	box-shadow: 0 0 0 1.5px var(--background);
 }
 
 /* Dim custom selection frames when the editor canvas loses focus. */
