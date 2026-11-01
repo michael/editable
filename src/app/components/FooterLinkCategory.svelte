@@ -6,7 +6,7 @@
 
 <Node {path} class="ew-footer-link-category">
 	<TextProperty
-		class="block body-sm text-(--muted-foreground)"
+		class="block body-sm font-semibold"
 		path={[...path, 'title']}
 		placeholder="Category"
 	/>

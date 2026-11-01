@@ -69,7 +69,7 @@ another set, and everything inside follows its tokens. */
 
 /* Color set 2: a light grey surface. Its muted surface is white, so boxes lift off it. */
 .ew-colorset-2 {
-	--background: oklch(97% 0 0);
+	--background: oklch(98% 0 0);
 	--foreground: oklch(0% 0 0);
 	--muted: oklch(100% 0 0);
 	--stroke: oklch(90% 0 0);
@@ -116,6 +116,19 @@ keeps the pair in --ew-surface*, since the children can't redefine tokens from t
 	--editing: var(--ew-surface-foreground);
 	--editing-muted: oklch(from var(--editing) l c h / 0.25);
 	--editing-foreground: var(--ew-surface);
+}
+
+/* A muted surface, such as a boxed item, fills with the muted color. Its children swap background
+and muted, so muted elements inside it, such as an eyebrow or inline code, stand out from the box. */
+.ew-muted-surface {
+	--ew-surface: var(--muted);
+	--ew-surface-muted: var(--background);
+	background: var(--ew-surface);
+}
+
+.ew-muted-surface > * {
+	--background: var(--ew-surface);
+	--muted: var(--ew-surface-muted);
 }
 
 :root {
@@ -217,12 +230,16 @@ There the caret follows the text color and text selection uses the system colors
 	color: HighlightText;
 }
 
-/* Selection frames sit outside the content and keep the page's editing color. Edges in the page
-background keep them visible on any color set, even one in the editing color itself. */
+/* Placeholders such as "Paragraph" guide editing only, so visitors never see them. */
+.svedit-canvas[contenteditable='false'] [placeholder].text.empty::before,
+.svedit-canvas[contenteditable='false'] [placeholder].text.empty::after {
+	content: none;
+}
+
+/* Selection frames sit outside the content and keep the page's editing color. An outer ring in the
+page background keeps them visible on any color set, even one in the editing color itself. */
 .svedit :is(.selected-node-overlay, .selected-property-overlay) {
-	box-shadow:
-		0 0 0 1.5px var(--background),
-		inset 0 0 0 1.5px var(--background);
+	box-shadow: 0 0 0 1.5px var(--background);
 }
 
 /* Dim custom selection frames when the editor canvas loses focus. */
@@ -248,30 +265,31 @@ background keep them visible on any color set, even one in the editing color its
 /* Typography system */
 /******************************************************************/
 
-/* Large display headings use medium weight; smaller headings use semibold. */
+/* Headings use semibold, so they stand apart from regular body text. */
+/* Leading tightens as headings grow. */
 /* Heading1XL */
 @utility display-1 {
-	@apply font-sans text-6xl leading-tight font-medium tracking-tight text-balance lg:text-7xl;
+	@apply font-sans text-5xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-6xl lg:text-7xl;
 }
 
 /* Heading1 */
 @utility display-2 {
-	@apply font-sans text-5xl leading-tight font-medium tracking-tight text-balance lg:text-6xl;
+	@apply font-sans text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl;
 }
 
 /* Heading2 */
 @utility display-3 {
-	@apply font-sans text-4xl leading-tight font-medium tracking-tight text-balance lg:text-5xl;
+	@apply font-sans text-3xl leading-[1.1] font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl;
 }
 
 /* Heading3 */
 @utility display-4 {
-	@apply font-sans text-3xl leading-tight font-medium tracking-tight text-balance lg:text-4xl;
+	@apply font-sans text-2xl leading-[1.15] font-semibold tracking-tight text-balance sm:text-3xl lg:text-4xl;
 }
 
 /* Heading4 and gallery titles */
 @utility display-5 {
-	@apply font-sans text-2xl leading-tight font-medium tracking-tight text-balance lg:text-3xl;
+	@apply font-sans text-xl leading-tight font-semibold tracking-tight text-balance sm:text-2xl lg:text-3xl;
 }
 
 /* Body text uses regular weight and a consistent 1.5 line height. */
@@ -300,19 +318,19 @@ background keep them visible on any color set, even one in the editing color its
 
 /* Defaults for each edge. Replace the utility with explicit classes for custom spacing. */
 @utility pt-block-generous {
-	@apply pt-10 sm:pt-14 md:pt-16 lg:pt-28;
+	@apply pt-24 lg:pt-32;
 }
 
 @utility pt-block-compact {
-	@apply pt-4 lg:pt-7;
+	@apply pt-6 lg:pt-8;
 }
 
 @utility pb-block-generous {
-	@apply pb-10 sm:pb-14 md:pb-16 lg:pb-28;
+	@apply pb-24 lg:pb-32;
 }
 
 @utility pb-block-compact {
-	@apply pb-4 lg:pb-7;
+	@apply pb-6 lg:pb-8;
 }
 
 /* EW-specific utilities */

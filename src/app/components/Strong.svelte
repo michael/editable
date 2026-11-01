@@ -7,4 +7,4 @@
 	let node: Nodes['strong'] = $derived(svedit.session.get(path));
 </script>
 
-<strong class="font-semibold" id={node.id} data-node-id={node.id}>{content}</strong>
+<strong class="font-[weight:bolder]" id={node.id} data-node-id={node.id}>{content}</strong>

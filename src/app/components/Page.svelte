@@ -20,7 +20,6 @@
 	let { path }: { path: DocumentPath } = $props();
 	let nav_wrapper_ref: HTMLDivElement | undefined = $state();
 	let nav_height = $state(0);
-	let scroll_y = $state(0);
 	let head_metadata = $derived(extract_page_metadata(svedit.session.doc));
 	let page_title = $derived(app.document_title ?? (head_metadata.title || 'Untitled page'));
 	let page_image: Nodes['image'] = $derived(svedit.session.get([...path, 'image']));
@@ -109,8 +108,6 @@
 	});
 </script>
 
-<svelte:window bind:scrollY={scroll_y} />
-
 <svelte:head>
 	<title>{page_title}</title>
 	{#if head_metadata.description}
@@ -155,7 +152,6 @@
 		<div
 			bind:this={nav_wrapper_ref}
 			class="bg-(--background) text-(--foreground) {svedit.editable ? '' : 'sticky top-0 z-40'}"
-			class:shadow-sm={!svedit.editable && scroll_y > 0}
 		>
 			<Nav path={[...path, 'nav']} />
 		</div>

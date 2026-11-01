@@ -121,7 +121,7 @@
 					<NavButton path={mobile_nav_cta_path} />
 				{/if}
 				<button
-					class="inline-flex size-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border-0 bg-transparent p-0 text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+					class="inline-flex size-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border-0 bg-transparent p-0 text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 					onclick={() => (mobile_nav_open = !mobile_nav_open)}
 					aria-label="Toggle menu"
 					aria-expanded={mobile_nav_open}
@@ -139,7 +139,7 @@
 			transition:slide={{ duration: 200 }}
 		>
 			<button
-				class="absolute top-4 right-5 inline-flex size-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border-0 bg-transparent p-0 text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:right-7"
+				class="absolute top-4 right-5 inline-flex size-9 shrink-0 items-center justify-center rounded-(--button-border-radius) border-0 bg-transparent p-0 text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40 sm:right-7"
 				onclick={() => (mobile_nav_open = false)}
 				aria-label="Close menu"
 			>
@@ -153,7 +153,7 @@
 						<a
 							href={item.href || '#'}
 							target={item.target !== '_self' ? item.target : undefined}
-							class="flex min-h-11 items-center py-2 text-3xl leading-tight font-normal wrap-anywhere text-(--foreground) underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:underline"
+							class="flex min-h-11 items-center py-2 text-3xl leading-tight font-normal wrap-anywhere text-(--foreground) transition-colors hover:text-(--muted-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:text-(--muted-foreground)"
 							onclick={() => (mobile_nav_open = false)}
 						>
 							{item.label?.content || ''}

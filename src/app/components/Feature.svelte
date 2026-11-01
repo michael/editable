@@ -45,7 +45,7 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				`grid grid-cols-1 gap-x-10 gap-y-5 px-5 sm:gap-y-7 sm:px-7 md:grid-cols-2 lg:gap-x-14`,
+				`grid grid-cols-1 gap-10 px-5 sm:px-7 md:grid-cols-2 lg:gap-x-14`,
 				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}
@@ -64,7 +64,7 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				`grid grid-cols-1 gap-x-10 gap-y-5 px-5 sm:gap-y-7 sm:px-7 md:grid-cols-2 lg:gap-x-14`,
+				`grid grid-cols-1 gap-10 px-5 sm:px-7 md:grid-cols-2 lg:gap-x-14`,
 				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}

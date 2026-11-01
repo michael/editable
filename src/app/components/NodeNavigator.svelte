@@ -134,7 +134,7 @@
 		<div
 			class="relative flex min-h-9 min-w-0 items-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] px-3 py-2 whitespace-nowrap {variant_item.option_count >
 			1
-				? 'cursor-pointer hover:bg-(--muted) active:bg-(--foreground)/10'
+				? 'cursor-pointer transition-colors hover:bg-(--muted) active:bg-(--foreground)/10'
 				: ''}"
 		>
 			<span class="flex min-w-0 items-center whitespace-nowrap" aria-hidden="true">

@@ -124,7 +124,7 @@
 			style:anchor-name={`--language-${menu_id}`}
 			aria-label={`Language: ${language_name(app.language)}`}
 			aria-expanded={menu_open}
-			class="inline-flex min-h-9 items-center gap-1 border-0 bg-transparent py-1.5 text-sm leading-5 font-normal text-(--foreground) underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:underline enabled:active:underline disabled:cursor-default disabled:text-(--muted-foreground)"
+			class="inline-flex min-h-9 items-center gap-1 border-0 bg-transparent py-1.5 text-sm leading-5 font-normal text-(--muted-foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:text-(--foreground) enabled:active:text-(--foreground) disabled:cursor-default disabled:text-(--muted-foreground)"
 		>
 			{app.language.toUpperCase()}
 			<svg
@@ -159,7 +159,7 @@
 						aria-current={app.language === language ? 'true' : undefined}
 						aria-disabled={disabled || app.language === language}
 						onclick={(event) => choose(event, language)}
-						class="group flex min-h-10 items-center gap-3 rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] px-3 py-2.5 text-sm leading-5 not-aria-disabled:hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) aria-disabled:cursor-default aria-disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
+						class="group flex min-h-10 items-center gap-3 rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] px-3 py-2.5 text-sm leading-5 transition-colors not-aria-disabled:hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) aria-disabled:cursor-default aria-disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
 					>
 						<span
 							class="inline-flex min-w-8 shrink-0 items-center justify-center rounded-(--button-border-radius) bg-(--foreground) px-2 py-0.5 text-xs leading-4 font-medium text-(--background) group-aria-disabled:bg-(--muted-foreground)"

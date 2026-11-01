@@ -89,7 +89,7 @@
 				type="button"
 				popovertarget={toc_id}
 				aria-expanded={toc_open}
-				class="relative flex min-h-9 min-w-0 cursor-pointer items-center gap-2 rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] px-3 py-2 font-medium whitespace-nowrap hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
+				class="relative flex min-h-9 min-w-0 cursor-pointer items-center gap-2 rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] px-3 py-2 font-medium whitespace-nowrap transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10"
 			>
 				<span class="min-w-0 truncate">{entries[active_entry_index]?.title}</span>
 				<svg
@@ -114,7 +114,7 @@
 				{#each entries as entry, index (entry.href)}
 					<a
 						href={entry.href}
-						class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere whitespace-normal text-(--foreground) hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
+						class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal wrap-anywhere whitespace-normal text-(--foreground) transition-colors hover:bg-(--muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-(--foreground)/10 pointer-coarse:min-h-11"
 						aria-current={index === active_entry_index ? 'location' : undefined}
 						onclick={close_toc_menu}
 					>
