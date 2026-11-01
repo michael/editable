@@ -187,7 +187,7 @@
 	<!-- Drop target overlay for file drag-and-drop onto media properties -->
 	{#if drop_target_path}
 		<div
-			class="drop-target-overlay"
+			class="ew-drop-target-overlay"
 			style="position-anchor: --{serialize_path(drop_target_path)};"
 		></div>
 	{/if}
@@ -196,7 +196,10 @@
 		{#if svedit.session.selection?.type === 'property'}
 			{@const anchor_style = `position-anchor: --${serialize_path(svedit.session.selection.path)};`}
 			{#if is_media_selected}
-				<div class="media-controls-overlay property-selection-overlay" style={anchor_style}></div>
+				<div
+					class="ew-media-controls-overlay property-selection-overlay"
+					style={anchor_style}
+				></div>
 				<!-- Keep controls beside the anchored overlay to avoid Safari positioning bugs. -->
 				{#if selected_property.src}
 					<MediaControls path={svedit.session.selection.path} {is_mouse_down} {anchor_style} />
@@ -266,7 +269,7 @@
 />
 
 <style>
-	.drop-target-overlay {
+	.ew-drop-target-overlay {
 		position: absolute;
 		top: anchor(top);
 		left: anchor(left);
@@ -278,7 +281,7 @@
 		z-index: 30;
 	}
 
-	.media-controls-overlay {
+	.ew-media-controls-overlay {
 		position: absolute;
 		top: anchor(top);
 		left: anchor(left);

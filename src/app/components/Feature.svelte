@@ -2,11 +2,15 @@
 	import type { Nodes } from '#app/document_schema.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { Node, NodeArrayProperty } from 'svedit';
+	import type { DocumentPath, NodeArrayAttachmentContext } from 'svedit';
 	import MediaProperty from './MediaProperty.svelte';
 	import { reveal } from '#app/reveal.js';
 
 	const svedit = get_svedit_context();
-	let { path, mark: section = null } = $props();
+	let {
+		path,
+		mark: section = null
+	}: { path: DocumentPath; mark?: NodeArrayAttachmentContext | null } = $props();
 	let node: Nodes['feature'] = $derived(svedit.session.get(path));
 	let media_node = $derived(svedit.session.get([...path, 'media']));
 	let render_as_link = $derived(!svedit.editable && node.href);
@@ -46,8 +50,8 @@
 		<div
 			class={[
 				`grid grid-cols-1 gap-10 px-5 sm:px-7 md:grid-cols-2 lg:gap-x-14`,
-				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+				padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+				padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 			]}
 		>
 			<div class="flex flex-col justify-center pb-0" use:reveal>
@@ -65,8 +69,8 @@
 		<div
 			class={[
 				`grid grid-cols-1 gap-10 px-5 sm:px-7 md:grid-cols-2 lg:gap-x-14`,
-				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+				padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+				padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 			]}
 		>
 			<div class="max-md:order-2" use:reveal={{ delay: 200 }}>

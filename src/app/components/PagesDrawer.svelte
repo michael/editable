@@ -50,11 +50,11 @@
 			);
 			if (!(selected_row instanceof HTMLElement)) return;
 
-			const scroll_container = tree_ref.closest('.drawer-panel');
+			const scroll_container = tree_ref.closest('.ew-drawer-panel');
 			if (!(scroll_container instanceof HTMLElement)) return;
 
 			const scroll_container_rect = scroll_container.getBoundingClientRect();
-			const search_shell = tree_ref.closest('.pages-drawer')?.querySelector('.search-shell');
+			const search_shell = tree_ref.closest('.ew-pages-drawer')?.querySelector('.ew-search-shell');
 			const search_shell_rect =
 				search_shell instanceof HTMLElement ? search_shell.getBoundingClientRect() : null;
 
@@ -439,7 +439,7 @@ Updated: ${updated_at_label}`;
 
 		if (event.key === 'Enter') {
 			const active_item = document.activeElement;
-			if (active_item instanceof HTMLButtonElement && active_item.closest('.menu-panel')) {
+			if (active_item instanceof HTMLButtonElement && active_item.closest('.ew-menu-panel')) {
 				event.preventDefault();
 				active_item.click();
 			}
@@ -585,15 +585,15 @@ Updated: ${updated_at_label}`;
 	});
 </script>
 
-<div class="pages-drawer">
+<div class="ew-pages-drawer">
 	<!-- Parks focus inside the drawer without opening the mobile keyboard. showModal()
 	focuses the first focusable element, so keep this first in the drawer. -->
-	<button type="button" class="drawer-initial-focus-target" aria-label="Pages drawer"></button>
+	<button type="button" class="ew-drawer-initial-focus-target" aria-label="Pages drawer"></button>
 
-	<div class="search-shell">
-		<label class="search-input-shell">
+	<div class="ew-search-shell">
+		<label class="ew-search-input-shell">
 			<svg
-				class="search-input-icon"
+				class="ew-search-input-icon"
 				xmlns="http://www.w3.org/2000/svg"
 				viewBox="0 0 15 15"
 				fill="none"
@@ -605,7 +605,7 @@ Updated: ${updated_at_label}`;
 			<input
 				bind:this={search_input_ref}
 				type="search"
-				class="search-input"
+				class="ew-search-input"
 				bind:value={search_query}
 				placeholder={`Search ${page_count} pages`}
 				aria-label={`Search ${page_count} pages`}
@@ -614,13 +614,13 @@ Updated: ${updated_at_label}`;
 		</label>
 	</div>
 
-	<section class="section">
+	<section class="ew-section">
 		{#if loading && !browser_data}
-			<div class="status-message" role="status">Loading pages…</div>
+			<div class="ew-status-message" role="status">Loading pages…</div>
 		{:else if load_error}
-			<div class="status-message" role="alert">{load_error}</div>
+			<div class="ew-status-message" role="alert">{load_error}</div>
 		{:else}
-			<div class="tree" bind:this={tree_ref}>
+			<div class="ew-tree" bind:this={tree_ref}>
 				{#snippet node_item(
 					node,
 					depth = 0,
@@ -633,61 +633,61 @@ Updated: ${updated_at_label}`;
 					{@const node_is_unlisted = is_unlisted_page(node, depth, ancestor_is_unlisted)}
 					{@const current_column_continues = node_is_root ? false : !is_last}
 					{@const guide_column_count = ancestor_columns.length}
-					<div class="tree-node">
-						<div class="tree-row-shell" style={`--tree-guide-columns: ${guide_column_count};`}>
-							<div class="tree-guides" aria-hidden="true">
+					<div class="ew-tree-node">
+						<div class="ew-tree-row-shell" style={`--tree-guide-columns: ${guide_column_count};`}>
+							<div class="ew-tree-guides" aria-hidden="true">
 								{#each ancestor_columns as show_rail, guide_index (`${depth}-${guide_index}`)}
-									<div class="tree-guide-column">
+									<div class="ew-tree-guide-column">
 										{#if show_rail}
-											<div class="tree-guide-rail"></div>
+											<div class="ew-tree-guide-rail"></div>
 										{/if}
 									</div>
 								{/each}
 
 								{#if !node_is_root}
-									<div class="tree-gutter">
-										<div class="tree-gutter-rail tree-gutter-rail-top"></div>
+									<div class="ew-tree-gutter">
+										<div class="ew-tree-gutter-rail ew-tree-gutter-rail-top"></div>
 										{#if current_column_continues}
-											<div class="tree-gutter-rail tree-gutter-rail-bottom"></div>
+											<div class="ew-tree-gutter-rail ew-tree-gutter-rail-bottom"></div>
 										{/if}
-										<div class="tree-gutter-elbow"></div>
+										<div class="ew-tree-gutter-elbow"></div>
 									</div>
 								{/if}
 							</div>
 
 							<a
-								class="tree-row"
-								class:tree-row-root={node_is_root}
-								class:tree-row-keyboard-selected={visible_results[selected_result_index]
+								class="ew-tree-row"
+								class:ew-tree-row-root={node_is_root}
+								class:ew-tree-row-keyboard-selected={visible_results[selected_result_index]
 									?.document_id === node.document_id}
 								data-page-browser-row={node.document_id}
 								title={get_page_title_tooltip(node)}
 								href={get_resolved_page_href(node.page_href)}
 								onclick={(event) => handle_page_click(event, node.document_id)}
 							>
-								<div class="page-illustration tree-illustration" aria-hidden="true">
+								<div class="ew-page-illustration ew-tree-illustration" aria-hidden="true">
 									{#if node.preview_media_node?.src}
-										<div class="media-preview">
+										<div class="ew-media-preview">
 											<Media node={{ ...node.preview_media_node, object_fit: 'cover' }} />
 										</div>
 									{:else}
-										<div class="page-illustration-fallback ew-bg-checkerboard"></div>
+										<div class="ew-page-illustration-fallback ew-bg-checkerboard"></div>
 									{/if}
 								</div>
 
-								<div class="tree-label">
-									<div class="tree-title">
+								<div class="ew-tree-label">
+									<div class="ew-tree-title">
 										{#each get_highlight_parts(node.title, normalized_search_query) as part, part_index (`title-${node.document_id}-${part_index}`)}
-											<span class:match-highlight={part.is_match}>{part.text}</span>
+											<span class:ew-match-highlight={part.is_match}>{part.text}</span>
 										{/each}
 									</div>
 								</div>
 
-								<div class="tree-row-meta">
+								<div class="ew-tree-row-meta">
 									{#if node.shadowed_by_markdown || node.shadowed_by_language}
 										<button
 											type="button"
-											class="unlisted-badge shadowed-badge"
+											class="ew-unlisted-badge ew-shadowed-badge"
 											title="Explain why this page is unreachable"
 											aria-label={`Explain why ${node.title} is unreachable`}
 											onclick={(event) =>
@@ -705,7 +705,7 @@ Updated: ${updated_at_label}`;
 									{#if node_is_unlisted}
 										<button
 											type="button"
-											class="unlisted-badge"
+											class="ew-unlisted-badge"
 											title="Explain what unlisted means"
 											aria-label={`Explain what unlisted means for ${node.title}`}
 											onclick={(event) =>
@@ -723,7 +723,7 @@ Updated: ${updated_at_label}`;
 							{#if !is_picker_mode}
 								<button
 									type="button"
-									class="item-actions-btn"
+									class="ew-item-actions-btn"
 									style={`anchor-name: ${get_menu_anchor_name(node.document_id)};`}
 									aria-label={`Page actions for ${node.title}`}
 									onclick={(event) =>
@@ -736,7 +736,7 @@ Updated: ${updated_at_label}`;
 										})}
 								>
 									<svg
-										class="tree-actions-dots"
+										class="ew-tree-actions-dots"
 										xmlns="http://www.w3.org/2000/svg"
 										viewBox="0 0 24 24"
 										fill="currentColor"
@@ -751,7 +751,7 @@ Updated: ${updated_at_label}`;
 						</div>
 
 						{#if node_has_children}
-							<div class="tree-children">
+							<div class="ew-tree-children">
 								{#each node.children as child, index (child.document_id)}
 									{@render node_item(
 										child,
@@ -767,9 +767,9 @@ Updated: ${updated_at_label}`;
 				{/snippet}
 
 				{#if normalized_search_query && filtered_page_forest.length === 0}
-					<div class="status-message">No matching pages.</div>
+					<div class="ew-status-message">No matching pages.</div>
 				{:else if !normalized_search_query && page_forest.length === 0}
-					<div class="status-message">No pages yet.</div>
+					<div class="ew-status-message">No pages yet.</div>
 				{:else}
 					{#each filtered_page_forest as root_node, index (root_node.document_id)}
 						{@render node_item(root_node, 0, index === filtered_page_forest.length - 1, [], false)}
@@ -782,14 +782,14 @@ Updated: ${updated_at_label}`;
 
 <dialog
 	bind:this={menu_ref}
-	class="page-actions-dialog focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
+	class="m-0 h-screen max-h-none w-screen max-w-none overflow-visible border-0 bg-transparent p-0 backdrop:bg-transparent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 	oncancel={handle_menu_cancel}
 	onclick={handle_menu_click}
 	onkeydown={handle_menu_keydown}
 >
 	{#if menu_item}
 		<div
-			class="menu-panel"
+			class="ew-menu-panel"
 			style={`position-anchor: ${menu_anchor_name}; position-area: block-end span-all; justify-self: anchor-center; position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;`}
 		>
 			<button
@@ -820,7 +820,7 @@ Updated: ${updated_at_label}`;
 				type="button"
 				class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11 {menu_item.is_home_page
 					? ''
-					: 'menu-item-danger'} transition-colors"
+					: 'ew-menu-item-danger'} transition-colors"
 				onclick={open_confirm}
 				onfocus={() => {
 					menu_selected_index = 2;
@@ -835,18 +835,20 @@ Updated: ${updated_at_label}`;
 
 <dialog
 	bind:this={unlisted_info_ref}
-	class="confirm-dialog focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
+	class="m-0 h-screen max-h-none w-screen max-w-none overflow-visible border-0 bg-transparent p-0 backdrop:bg-(--foreground)/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 	oncancel={handle_unlisted_info_cancel}
 	onclick={handle_unlisted_info_click}
 >
 	{#if unlisted_info_item}
-		<div class="confirm-panel unlisted-info-panel">
-			<h3 class="confirm-title">Unlisted page</h3>
-			<p class="confirm-message">
+		<div
+			class="fixed top-1/2 left-1/2 flex max-h-[calc(100dvh-2.5rem)] w-[min(24rem,calc(100vw-2.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-4 text-(--foreground)"
+		>
+			<h3 class="m-0 text-base font-medium">Unlisted page</h3>
+			<p class="m-0 text-sm leading-6 text-(--muted-foreground)">
 				Unlisted pages are not discoverable from the homepage (and for Google), but can be accessed
 				by anyone who has the link.
 			</p>
-			<div class="confirm-actions">
+			<div class="flex justify-end gap-3">
 				<button
 					type="button"
 					class="inline-flex min-h-9 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
@@ -861,18 +863,20 @@ Updated: ${updated_at_label}`;
 
 <dialog
 	bind:this={shadowed_info_ref}
-	class="confirm-dialog focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
+	class="m-0 h-screen max-h-none w-screen max-w-none overflow-visible border-0 bg-transparent p-0 backdrop:bg-(--foreground)/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 	oncancel={handle_shadowed_info_cancel}
 	onclick={handle_shadowed_info_click}
 >
 	{#if shadowed_info_item}
-		<div class="confirm-panel unlisted-info-panel">
-			<h3 class="confirm-title">
+		<div
+			class="fixed top-1/2 left-1/2 flex max-h-[calc(100dvh-2.5rem)] w-[min(24rem,calc(100vw-2.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-4 text-(--foreground)"
+		>
+			<h3 class="m-0 text-base font-medium">
 				URL taken by {shadowed_info_item.shadowed_by_language
 					? 'a language homepage'
 					: 'a markdown page'}
 			</h3>
-			<p class="confirm-message">
+			<p class="m-0 text-sm leading-6 text-(--muted-foreground)">
 				{#if shadowed_info_item.shadowed_by_language}
 					The homepage for language <code>{shadowed_info_item.slug}</code> is served at
 					<code>/{shadowed_info_item.slug}</code>, so this page cannot be reached at its current
@@ -884,7 +888,7 @@ Updated: ${updated_at_label}`;
 					ask a developer to remove that markdown page.
 				{/if}
 			</p>
-			<div class="confirm-actions">
+			<div class="flex justify-end gap-3">
 				<button
 					type="button"
 					class="inline-flex min-h-9 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
@@ -898,14 +902,14 @@ Updated: ${updated_at_label}`;
 </dialog>
 
 <style>
-	.pages-drawer {
+	.ew-pages-drawer {
 		position: relative;
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
 	}
 
-	.drawer-initial-focus-target {
+	.ew-drawer-initial-focus-target {
 		position: absolute;
 		width: 1px;
 		height: 1px;
@@ -916,7 +920,7 @@ Updated: ${updated_at_label}`;
 		pointer-events: none;
 	}
 
-	.search-shell {
+	.ew-search-shell {
 		position: sticky;
 		top: 0;
 		z-index: 1;
@@ -925,7 +929,7 @@ Updated: ${updated_at_label}`;
 		background: var(--background);
 	}
 
-	.search-input-shell {
+	.ew-search-input-shell {
 		display: flex;
 		align-items: center;
 		gap: 0.55rem;
@@ -941,18 +945,18 @@ Updated: ${updated_at_label}`;
 	}
 
 	/* Keep search focus quiet while the result highlight identifies the Enter target. */
-	.search-input-shell:focus-within {
+	.ew-search-input-shell:focus-within {
 		border-color: var(--editing);
 	}
 
-	.search-input-icon {
+	.ew-search-input-icon {
 		flex: 0 0 auto;
 		width: 1.15rem;
 		height: 1.15rem;
 		color: var(--muted-foreground);
 	}
 
-	.search-input {
+	.ew-search-input {
 		width: 100%;
 		min-width: 0;
 		border: 0;
@@ -967,34 +971,34 @@ Updated: ${updated_at_label}`;
 		-webkit-appearance: none;
 	}
 
-	.search-input::placeholder {
+	.ew-search-input::placeholder {
 		color: var(--muted-foreground);
 	}
 
-	.search-input:focus,
-	.search-input:focus-visible {
+	.ew-search-input:focus,
+	.ew-search-input:focus-visible {
 		outline: none;
 		border: 0;
 		box-shadow: none;
 	}
 
-	.section {
+	.ew-section {
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
 	}
 
-	.status-message {
+	.ew-status-message {
 		padding: 0.8rem 0;
 		font-size: 0.9rem;
 		color: var(--muted-foreground);
 	}
 
-	.tree-row-shell {
+	.ew-tree-row-shell {
 		position: relative;
 	}
 
-	.tree-row {
+	.ew-tree-row {
 		position: relative;
 		z-index: 1;
 		border: 0;
@@ -1005,7 +1009,7 @@ Updated: ${updated_at_label}`;
 		outline: none;
 	}
 
-	.tree-row-shell::before {
+	.ew-tree-row-shell::before {
 		content: '';
 		position: absolute;
 		inset: 0 -0.4rem 0
@@ -1017,11 +1021,11 @@ Updated: ${updated_at_label}`;
 		transition: background-color 140ms ease;
 	}
 
-	.tree-row-keyboard-selected {
+	.ew-tree-row-keyboard-selected {
 		z-index: 3;
 	}
 
-	.tree-row {
+	.ew-tree-row {
 		display: flex;
 		align-items: center;
 		gap: 0;
@@ -1032,7 +1036,7 @@ Updated: ${updated_at_label}`;
 		z-index: 1;
 	}
 
-	.tree-row-meta {
+	.ew-tree-row-meta {
 		margin-left: auto;
 		flex: 0 0 auto;
 		display: flex;
@@ -1043,11 +1047,11 @@ Updated: ${updated_at_label}`;
 		padding-right: 1rem;
 	}
 
-	.tree-row-root {
+	.ew-tree-row-root {
 		padding-left: 0;
 	}
 
-	.tree-row::after {
+	.ew-tree-row::after {
 		content: '';
 		position: absolute;
 		inset: 0 -0.4rem 0
@@ -1060,25 +1064,25 @@ Updated: ${updated_at_label}`;
 		z-index: 3;
 	}
 
-	.tree-row-shell:hover::before {
+	.ew-tree-row-shell:hover::before {
 		background: var(--muted);
 	}
 
-	.tree-row-shell:hover .tree-row-keyboard-selected::before {
+	.ew-tree-row-shell:hover .ew-tree-row-keyboard-selected::before {
 		background: var(--editing-muted);
 	}
 
-	.tree-row:focus-visible::after,
-	.tree-row-shell:focus-within .tree-row:focus-visible::after {
+	.ew-tree-row:focus-visible::after,
+	.ew-tree-row-shell:focus-within .ew-tree-row:focus-visible::after {
 		outline-color: var(--editing);
 	}
 
-	.tree-row-keyboard-selected {
+	.ew-tree-row-keyboard-selected {
 		outline: none;
 		background: transparent;
 	}
 
-	.tree-row-keyboard-selected::before {
+	.ew-tree-row-keyboard-selected::before {
 		content: '';
 		position: absolute;
 		inset: 0 -0.4rem 0
@@ -1089,7 +1093,7 @@ Updated: ${updated_at_label}`;
 		z-index: -1;
 	}
 
-	.item-actions-btn {
+	.ew-item-actions-btn {
 		position: absolute;
 		z-index: 4;
 		top: 50%;
@@ -1114,29 +1118,29 @@ Updated: ${updated_at_label}`;
 			transform 150ms ease;
 	}
 
-	.tree-actions-dots {
+	.ew-tree-actions-dots {
 		width: 1.5rem;
 		height: 1.5rem;
 		color: inherit;
 	}
 
-	.item-actions-btn:focus-visible {
+	.ew-item-actions-btn:focus-visible {
 		outline-color: var(--editing);
 		box-shadow: none;
 	}
 
-	.item-actions-btn:active {
+	.ew-item-actions-btn:active {
 		background: color-mix(in srgb, var(--foreground) 10%, transparent);
 	}
 
-	.page-illustration {
+	.ew-page-illustration {
 		display: grid;
 		place-items: center;
 		background: transparent;
 		overflow: hidden;
 	}
 
-	.tree-illustration {
+	.ew-tree-illustration {
 		width: 2.25rem;
 		aspect-ratio: 1;
 		flex: 0 0 auto;
@@ -1146,7 +1150,7 @@ Updated: ${updated_at_label}`;
 		overflow: hidden;
 	}
 
-	.media-preview {
+	.ew-media-preview {
 		width: 100%;
 		height: 100%;
 		display: block;
@@ -1156,7 +1160,7 @@ Updated: ${updated_at_label}`;
 		overflow: hidden;
 	}
 
-	.page-illustration-fallback {
+	.ew-page-illustration-fallback {
 		width: 100%;
 		height: 100%;
 		display: grid;
@@ -1164,24 +1168,24 @@ Updated: ${updated_at_label}`;
 		border-radius: inherit;
 	}
 
-	.match-highlight {
+	.ew-match-highlight {
 		background: var(--editing-muted);
 		color: inherit;
 	}
 
-	.tree {
+	.ew-tree {
 		display: flex;
 		flex-direction: column;
 		gap: 0;
 	}
 
-	.tree-node {
+	.ew-tree-node {
 		display: flex;
 		flex-direction: column;
 		gap: 0;
 	}
 
-	.tree-row-shell {
+	.ew-tree-row-shell {
 		position: relative;
 		display: flex;
 		align-items: stretch;
@@ -1189,7 +1193,7 @@ Updated: ${updated_at_label}`;
 		isolation: isolate;
 	}
 
-	.tree-guides {
+	.ew-tree-guides {
 		position: absolute;
 		inset: 0 auto 0 0;
 		z-index: 0;
@@ -1202,38 +1206,38 @@ Updated: ${updated_at_label}`;
 		pointer-events: none;
 	}
 
-	.tree-row {
+	.ew-tree-row {
 		position: relative;
 		z-index: 1;
 		padding-left: calc(var(--tree-guide-columns, 0) * var(--tree-indent-width, 1.3rem));
 	}
 
-	.search-shell {
+	.ew-search-shell {
 		z-index: 4;
 	}
 
-	.tree-guide-column,
-	.tree-gutter {
+	.ew-tree-guide-column,
+	.ew-tree-gutter {
 		position: relative;
 		width: var(--tree-indent-width, 1.3rem);
 		flex: 0 0 var(--tree-indent-width, 1.3rem);
 		align-self: stretch;
 	}
 
-	.tree-guide-rail,
-	.tree-gutter-rail {
+	.ew-tree-guide-rail,
+	.ew-tree-gutter-rail {
 		position: absolute;
 		left: calc(50% - 0.5px);
 		width: 1px;
 		background: var(--stroke);
 	}
 
-	.tree-guide-rail {
+	.ew-tree-guide-rail {
 		top: 0;
 		bottom: 0;
 	}
 
-	.tree-gutter {
+	.ew-tree-gutter {
 		padding: 0;
 		border: 0;
 		background: transparent;
@@ -1243,17 +1247,17 @@ Updated: ${updated_at_label}`;
 		min-height: 100%;
 	}
 
-	.tree-gutter-rail-top {
+	.ew-tree-gutter-rail-top {
 		top: 0;
 		height: 50%;
 	}
 
-	.tree-gutter-rail-bottom {
+	.ew-tree-gutter-rail-bottom {
 		top: 50%;
 		height: 50%;
 	}
 
-	.tree-gutter-elbow {
+	.ew-tree-gutter-elbow {
 		position: absolute;
 		left: calc(50% - 0.5px);
 		top: 50%;
@@ -1262,7 +1266,7 @@ Updated: ${updated_at_label}`;
 		background: var(--stroke);
 	}
 
-	.tree-label {
+	.ew-tree-label {
 		min-width: 0;
 		flex: 1 1 auto;
 		overflow: hidden;
@@ -1277,13 +1281,13 @@ Updated: ${updated_at_label}`;
 		padding-left: 0.75rem;
 	}
 
-	.tree-title {
+	.ew-tree-title {
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 
-	.unlisted-badge {
+	.ew-unlisted-badge {
 		display: inline-flex;
 		height: 1.125rem;
 		flex: 0 0 auto;
@@ -1304,54 +1308,33 @@ Updated: ${updated_at_label}`;
 	}
 
 	/* Red because a shadowed page is broken, not merely undiscoverable. */
-	.shadowed-badge {
+	.ew-shadowed-badge {
 		color: color-mix(in oklch, red 65%, var(--foreground));
 	}
 
-	.unlisted-badge:focus-visible {
+	.ew-unlisted-badge:focus-visible {
 		outline-color: var(--editing);
 	}
 
 	@media (hover: hover) and (pointer: fine) {
-		.item-actions-btn:hover,
-		.item-actions-btn:focus-visible {
+		.ew-item-actions-btn:hover,
+		.ew-item-actions-btn:focus-visible {
 			background: var(--background);
 		}
 
-		.unlisted-badge:hover,
-		.unlisted-badge:focus-visible {
+		.ew-unlisted-badge:hover,
+		.ew-unlisted-badge:focus-visible {
 			background: var(--muted);
 		}
 	}
 
-	.tree-children {
+	.ew-tree-children {
 		display: flex;
 		flex-direction: column;
 		gap: 0;
 	}
 
-	.page-actions-dialog,
-	.confirm-dialog {
-		margin: 0;
-		padding: 0;
-		border: 0;
-		background: transparent;
-		max-width: none;
-		max-height: none;
-		width: 100vw;
-		height: 100vh;
-		overflow: visible;
-	}
-
-	.page-actions-dialog::backdrop {
-		background: transparent;
-	}
-
-	.confirm-dialog::backdrop {
-		background: color-mix(in oklch, var(--foreground) 10%, transparent);
-	}
-
-	.menu-panel {
+	.ew-menu-panel {
 		position: fixed;
 		z-index: 40;
 		display: flex;
@@ -1369,98 +1352,57 @@ Updated: ${updated_at_label}`;
 		box-shadow: none;
 	}
 
-	.menu-item-danger {
+	.ew-menu-item-danger {
 		color: color-mix(in oklch, red 65%, var(--foreground));
 	}
 
-	.confirm-panel {
-		position: fixed;
-		inset: 50% auto auto 50%;
-		transform: translate(-50%, -50%);
-		width: min(28rem, calc(100vw - 2.5rem));
-		max-height: calc(100dvh - 2.5rem);
-		overflow-y: auto;
-		padding: 1rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		border: 1px solid var(--stroke);
-		border-radius: min(1rem, var(--button-border-radius));
-		background: var(--background);
-		color: var(--foreground);
-		box-shadow: none;
-	}
-
-	.unlisted-info-panel {
-		width: min(24rem, calc(100vw - 2.5rem));
-	}
-
-	.confirm-title {
-		margin: 0;
-		font-size: 1rem;
-		font-weight: 500;
-	}
-
-	.confirm-message {
-		margin: 0;
-		font-size: 0.875rem;
-		line-height: 1.5rem;
-		color: var(--muted-foreground);
-	}
-
-	.confirm-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 0.75rem;
-	}
-
 	@media (max-width: 640px) {
-		.search-input-shell {
+		.ew-search-input-shell {
 			gap: 0.5rem;
 			padding: 0 0.72rem;
 		}
 
-		.search-input-icon {
+		.ew-search-input-icon {
 			width: 1.05rem;
 			height: 1.05rem;
 		}
 
-		.tree-row-shell:hover::before {
+		.ew-tree-row-shell:hover::before {
 			background: transparent;
 		}
 
-		.tree-row-shell:hover .tree-row-keyboard-selected::before {
+		.ew-tree-row-shell:hover .ew-tree-row-keyboard-selected::before {
 			background: var(--editing-muted);
 		}
 
-		.tree-row-meta {
+		.ew-tree-row-meta {
 			display: flex;
 			padding-left: 0.5rem;
 			padding-right: 0.75rem;
 		}
 
-		.item-actions-btn {
+		.ew-item-actions-btn {
 			width: 2.25rem;
 			padding: 0;
 		}
 
-		.item-actions-btn,
-		.unlisted-badge {
+		.ew-item-actions-btn,
+		.ew-unlisted-badge {
 			background: var(--muted);
 		}
 
-		.tree-row-keyboard-selected ~ .item-actions-btn,
-		.tree-row-keyboard-selected .unlisted-badge {
+		.ew-tree-row-keyboard-selected ~ .ew-item-actions-btn,
+		.ew-tree-row-keyboard-selected .ew-unlisted-badge {
 			background: var(--background);
 		}
 
-		.tree-row-shell {
+		.ew-tree-row-shell {
 			--tree-indent-width: 1.3rem;
 		}
 	}
 
 	@media (min-width: 641px) {
-		.tree-row-shell {
+		.ew-tree-row-shell {
 			--tree-indent-width: 2.6rem;
 		}
 	}

@@ -2,9 +2,13 @@
 	import type { Nodes } from '#app/document_schema.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { Node, NodeArrayProperty } from 'svedit';
+	import type { DocumentPath, NodeArrayAttachmentContext } from 'svedit';
 
 	const svedit = get_svedit_context();
-	let { path, mark: section = null } = $props();
+	let {
+		path,
+		mark: section = null
+	}: { path: DocumentPath; mark?: NodeArrayAttachmentContext | null } = $props();
 	let node: Nodes['descriptive_listing'] = $derived(svedit.session.get(path));
 	let listing_layout = $derived(node.layout || 'narrow-left');
 	let padding_top_generous = $derived(!section || section.is_start);
@@ -16,8 +20,8 @@
 		<div class="mx-auto w-full max-w-7xl">
 			<div
 				class={[
-					padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-					padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+					padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+					padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 				]}
 			>
 				<div class="max-w-4xl bg-(--background) px-5 text-(--foreground) sm:px-7">
@@ -33,8 +37,8 @@
 		<div class="mx-auto w-full max-w-7xl">
 			<div
 				class={[
-					padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-					padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+					padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+					padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 				]}
 			>
 				<div class="mx-auto max-w-4xl bg-(--background) px-5 text-(--foreground) sm:px-7">
@@ -50,8 +54,8 @@
 		<div class="mx-auto w-full max-w-7xl">
 			<div
 				class={[
-					padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-					padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+					padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+					padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 				]}
 			>
 				<div class="ml-auto max-w-4xl bg-(--background) px-5 text-(--foreground) sm:px-7">
@@ -68,8 +72,8 @@
 			<div
 				class={[
 					'px-5 sm:px-7',
-					padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-					padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+					padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+					padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 				]}
 			>
 				<div class="bg-(--background) text-(--foreground)">
@@ -86,8 +90,8 @@
 			<div
 				class={[
 					'px-5 sm:px-7',
-					padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-					padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+					padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+					padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 				]}
 			>
 				<div class="bg-(--background) text-(--foreground)">

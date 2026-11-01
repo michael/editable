@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { error } from '@sveltejs/kit';
-import { site } from './server_site.js';
+import { site, site_url } from './server_site.js';
 import { require_editor } from '#lib/server/auth.js';
 import { backend } from './services.js';
 import type { OAuthGrantRecord, OAuthTokenRecord } from '#lib/server/backend.js';
@@ -30,10 +30,7 @@ const new_secret = () => randomBytes(32).toString('base64url');
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 
 // Each site is its own authorization server at its origin and base path, read per request.
-export const issuer = () => {
-	const { origin, base } = site;
-	return `${new URL(origin).origin}${base}`;
-};
+export const issuer = site_url;
 export const mcp_resource = () => `${issuer()}/mcp`;
 // RFC 9728 puts a resource's metadata at the host root with the resource's path appended.
 export const resource_metadata_url = () => {

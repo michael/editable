@@ -49,7 +49,7 @@
 </script>
 
 <div
-	class="sizable-viewbox {css_class}"
+	class="ew-sizable-viewbox {css_class}"
 	data-viewbox-anchor={anchor_name}
 	style="max-width: {max_width_style}; aspect-ratio: {resolved_aspect_ratio}; anchor-name: {anchor_name}; {css_style}"
 >
@@ -57,7 +57,7 @@
 </div>
 
 <style>
-	.sizable-viewbox {
+	.ew-sizable-viewbox {
 		width: 100%;
 		overflow: hidden;
 	}

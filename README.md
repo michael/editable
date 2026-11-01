@@ -125,7 +125,7 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 }
 
 /* Type scale — adjust any of these utilities to match your style. */
-@utility display-1 {
+@utility ew-display-1 {
 	@apply font-sans text-5xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-6xl lg:text-7xl;
 }
 ```
@@ -199,10 +199,10 @@ Most block components have one outer `Node`. Mark components are the exception: 
 The Hero's fixed text fields use `TextProperty`:
 
 ```svelte
-<TextProperty tag="h1" class="display-1" path={[...path, 'title']} placeholder="Hero title" />
+<TextProperty tag="h1" class="ew-display-1" path={[...path, 'title']} placeholder="Hero title" />
 
 <TextProperty
-	class="pt-4 body-xl text-(--muted-foreground)"
+	class="pt-4 ew-body-xl text-(--muted-foreground)"
 	path={[...path, 'description']}
 	placeholder="Say what this page is about"
 />
@@ -662,9 +662,9 @@ Create `src/app/components/Hero.svelte`. It reads the node at `path`, renders ea
 </script>
 
 {#snippet text()}
-	<TextProperty tag="h1" class="display-1" path={[...path, 'title']} placeholder="Hero title" />
+	<TextProperty tag="h1" class="ew-display-1" path={[...path, 'title']} placeholder="Hero title" />
 	<TextProperty
-		class="pt-4 body-xl text-(--muted-foreground)"
+		class="pt-4 ew-body-xl text-(--muted-foreground)"
 		path={[...path, 'description']}
 		placeholder="Say what this page is about"
 	/>

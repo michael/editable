@@ -411,31 +411,35 @@
 	}
 </script>
 
-<div class="viewbox-handles" style="position-anchor: {anchor_name};">
+<div class="ew-viewbox-handles" style="position-anchor: {anchor_name};">
 	<!-- Right width handle -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="handle handle-right" ondblclick={handle_width_dblclick} {@attach drag_right}>
-		<div class="handle-line"></div>
+	<div class="ew-handle ew-handle-right" ondblclick={handle_width_dblclick} {@attach drag_right}>
+		<div class="ew-handle-line"></div>
 	</div>
 
 	<!-- Bottom aspect ratio handle -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="handle handle-bottom" ondblclick={handle_height_dblclick} {@attach drag_bottom}>
-		<div class="handle-line"></div>
+	<div class="ew-handle ew-handle-bottom" ondblclick={handle_height_dblclick} {@attach drag_bottom}>
+		<div class="ew-handle-line"></div>
 	</div>
 
 	<!-- Bottom-right corner handle (both axes) -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="handle handle-corner" ondblclick={handle_corner_dblclick} {@attach drag_corner}></div>
+	<div
+		class="ew-handle ew-handle-corner"
+		ondblclick={handle_corner_dblclick}
+		{@attach drag_corner}
+	></div>
 
 	<!-- Snap label tooltip -->
 	{#if snap_label}
-		<div class="snap-label">{snap_label}</div>
+		<div class="ew-snap-label">{snap_label}</div>
 	{/if}
 </div>
 
 <style>
-	.viewbox-handles {
+	.ew-viewbox-handles {
 		position: absolute;
 		top: anchor(top);
 		left: anchor(left);
@@ -446,7 +450,7 @@
 
 	/* --- Drag handles --- */
 
-	.handle {
+	.ew-handle {
 		position: absolute;
 		z-index: 20;
 		pointer-events: auto;
@@ -454,12 +458,12 @@
 	}
 
 	/* Toggled by the touch_drag attachment via classList */
-	.handle:global(.dragging) {
+	.ew-handle:global(.ew-dragging) {
 		user-select: none;
 	}
 
 	/* Right handle — sits to the right of the viewbox */
-	.handle-right {
+	.ew-handle-right {
 		top: 0;
 		bottom: 0;
 		right: -14px;
@@ -471,7 +475,7 @@
 	}
 
 	/* Bottom handle — sits below the viewbox */
-	.handle-bottom {
+	.ew-handle-bottom {
 		left: 0;
 		right: 0;
 		bottom: -14px;
@@ -483,7 +487,7 @@
 	}
 
 	/* Corner handle — bottom-right intersection */
-	.handle-corner {
+	.ew-handle-corner {
 		right: -16px;
 		bottom: -16px;
 		width: 22px;
@@ -495,7 +499,7 @@
 	}
 
 	/* Visual indicator lines */
-	.handle-right .handle-line {
+	.ew-handle-right .ew-handle-line {
 		width: 3px;
 		height: 32px;
 		max-height: 50%;
@@ -504,7 +508,7 @@
 		opacity: 0.8;
 	}
 
-	.handle-bottom .handle-line {
+	.ew-handle-bottom .ew-handle-line {
 		height: 3px;
 		width: 32px;
 		max-width: 50%;
@@ -514,7 +518,7 @@
 	}
 
 	/* Snap label */
-	.snap-label {
+	.ew-snap-label {
 		position: absolute;
 		top: -24px;
 		left: 50%;

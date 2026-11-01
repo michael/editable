@@ -30,8 +30,8 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+				padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+				padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 			]}
 		>
 			<div class="max-w-4xl px-5 sm:px-7">
@@ -45,8 +45,8 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+				padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+				padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 			]}
 		>
 			<div class="mx-auto max-w-4xl px-5 sm:px-7">
@@ -60,8 +60,8 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+				padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+				padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 			]}
 		>
 			<div class="ml-auto max-w-4xl px-5 sm:px-7">
@@ -75,8 +75,8 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+				padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+				padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 			]}
 		>
 			<div class="mx-auto max-w-4xl px-5 text-center text-balance sm:px-7">
@@ -90,8 +90,8 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+				padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+				padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 			]}
 		>
 			<div class="px-5 sm:px-7">
@@ -105,8 +105,8 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+				padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+				padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 			]}
 		>
 			<div class="px-5 text-center text-balance sm:px-7">

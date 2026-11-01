@@ -205,7 +205,7 @@
 
 <dialog
 	bind:this={dialog_ref}
-	class="edit-link-dialog absolute z-40 m-0 mt-3 max-h-90 max-w-[calc(100vw-2.5rem)] overflow-y-auto rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-1 text-(--foreground) focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
+	class="ew-edit-link-dialog absolute z-40 m-0 mt-3 max-h-90 max-w-[calc(100vw-2.5rem)] overflow-y-auto rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-1 text-(--foreground) focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 	style="position-anchor: {anchor_name}; position-area: block-end span-all; justify-self: anchor-center;"
 	onclick={handle_backdrop_click}
 >
@@ -274,7 +274,7 @@
 </dialog>
 
 <style>
-	.edit-link-dialog::backdrop {
+	.ew-edit-link-dialog::backdrop {
 		background: color-mix(in oklch, var(--foreground) 10%, transparent);
 	}
 </style>

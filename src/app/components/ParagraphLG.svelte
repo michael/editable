@@ -15,7 +15,7 @@
 	<div use:reveal>
 		<TextProperty
 			tag="p"
-			class={`body-lg ${layout === 'muted' ? 'text-(--muted-foreground)' : ''}`}
+			class={`ew-body-lg ${layout === 'muted' ? 'text-(--muted-foreground)' : ''}`}
 			path={[...path, 'content']}
 			placeholder="Large paragraph"
 		/>

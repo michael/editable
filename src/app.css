@@ -268,48 +268,48 @@ page background keeps them visible on any color set, even one in the editing col
 /* Headings use semibold, so they stand apart from regular body text. */
 /* Leading tightens as headings grow. */
 /* Heading1XL */
-@utility display-1 {
+@utility ew-display-1 {
 	@apply font-sans text-5xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-6xl lg:text-7xl;
 }
 
 /* Heading1 */
-@utility display-2 {
+@utility ew-display-2 {
 	@apply font-sans text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl;
 }
 
 /* Heading2 */
-@utility display-3 {
+@utility ew-display-3 {
 	@apply font-sans text-3xl leading-[1.1] font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl;
 }
 
 /* Heading3 */
-@utility display-4 {
+@utility ew-display-4 {
 	@apply font-sans text-2xl leading-[1.15] font-semibold tracking-tight text-balance sm:text-3xl lg:text-4xl;
 }
 
 /* Heading4 and gallery titles */
-@utility display-5 {
+@utility ew-display-5 {
 	@apply font-sans text-xl leading-tight font-semibold tracking-tight text-balance sm:text-2xl lg:text-3xl;
 }
 
 /* Body text uses regular weight and a consistent 1.5 line height. */
 /* Small paragraphs and listing descriptions */
-@utility body-sm {
+@utility ew-body-sm {
 	@apply font-sans text-sm leading-normal font-normal text-pretty;
 }
 
 /* Standard paragraphs */
-@utility body-base {
+@utility ew-body-base {
 	@apply font-sans text-base leading-normal font-normal text-pretty;
 }
 
 /* Large paragraphs */
-@utility body-lg {
+@utility ew-body-lg {
 	@apply font-sans text-lg leading-normal font-normal text-pretty;
 }
 
 /* Introductory paragraphs */
-@utility body-xl {
+@utility ew-body-xl {
 	@apply font-sans text-xl leading-normal font-normal text-pretty lg:text-2xl;
 }
 
@@ -317,23 +317,23 @@ page background keeps them visible on any color set, even one in the editing col
 /******************************************************************/
 
 /* Defaults for each edge. Replace the utility with explicit classes for custom spacing. */
-@utility pt-block-generous {
+@utility ew-pt-block-generous {
 	@apply pt-24 lg:pt-32;
 }
 
-@utility pt-block-compact {
+@utility ew-pt-block-compact {
 	@apply pt-6 lg:pt-8;
 }
 
-@utility pb-block-generous {
+@utility ew-pb-block-generous {
 	@apply pb-24 lg:pb-32;
 }
 
-@utility pb-block-compact {
+@utility ew-pb-block-compact {
 	@apply pb-6 lg:pb-8;
 }
 
-/* EW-specific utilities */
+/* Other utilities */
 @utility ew-bg-checkerboard {
 	background:
 		linear-gradient(
@@ -366,12 +366,12 @@ page background keeps them visible on any color set, even one in the editing col
 }
 
 /* Comment in the block below to enable scroll-triggered reveal animations */
-/*.svedit-canvas[contenteditable='false'] .reveal-hidden {
+/*.svedit-canvas[contenteditable='false'] .ew-reveal-hidden {
 	opacity: 0;
 	transform: translateY(30px);
 }
 
-.svedit-canvas[contenteditable='false'] .revealed {
+.svedit-canvas[contenteditable='false'] .ew-revealed {
 	opacity: 1;
 	transform: translateY(0);
 	transition:

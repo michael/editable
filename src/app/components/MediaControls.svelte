@@ -120,7 +120,7 @@
 {#if pan_mode_armed || !is_mouse_down}
 	<div
 		bind:this={controls_ref}
-		class="media-controls"
+		class="ew-media-controls"
 		style={anchor_style}
 		oncontextmenu={(e) => e.preventDefault()}
 		onpointerdowncapture={handle_pointer_down}
@@ -132,7 +132,7 @@
 	>
 		{#if can_pan}
 			<div
-				class="marker"
+				class="ew-marker"
 				style={`left: ${media_node.focal_point_x * 100}%; top: ${media_node.focal_point_y * 100}%;`}
 			></div>
 		{/if}
@@ -140,7 +140,7 @@
 {/if}
 
 <style>
-	.media-controls {
+	.ew-media-controls {
 		position: absolute;
 		top: anchor(top);
 		left: anchor(left);
@@ -152,16 +152,16 @@
 		z-index: 10;
 	}
 
-	.media-controls:global(.dragging) {
+	.ew-media-controls:global(.ew-dragging) {
 		cursor: grabbing;
 	}
 
-	.media-controls:global(.touch-locked) {
+	.ew-media-controls:global(.ew-touch-locked) {
 		outline: 2px solid var(--editing, oklch(55.8% 0.185 282));
 		outline-offset: -2px;
 	}
 
-	.marker {
+	.ew-marker {
 		position: absolute;
 		width: max(5%, 20px);
 		max-width: 20%;
@@ -174,7 +174,7 @@
 	}
 
 	/* Center crosshair - horizontal line */
-	.marker::before {
+	.ew-marker::before {
 		content: '';
 		position: absolute;
 		left: 50%;
@@ -186,7 +186,7 @@
 	}
 
 	/* Center crosshair - vertical line */
-	.marker::after {
+	.ew-marker::after {
 		content: '';
 		position: absolute;
 		left: 50%;

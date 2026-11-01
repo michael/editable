@@ -3,10 +3,14 @@
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { media_link_label } from '#app/media_link_label.js';
 	import { Node, TextProperty } from 'svedit';
+	import type { DocumentPath, NodeArrayAttachmentContext } from 'svedit';
 	import MediaProperty from './MediaProperty.svelte';
 
 	const svedit = get_svedit_context();
-	let { path, mark: section = null } = $props();
+	let {
+		path,
+		mark: section = null
+	}: { path: DocumentPath; mark?: NodeArrayAttachmentContext | null } = $props();
 	let node: Nodes['captioned_figure'] = $derived(svedit.session.get(path));
 	let media_node = $derived(svedit.session.get([...path, 'media']));
 	let render_as_link = $derived(!svedit.editable && node.href);
@@ -20,8 +24,8 @@
 		<div
 			class={[
 				`px-5 sm:px-7`,
-				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+				padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+				padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 			]}
 		>
 			<svelte:element

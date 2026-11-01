@@ -15,7 +15,7 @@
 	<div use:reveal>
 		<TextProperty
 			tag="h1"
-			class={`display-1 ${layout === 'muted' ? 'text-(--muted-foreground)' : ''}`}
+			class={`ew-display-1 ${layout === 'muted' ? 'text-(--muted-foreground)' : ''}`}
 			path={[...path, 'content']}
 			placeholder="Heading 1 XL"
 		/>
