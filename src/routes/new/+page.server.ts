@@ -4,7 +4,6 @@ import { site } from '#app/server_site.js';
 import { resolve_href } from '#app/document_links.js';
 import type { PageServerLoad } from './$types';
 
-// Deliberately no `await parent()` here — see routes/+page.server.ts.
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (VERCEL) {
 		return {
@@ -14,7 +13,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	}
 
 	if (!locals.is_editor) {
-		throw redirect(303, resolve_href('/', site));
+		redirect(303, resolve_href('/', site));
 	}
 
 	const api_module = await import('#app/api.remote.js');

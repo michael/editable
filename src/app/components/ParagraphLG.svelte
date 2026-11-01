@@ -17,7 +17,7 @@
 			tag="p"
 			class={`body-lg ${layout === 'muted' ? 'text-(--muted-foreground)' : ''}`}
 			path={[...path, 'content']}
-			placeholder="Large Paragraph"
+			placeholder="Large paragraph"
 		/>
 	</div>
 </Node>

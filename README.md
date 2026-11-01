@@ -1,4 +1,4 @@
-# The Editable Manual
+# The Editable manual
 
 Editable lets you build and edit a Svelte website without adding a separate CMS. Editors work directly on the page, while the content model, components, layouts, and styling remain in the codebase you own. Use the included defaults and adapt the colors and fonts to deploy a beautiful site within minutes — or customize the entire layout and model your own content types. This manual explains how to build and run a site with Editable.
 
@@ -76,7 +76,7 @@ From here on, `git push` saves your work to your own repo. To bring in Editable 
 
 ### Styling
 
-With the development server running, open the [design system](http://localhost:5173/design-system) in your browser to explore typography, spacing, buttons, and editor pills. Inspect its [source code](src/routes/design-system/+page.svelte) for the corresponding markup and styles.
+With the development server running, open the [design system](http://localhost:5173/design-system) in your browser to explore typography, spacing, buttons, and editor pills. Inspect its source in `src/routes/design-system/+page.svelte` for the corresponding markup and styles.
 
 When customizing your Editable site, ideally update the design system first, then apply those changes to the actual site components. This gives you a concrete visual reference to work from and helps keep the site consistent, whether you build it with an agent or edit the code manually.
 
@@ -341,7 +341,7 @@ For ordinary content components, the vocabulary is small:
 - `MediaProperty` is Editable's ready-made `CustomProperty` for images and videos.
 - `SizableViewbox` optionally adds editor-controlled sizing around media.
 
-The first four come from `svedit`; the last two live in `src/app/components`. Components such as `Display`, `ButtonGroup`, and `SupportingMedia` are useful compositions of these pieces, not additional editing primitives. System components such as node gaps, carets, and selection markers are wired into the editor shell and normally do not appear in your content components.
+The first four come from `svedit`; the last two live in `src/app/components`. Components such as `ButtonGroup` and `SupportingMedia` are useful compositions of these pieces, not additional editing primitives. System components such as node gaps, carets, and selection markers are wired into the editor shell and normally do not appear in your content components.
 
 ## Content model
 
@@ -423,7 +423,8 @@ footer_link { href, target, label: text }
 
 prose { layout: narrow-left | narrow-center | narrow-right | narrow-centered-text |
                 wide-left | wide-centered-text, body: [rich content] }
-prose_grid { layout: plain | plain-centered-text | boxed | boxed-centered-text,
+prose_grid { layout: plain | plain-centered-text | boxed | boxed-centered-text |
+                     boxed-accent | boxed-accent-centered-text,
              items: [prose_grid_item] }
 prose_grid_item { body: [rich content] }
 
@@ -442,7 +443,7 @@ code_block { layout: narrow-left | narrow-center | narrow-right | wide,
              content: text } // monospaced, preserves whitespace, no marks
 ```
 
-Code blocks are placed with `layout`, like prose, and always keep their text left-aligned. Their `language` and `wrap_lines` are set in a popover above the block, which appears while the caret is in the block or the block is selected. `plain` (the default) leaves highlighting off. Long lines scroll sideways unless `wrap_lines` is on. A copy button sits beside the first line, in a column of its own, so it never covers code. Twinkleplop highlights selected languages in both view and edit mode. Language grammars load on demand, and the native range painter loads only when editing. View rendering awaits its grammar during server rendering and hydration; editing stays plain until the grammar loads. Editing uses native CSS highlight ranges without changing Svedit’s text DOM. Updates are batched to animation frames and pause during IME composition. Blocks exceeding 50,000 UTF-16 code units or 4,000 syntax ranges use plain text editing to keep highlighting work bounded; they still highlight in view mode. Highlighting resumes automatically when the block is shortened. Browsers without the CSS Custom Highlight API retain plain text editing. Supported language ids are listed in [src/app/code_languages.ts](src/app/code_languages.ts). Markdown imports preserve supported fence languages and common aliases such as `js`, `ts`, and `sh`. Existing preformatted nodes migrate to plain code blocks.
+Code blocks are placed with `layout`, like prose, and always keep their text left-aligned. Their `language` and `wrap_lines` are set in a popover above the block, which appears while the caret is in the block or the block is selected. `plain` (the default) leaves highlighting off. Long lines scroll sideways unless `wrap_lines` is on. A copy button sits beside the first line, in a column of its own, so it never covers code. Twinkleplop highlights selected languages in both view and edit mode. Language grammars load on demand, and the native range painter loads only when editing. View rendering awaits its grammar during server rendering and hydration; editing stays plain until the grammar loads. Editing uses native CSS highlight ranges without changing Svedit’s text DOM. Updates are batched to animation frames and pause during IME composition. Blocks exceeding 50,000 UTF-16 code units or 4,000 syntax ranges use plain text editing to keep highlighting work bounded; they still highlight in view mode. Highlighting resumes automatically when the block is shortened. Browsers without the CSS Custom Highlight API retain plain text editing. Supported language ids are listed in `src/app/code_languages.ts`. Markdown imports preserve supported fence languages and common aliases such as `js`, `ts`, and `sh`. Existing preformatted nodes migrate to plain code blocks.
 
 **Media** — `image` and `video` share one shape and are interchangeable wherever media is allowed:
 
@@ -473,18 +474,19 @@ supporting_media {
 **Collections and buttons**:
 
 ```ts
-gallery { layout: mixed | portraits | squares | landscapes | compact-landscapes,
+gallery { layout: mixed | portraits | squares | squares-2-columns | squares-3-columns |
+                  landscapes | compact-landscapes,
           gallery_items: [gallery_item] }
 gallery_item { href, target, media: image | video }
 
-titled_gallery { layout: cards | compact, items: [titled_gallery_item] }
+titled_gallery { layout: cards | compact | carousel, items: [titled_gallery_item] }
 titled_gallery_item {
 	href, target
 	media: image | video
 	title: text          // single line; marks: emphasis, highlight
 }
 
-descriptive_gallery { layout: cards | compact, items: [descriptive_gallery_item] }
+descriptive_gallery { layout: cards | compact | carousel, items: [descriptive_gallery_item] }
 descriptive_gallery_item {
 	href, target
 	media: image | video
@@ -513,13 +515,14 @@ accordion { layout: narrow-left | narrow-center | narrow-right | full-width | tw
             items: [accordion_item] }
 accordion_item {
 	title: text          // single line; marks: emphasis, highlight
-	body: [rich content without headings]
+	body: [rich content without headings or eyebrows]
 }
 
 feature { layout: image-right | image-left, href, target, media: image | video, body: [rich content] }
 
 button_group { buttons: [button] }
-button { layout: primary | secondary | link, href, target, label: text }
+button { layout: primary | secondary | link | primary-small | secondary-small | link-small,
+         href, target, label: text }
 ```
 
 **Marks and annotations** — both attach a separate node to a half-open range using the same shape. For text, offsets address character positions; for node arrays, they address child-node positions. `start_offset` is included and `end_offset` is excluded:
@@ -737,7 +740,7 @@ From here it's just iteration: add calls to action, give editors control over th
 
 Deploy your local site to a public URL in a few steps.
 
-Editable runs on any VPS — all you need is Node.js, and the included `Dockerfile` works with any platform that supports Docker (see [Deploy to a VPS](#deploy-to-a-vps-experimental)). The repository ships ready-made for [Fly.io](https://fly.io), which remains the recommended default: machines scale to zero and wake in well under a second, so a personal site costs next to nothing to run. Install [flyctl](https://fly.io/docs/flyctl/install/), then sign in (opens your browser; creates a free account if you don't have one):
+Editable runs on any VPS — all you need is Node.js, and the included `Dockerfile` works with any platform that supports Docker (see [Deploy to a VPS](#deploy-to-a-vps-experimental)). The repository ships ready-made for [Fly.io](https://fly.io), which remains the recommended default: a machine can suspend when idle (`auto_stop_machines = "suspend"` in `fly.toml`) and wakes in well under a second, so a personal site costs next to nothing to run. Install [flyctl](https://fly.io/docs/flyctl/install/), then sign in (opens your browser; creates a free account if you don't have one):
 
 ```sh
 fly auth login
@@ -765,9 +768,9 @@ Set the secrets. `ORIGIN` must be your app's public URL, so canonical links and 
 
 ```sh
 fly secrets set \
-  ORIGIN="https://my-site.fly.dev" \
-  BODY_SIZE_LIMIT='100M' \
-  ADMIN_PASSWORD='pick-a-strong-password'
+	ORIGIN="https://my-site.fly.dev" \
+	BODY_SIZE_LIMIT='100M' \
+	ADMIN_PASSWORD='pick-a-strong-password'
 ```
 
 Set your site's language in `fly.toml` under `[env]`, such as `LANGUAGES = "de"`. It's not a secret, so it lives with the app's configuration.
@@ -859,7 +862,7 @@ Create the server with your ssh key installed, point your domain's A record at i
 pnpm vps:deploy root@203.0.113.10 my-site.example.com
 ```
 
-The first run provisions the server — Docker, [Caddy](https://caddyserver.com) as the TLS-terminating reverse proxy, swap on machines with less than 2 GB RAM — asks you for an admin password, builds the Docker image locally, streams it over ssh, and starts the site. The server never needs access to your git repository or the memory to run a build. Your content lives in `/data` on the server — the same path Fly.io mounts and the same path inside the container; deploys replace the container and never touch that folder.
+The first run provisions the server — Docker, [Caddy](https://caddyserver.com) as the TLS-terminating reverse proxy, swap on machines with less than 2 GB RAM — copies `LANGUAGES` from your local `.env` (it stops if that is unset), asks you for an admin password, builds the Docker image locally, streams it over ssh, and starts the site. The server never needs access to your git repository or the memory to run a build. Your content lives in `/data` on the server — the same path Fly.io mounts and the same path inside the container; deploys replace the container and never touch that folder.
 
 After the first deploy, add one line to your **local** `.env` — this is your checkout's deployment identity, playing the role `fly.toml` plays for Fly.io. Everything else (container name, data path) is read from the server:
 
@@ -1002,11 +1005,11 @@ Then `fly deploy`. That's it — the presence of the `BUCKET_NAME` secret enable
 
 ```sh
 fly secrets set \
-  BUCKET_NAME='my-site-backup' \
-  AWS_ENDPOINT_URL_S3='https://...' \
-  AWS_REGION='auto' \
-  AWS_ACCESS_KEY_ID='...' \
-  AWS_SECRET_ACCESS_KEY='...'
+	BUCKET_NAME='my-site-backup' \
+	AWS_ENDPOINT_URL_S3='https://...' \
+	AWS_REGION='auto' \
+	AWS_ACCESS_KEY_ID='...' \
+	AWS_SECRET_ACCESS_KEY='...'
 ```
 
 Use one bucket per site. The bucket is append-only: local asset cleanup is never mirrored to it, so unlike volume-local rollbacks, restores from the bucket are not bounded by `ASSET_GRACE_PERIOD_DAYS` — every asset ever uploaded is still there. Replication runs as a supervised sidecar: if it ever fails, your site stays up and the logs say so loudly.
@@ -1162,7 +1165,7 @@ pnpm migration:create reconcile-heading --after 20261009T120000000Z_editable_sit
 
 A migration that must run before another is placed right after the one preceding that. This works because migrations that arrive together are all pending when a site upgrades. One dated before a migration a site already ran still runs, but later, and the log warns about it.
 
-Editable's own migrations use the `editable` source name; `custom` migrations belong to your project. The timestamp-first filenames keep both sources in one chronological list without a central registry or sequence-number conflicts. Because order across versions follows timestamps rather than when a migration arrived, prefer tolerant migrations, "create if missing" rather than "create", which safely do nothing when their source shape is absent.
+Editable's own migrations use the `editable` namespace; `custom` migrations belong to your project. The timestamp-first filenames keep both namespaces in one chronological list without a central registry or sequence-number conflicts. Because order across versions follows timestamps rather than when a migration arrived, prefer tolerant migrations, "create if missing" rather than "create", which safely do nothing when their source shape is absent.
 
 ## Translations (experimental)
 

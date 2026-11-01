@@ -129,7 +129,7 @@ export function normalize_hrefs(
 const SAFE_HREF_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:', 'sms:']);
 
 /** Links may be relative or use a protocol that cannot run code, so stored content cannot script the site. */
-export function is_safe_href(href: string): boolean {
+function is_safe_href(href: string): boolean {
 	const url = URL.parse(href.trim(), 'http://editable.local');
 	return !!url && SAFE_HREF_PROTOCOLS.has(url.protocol);
 }

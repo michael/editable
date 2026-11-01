@@ -151,8 +151,6 @@
 			Math.abs(session.selection.anchor_offset - session.selection.focus_offset) === 1
 	);
 
-	let file_input_ref = $state(null);
-
 	// How far the virtual keyboard overlaps the layout viewport. 0 on browsers that
 	// resize it themselves (interactive-widget in app.html).
 	let keyboard_inset = $state(0);
@@ -207,10 +205,6 @@
 		restore_canvas_focus(event);
 	}
 
-	function cache_replace_media_path(path) {
-		document.documentElement.dataset.replaceMediaPath = JSON.stringify(path);
-	}
-
 	function handle_edit_image_click(event) {
 		handle_btn_click(event, session.commands.edit_image);
 	}
@@ -221,13 +215,6 @@
 			return;
 		}
 		app_commands.edit_document.execute();
-	}
-
-	function handle_replace_image_click() {
-		if (session.selection?.type !== 'property') return;
-		cache_replace_media_path(session.selection.path);
-		// Opens a file dialog, so focus intentionally leaves the canvas here.
-		file_input_ref?.click();
 	}
 
 	async function handle_file_selected(e) {
@@ -793,7 +780,7 @@
 										id="replace-media-btn"
 										class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
 										onmousedown={handle_btn_mousedown}
-										onclick={handle_replace_image_click}
+										onclick={() => session.commands.replace_media.execute()}
 										use:tooltip={{ label: 'Replace image', keys: ['⏎'] }}
 										aria-label="Replace image"
 									>
@@ -931,7 +918,6 @@
 							<!-- Hidden file input for replace-image -->
 							<input
 								id="replace-media-input"
-								bind:this={file_input_ref}
 								type="file"
 								accept="image/*,video/*"
 								class="hidden"

@@ -49,7 +49,7 @@
 {/snippet}
 
 <Node
-	class="ew-descriptive-gallery-item group min-w-0 {layout === 'carousel' ? 'snap-start' : ''}"
+	class="ew-descriptive-gallery-item min-w-0 {layout === 'carousel' ? 'snap-start' : ''}"
 	{path}
 >
 	{#if layout === 'compact'}

@@ -12,7 +12,7 @@
 	let display_meta = $derived(svedit.editable || !!node.meta?.content?.trim());
 </script>
 
-<Node class="listing-item group border-b border-(--stroke)" {path}>
+<Node class="border-b border-(--stroke)" {path}>
 	<svelte:element
 		this={render_as_link ? 'a' : 'div'}
 		href={render_as_link ? node.href : undefined}

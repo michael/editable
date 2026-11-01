@@ -28,7 +28,7 @@
 			: ''}"
 		style="border-radius: var(--image-border-radius)"
 	>
-		<MediaProperty class="supporting-media" path={[...path, 'media']} />
+		<MediaProperty path={[...path, 'media']} />
 	</SizableViewbox>
 {/snippet}
 

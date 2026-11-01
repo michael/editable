@@ -42,10 +42,6 @@ export function create_page_browser(options: {
 		state.open = true;
 	}
 
-	function close() {
-		reset();
-	}
-
 	function handle_page_selected(page: PageTreeNode) {
 		if (state.mode === 'select' && state.on_select_page) {
 			state.on_select_page(page);
@@ -65,7 +61,7 @@ export function create_page_browser(options: {
 		},
 		open_navigate,
 		open_select,
-		close,
+		close: reset,
 		handle_page_selected
 	};
 }

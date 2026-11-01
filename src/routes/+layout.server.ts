@@ -1,11 +1,7 @@
 import { site, request_language } from '#app/server_site.js';
 import { VERCEL } from '$app/env/private';
-import {
-	default_banner_document,
-	default_footer_document,
-	default_nav_document,
-	default_site_document
-} from '#app/default_site.js';
+import { default_site_document } from '#app/default_site.js';
+import { get_shared_site_documents } from '#app/page_loaders.js';
 import { extract_site_metadata } from '#app/page_metadata.js';
 import { page_shell } from '#app/page_shell.js';
 import type { Document } from 'svedit';
@@ -22,35 +18,16 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 	let site_metadata;
 	let shell: Document;
 	if (has_backend) {
-		const { get_shared_documents, get_site_metadata } = await import('#app/api.remote.js');
+		const { get_site_metadata } = await import('#app/api.remote.js');
 		const [shared_documents, next_site_metadata] = await Promise.all([
-			get_shared_documents(),
+			get_shared_site_documents(language),
 			get_site_metadata()
 		]);
-		if (language) {
-			const { translate_shared_document } = await import('#app/server_translations.js');
-			shared_documents.banner_document = await translate_shared_document(
-				shared_documents.banner_document,
-				language
-			);
-			shared_documents.nav_document = await translate_shared_document(
-				shared_documents.nav_document,
-				language
-			);
-			shared_documents.footer_document = await translate_shared_document(
-				shared_documents.footer_document,
-				language
-			);
-		}
 		shell = page_shell(shared_documents);
 		site_metadata = next_site_metadata;
 	} else {
 		site_metadata = extract_site_metadata(default_site_document);
-		shell = page_shell({
-			banner_document: default_banner_document,
-			nav_document: default_nav_document,
-			footer_document: default_footer_document
-		});
+		shell = page_shell(await get_shared_site_documents(language));
 	}
 
 	return {

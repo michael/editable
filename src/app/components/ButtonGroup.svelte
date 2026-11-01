@@ -11,9 +11,7 @@
 
 <Node class="ew-button-group" {path}>
 	<NodeArrayProperty
-		class="button-group-buttons flex flex-wrap items-center [--row:1] gap-3{is_centered
-			? ' mx-auto w-fit'
-			: ''}"
+		class="flex flex-wrap items-center [--row:1] gap-3{is_centered ? ' mx-auto w-fit' : ''}"
 		path={[...path, 'buttons']}
 	/>
 </Node>

@@ -1,6 +1,6 @@
 // Default content for a new site.
 // Stored as a single merged document so you can paste console.logged JSON directly.
-// The default nav, footer, and page documents are extracted automatically using svedit's traverse utility.
+// The default banner, nav, footer, and page documents are extracted automatically using svedit's traverse utility.
 
 import { fill_document_defaults, traverse } from 'svedit';
 import { document_schema } from '#app/document_schema.js';

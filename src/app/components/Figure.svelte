@@ -37,7 +37,7 @@
 		<div
 			class={[
 				// No gutter or corner radius on phones, so the media runs edge to edge.
-				`figure sm:px-7`,
+				`sm:px-7`,
 				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}
@@ -51,7 +51,6 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				'figure',
 				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}
@@ -67,7 +66,6 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				'figure',
 				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}
@@ -83,7 +81,6 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				'figure',
 				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}
@@ -97,7 +94,7 @@
 
 {#snippet flush()}
 	<div class="mx-auto max-w-7xl">
-		<div class="figure px-5 py-0 sm:px-7">
+		<div class="px-5 sm:px-7">
 			{@render media_frame()}
 		</div>
 	</div>
@@ -105,7 +102,7 @@
 
 {#snippet full_bleed()}
 	<div class="w-full">
-		<div class="figure">
+		<div>
 			{@render media_frame('')}
 		</div>
 	</div>

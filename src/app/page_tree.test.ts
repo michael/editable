@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { build_page_forest } from './page_tree.js';
-import type { PageSummary, PageTreeNode } from './api.remote.js';
+import type { PageSummary, PageTreeNode } from './page_browser_data.js';
 
 function build_tree(root_ids: string[], links: Record<string, string[]>) {
 	const summaries = new Map<string, PageSummary>(

@@ -2,15 +2,14 @@
 //
 // Converts a markdown file into a page document graph matching
 // `document_schema`. The result contains the `page` root plus all content
-// nodes, but no nav/footer — those are merged in by `compose.js`.
+// nodes, but no banner, nav or footer — those are merged in by `compose.ts`.
 //
 // Unsupported constructs are rejected with a source-located error instead of
 // being silently dropped or degraded.
 
 import { normalize_code_language } from '#app/code_languages.js';
 import { fromMarkdown } from 'mdast-util-from-markdown';
-import { MEDIA_DEFAULTS } from '#app/document_schema.js';
-import { document_schema } from '#app/document_schema.js';
+import { MEDIA_DEFAULTS, document_schema } from '#app/document_schema.js';
 import { select_toc_headings } from '#lib/server/markdown/toc.js';
 import type { TocHeading } from '#lib/server/markdown/toc.js';
 import type { Document, DocumentNode } from 'svedit';
@@ -57,7 +56,7 @@ export class MarkdownConversionError extends Error {
 }
 
 /**
- * Convert markdown text to a page document graph (without nav/footer).
+ * Convert markdown text to a page document graph (without banner, nav or footer).
  * Throws MarkdownConversionError on unsupported constructs.
  */
 export function convert_markdown(
@@ -510,6 +509,11 @@ function validate_href(ctx: Ctx, inline: any): string {
 	} else if (/\.md($|[#?])/i.test(href)) {
 		throw new MarkdownConversionError(
 			`Links to .md files are not supported — link to the configured pathname instead (e.g. "/manual"): "${href}".`,
+			{ source: ctx.source, position: inline.position }
+		);
+	} else if (!href.startsWith('/') && !href.startsWith('#')) {
+		throw new MarkdownConversionError(
+			`Relative links are not supported — use a site-absolute path or #fragment: "${href}".`,
 			{ source: ctx.source, position: inline.position }
 		);
 	}

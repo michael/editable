@@ -19,7 +19,7 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				`captioned-figure px-5 sm:px-7`,
+				`px-5 sm:px-7`,
 				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}
