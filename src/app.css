@@ -230,6 +230,12 @@ There the caret follows the text color and text selection uses the system colors
 	color: HighlightText;
 }
 
+/* Placeholders such as "Paragraph" guide editing only, so visitors never see them. */
+.svedit-canvas[contenteditable='false'] [placeholder].text.empty::before,
+.svedit-canvas[contenteditable='false'] [placeholder].text.empty::after {
+	content: none;
+}
+
 /* Selection frames sit outside the content and keep the page's editing color. Edges in the page
 background keep them visible on any color set, even one in the editing color itself. */
 .svedit :is(.selected-node-overlay, .selected-property-overlay) {
