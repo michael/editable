@@ -551,7 +551,9 @@
 						Pixel equivalents assume the default 16px root font size. Adjacent padding adds up: two
 						compact edges create a 48px gap, 64px from 1024px, always wider than the gap between
 						elements inside a block. Two generous edges create a gap four times as wide: 192px, or
-						256px from 1024px.
+						256px from 1024px. Only the rows of a plain prose grid sit further apart than two
+						compact edges: with nothing but whitespace between their items, they are 96px apart,
+						128px from 1024px.
 					</p>
 				</div>
 

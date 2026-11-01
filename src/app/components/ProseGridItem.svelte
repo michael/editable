@@ -27,10 +27,9 @@
 {/snippet}
 
 {#snippet plain()}
-	<div class="pt-block-generous pb-block-generous">
-		<div class={['max-w-4xl', centered && 'text-center text-balance']}>
-			{@render body()}
-		</div>
+	<!-- The prose grid pads the block and spaces the rows, so plain items add no padding of their own. -->
+	<div class={['max-w-4xl', centered && 'text-center text-balance']}>
+		{@render body()}
 	</div>
 {/snippet}
 
