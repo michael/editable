@@ -30,6 +30,7 @@ Editable is minimalistic by design: less, but better.
 - Use tabs for indentation throughout the project, including code snippets in documentation and design system examples. Preserve spaces only where the file format requires them.
 - Use `snake_case` for project-defined JavaScript and TypeScript identifiers. Keep web platform and Svelte APIs in their native `camelCase` form.
 - Prefer Tailwind classes and minimize custom CSS. For CSS custom properties, use Tailwind's arbitrary-value utilities, such as `text-(--editing)` and `border-(--editing)`, where applicable.
+- Stick with Tailwind's default theme values when one matches: use `leading-tight` rather than `leading-[1.25]`. Reach for an arbitrary value only when no default fits.
 
 - Prefix all project-defined CSS classes with `ew-`, including component, state, and custom utility classes. Standard Tailwind classes and classes required by third-party libraries retain their original names.
 

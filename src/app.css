@@ -285,7 +285,7 @@ background keep them visible on any color set, even one in the editing color its
 
 /* Heading4 and gallery titles */
 @utility display-5 {
-	@apply font-sans text-xl leading-[1.25] font-semibold tracking-tight text-balance sm:text-2xl lg:text-3xl;
+	@apply font-sans text-xl leading-tight font-semibold tracking-tight text-balance sm:text-2xl lg:text-3xl;
 }
 
 /* Body text uses regular weight and a consistent 1.5 line height. */
