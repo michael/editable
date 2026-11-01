@@ -19,14 +19,13 @@
 	);
 </script>
 
-{#snippet media_frame(border_radius = true)}
+{#snippet media_frame(rounded = 'rounded-(--image-border-radius)')}
 	<svelte:element
 		this={render_as_link ? 'a' : 'div'}
 		href={render_as_link ? node.href : undefined}
 		target={render_as_link && node.target !== '_self' ? node.target : undefined}
 		aria-label={render_as_link ? link_label : undefined}
-		class="block overflow-hidden outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
-		style:border-radius={border_radius ? 'var(--image-border-radius)' : undefined}
+		class="block overflow-hidden outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {rounded}"
 		style:aspect-ratio={media_aspect_ratio}
 	>
 		<MediaProperty path={[...path, 'media']} />
@@ -37,12 +36,13 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				`figure px-5 sm:px-7`,
+				// No gutter or corner radius on phones, so the media runs edge to edge.
+				`figure sm:px-7`,
 				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}
 		>
-			{@render media_frame()}
+			{@render media_frame('sm:rounded-(--image-border-radius)')}
 		</div>
 	</div>
 {/snippet}
@@ -106,7 +106,7 @@
 {#snippet full_bleed()}
 	<div class="w-full">
 		<div class="figure">
-			{@render media_frame(false)}
+			{@render media_frame('')}
 		</div>
 	</div>
 {/snippet}
