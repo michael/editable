@@ -34,8 +34,8 @@ export function unlock_cursor() {
  * (disambiguates from page scroll).
  *
  * Toggles CSS classes on the element automatically:
- *   .dragging     — while actively dragging (mouse or touch)
- *   .touch-locked — once the touch hold threshold passes
+ *   .ew-dragging     — while actively dragging (mouse or touch)
+ *   .ew-touch-locked — once the touch hold threshold passes
  *
  * Usage:
  *
@@ -59,12 +59,12 @@ export function touch_drag(callbacks: {
 
 		function set_dragging(v: boolean) {
 			dragging = v;
-			node.classList.toggle('dragging', v);
+			node.classList.toggle('ew-dragging', v);
 		}
 
 		function set_locked(v: boolean) {
 			locked = v;
-			node.classList.toggle('touch-locked', v);
+			node.classList.toggle('ew-touch-locked', v);
 		}
 
 		function can_start() {

@@ -23,7 +23,7 @@ rather than a border, so switching to the accent surface causes no layout shift.
 		<div class="mx-auto max-w-7xl px-5 py-2.5 text-center sm:px-7">
 			<TextProperty
 				tag="p"
-				class="block body-sm"
+				class="block ew-body-sm"
 				path={[...path, 'content']}
 				placeholder="Add an optional announcement — visible on all pages"
 			/>

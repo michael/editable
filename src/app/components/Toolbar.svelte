@@ -151,8 +151,6 @@
 			Math.abs(session.selection.anchor_offset - session.selection.focus_offset) === 1
 	);
 
-	let file_input_ref = $state(null);
-
 	// How far the virtual keyboard overlaps the layout viewport. 0 on browsers that
 	// resize it themselves (interactive-widget in app.html).
 	let keyboard_inset = $state(0);
@@ -207,10 +205,6 @@
 		restore_canvas_focus(event);
 	}
 
-	function cache_replace_media_path(path) {
-		document.documentElement.dataset.replaceMediaPath = JSON.stringify(path);
-	}
-
 	function handle_edit_image_click(event) {
 		handle_btn_click(event, session.commands.edit_image);
 	}
@@ -221,13 +215,6 @@
 			return;
 		}
 		app_commands.edit_document.execute();
-	}
-
-	function handle_replace_image_click() {
-		if (session.selection?.type !== 'property') return;
-		cache_replace_media_path(session.selection.path);
-		// Opens a file dialog, so focus intentionally leaves the canvas here.
-		file_input_ref?.click();
 	}
 
 	async function handle_file_selected(e) {
@@ -331,7 +318,9 @@
 		</svg>
 	</button>
 	{#if can_show_variant_selector}
-		<span class="selection-leading-divider mx-1 h-5 w-px shrink-0 bg-(--stroke)" aria-hidden="true"
+		<span
+			class="ew-selection-leading-divider mx-1 h-5 w-px shrink-0 bg-(--stroke)"
+			aria-hidden="true"
 		></span>
 	{/if}
 {/snippet}
@@ -413,43 +402,43 @@
 
 {#if editable || can_show_read_toolbar}
 	<div
-		class="toolbar-layout pointer-events-none fixed {tw_toolbar_position} z-50 flex min-w-0 items-center gap-3"
+		class="ew-toolbar-layout pointer-events-none fixed {tw_toolbar_position} z-50 flex min-w-0 items-center gap-3"
 		style:--keyboard-inset="{keyboard_inset}px"
 	>
 		{#if editable && can_select_parent}
-			<div class="mobile-selection-leading shrink-0 items-center">
+			<div class="ew-mobile-selection-leading shrink-0 items-center">
 				{@render selection_leading_contents()}
 			</div>
 		{/if}
 
 		<div
-			class="toolbar-middle min-w-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
+			class="ew-toolbar-middle min-w-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 		>
 			{#if editable && can_show_selection_tool_group}
 				<div
-					class="editor-toolbar selection-toolbar flex shrink items-center gap-1 {tw_toolbar_surface}"
+					class="ew-editor-toolbar selection-toolbar flex shrink items-center gap-1 {tw_toolbar_surface}"
 				>
 					{#if can_select_parent}
-						<div class="desktop-selection-leading flex shrink-0 items-center gap-1">
+						<div class="ew-desktop-selection-leading flex shrink-0 items-center gap-1">
 							{@render selection_leading_contents()}
 						</div>
 					{/if}
 					{#if can_show_variant_selector}
 						<!-- Not a scroll container: long labels truncate. min-w-0 lets it shrink. -->
-						<div class="variant-slot min-w-0" class:mobile-hidden={!is_single_node_selected}>
+						<div class="ew-variant-slot min-w-0" class:ew-mobile-hidden={!is_single_node_selected}>
 							<NodeNavigator {session} {focus_canvas} />
 						</div>
 					{/if}
 				</div>
 			{/if}
 
-			<div class="toolbar-spacer min-w-0 flex-1"></div>
+			<div class="ew-toolbar-spacer min-w-0 flex-1"></div>
 
-			<div class="editor-toolbar action-toolbar flex shrink items-center {tw_toolbar_surface}">
+			<div class="ew-editor-toolbar action-toolbar flex shrink items-center {tw_toolbar_surface}">
 				<!-- Four pixels of scroll padding clear the 2px outline and 2px offset.
 				The negative margin preserves the pill inset; keep the scrollport square. -->
 				<div
-					class="tools-scroller -m-1 min-w-0 flex-1 scrollbar-none overflow-x-auto p-1 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
+					class="ew-tools-scroller -m-1 min-w-0 flex-1 scrollbar-none overflow-x-auto p-1 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 				>
 					<div class="flex min-w-max items-center gap-1">
 						{#if !editable}
@@ -529,7 +518,7 @@
 								{#if can_logout}
 									<button
 										bind:this={page_menu_trigger}
-										class="page-actions-trigger {tw_toolbar_btn} {tw_toolbar_btn_hover}"
+										class="ew-page-actions-trigger {tw_toolbar_btn} {tw_toolbar_btn_hover}"
 										aria-haspopup="menu"
 										aria-expanded={page_menu_open}
 										aria-controls="toolbar-page-actions-menu"
@@ -555,7 +544,7 @@
 										bind:this={page_menu}
 										ontoggle={handle_page_menu_toggle}
 										onkeydown={handle_page_menu_keydown}
-										class="page-actions-menu w-max min-w-44 rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-1 text-(--foreground)"
+										class="ew-page-actions-menu w-max min-w-44 rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-1 text-(--foreground)"
 										popover="auto"
 										role="menu"
 										tabindex="-1"
@@ -793,7 +782,7 @@
 										id="replace-media-btn"
 										class="{tw_toolbar_btn} {tw_toolbar_btn_hover}"
 										onmousedown={handle_btn_mousedown}
-										onclick={handle_replace_image_click}
+										onclick={() => session.commands.replace_media.execute()}
 										use:tooltip={{ label: 'Replace image', keys: ['⏎'] }}
 										aria-label="Replace image"
 									>
@@ -931,7 +920,6 @@
 							<!-- Hidden file input for replace-image -->
 							<input
 								id="replace-media-input"
-								bind:this={file_input_ref}
 								type="file"
 								accept="image/*,video/*"
 								class="hidden"
@@ -992,7 +980,7 @@
 				</div>
 
 				{#if editable}
-					<div class="desktop-save-group flex shrink-0 items-center gap-1">
+					<div class="ew-desktop-save-group flex shrink-0 items-center gap-1">
 						{@render save_group_contents()}
 					</div>
 				{/if}
@@ -1000,7 +988,7 @@
 		</div>
 
 		{#if editable}
-			<div class="mobile-save-group shrink-0 items-center">
+			<div class="ew-mobile-save-group shrink-0 items-center">
 				{@render save_group_contents()}
 			</div>
 		{/if}
@@ -1008,11 +996,11 @@
 {/if}
 
 <style>
-	.page-actions-trigger {
+	.ew-page-actions-trigger {
 		anchor-name: --toolbar-page-actions;
 	}
 
-	.page-actions-menu {
+	.ew-page-actions-menu {
 		position: fixed;
 		position-anchor: --toolbar-page-actions;
 		position-area: block-start span-inline-end;
@@ -1021,30 +1009,30 @@
 		margin: 0 12px 8px;
 	}
 
-	.selection-leading-divider {
+	.ew-selection-leading-divider {
 		display: block;
 		align-self: center;
 	}
 
-	.mobile-selection-leading,
-	.mobile-save-group {
+	.ew-mobile-selection-leading,
+	.ew-mobile-save-group {
 		display: none;
 	}
 
-	.toolbar-middle {
+	.ew-toolbar-middle {
 		display: contents;
 	}
 
 	/* Touch only: a transform here would make this fixed element a containing
 	   block. The mobile rule below re-declares it alongside translateX. */
 	@media (hover: none), (pointer: coarse) {
-		.toolbar-layout {
+		.ew-toolbar-layout {
 			transform: translateY(calc(-1 * var(--keyboard-inset, 0px)));
 		}
 	}
 
 	@media (max-width: 639px) {
-		.toolbar-layout {
+		.ew-toolbar-layout {
 			right: auto;
 			left: 50%;
 			width: max-content;
@@ -1061,12 +1049,12 @@
 			pointer-events: auto;
 		}
 
-		.desktop-selection-leading,
-		.desktop-save-group {
+		.ew-desktop-selection-leading,
+		.ew-desktop-save-group {
 			display: none;
 		}
 
-		.toolbar-middle {
+		.ew-toolbar-middle {
 			display: flex;
 			flex: 0 1 auto;
 			min-width: 0;
@@ -1079,7 +1067,7 @@
 			gap: 4px;
 		}
 
-		.toolbar-middle > .editor-toolbar {
+		.ew-toolbar-middle > .ew-editor-toolbar {
 			display: contents;
 			padding: 0;
 			background: transparent;
@@ -1089,28 +1077,28 @@
 			backdrop-filter: none;
 		}
 
-		.toolbar-spacer {
+		.ew-toolbar-spacer {
 			display: none;
 		}
 
-		.variant-slot,
-		.tools-scroller {
+		.ew-variant-slot,
+		.ew-tools-scroller {
 			display: contents;
 		}
 
 		/* Two classes so this wins over the display: contents above. */
-		.variant-slot.mobile-hidden {
+		.ew-variant-slot.ew-mobile-hidden {
 			display: none;
 		}
 
-		.mobile-selection-leading {
+		.ew-mobile-selection-leading {
 			display: flex;
 			flex: none;
 			align-self: stretch;
 			gap: 4px;
 		}
 
-		.mobile-save-group {
+		.ew-mobile-save-group {
 			display: flex;
 			flex: none;
 			align-self: stretch;

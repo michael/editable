@@ -12,8 +12,6 @@
 
 	function get_marker(index, layout) {
 		switch (layout) {
-			case 'square':
-				return '▪';
 			case 'check':
 				return '✓';
 			case 'decimal':

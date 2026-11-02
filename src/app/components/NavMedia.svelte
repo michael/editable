@@ -18,7 +18,7 @@
 	let link_label = $derived(media_link_label(media_node.alt, node.href));
 </script>
 
-<Node class="nav-media flex min-w-9 shrink-0 items-center" {path}>
+<Node class="flex min-w-9 shrink-0 items-center" {path}>
 	<svelte:element
 		this={render_as_link ? 'a' : 'div'}
 		class="inline-flex min-h-9 shrink-0 grow items-center justify-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"

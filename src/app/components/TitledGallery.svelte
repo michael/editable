@@ -2,9 +2,13 @@
 	import type { Nodes } from '#app/document_schema.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { Node, NodeArrayProperty } from 'svedit';
+	import type { DocumentPath, NodeArrayAttachmentContext } from 'svedit';
 	import GalleryCarousel from './GalleryCarousel.svelte';
 
-	let { path, mark: section = null } = $props();
+	let {
+		path,
+		mark: section = null
+	}: { path: DocumentPath; mark?: NodeArrayAttachmentContext | null } = $props();
 	const svedit = get_svedit_context();
 	let node: Nodes['titled_gallery'] = $derived(svedit.session.get(path));
 	let layout = $derived(node.layout || 'cards');
@@ -17,8 +21,8 @@
 		<div
 			class={[
 				layout !== 'carousel' && 'px-5 sm:px-7',
-				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+				padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+				padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 			]}
 		>
 			{#if layout === 'carousel'}

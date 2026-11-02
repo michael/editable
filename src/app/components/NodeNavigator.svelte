@@ -128,7 +128,7 @@
 
 {#if variant_item}
 	<div
-		class="variant-pill flex min-h-9 min-w-0 items-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] text-sm leading-5 whitespace-nowrap text-(--foreground) max-sm:min-w-36"
+		class="ew-variant-pill flex min-h-9 min-w-0 items-center rounded-[max(0px,calc(var(--button-border-radius)-0.25rem-1px))] text-sm leading-5 whitespace-nowrap text-(--foreground) max-sm:min-w-36"
 		aria-label="Current node variant"
 	>
 		<div
@@ -162,7 +162,7 @@
 			</span>
 			{#if variant_item.option_count > 1}
 				<select
-					class="variant-select absolute inset-0 size-full cursor-pointer opacity-0"
+					class="ew-variant-select absolute inset-0 size-full cursor-pointer opacity-0"
 					value={variant_item.current_value}
 					aria-label="Choose variant; current variant is {variant_item.label}"
 					use:tooltip={{
@@ -191,9 +191,9 @@
 {/if}
 
 <style>
-	.variant-select,
-	.variant-select:focus,
-	.variant-select:focus-visible {
+	.ew-variant-select,
+	.ew-variant-select:focus,
+	.ew-variant-select:focus-visible {
 		appearance: none;
 		-webkit-appearance: none;
 		border: 0;
@@ -203,7 +203,7 @@
 	}
 
 	/* The real control is a transparent <select>, so the pill renders its ring. */
-	.variant-pill:has(.variant-select:focus-visible) {
+	.ew-variant-pill:has(.ew-variant-select:focus-visible) {
 		outline: 2px solid var(--editing);
 		outline-offset: 2px;
 	}

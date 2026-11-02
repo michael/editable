@@ -11,10 +11,10 @@
 	title="The Editable Design System"
 	description="Editable's visual reference, in plain HTML and Tailwind."
 >
-	<div class="bg-(--background) pt-block-generous pb-16 font-sans text-(--foreground)">
+	<div class="bg-(--background) ew-pt-block-generous pb-16 font-sans text-(--foreground)">
 		<div class="mx-auto max-w-7xl space-y-16 px-5 sm:px-7">
 			<header class="space-y-3">
-				<h1 class="display-2">The Editable Design System</h1>
+				<h1 class="ew-display-2">The Editable Design System</h1>
 				<p class="max-w-xl text-base leading-relaxed text-(--muted-foreground)">
 					A shared starting point for Editable. Simple styles, ready to use and adapt.
 				</p>
@@ -26,8 +26,8 @@
 				class="space-y-12 lg:space-y-16"
 			>
 				<div class="space-y-2">
-					<h2 id="foundations-heading" class="display-5">Foundations</h2>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<h2 id="foundations-heading" class="ew-display-5">Foundations</h2>
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						Colors, fonts, and corner radii come from the shared tokens in
 						<code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
@@ -37,8 +37,8 @@
 				</div>
 
 				<div class="space-y-5 sm:space-y-7">
-					<h3 class="body-sm font-semibold">Colors and surfaces</h3>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<h3 class="ew-body-sm font-semibold">Colors and surfaces</h3>
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						Keep each surface with its foreground color. Neutral controls use the muted surface on
 						hover and a 10% foreground tint on press. Primary actions and editing actions use their
 						respective accent treatments.
@@ -46,11 +46,11 @@
 					<div class="grid grid-cols-1 gap-x-5 gap-y-8 sm:gap-x-7 lg:grid-cols-3 lg:gap-y-7">
 						<div class="space-y-3">
 							<div
-								class="flex min-h-28 items-center rounded-(--image-border-radius) border border-(--stroke) bg-(--background) p-5 body-base text-(--foreground)"
+								class="flex min-h-28 items-center rounded-(--image-border-radius) border border-(--stroke) bg-(--background) p-5 ew-body-base text-(--foreground)"
 							>
 								Page content
 							</div>
-							<p class="body-sm">
+							<p class="ew-body-sm">
 								<code
 									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--background</code
@@ -64,12 +64,12 @@
 						</div>
 						<div class="space-y-3">
 							<div
-								class="flex min-h-28 flex-col justify-center gap-1 rounded-(--image-border-radius) border border-(--stroke) bg-(--muted) p-5 body-base text-(--foreground)"
+								class="flex min-h-28 flex-col justify-center gap-1 rounded-(--image-border-radius) border border-(--stroke) bg-(--muted) p-5 ew-body-base text-(--foreground)"
 							>
 								<p>Secondary surface</p>
-								<p class="body-sm text-(--muted-foreground)">Supporting text</p>
+								<p class="ew-body-sm text-(--muted-foreground)">Supporting text</p>
 							</div>
-							<p class="body-sm">
+							<p class="ew-body-sm">
 								<code
 									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--muted</code
@@ -83,11 +83,11 @@
 						</div>
 						<div class="space-y-3">
 							<div
-								class="flex min-h-28 items-center rounded-(--image-border-radius) border border-transparent bg-(--accent) p-5 body-base text-(--accent-foreground)"
+								class="flex min-h-28 items-center rounded-(--image-border-radius) border border-transparent bg-(--accent) p-5 ew-body-base text-(--accent-foreground)"
 							>
 								Primary action or highlight
 							</div>
-							<p class="body-sm">
+							<p class="ew-body-sm">
 								<code
 									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--accent</code
@@ -101,11 +101,11 @@
 						</div>
 						<div class="space-y-3">
 							<div
-								class="flex min-h-28 items-center rounded-(--image-border-radius) border border-transparent bg-(--editing) p-5 body-base text-(--editing-foreground)"
+								class="flex min-h-28 items-center rounded-(--image-border-radius) border border-transparent bg-(--editing) p-5 ew-body-base text-(--editing-foreground)"
 							>
 								Active editing
 							</div>
-							<p class="body-sm">
+							<p class="ew-body-sm">
 								<code
 									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--editing</code
@@ -119,11 +119,11 @@
 						</div>
 						<div class="space-y-3">
 							<div
-								class="flex min-h-28 items-center rounded-(--image-border-radius) border border-(--stroke) bg-(--editing-muted) p-5 body-base text-(--editing)"
+								class="flex min-h-28 items-center rounded-(--image-border-radius) border border-(--stroke) bg-(--editing-muted) p-5 ew-body-base text-(--editing)"
 							>
 								Passive editing highlight
 							</div>
-							<p class="body-sm">
+							<p class="ew-body-sm">
 								<code
 									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--editing-muted</code
@@ -137,12 +137,12 @@
 						</div>
 						<div class="space-y-3">
 							<div
-								class="flex min-h-28 flex-col justify-center gap-3 rounded-(--image-border-radius) border border-(--stroke) bg-(--background) p-5 body-base"
+								class="flex min-h-28 flex-col justify-center gap-3 rounded-(--image-border-radius) border border-(--stroke) bg-(--background) p-5 ew-body-base"
 							>
 								<p>Borders and dividers</p>
 								<hr class="border-0 border-t border-(--stroke)" />
 							</div>
-							<p class="body-sm">
+							<p class="ew-body-sm">
 								<code
 									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--stroke</code
@@ -153,8 +153,8 @@
 				</div>
 
 				<div id="colorsets" class="space-y-5 sm:space-y-7">
-					<h3 class="body-sm font-semibold">Color sets</h3>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<h3 class="ew-body-sm font-semibold">Color sets</h3>
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						Each color set assigns every color token, so everything inside it stays readable without
 						changes of its own. Color set 1 is the page; sections switch to set 2 or 3. Code keeps
 						set 1, which its syntax colors are made for. Editable text on an accent fill, such as a
@@ -169,11 +169,11 @@
 						<div
 							class="ew-colorset-1 flex flex-col gap-4 rounded-(--image-border-radius) border border-(--stroke) bg-(--background) p-5 text-(--foreground)"
 						>
-							<p class="body-base">Color set 1</p>
-							<p class="body-sm text-(--muted-foreground)">
+							<p class="ew-body-base">Color set 1</p>
+							<p class="ew-body-sm text-(--muted-foreground)">
 								The page. Its accent is the editing color.
 							</p>
-							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
+							<div class="bg-(--muted) px-3 py-2 ew-body-sm">Muted surface</div>
 							<div class="flex flex-wrap gap-2">
 								<span
 									class="inline-flex min-h-9 items-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-3 text-sm leading-5 text-(--accent-foreground)"
@@ -188,12 +188,12 @@
 						<div
 							class="ew-colorset-2 flex flex-col gap-4 rounded-(--image-border-radius) border border-(--stroke) bg-(--background) p-5 text-(--foreground)"
 						>
-							<p class="body-base">Color set 2</p>
-							<p class="body-sm text-(--muted-foreground)">
+							<p class="ew-body-base">Color set 2</p>
+							<p class="ew-body-sm text-(--muted-foreground)">
 								Light grey. Its muted surface is white, so boxes lift off it; its accent is the
 								editing color.
 							</p>
-							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
+							<div class="bg-(--muted) px-3 py-2 ew-body-sm">Muted surface</div>
 							<div class="flex flex-wrap gap-2">
 								<span
 									class="inline-flex min-h-9 items-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-3 text-sm leading-5 text-(--accent-foreground)"
@@ -208,11 +208,11 @@
 						<div
 							class="ew-colorset-3 flex flex-col gap-4 rounded-(--image-border-radius) border border-(--stroke) bg-(--background) p-5 text-(--foreground)"
 						>
-							<p class="body-base">Color set 3</p>
-							<p class="body-sm text-(--muted-foreground)">
+							<p class="ew-body-base">Color set 3</p>
+							<p class="ew-body-sm text-(--muted-foreground)">
 								The accent as a surface. Accent and editing colors turn to the foreground.
 							</p>
-							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
+							<div class="bg-(--muted) px-3 py-2 ew-body-sm">Muted surface</div>
 							<div class="flex flex-wrap gap-2">
 								<span
 									class="inline-flex min-h-9 items-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-3 text-sm leading-5 text-(--accent-foreground)"
@@ -228,11 +228,11 @@
 				</div>
 
 				<div class="space-y-5 sm:space-y-7">
-					<h3 class="body-sm font-semibold">Font families</h3>
+					<h3 class="ew-body-sm font-semibold">Font families</h3>
 					<div class="grid grid-cols-1 gap-x-5 gap-y-8 sm:gap-x-7 lg:grid-cols-3 lg:gap-y-7">
 						<div class="space-y-3">
 							<p class="font-sans text-2xl">Clear words.</p>
-							<p class="body-sm">
+							<p class="ew-body-sm">
 								<code
 									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>font-sans</code
@@ -241,7 +241,7 @@
 						</div>
 						<div class="space-y-3">
 							<p class="font-serif text-2xl">Clear words.</p>
-							<p class="body-sm">
+							<p class="ew-body-sm">
 								<code
 									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>font-serif</code
@@ -250,7 +250,7 @@
 						</div>
 						<div class="space-y-3">
 							<p class="font-mono text-2xl">Clear words.</p>
-							<p class="body-sm">
+							<p class="ew-body-sm">
 								<code
 									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>font-mono</code
@@ -261,8 +261,8 @@
 				</div>
 
 				<div class="space-y-5 sm:space-y-7">
-					<h3 class="body-sm font-semibold">Corner radii</h3>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<h3 class="ew-body-sm font-semibold">Corner radii</h3>
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						Buttons and pill shells use the button radius. Popovers cap it at 1rem; their inner rows
 						and pill controls subtract 4px padding and a 1px border, clamped at zero. Images use
 						their own radius. Set either token to zero for square corners.
@@ -277,7 +277,7 @@
 							>
 								Button
 							</div>
-							<p class="body-sm">
+							<p class="ew-body-sm">
 								<code
 									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--button-border-radius</code
@@ -294,7 +294,7 @@
 									Pill interior
 								</div>
 							</div>
-							<p class="body-sm">Button radius with an inset interior.</p>
+							<p class="ew-body-sm">Button radius with an inset interior.</p>
 						</div>
 						<div class="space-y-3">
 							<div
@@ -306,15 +306,15 @@
 									Popover row
 								</div>
 							</div>
-							<p class="body-sm">Button radius capped at 1rem, with an inset row.</p>
+							<p class="ew-body-sm">Button radius capped at 1rem, with an inset row.</p>
 						</div>
 						<div class="space-y-3">
 							<div
-								class="flex aspect-video items-center justify-center rounded-(--image-border-radius) border border-(--stroke) bg-(--muted) p-5 body-sm"
+								class="flex aspect-video items-center justify-center rounded-(--image-border-radius) border border-(--stroke) bg-(--muted) p-5 ew-body-sm"
 							>
 								Image corners
 							</div>
-							<p class="body-sm">
+							<p class="ew-body-sm">
 								<code
 									class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 									>--image-border-radius</code
@@ -327,8 +327,8 @@
 
 			<section id="page-limiter" aria-labelledby="page-limiter-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="page-limiter-heading" class="display-5">Page limiter</h2>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<h2 id="page-limiter-heading" class="ew-display-5">Page limiter</h2>
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						Center each block with <code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>mx-auto max-w-7xl</code
@@ -352,8 +352,8 @@
 					<div class="mx-auto max-w-7xl bg-(--muted)">
 						<div class="px-5 sm:px-7">
 							<div class="border-x border-dashed border-(--stroke) bg-(--background) py-8">
-								<p class="body-base">Page content aligns here.</p>
-								<p class="mt-2 body-sm text-(--muted-foreground)">
+								<p class="ew-body-base">Page content aligns here.</p>
+								<p class="mt-2 ew-body-sm text-(--muted-foreground)">
 									The shaded edges show the shared page padding. Resize the window to compare.
 								</p>
 							</div>
@@ -369,7 +369,7 @@
 	&lt;/div&gt;
 &lt;/div&gt;</code
 					></pre>
-				<p class="max-w-prose body-sm text-(--muted-foreground)">
+				<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 					Keep full-width backgrounds outside the limiter and choose vertical spacing per block.
 					Narrower reading columns can sit inside this shared page width. Apply the side padding
 					once so adjacent blocks line up.
@@ -378,13 +378,13 @@
 
 			<section id="content-tracks" aria-labelledby="content-tracks-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="content-tracks-heading" class="display-5">Content tracks</h2>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<h2 id="content-tracks-heading" class="ew-display-5">Content tracks</h2>
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						A track controls how much of the page limiter a block occupies and where it sits. Prose
 						and descriptive listings share narrow left, center, and right tracks, plus a wide
 						layout. Alternating their positions adds variation while keeping shared alignment edges.
 					</p>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						Narrow tracks use <code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>max-w-4xl</code
@@ -401,7 +401,7 @@
 				<!-- Use actual track widths and padding so these diagrams respond like application blocks. -->
 				<div class="space-y-6">
 					<figure class="space-y-2">
-						<figcaption class="body-sm">
+						<figcaption class="ew-body-sm">
 							Narrow left · <code
 								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>max-w-4xl</code
@@ -411,7 +411,7 @@
 							<div class="mx-auto max-w-7xl bg-(--muted)">
 								<div class="max-w-4xl px-5 sm:px-7">
 									<div
-										class="border-x border-dashed border-(--stroke) bg-(--background) py-5 body-sm"
+										class="border-x border-dashed border-(--stroke) bg-(--background) py-5 ew-body-sm"
 									>
 										Content starts at the left page edge.
 									</div>
@@ -421,7 +421,7 @@
 					</figure>
 
 					<figure class="space-y-2">
-						<figcaption class="body-sm">
+						<figcaption class="ew-body-sm">
 							Narrow center · <code
 								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>mx-auto max-w-4xl</code
@@ -431,7 +431,7 @@
 							<div class="mx-auto max-w-7xl bg-(--muted)">
 								<div class="mx-auto max-w-4xl px-5 sm:px-7">
 									<div
-										class="border-x border-dashed border-(--stroke) bg-(--background) py-5 body-sm"
+										class="border-x border-dashed border-(--stroke) bg-(--background) py-5 ew-body-sm"
 									>
 										Content sits in the center of the page.
 									</div>
@@ -441,7 +441,7 @@
 					</figure>
 
 					<figure class="space-y-2">
-						<figcaption class="body-sm">
+						<figcaption class="ew-body-sm">
 							Narrow right · <code
 								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>ml-auto max-w-4xl</code
@@ -451,7 +451,7 @@
 							<div class="mx-auto max-w-7xl bg-(--muted)">
 								<div class="ml-auto max-w-4xl px-5 sm:px-7">
 									<div
-										class="border-x border-dashed border-(--stroke) bg-(--background) py-5 body-sm"
+										class="border-x border-dashed border-(--stroke) bg-(--background) py-5 ew-body-sm"
 									>
 										Content ends at the right page edge.
 									</div>
@@ -461,12 +461,12 @@
 					</figure>
 
 					<figure class="space-y-2">
-						<figcaption class="body-sm">Wide · use the full available content width</figcaption>
+						<figcaption class="ew-body-sm">Wide · use the full available content width</figcaption>
 						<div class="-mx-5 sm:-mx-7">
 							<div class="mx-auto max-w-7xl bg-(--muted)">
 								<div class="px-5 sm:px-7">
 									<div
-										class="border-x border-dashed border-(--stroke) bg-(--background) py-5 body-sm"
+										class="border-x border-dashed border-(--stroke) bg-(--background) py-5 ew-body-sm"
 									>
 										Content spans the limiter, inside the shared side padding.
 									</div>
@@ -476,7 +476,7 @@
 					</figure>
 
 					<figure class="space-y-2">
-						<figcaption class="body-sm">
+						<figcaption class="ew-body-sm">
 							Two columns · descriptive listings · 50:50 after the gap
 						</figcaption>
 						<div class="-mx-5 sm:-mx-7">
@@ -484,12 +484,12 @@
 								<div class="px-5 sm:px-7">
 									<div class="grid grid-cols-1 gap-x-10 gap-y-0 lg:grid-cols-2 lg:gap-x-14">
 										<div
-											class="border-x border-dashed border-(--stroke) bg-(--background) py-5 body-sm"
+											class="border-x border-dashed border-(--stroke) bg-(--background) py-5 ew-body-sm"
 										>
 											First column
 										</div>
 										<div
-											class="border-x border-dashed border-(--stroke) bg-(--background) py-5 body-sm"
+											class="border-x border-dashed border-(--stroke) bg-(--background) py-5 ew-body-sm"
 										>
 											Second column
 										</div>
@@ -503,14 +503,14 @@
 
 			<section id="block-spacing" aria-labelledby="block-spacing-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="block-spacing-heading" class="display-5">Vertical block spacing</h2>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<h2 id="block-spacing-heading" class="ew-display-5">Vertical block spacing</h2>
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						Generous spacing separates sections. Compact spacing pulls related blocks together. Each
 						block has its own top and bottom padding, chosen independently.
 					</p>
 				</div>
 
-				<ul class="max-w-prose list-disc space-y-2 pl-5 body-sm">
+				<ul class="max-w-prose list-disc space-y-2 pl-5 ew-body-sm">
 					<li>A standalone block has generous padding above and below.</li>
 					<li>
 						In a section, the first block has generous top padding and compact bottom padding.
@@ -521,7 +521,7 @@
 				</ul>
 
 				<div class="space-y-3">
-					<h3 class="body-sm font-semibold">Padding per edge</h3>
+					<h3 class="ew-body-sm font-semibold">Padding per edge</h3>
 					<div class="overflow-x-auto">
 						<table class="w-full max-w-3xl text-sm leading-6">
 							<caption class="sr-only">Responsive generous and compact padding values</caption>
@@ -547,7 +547,7 @@
 							>
 						</table>
 					</div>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						Pixel equivalents assume the default 16px root font size. Adjacent padding adds up: two
 						compact edges create a 48px gap, 64px from 1024px, always wider than the gap between
 						elements inside a block. Two generous edges create a gap four times as wide: 192px, or
@@ -564,7 +564,7 @@
 			-->
 				<div class="grid items-start gap-10 md:grid-cols-2">
 					<div class="space-y-4">
-						<h3 class="body-sm font-semibold">Standalone block</h3>
+						<h3 class="ew-body-sm font-semibold">Standalone block</h3>
 						<div class="border border-(--stroke)">
 							<div>
 								<div
@@ -573,7 +573,7 @@
 									Generous
 								</div>
 								<div class="border-y border-dashed border-(--stroke) px-5 py-4 sm:px-7">
-									<p class="body-base">Independent content</p>
+									<p class="ew-body-base">Independent content</p>
 								</div>
 								<div
 									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-32"
@@ -584,7 +584,7 @@
 						</div>
 					</div>
 					<div class="space-y-4">
-						<h3 class="body-sm font-semibold">Three blocks in one section</h3>
+						<h3 class="ew-body-sm font-semibold">Three blocks in one section</h3>
 						<div class="divide-y divide-(--stroke) border border-(--stroke)">
 							<div>
 								<div
@@ -593,7 +593,7 @@
 									Generous
 								</div>
 								<div class="border-y border-dashed border-(--stroke) px-5 py-4 sm:px-7">
-									<p class="body-base">First block</p>
+									<p class="ew-body-base">First block</p>
 								</div>
 								<div
 									class="flex h-6 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-8"
@@ -608,7 +608,7 @@
 									Compact
 								</div>
 								<div class="border-y border-dashed border-(--stroke) px-5 py-4 sm:px-7">
-									<p class="body-base">Middle block</p>
+									<p class="ew-body-base">Middle block</p>
 								</div>
 								<div
 									class="flex h-6 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-8"
@@ -623,7 +623,7 @@
 									Compact
 								</div>
 								<div class="border-y border-dashed border-(--stroke) px-5 py-4 sm:px-7">
-									<p class="body-base">Last block</p>
+									<p class="ew-body-base">Last block</p>
 								</div>
 								<div
 									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-32"
@@ -634,15 +634,15 @@
 						</div>
 					</div>
 				</div>
-				<p class="max-w-prose body-sm text-(--muted-foreground)">
+				<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 					Shaded bands show the padding at its actual size. Resize the window to compare the scale.
 					Spacing within a block, such as the gap between a heading and a paragraph, is a separate
 					choice.
 				</p>
 				<div id="block-spacing-api" class="space-y-6">
 					<div class="space-y-2">
-						<h3 class="body-sm font-semibold">Sample block implementation</h3>
-						<p class="max-w-prose body-sm text-(--muted-foreground)">
+						<h3 class="ew-body-sm font-semibold">Sample block implementation</h3>
+						<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 							A top-level block receives its section context through <code
 								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>mark</code
@@ -678,8 +678,8 @@
 	&lt;div class="mx-auto max-w-7xl"&gt;
 		&lt;div class=&#123;[
 			'px-5 sm:px-7',
-			padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-			padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+			padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+			padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 		]&#125;&gt;
 			&lt;NodeArrayProperty
 				path=&#123;[...path, 'body']&#125;
@@ -690,7 +690,7 @@
 &lt;/Node&gt;</code
 							></pre>
 					</div>
-					<ul class="max-w-prose list-disc space-y-2 pl-5 body-sm">
+					<ul class="max-w-prose list-disc space-y-2 pl-5 ew-body-sm">
 						<li>No section mark: both edges are generous.</li>
 						<li>
 							<code
@@ -712,7 +712,7 @@
 						</li>
 						<li>A one-block section is both the start and the end, so both edges are generous.</li>
 					</ul>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						The app uses shared utilities in <code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>src/app.css</code
@@ -720,18 +720,18 @@
 						for the default rhythm:
 						<code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
-							>pt-block-generous</code
+							>ew-pt-block-generous</code
 						>,
 						<code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
-							>pt-block-compact</code
+							>ew-pt-block-compact</code
 						>, and their
 						<code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>pb-</code
 						> equivalents. They apply the values above to existing elements without adding a wrapper component.
 					</p>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						For a custom rhythm, replace the default utility on that edge with explicit responsive
 						classes, such as <code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
@@ -744,8 +744,8 @@
 
 			<section id="typography" aria-labelledby="typography-heading" class="space-y-10">
 				<div class="space-y-2">
-					<h2 id="typography-heading" class="display-5">Typography</h2>
-					<p class="body-sm text-(--muted-foreground)">
+					<h2 id="typography-heading" class="ew-display-5">Typography</h2>
+					<p class="ew-body-sm text-(--muted-foreground)">
 						A shared scale for headings and body text.
 					</p>
 				</div>
@@ -760,24 +760,24 @@
 			-->
 				<div class="space-y-10">
 					<div id="type-display-1" class="space-y-3">
-						<p class="text-sm text-(--muted-foreground)">display-1</p>
-						<h3 class="display-1">Make room for what matters.</h3>
+						<p class="text-sm text-(--muted-foreground)">ew-display-1</p>
+						<h3 class="ew-display-1">Make room for what matters.</h3>
 					</div>
 					<div id="type-display-2" class="space-y-3">
-						<p class="text-sm text-(--muted-foreground)">display-2</p>
-						<h3 class="display-2">Make room for what matters.</h3>
+						<p class="text-sm text-(--muted-foreground)">ew-display-2</p>
+						<h3 class="ew-display-2">Make room for what matters.</h3>
 					</div>
 					<div id="type-display-3" class="space-y-3">
-						<p class="text-sm text-(--muted-foreground)">display-3</p>
-						<h3 class="display-3">Make room for what matters.</h3>
+						<p class="text-sm text-(--muted-foreground)">ew-display-3</p>
+						<h3 class="ew-display-3">Make room for what matters.</h3>
 					</div>
 					<div id="type-display-4" class="space-y-3">
-						<p class="text-sm text-(--muted-foreground)">display-4</p>
-						<h3 class="display-4">Make room for what matters.</h3>
+						<p class="text-sm text-(--muted-foreground)">ew-display-4</p>
+						<h3 class="ew-display-4">Make room for what matters.</h3>
 					</div>
 					<div id="type-display-5" class="space-y-3">
-						<p class="text-sm text-(--muted-foreground)">display-5</p>
-						<h3 class="display-5">Make room for what matters.</h3>
+						<p class="text-sm text-(--muted-foreground)">ew-display-5</p>
+						<h3 class="ew-display-5">Make room for what matters.</h3>
 					</div>
 				</div>
 
@@ -788,32 +788,32 @@
 			-->
 				<div class="space-y-10">
 					<div id="type-body-xl" class="space-y-3">
-						<p class="text-sm text-(--muted-foreground)">body-xl</p>
-						<p class="max-w-prose body-xl">
+						<p class="text-sm text-(--muted-foreground)">ew-body-xl</p>
+						<p class="max-w-prose ew-body-xl">
 							Good design makes everyday things easier to understand. Clear words, comfortable
 							spacing, and a thoughtful hierarchy help people find what they need and decide what to
 							do next.
 						</p>
 					</div>
 					<div id="type-body-lg" class="space-y-3">
-						<p class="text-sm text-(--muted-foreground)">body-lg</p>
-						<p class="max-w-prose body-lg">
+						<p class="text-sm text-(--muted-foreground)">ew-body-lg</p>
+						<p class="max-w-prose ew-body-lg">
 							Good design makes everyday things easier to understand. Clear words, comfortable
 							spacing, and a thoughtful hierarchy help people find what they need and decide what to
 							do next.
 						</p>
 					</div>
 					<div id="type-body-base" class="space-y-3">
-						<p class="text-sm text-(--muted-foreground)">body-base</p>
-						<p class="max-w-prose body-base">
+						<p class="text-sm text-(--muted-foreground)">ew-body-base</p>
+						<p class="max-w-prose ew-body-base">
 							Good design makes everyday things easier to understand. Clear words, comfortable
 							spacing, and a thoughtful hierarchy help people find what they need and decide what to
 							do next.
 						</p>
 					</div>
 					<div id="type-body-sm" class="space-y-3">
-						<p class="text-sm text-(--muted-foreground)">body-sm</p>
-						<p class="max-w-prose body-sm">
+						<p class="text-sm text-(--muted-foreground)">ew-body-sm</p>
+						<p class="max-w-prose ew-body-sm">
 							Good design makes everyday things easier to understand. Clear words, comfortable
 							spacing, and a thoughtful hierarchy help people find what they need and decide what to
 							do next.
@@ -822,7 +822,7 @@
 				</div>
 
 				<!--
-				An eyebrow labels the heading below it: body-sm, 12px on phones, on a muted box with accent
+				An eyebrow labels the heading below it: ew-body-sm, 12px on phones, on a muted box with accent
 				corner marks. The marks are a border masked down to its corners, on the wrapper's ::before.
 			-->
 				<div id="type-eyebrow" class="space-y-3">
@@ -830,15 +830,15 @@
 					<div
 						class="relative inline-block bg-(--muted) px-3 py-1 before:pointer-events-none before:absolute before:inset-0 before:border before:border-(--accent) before:[mask:conic-gradient(at_5px_5px,#0000_75%,#000_0)_0_0/calc(100%-5px)_calc(100%-5px)]"
 					>
-						<p class="body-sm text-(--muted-foreground) max-sm:text-xs">Visual builder</p>
+						<p class="ew-body-sm text-(--muted-foreground) max-sm:text-xs">Visual builder</p>
 					</div>
 				</div>
 			</section>
 
 			<section id="formatting" aria-labelledby="formatting-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="formatting-heading" class="display-5">Inline formatting</h2>
-					<p class="body-sm text-(--muted-foreground)">
+					<h2 id="formatting-heading" class="ew-display-5">Inline formatting</h2>
+					<p class="ew-body-sm text-(--muted-foreground)">
 						Emphasis and detail within the flow of a sentence.
 					</p>
 				</div>
@@ -854,7 +854,7 @@
 					<div id="format-emphasis" class="space-y-3">
 						<h3 class="text-sm text-(--muted-foreground)">Emphasis · em</h3>
 						<!-- Italic adds emphasis without introducing another weight or color. -->
-						<p class="max-w-prose body-base">
+						<p class="max-w-prose ew-body-base">
 							Start with what people <em class="italic">actually need</em>.
 						</p>
 					</div>
@@ -862,7 +862,7 @@
 					<div id="format-strong" class="space-y-3">
 						<h3 class="text-sm text-(--muted-foreground)">Bold · strong</h3>
 						<!-- One step bolder than the surrounding text, so it also stands out in semibold headings. -->
-						<p class="max-w-prose body-base">
+						<p class="max-w-prose ew-body-base">
 							Keep the <strong class="font-[weight:bolder]">most important information</strong> easy to
 							find.
 						</p>
@@ -878,7 +878,7 @@
 						thickness never changes.
 						Use the shared editing outline for keyboard focus.
 					-->
-						<p class="max-w-prose body-base">
+						<p class="max-w-prose ew-body-base">
 							Explore the
 							<a
 								href="#typography"
@@ -895,7 +895,7 @@
 						Code shares the shortcut-key border, muted surface, radius, and horizontal padding.
 						It keeps monospace typography and may break long identifiers across lines.
 					-->
-						<p class="max-w-prose body-base">
+						<p class="max-w-prose ew-body-base">
 							Use <code
 								class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 								>font-semibold</code
@@ -911,7 +911,7 @@
 						Use em-based padding and the button radius capped at 0.25em, including on wrapped lines.
 						Highlight is a standalone formatting style.
 					-->
-						<p class="max-w-prose body-base">
+						<p class="max-w-prose ew-body-base">
 							Highlight <mark
 								class="ew-native-selection rounded-[min(var(--button-border-radius),0.25em)] bg-(--accent) box-decoration-clone px-[0.25em] py-[0.125em] text-(--accent-foreground)"
 								>the part worth remembering</mark
@@ -923,8 +923,8 @@
 
 			<section id="card" aria-labelledby="card-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="card-heading" class="display-5">Card</h2>
-					<p class="body-sm text-(--muted-foreground)">
+					<h2 id="card-heading" class="ew-display-5">Card</h2>
+					<p class="ew-body-sm text-(--muted-foreground)">
 						A 4:3 media area, semibold title, and optional description. Shared by gallery cards;
 						width and arrangement belong to the surrounding layout. Linked cards underline the title
 						and make the whole card clickable. Use a div and omit the underline for an unlinked
@@ -950,11 +950,11 @@
 						</div>
 						<div class="pt-4">
 							<h3
-								class="body-base font-semibold underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors group-hover/card:decoration-current group-active/card:decoration-current"
+								class="ew-body-base font-semibold underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors group-hover/card:decoration-current group-active/card:decoration-current"
 							>
 								Card title
 							</h3>
-							<p class="pt-1 body-base text-(--muted-foreground)">
+							<p class="pt-1 ew-body-base text-(--muted-foreground)">
 								An optional description adds context below the title.
 							</p>
 						</div>
@@ -964,8 +964,8 @@
 
 			<section id="buttons" aria-labelledby="buttons-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="buttons-heading" class="display-5">Buttons</h2>
-					<p class="body-sm text-(--muted-foreground)">
+					<h2 id="buttons-heading" class="ew-display-5">Buttons</h2>
+					<p class="ew-body-sm text-(--muted-foreground)">
 						Standard size. Hover, press, or tab to explore the states.
 					</p>
 				</div>
@@ -1023,8 +1023,8 @@
 
 			<section id="buttons-small" aria-labelledby="buttons-small-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="buttons-small-heading" class="display-5">Small buttons</h2>
-					<p class="body-sm text-(--muted-foreground)">
+					<h2 id="buttons-small-heading" class="ew-display-5">Small buttons</h2>
+					<p class="ew-body-sm text-(--muted-foreground)">
 						For navigation and compact layouts. Small buttons keep a 36px minimum height on all
 						devices.
 					</p>
@@ -1074,8 +1074,8 @@
 
 			<section id="buttons-disabled" aria-labelledby="buttons-disabled-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="buttons-disabled-heading" class="display-5">Disabled buttons</h2>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<h2 id="buttons-disabled-heading" class="ew-display-5">Disabled buttons</h2>
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						Buttons and pill controls use 40% opacity with the default cursor. Native disabled
 						buttons skip keyboard focus and suppress hover and press feedback. Menu rows instead use
 						muted text to keep unavailable actions legible.
@@ -1141,8 +1141,8 @@
 				class="space-y-8"
 			>
 				<div class="space-y-2">
-					<h2 id="descriptive-listing-heading" class="display-5">Descriptive listing</h2>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<h2 id="descriptive-listing-heading" class="ew-display-5">Descriptive listing</h2>
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						A linked row with a semibold title, description, and optional metadata. Hover or press
 						anywhere on the row to show the title underline in full; keyboard focus outlines the
 						whole row. A plain listing uses the same recipe with the description omitted.
@@ -1158,16 +1158,16 @@
 							<div class="flex items-center justify-between gap-6">
 								<div class="min-w-2/3 flex-1">
 									<p
-										class="body-base font-semibold underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors group-hover/listing-link:decoration-current group-active/listing-link:decoration-current"
+										class="ew-body-base font-semibold underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors group-hover/listing-link:decoration-current group-active/listing-link:decoration-current"
 									>
 										Typography
 									</p>
-									<p class="pt-1 body-base text-balance text-(--muted-foreground)">
+									<p class="pt-1 ew-body-base text-balance text-(--muted-foreground)">
 										A shared scale for headings and body text.
 									</p>
 								</div>
 								<div class="min-w-0 self-center text-right">
-									<p class="pt-1 body-base text-(--muted-foreground)">9 styles</p>
+									<p class="pt-1 ew-body-base text-(--muted-foreground)">9 styles</p>
 								</div>
 							</div>
 						</a>
@@ -1180,11 +1180,11 @@
 							<div class="flex items-center justify-between gap-6">
 								<div class="min-w-2/3 flex-1">
 									<p
-										class="body-base font-semibold underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors group-hover/listing-link:decoration-current group-active/listing-link:decoration-current"
+										class="ew-body-base font-semibold underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors group-hover/listing-link:decoration-current group-active/listing-link:decoration-current"
 									>
 										Buttons
 									</p>
-									<p class="pt-1 body-base text-balance text-(--muted-foreground)">
+									<p class="pt-1 ew-body-base text-balance text-(--muted-foreground)">
 										Primary, secondary, and link treatments for common actions.
 									</p>
 								</div>
@@ -1196,8 +1196,8 @@
 
 			<section id="dialog-buttons" aria-labelledby="dialog-buttons-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="dialog-buttons-heading" class="display-5">Dialog buttons</h2>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<h2 id="dialog-buttons-heading" class="ew-display-5">Dialog buttons</h2>
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						For the editing dialogs outside the toolbar: the login dialog, the save conflict dialog,
 						and the OAuth consent page. The primary action uses the editing colors, since these
 						dialogs belong to editing rather than to the site.
@@ -1256,8 +1256,8 @@
 
 			<section id="boxed-prose" aria-labelledby="boxed-prose-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="boxed-prose-heading" class="display-5">Boxed items</h2>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<h2 id="boxed-prose-heading" class="ew-display-5">Boxed items</h2>
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						Boxed items use
 						<code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
@@ -1277,10 +1277,10 @@
 							<div
 								class="relative inline-block bg-(--muted) px-3 py-1 before:pointer-events-none before:absolute before:inset-0 before:border before:border-(--accent) before:[mask:conic-gradient(at_5px_5px,#0000_75%,#000_0)_0_0/calc(100%-5px)_calc(100%-5px)]"
 							>
-								<p class="body-sm text-(--muted-foreground) max-sm:text-xs">Personal</p>
+								<p class="ew-body-sm text-(--muted-foreground) max-sm:text-xs">Personal</p>
 							</div>
-							<h3 class="display-5">Make it your own</h3>
-							<p class="body-base">Start with the shared styles and adapt them to your site.</p>
+							<h3 class="ew-display-5">Make it your own</h3>
+							<p class="ew-body-base">Start with the shared styles and adapt them to your site.</p>
 							<a
 								href="#buttons"
 								class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)]"
@@ -1291,8 +1291,8 @@
 					<div
 						class="ew-accent-surface flex flex-col items-center gap-5 rounded-(--image-border-radius) px-6 py-8 text-center text-balance sm:gap-7 sm:px-8 sm:py-10"
 					>
-						<h3 class="display-5">Make it stand out</h3>
-						<p class="body-base text-(--muted-foreground)">
+						<h3 class="ew-display-5">Make it stand out</h3>
+						<p class="ew-body-base text-(--muted-foreground)">
 							The accent of the color set, with every recipe inside still readable.
 						</p>
 						<a
@@ -1306,8 +1306,8 @@
 
 			<section id="navigation" aria-labelledby="navigation-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="navigation-heading" class="display-5">Navigation</h2>
-					<p class="body-sm text-(--muted-foreground)">
+					<h2 id="navigation-heading" class="ew-display-5">Navigation</h2>
+					<p class="ew-body-sm text-(--muted-foreground)">
 						A placeholder logo, main links, and small primary and secondary buttons. Links use the
 						foreground color and fade to muted on hover and press, without an underline, like the
 						mobile menu.
@@ -1397,8 +1397,8 @@
 					</div>
 				</nav>
 				<div id="navigation-mobile" class="space-y-4">
-					<h3 class="body-sm font-semibold">Mobile navigation controls</h3>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<h3 class="ew-body-sm font-semibold">Mobile navigation controls</h3>
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						The application switches to a menu on small screens. Use an opaque page background,
 						these icon buttons, and larger navigation links. Controls share the 2px focus outline
 						and offset, with 44px touch targets. Opening and dismissal belong to the application.
@@ -1452,8 +1452,8 @@
 
 			<section id="pills" aria-labelledby="pills-heading" class="space-y-10">
 				<div class="space-y-2">
-					<h2 id="pills-heading" class="display-5">Editor pills</h2>
-					<p class="body-sm text-(--muted-foreground)">
+					<h2 id="pills-heading" class="ew-display-5">Editor pills</h2>
+					<p class="ew-body-sm text-(--muted-foreground)">
 						Compact surfaces for tools, actions, and previews.
 					</p>
 				</div>
@@ -1672,8 +1672,8 @@ The local href is a specimen destination. Production links retain their own dest
 			</section>
 			<section id="editor-forms" aria-labelledby="editor-forms-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="editor-forms-heading" class="display-5">Editor forms</h2>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<h2 id="editor-forms-heading" class="ew-display-5">Editor forms</h2>
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						Link and media prompts use an opaque surface with 4px padding, no shadow, and the button
 						radius capped at 1rem. Fields and actions subtract the padding and border from that
 						radius. Text inputs and textareas use 16px text and an editing-color border on focus.
@@ -1708,8 +1708,8 @@ The local href is a specimen destination. Production links retain their own dest
 
 			<section id="page-browser" aria-labelledby="page-browser-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="page-browser-heading" class="display-5">Page browser</h2>
-					<p class="max-w-prose body-sm text-(--muted-foreground)">
+					<h2 id="page-browser-heading" class="ew-display-5">Page browser</h2>
+					<p class="max-w-prose ew-body-sm text-(--muted-foreground)">
 						A muted editing fill marks the result Enter will open. Only keyboard-focused rows get a
 						ring, drawn inside the row to keep tree guides and adjacent rows clear. Search focus
 						uses a thin editing-color border. Action menus reuse the list popover recipe.
@@ -1767,8 +1767,8 @@ The local href is a specimen destination. Production links retain their own dest
 
 			<section id="popovers" aria-labelledby="popovers-heading" class="space-y-8">
 				<div class="space-y-2">
-					<h2 id="popovers-heading" class="display-5">List popovers</h2>
-					<p class="body-sm text-(--muted-foreground)">
+					<h2 id="popovers-heading" class="ew-display-5">List popovers</h2>
+					<p class="ew-body-sm text-(--muted-foreground)">
 						Compact lists with a shared surface and aligned rows.
 					</p>
 				</div>

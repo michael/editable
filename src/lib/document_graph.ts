@@ -1,6 +1,6 @@
 import type { Attachment, DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
 
-function get_attached_ranges(
+export function get_attached_ranges(
 	value: { marks?: Attachment[]; annotations?: Attachment[] } | null | undefined
 ): Attachment[] {
 	return [...(value?.marks ?? []), ...(value?.annotations ?? [])];
@@ -11,7 +11,7 @@ function get_attached_ranges(
  * and rewriting the references between them.
  *
  * Ids outside the copied set are left untouched, so references that point at
- * other documents — a page's shared `nav` and `footer` — keep pointing there.
+ * other documents — a page's shared `banner`, `nav` and `footer` — keep pointing there.
  * Pass those roots in `exclude_roots` so they are not treated as part of the
  * subtree; they live in their own documents and must not be duplicated.
  */

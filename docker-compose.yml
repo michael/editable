@@ -24,7 +24,7 @@ services:
       # inside the container and content silently dies with each deploy
       # (fly.toml sets the same for Fly deployments).
       DATA_DIR: /data
-      # Must stay above MAX_VIDEO_FILESIZE (50 MiB); pre-optimized videos skip
+      # Must stay above MAX_VIDEO_FILESIZE (100 MB); pre-optimized videos skip
       # the transcode and upload at their original size.
       BODY_SIZE_LIMIT: '${BODY_SIZE_LIMIT:-100M}'
       PROTOCOL_HEADER: x-forwarded-proto

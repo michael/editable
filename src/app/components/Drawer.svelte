@@ -198,8 +198,8 @@
 		if (!dialog_ref) return;
 
 		if (open) {
-			document.documentElement.classList.add('drawer-open');
-			document.body.classList.add('drawer-open');
+			document.documentElement.classList.add('ew-drawer-open');
+			document.body.classList.add('ew-drawer-open');
 
 			is_closing = false;
 			drawer_height_ratio = last_open_drawer_height_ratio;
@@ -212,8 +212,8 @@
 				is_mounted = true;
 			});
 		} else {
-			document.documentElement.classList.remove('drawer-open');
-			document.body.classList.remove('drawer-open');
+			document.documentElement.classList.remove('ew-drawer-open');
+			document.body.classList.remove('ew-drawer-open');
 
 			if (dialog_ref.open && !is_closing) {
 				is_mounted = false;
@@ -222,8 +222,8 @@
 		}
 
 		return () => {
-			document.documentElement.classList.remove('drawer-open');
-			document.body.classList.remove('drawer-open');
+			document.documentElement.classList.remove('ew-drawer-open');
+			document.body.classList.remove('ew-drawer-open');
 		};
 	});
 </script>
@@ -231,29 +231,29 @@
 <dialog
 	bind:this={dialog_ref}
 	aria-label={label}
-	class="drawer-dialog"
-	class:mounted={is_mounted}
-	class:closing={is_closing}
-	class:dragging={is_dragging}
+	class="ew-drawer-dialog"
+	class:ew-mounted={is_mounted}
+	class:ew-closing={is_closing}
+	class:ew-dragging={is_dragging}
 	oncancel={handle_dialog_cancel}
 	onclick={handle_backdrop_click}
 >
 	<div
-		class="drawer-shell"
+		class="ew-drawer-shell"
 		style={drawer_height_mode === 'manual'
 			? `--drawer-height: ${drawer_height_ratio * 100}dvh;`
 			: undefined}
 	>
 		<div
-			class="drawer"
-			class:auto-dragging={drawer_height_mode === 'auto' && is_dragging}
+			class="ew-drawer"
+			class:ew-auto-dragging={drawer_height_mode === 'auto' && is_dragging}
 			ontransitionend={handle_drawer_transition_end}
 			style={drawer_height_mode === 'auto' && is_dragging
 				? `--auto-drag-offset: ${drag_offset_y}px;`
 				: undefined}
 		>
 			<div
-				class="drawer-handle-area"
+				class="ew-drawer-handle-area"
 				bind:this={handle_ref}
 				role="presentation"
 				aria-hidden="true"
@@ -262,14 +262,14 @@
 				onpointerup={handle_handle_pointerup}
 				onpointercancel={handle_handle_pointercancel}
 			>
-				<span class="drawer-handle" aria-hidden="true"></span>
+				<span class="ew-drawer-handle" aria-hidden="true"></span>
 			</div>
 
 			<div
-				class:drawer-panel-auto={drawer_height_mode === 'auto'}
-				class="drawer-panel focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
+				class:ew-drawer-panel-auto={drawer_height_mode === 'auto'}
+				class="ew-drawer-panel focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 			>
-				<div class="drawer-content" class:drawer-content-centered={center_content}>
+				<div class="ew-drawer-content" class:ew-drawer-content-centered={center_content}>
 					{@render children?.({ close })}
 				</div>
 			</div>
@@ -278,7 +278,7 @@
 </dialog>
 
 <style>
-	.drawer-dialog {
+	.ew-drawer-dialog {
 		margin: 0;
 		padding: 0;
 		border: 0;
@@ -296,40 +296,40 @@
 	   class is removed. Those platforms draw scrollbars as overlays anyway, so
 	   there is no second scrollbar to hide. */
 	@media (hover: hover) and (pointer: fine) {
-		:global(html.drawer-open),
-		:global(body.drawer-open) {
+		:global(html.ew-drawer-open),
+		:global(body.ew-drawer-open) {
 			scrollbar-width: none;
 			-ms-overflow-style: none;
 		}
 
-		:global(html.drawer-open::-webkit-scrollbar),
-		:global(body.drawer-open::-webkit-scrollbar) {
+		:global(html.ew-drawer-open::-webkit-scrollbar),
+		:global(body.ew-drawer-open::-webkit-scrollbar) {
 			display: none;
 			width: 0;
 			height: 0;
 		}
 	}
 
-	.drawer-dialog::backdrop {
+	.ew-drawer-dialog::backdrop {
 		background: transparent;
 		opacity: 0;
 		transition: opacity 0.2s ease-out;
 	}
 
-	.drawer-dialog[open].mounted::backdrop {
+	.ew-drawer-dialog[open].ew-mounted::backdrop {
 		background: color-mix(in oklch, var(--foreground) 16%, transparent);
 		backdrop-filter: blur(2px);
 		-webkit-backdrop-filter: blur(2px);
 		opacity: 1;
 	}
 
-	.drawer-shell {
+	.ew-drawer-shell {
 		position: fixed;
 		inset: 0;
 		pointer-events: none;
 	}
 
-	.drawer-handle-area {
+	.ew-drawer-handle-area {
 		position: absolute;
 		left: 0;
 		right: 0;
@@ -344,11 +344,11 @@
 		z-index: 2;
 	}
 
-	.drawer-dialog.dragging .drawer-handle-area {
+	.ew-drawer-dialog.ew-dragging .ew-drawer-handle-area {
 		cursor: ns-resize;
 	}
 
-	.drawer-handle {
+	.ew-drawer-handle {
 		display: block;
 		width: 2.5rem;
 		height: 0.32rem;
@@ -357,7 +357,7 @@
 		border: 1px solid var(--stroke);
 	}
 
-	.drawer {
+	.ew-drawer {
 		position: absolute;
 		left: 0;
 		right: 0;
@@ -370,26 +370,26 @@
 		will-change: transform;
 	}
 
-	.drawer-dialog.mounted .drawer {
+	.ew-drawer-dialog.ew-mounted .ew-drawer {
 		transform: translateY(0);
 	}
 
-	.drawer-dialog.mounted .drawer.auto-dragging {
+	.ew-drawer-dialog.ew-mounted .ew-drawer.ew-auto-dragging {
 		transform: translateY(var(--auto-drag-offset));
 	}
 
-	.drawer-dialog.closing .drawer {
+	.ew-drawer-dialog.ew-closing .ew-drawer {
 		transform: translateY(100%);
 		transition:
 			transform 150ms cubic-bezier(0.32, 0, 0.67, 0),
 			height 150ms cubic-bezier(0.32, 0, 0.67, 0);
 	}
 
-	.drawer-dialog.dragging .drawer {
+	.ew-drawer-dialog.ew-dragging .ew-drawer {
 		transition: none;
 	}
 
-	.drawer-panel {
+	.ew-drawer-panel {
 		width: 100%;
 		height: var(--drawer-height);
 		max-height: 95dvh;
@@ -402,13 +402,13 @@
 		pointer-events: auto;
 	}
 
-	.drawer-panel-auto {
+	.ew-drawer-panel-auto {
 		height: auto;
 		min-height: 0;
 		overflow: visible;
 	}
 
-	.drawer-content {
+	.ew-drawer-content {
 		width: 100%;
 		max-width: 80rem;
 		margin: 0 auto;
@@ -418,7 +418,7 @@
 
 	/* Content shorter than the min height sits in the middle instead of the top.
 	   Symmetric padding so the centering is not pulled up by the bottom inset. */
-	.drawer-content-centered {
+	.ew-drawer-content-centered {
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
@@ -426,21 +426,21 @@
 	}
 
 	@media (min-width: 640px) {
-		.drawer-content {
+		.ew-drawer-content {
 			padding-left: 1.75rem;
 			padding-right: 1.75rem;
 		}
 	}
 
 	@media (min-width: 768px) {
-		.drawer-content {
+		.ew-drawer-content {
 			padding-left: 2.5rem;
 			padding-right: 2.5rem;
 		}
 	}
 
 	@media (min-width: 1024px) {
-		.drawer-content {
+		.ew-drawer-content {
 			padding-left: 3.5rem;
 			padding-right: 3.5rem;
 		}

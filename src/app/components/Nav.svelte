@@ -13,35 +13,21 @@
 	const svedit = get_svedit_context();
 	let node: Nodes['nav'] = $derived(svedit.session.get(path));
 	let middle_item_ids = $derived(node.middle_items.nodes);
-	let mobile_nav_media_path = $derived(find_mobile_nav_media_path());
-	let mobile_nav_cta_path = $derived(find_mobile_nav_cta_path());
+	let mobile_nav_media_path = $derived(find_nav_item_path((item) => item.type === 'nav_media'));
+	let mobile_nav_cta_path = $derived(
+		find_nav_item_path((item) => item.type === 'nav_button' && item.layout === 'primary')
+	);
 	let mobile_nav_open = $state(false);
 
-	function find_mobile_nav_media_path() {
+	/** The path of the first nav item that passes the test, searching start to end. */
+	function find_nav_item_path(test) {
 		for (const item_property_name of ['start_items', 'middle_items', 'end_items']) {
 			const items = node?.[item_property_name]?.nodes || [];
 			for (let index = 0; index < items.length; index++) {
 				const item = svedit.session.get([...path, item_property_name, index]);
-				if (item?.type === 'nav_media') {
-					return [item.id];
-				}
+				if (item && test(item)) return [item.id];
 			}
 		}
-
-		return null;
-	}
-
-	function find_mobile_nav_cta_path() {
-		for (const item_property_name of ['start_items', 'middle_items', 'end_items']) {
-			const items = node?.[item_property_name]?.nodes || [];
-			for (let index = 0; index < items.length; index++) {
-				const item = svedit.session.get([...path, item_property_name, index]);
-				if (item?.type === 'nav_button' && item.layout === 'primary') {
-					return [item.id];
-				}
-			}
-		}
-
 		return null;
 	}
 

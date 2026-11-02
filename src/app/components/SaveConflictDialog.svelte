@@ -42,7 +42,7 @@
 			class="fixed top-1/2 left-1/2 flex max-h-[calc(100dvh-2.5rem)] w-[min(32rem,calc(100vw-2.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-6 overflow-y-auto rounded-[min(1.5rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) px-6 py-8 text-center text-(--foreground)"
 		>
 			<div class="flex flex-col gap-2">
-				<h2 id="ew-save-conflict-title" class="m-0 display-5">
+				<h2 id="ew-save-conflict-title" class="m-0 ew-display-5">
 					Which version do you want to keep?
 				</h2>
 				<p id="ew-save-conflict-message" class="m-0 text-sm leading-6 text-(--muted-foreground)">

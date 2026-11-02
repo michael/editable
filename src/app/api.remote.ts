@@ -1,5 +1,5 @@
 import type { TranslationMap } from './translations.js';
-import { translation_payloads } from '../lib/asset_references.js';
+import { translation_payloads } from '#lib/asset_references.js';
 import { site } from './server_site.js';
 import {
 	normalize_href,
@@ -20,7 +20,6 @@ import {
 	InvalidDocumentError,
 	VersionConflictError,
 	combine_page_document,
-	get_attached_ranges,
 	get_combined_document,
 	get_doc_from_db,
 	get_home_page_id_from_db,
@@ -35,16 +34,14 @@ import {
 } from '#app/server_documents.js';
 
 import { build_page_browser_data } from '#app/page_browser_data.js';
-export type { PageSummary, PageTreeNode } from '#app/page_browser_data.js';
 import type { SitemapEntry } from '#lib/server/sitemap.js';
 import { latest_modified } from '#lib/server/sitemap.js';
 import { language_alternates } from './seo.js';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
-import { document_schema } from '#app/document_schema.js';
 import { is_reserved_markdown_slug, get_markdown_page_pathnames } from '#app/markdown/registry.js';
 import { extract_page_metadata, extract_site_metadata } from '#app/page_metadata.js';
 import type { PreviewMediaNode } from '#app/page_metadata.js';
-import type { DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
+import type { DocumentNode } from 'svedit';
 import { require_editor } from '#lib/server/auth.js';
 import { get_auth } from './server_auth.js';
 import { revoke_all_grants } from '#app/server_oauth.js';
@@ -92,7 +89,7 @@ function resolve_site_links(document: DocumentData): DocumentData {
 }
 
 /**
- * Get a document from the database, stitching in shared documents (banner, nav, footer).
+ * Get a page document by slug, stitching in shared documents (banner, nav, footer).
  */
 export const get_document = query(v.string(), async (slug) => {
 	const resolved = await backend.resolve_slug(slug);
@@ -110,7 +107,7 @@ export const get_document = query(v.string(), async (slug) => {
 });
 
 /**
- * Get a page's own document for duplication, without the shared nav and footer
+ * Get a page's own document for duplication, without the shared banner, nav and footer
  * stitched in. The caller rebuilds those references against the current shared
  * documents, so returning them here would only invite copying them by mistake.
  */
@@ -165,7 +162,7 @@ export const get_site_metadata = query(v.void(), async () => {
 });
 
 /**
- * Return the current shared nav and footer documents used for composing new pages.
+ * Return the current shared banner, nav and footer documents used for composing new pages.
  */
 export const get_shared_documents = query(v.void(), async () => {
 	const home_page_id = await get_home_page_id_from_db();
@@ -315,9 +312,6 @@ export const get_internal_link_preview = query(v.string(), async (href) => {
 	return preview;
 });
 
-/**
- * Save a document to the database, splitting shared documents (nav, footer) back out.
- */
 /** Point a link at new_slug when it leads to the page through one of its slugs. */
 function rewrite_internal_page_href(
 	href: string,
@@ -337,34 +331,8 @@ function rewrite_internal_page_hrefs(
 	link_languages: string[]
 ) {
 	for (const node of Object.values(nodes)) {
-		if (!node || typeof node !== 'object') continue;
-
-		if (typeof node.href === 'string') {
+		if (typeof node?.href === 'string') {
 			node.href = rewrite_internal_page_href(node.href, target_slugs, new_slug, link_languages);
-		}
-
-		const type_schema: NodeSchema | undefined = document_schema[node.type];
-		if (!type_schema) continue;
-
-		for (const [prop_name, prop_def] of Object.entries<PropertyDefinition>(
-			type_schema.properties
-		)) {
-			if (prop_def.type !== 'text') continue;
-
-			const value = node[prop_name];
-
-			for (const range of get_attached_ranges(value)) {
-				const range_node = range?.node_id ? nodes[range.node_id] : null;
-				if (!range_node || range_node.type !== 'link') continue;
-				if (typeof range_node.href !== 'string') continue;
-
-				range_node.href = rewrite_internal_page_href(
-					range_node.href,
-					target_slugs,
-					new_slug,
-					link_languages
-				);
-			}
 		}
 	}
 }
@@ -392,6 +360,7 @@ export const save_page_translation = command(
 	}
 );
 
+/** Save a page, splitting the shared documents (banner, nav, footer) back out. */
 export const save_page = command(save_page_input_schema, async (combined_doc) => {
 	require_editor(getRequestEvent().locals);
 	if (combined_doc.language && combined_doc.language !== site.languages[0])

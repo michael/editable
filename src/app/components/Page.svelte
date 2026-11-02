@@ -198,19 +198,19 @@
 								<TextProperty
 									path={[...path, 'title']}
 									placeholder="Page title"
-									class="block body-base font-medium"
+									class="block ew-body-base font-medium"
 								/>
 								<TextProperty
 									path={[...path, 'description']}
 									placeholder="Write a clear summary of this page for search results. Explain what people will find here in 1–2 sentences. Aim for specific, human-readable copy rather than keywords."
-									class="block body-sm text-(--muted-foreground)"
+									class="block ew-body-sm text-(--muted-foreground)"
 								/>
 							</div>
 							{#if page_image_is_svg}
 								<p
 									contenteditable="false"
 									role="alert"
-									class="col-span-2 self-start body-sm text-(--editing)"
+									class="col-span-2 self-start ew-body-sm text-(--editing)"
 								>
 									This SVG won’t work as a page preview on Google, WhatsApp, and other services. Use
 									a PNG, JPEG, or WebP instead.

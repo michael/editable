@@ -15,9 +15,9 @@
 	<div use:reveal>
 		<TextProperty
 			tag="p"
-			class={`body-xl ${layout === 'muted' ? 'text-(--muted-foreground)' : ''}`}
+			class={`ew-body-xl ${layout === 'muted' ? 'text-(--muted-foreground)' : ''}`}
 			path={[...path, 'content']}
-			placeholder="Extra Large Paragraph"
+			placeholder="Extra large paragraph"
 		/>
 	</div>
 </Node>

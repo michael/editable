@@ -15,7 +15,7 @@
 	let link_label = $derived(media_link_label(media_node.alt, node.href));
 </script>
 
-<Node class="gallery-item" {path}>
+<Node {path}>
 	<svelte:element
 		this={render_as_link ? 'a' : 'div'}
 		href={render_as_link ? node.href : undefined}
@@ -25,6 +25,6 @@
 		style:border-radius="var(--image-border-radius)"
 		use:reveal
 	>
-		<MediaProperty class="image-property" path={[...path, 'media']} />
+		<MediaProperty path={[...path, 'media']} />
 	</svelte:element>
 </Node>

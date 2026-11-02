@@ -17,7 +17,7 @@
 			<div class="flex items-center justify-between gap-4">
 				<div class="min-w-0">
 					<TextProperty
-						class="body-base font-semibold"
+						class="ew-body-base font-semibold"
 						path={[...path, 'title']}
 						placeholder="Title"
 					/>
@@ -26,7 +26,12 @@
 					class="pointer-events-auto flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center text-(--muted-foreground) outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
 					aria-label="Toggle accordion item"
 				>
-					<svg class="accordion-chevron size-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+					<svg
+						class="ew-accordion-chevron size-5"
+						viewBox="0 0 20 20"
+						fill="none"
+						aria-hidden="true"
+					>
 						<path
 							d="M5 7.5L10 12.5L15 7.5"
 							stroke="currentColor"
@@ -53,11 +58,11 @@
 		content: '';
 	}
 
-	:global(.ew-accordion-item .accordion-chevron) {
+	:global(.ew-accordion-item .ew-accordion-chevron) {
 		transition: transform 0.2s ease;
 	}
 
-	:global(.ew-accordion-item details[open] .accordion-chevron) {
+	:global(.ew-accordion-item details[open] .ew-accordion-chevron) {
 		transform: rotate(180deg);
 	}
 </style>

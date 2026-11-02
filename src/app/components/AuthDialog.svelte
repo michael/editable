@@ -124,7 +124,7 @@
 	{#if step === 'choice'}
 		<div class="flex flex-col gap-6 px-2 py-6 sm:px-1">
 			<div class="flex flex-col items-center gap-1 text-center">
-				<h2 class="m-0 display-5">You can edit this website</h2>
+				<h2 class="m-0 ew-display-5">You can edit this website</h2>
 			</div>
 
 			<div class="flex min-w-0 flex-wrap items-center justify-center gap-3">
@@ -147,7 +147,7 @@
 	{:else}
 		<div class="mx-auto flex w-full max-w-lg flex-col gap-6 px-1 py-6">
 			<div class="flex flex-col items-center gap-1 text-center">
-				<h2 class="m-0 display-5">Login as admin</h2>
+				<h2 class="m-0 ew-display-5">Login as admin</h2>
 			</div>
 
 			<form class="flex items-center gap-2" onsubmit={handle_login_submit}>

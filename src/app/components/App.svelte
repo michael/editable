@@ -260,7 +260,6 @@
 		set auth_dialog_open(value) {
 			auth_dialog_open = value;
 		},
-		close_auth_dialog,
 		edit_for_fun,
 		handle_auth_success
 	};

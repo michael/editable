@@ -12,7 +12,7 @@
 	let display_meta = $derived(svedit.editable || !!node.meta?.content?.trim());
 </script>
 
-<Node class="descriptive-listing-item group border-b border-(--stroke)" {path}>
+<Node class="border-b border-(--stroke)" {path}>
 	<svelte:element
 		this={render_as_link ? 'a' : 'div'}
 		href={render_as_link ? node.href : undefined}
@@ -23,7 +23,7 @@
 		<div class="flex items-center justify-between gap-6">
 			<div class="min-w-2/3 flex-1">
 				<TextProperty
-					class="body-base font-semibold {node.href
+					class="ew-body-base font-semibold {node.href
 						? 'underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors'
 						: ''} {render_as_link
 						? 'group-hover/listing-link:decoration-current group-active/listing-link:decoration-current'
@@ -32,7 +32,7 @@
 					placeholder="Title"
 				/>
 				<TextProperty
-					class="pt-1 body-base text-balance text-(--muted-foreground)"
+					class="pt-1 ew-body-base text-balance text-(--muted-foreground)"
 					path={[...path, 'description']}
 					placeholder="Description"
 				/>
@@ -41,7 +41,7 @@
 			{#if display_meta}
 				<div class="min-w-0 self-center text-right">
 					<TextProperty
-						class="pt-1 body-base text-(--muted-foreground)"
+						class="pt-1 ew-body-base text-(--muted-foreground)"
 						path={[...path, 'meta']}
 						placeholder="Meta"
 					/>

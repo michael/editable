@@ -33,15 +33,16 @@ Editable comes with one backend, `sqlite_backend`: records in `data/db.sqlite3` 
 
 `src/lib/server/backend.ts` defines the interface and its record types. All functions are asynchronous:
 
-| Records                   | Functions                                                                                                                                              |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Documents                 | `get_document`, `list_documents`, `save_documents` (documents and everything that changes with them), `delete_page`                                    |
-| Page URLs                 | `resolve_slug`, `get_active_slug`, `list_slugs`                                                                                                        |
-| References                | `list_document_refs`, `list_asset_refs`                                                                                                                |
-| Translations and settings | `list_translations`, `save_translations`, `get_setting`, `list_settings`                                                                               |
-| Sign-in and MCP (private) | `get`, `save`, and `delete` for sessions, the login throttle, and OAuth grants and tokens; `take_oauth_token`, `revoke_oauth_grants`, `delete_expired` |
-| Assets                    | `write_asset`, `read_asset`, `asset_size`, `delete_asset`, `touch_asset`, `list_assets`                                                                |
-| Migrations                | `applied_migrations`, `migrate`                                                                                                                        |
+| Records                   | Functions                                                                                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Documents                 | `get_document`, `list_documents`, `save_documents` (documents and everything that changes with them), `delete_page`                                           |
+| Page URLs                 | `resolve_slug`, `get_active_slug`, `list_slugs`                                                                                                               |
+| References                | `list_document_refs`, `list_asset_refs`                                                                                                                       |
+| Translations and settings | `list_translations`, `save_translations`, `get_setting`, `list_settings`                                                                                      |
+| Sign-in and MCP (private) | `get` and `save` for sessions, the login throttle, and OAuth grants and tokens; `delete_session`, `take_oauth_token`, `revoke_oauth_grants`, `delete_expired` |
+| Assets                    | `write_asset`, `read_asset`, `asset_size`, `delete_asset`, `touch_asset`, `list_assets`                                                                       |
+| Migrations                | `applied_migrations`, `migrate`                                                                                                                               |
+| Lifecycle                 | `close`                                                                                                                                                       |
 
 A backend keeps these promises:
 
@@ -286,7 +287,7 @@ Editable keeps that file to this one function, so changing it never conflicts wi
 
 ### Example: sign in with GitHub
 
-A sketch, with the small helpers left out: `sign` and `verify` protect the session cookie with a secret, and `github_user` exchanges the authorization code for the GitHub account. Register an OAuth app on GitHub with the callback URL `https://your-site.example.com/auth/callback`, and set `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SESSION_SECRET`, and `EDITORS`, the GitHub accounts allowed to edit, in the environment.
+A sketch, with the small helpers left out: `sign` and `verify` protect the session cookie with a secret, and `github_user` exchanges the authorization code for the GitHub account. Register an OAuth app on GitHub with the callback URL `https://your-site.example.com/auth/callback`, and set `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SESSION_SECRET`, and `EDITORS`, the GitHub accounts allowed to edit, in the environment. Declare them in `variables` in `src/env.ts`: `$app/env/private` exports only declared variables.
 
 ```ts
 // src/app/github_auth.ts
@@ -341,7 +342,8 @@ export const GET = async ({ url, cookies }) => {
 
 	// Cookies from set_session_cookie are only sent to the server, and only over HTTPS in production.
 	set_session_cookie(cookies, github_cookie(), sign({ login, name }));
-	redirect(303, saved.return_to.startsWith('/') ? saved.return_to : '/');
+	// A path on this site only: browsers read //example.com and /\example.com as another site.
+	redirect(303, /^\/(?![/\\])/.test(saved.return_to) ? saved.return_to : '/');
 };
 ```
 

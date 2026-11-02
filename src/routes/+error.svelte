@@ -22,11 +22,11 @@
 		class="mx-auto flex min-h-[60vh] w-full max-w-7xl items-center justify-center px-5 py-24 sm:px-7 sm:py-32"
 	>
 		<div class="max-w-2xl space-y-5 text-center text-balance">
-			<p class="display-1 text-(--muted-foreground)">{page.status}</p>
-			<h1 class="display-3">
+			<p class="ew-display-1 text-(--muted-foreground)">{page.status}</p>
+			<h1 class="ew-display-3">
 				{is_not_found ? 'Page not found.' : 'Something went wrong.'}
 			</h1>
-			<p class="mx-auto max-w-xl body-base text-(--muted-foreground)">
+			<p class="mx-auto max-w-xl ew-body-base text-(--muted-foreground)">
 				{is_not_found
 					? "The page you're looking for doesn't exist or may have moved."
 					: 'Please try again, or return to the home page.'}

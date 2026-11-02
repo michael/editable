@@ -25,7 +25,7 @@
 			<AuthDialog onlogin_success={refreshAll} />
 		{:else if data.step === 'consent'}
 			<div class="flex flex-col gap-2">
-				<h1 class="m-0 display-5">Allow {data.client_name} to edit {data.site_host}?</h1>
+				<h1 class="m-0 ew-display-5">Allow {data.client_name} to edit {data.site_host}?</h1>
 				<p class="m-0 text-sm leading-6 text-(--muted-foreground)">
 					It can read, create, and edit pages for the next 48 hours. Logging out ends its access
 					right away.
@@ -57,7 +57,7 @@
 			</form>
 		{:else}
 			<div class="flex flex-col gap-2">
-				<h1 class="m-0 display-5">Can’t connect</h1>
+				<h1 class="m-0 ew-display-5">Can’t connect</h1>
 				<p class="m-0 text-sm leading-6 text-(--muted-foreground)">{data.message}</p>
 			</div>
 		{/if}

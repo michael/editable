@@ -129,7 +129,7 @@ export function get_social_image(
 	};
 }
 
-export function collect_page_body_node_ids(page_doc: Document | null | undefined): string[] {
+function collect_page_body_node_ids(page_doc: Document | null | undefined): string[] {
 	if (!page_doc?.document_id || !page_doc.nodes) {
 		return [];
 	}

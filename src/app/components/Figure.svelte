@@ -3,10 +3,14 @@
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { media_link_label } from '#app/media_link_label.js';
 	import { Node } from 'svedit';
+	import type { DocumentPath, NodeArrayAttachmentContext } from 'svedit';
 	import MediaProperty from './MediaProperty.svelte';
 
 	const svedit = get_svedit_context();
-	let { path, mark: section = null } = $props();
+	let {
+		path,
+		mark: section = null
+	}: { path: DocumentPath; mark?: NodeArrayAttachmentContext | null } = $props();
 	let node: Nodes['figure'] = $derived(svedit.session.get(path));
 	let media_node = $derived(svedit.session.get([...path, 'media']));
 	let render_as_link = $derived(!svedit.editable && node.href);
@@ -37,9 +41,9 @@
 		<div
 			class={[
 				// No gutter or corner radius on phones, so the media runs edge to edge.
-				`figure sm:px-7`,
-				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+				`sm:px-7`,
+				padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+				padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 			]}
 		>
 			{@render media_frame('sm:rounded-(--image-border-radius)')}
@@ -51,9 +55,8 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				'figure',
-				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+				padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+				padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 			]}
 		>
 			<div class="max-w-4xl px-5 sm:px-7">
@@ -67,9 +70,8 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				'figure',
-				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+				padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+				padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 			]}
 		>
 			<div class="mx-auto max-w-4xl px-5 sm:px-7">
@@ -83,9 +85,8 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				'figure',
-				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
-				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
+				padding_top_generous ? 'ew-pt-block-generous' : 'ew-pt-block-compact',
+				padding_bottom_generous ? 'ew-pb-block-generous' : 'ew-pb-block-compact'
 			]}
 		>
 			<div class="ml-auto max-w-4xl px-5 sm:px-7">
@@ -97,7 +98,7 @@
 
 {#snippet flush()}
 	<div class="mx-auto max-w-7xl">
-		<div class="figure px-5 py-0 sm:px-7">
+		<div class="px-5 sm:px-7">
 			{@render media_frame()}
 		</div>
 	</div>
@@ -105,7 +106,7 @@
 
 {#snippet full_bleed()}
 	<div class="w-full">
-		<div class="figure">
+		<div>
 			{@render media_frame('')}
 		</div>
 	</div>
