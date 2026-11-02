@@ -54,10 +54,10 @@ another set, and everything inside follows its tokens. */
 	--stroke: oklch(92% 0 0);
 	/* Text color for secondary or de-emphasized content. */
 	--muted-foreground: oklch(55% 0 0);
-	/* Strong accent color for primary actions and highlights. */
-	--accent: var(--editing);
+	/* Accent for primary actions and highlights: your choice, such as the foreground or a brand color. */
+	--accent: var(--foreground);
 	/* Text color used on the accent color. */
-	--accent-foreground: var(--editing-foreground);
+	--accent-foreground: var(--background);
 
 	/* Primary accent for active editing controls, carets, and selections. */
 	--editing: oklch(55.8% 0.185 282);
@@ -74,14 +74,14 @@ another set, and everything inside follows its tokens. */
 	--muted: oklch(100% 0 0);
 	--stroke: oklch(90% 0 0);
 	--muted-foreground: oklch(52% 0 0);
-	--accent: var(--editing);
-	--accent-foreground: var(--editing-foreground);
+	--accent: var(--foreground);
+	--accent-foreground: var(--background);
 	--editing: oklch(55.8% 0.185 282);
 	--editing-muted: oklch(from var(--editing) l c h / 0.1);
 	--editing-foreground: oklch(100% 0 0);
 }
 
-/* Color set 3: the accent as a surface. Accent and editing colors turn to the foreground to stay visible. */
+/* Color set 3: a colored surface. Accent and editing colors turn to the foreground to stay visible. */
 .ew-colorset-3 {
 	--background: oklch(55.8% 0.185 282);
 	--foreground: oklch(100% 0 0);

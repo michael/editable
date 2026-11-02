@@ -170,9 +170,7 @@
 							class="ew-colorset-1 flex flex-col gap-4 rounded-(--image-border-radius) border border-(--stroke) bg-(--background) p-5 text-(--foreground)"
 						>
 							<p class="body-base">Color set 1</p>
-							<p class="body-sm text-(--muted-foreground)">
-								The page. Its accent is the editing color.
-							</p>
+							<p class="body-sm text-(--muted-foreground)">The page.</p>
 							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
 							<div class="flex flex-wrap gap-2">
 								<span
@@ -190,8 +188,7 @@
 						>
 							<p class="body-base">Color set 2</p>
 							<p class="body-sm text-(--muted-foreground)">
-								Light grey. Its muted surface is white, so boxes lift off it; its accent is the
-								editing color.
+								Light grey. Its muted surface is white, so boxes lift off it.
 							</p>
 							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
 							<div class="flex flex-wrap gap-2">
@@ -210,7 +207,7 @@
 						>
 							<p class="body-base">Color set 3</p>
 							<p class="body-sm text-(--muted-foreground)">
-								The accent as a surface. Accent and editing colors turn to the foreground.
+								A colored surface. Accent and editing colors turn to the foreground.
 							</p>
 							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
 							<div class="flex flex-wrap gap-2">
