@@ -9,7 +9,7 @@
 		"#app/*": "./src/app/*"
 	},
 	"engines": {
-		"node": ">=24"
+		"node": "26.x"
 	},
 	"devEngines": {
 		"runtime": {
