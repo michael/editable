@@ -81,13 +81,13 @@ another set, and everything inside follows its tokens. */
 	--editing-foreground: oklch(100% 0 0);
 }
 
-/* Color set 3: a colored surface. Accent and editing colors turn to the foreground to stay visible. */
+/* Color set 3: color set 1 inverted, white on black. Editing colors follow the foreground. */
 .ew-colorset-3 {
-	--background: oklch(55.8% 0.185 282);
+	--background: oklch(0% 0 0);
 	--foreground: oklch(100% 0 0);
-	--muted: oklch(61% 0.16 283);
-	--stroke: oklch(71% 0.12 285);
-	--muted-foreground: oklch(89% 0.045 288);
+	--muted: oklch(20% 0 0);
+	--stroke: oklch(32% 0 0);
+	--muted-foreground: oklch(72% 0 0);
 	--accent: var(--foreground);
 	--accent-foreground: var(--background);
 	--editing: var(--foreground);

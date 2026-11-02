@@ -110,7 +110,7 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 	--editing-foreground: var(--background);
 }
 
-/* Color set 2: a light grey surface. Color set 3 is a colored surface. */
+/* Color set 2: a light grey surface. Color set 3 is a contrasting surface. */
 .ew-colorset-2 {
 	--background: oklch(98% 0 0);
 	--muted: oklch(100% 0 0);

@@ -207,7 +207,7 @@
 						>
 							<p class="body-base">Color set 3</p>
 							<p class="body-sm text-(--muted-foreground)">
-								A colored surface. Accent and editing colors turn to the foreground.
+								A contrasting set for sections that stand out.
 							</p>
 							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
 							<div class="flex flex-wrap gap-2">
