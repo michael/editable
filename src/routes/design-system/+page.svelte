@@ -156,9 +156,9 @@
 					<h3 class="body-sm font-semibold">Color sets</h3>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Each color set assigns every color token, so everything inside it stays readable without
-						changes of its own. Color set 1 is the page; sections switch to set 2 or 3. Code keeps
-						set 1, which its syntax colors are made for. Editable text on an accent fill, such as a
-						primary button or a highlight, adds
+						changes of its own, including the syntax colors of code. Color set 1 is the page;
+						sections switch to set 2 or 3. Editable text on an accent fill, such as a primary button
+						or a highlight, adds
 						<code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>ew-native-selection</code

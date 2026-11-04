@@ -45,24 +45,24 @@ another set, and everything inside follows its tokens. */
 :root,
 .ew-colorset-1 {
 	/* Main page background color. */
-	--background: oklch(100% 0 0);
+	--background: oklch(0% 0 0);
 	/* Main text and foreground color. */
-	--foreground: oklch(0% 0 0);
+	--foreground: oklch(100% 0 0);
 	/* Subtle background for secondary surfaces and hover states. */
-	--muted: oklch(98% 0 0);
+	--muted: oklch(20% 0 0);
 	/* Color for borders, dividers, and other visual lines. */
-	--stroke: oklch(92% 0 0);
+	--stroke: oklch(32% 0 0);
 	/* Text color for secondary or de-emphasized content. */
-	--muted-foreground: oklch(55% 0 0);
+	--muted-foreground: oklch(72% 0 0);
 	/* Accent for primary actions and highlights: your choice, such as the foreground or a brand color. */
 	--accent: var(--foreground);
 	/* Text color used on the accent color. */
 	--accent-foreground: var(--background);
 
 	/* Primary accent for active editing controls, carets, and selections. */
-	--editing: oklch(55.8% 0.185 282);
+	--editing: var(--foreground);
 	/* Low-opacity version of the editing accent for passive highlights. */
-	--editing-muted: oklch(from var(--editing) l c h / 0.1);
+	--editing-muted: oklch(from var(--editing) l c h / 0.25);
 	/* Foreground color for content displayed on the editing accent. */
 	--editing-foreground: var(--background);
 }
@@ -81,17 +81,17 @@ another set, and everything inside follows its tokens. */
 	--editing-foreground: oklch(100% 0 0);
 }
 
-/* Color set 3: color set 1 inverted, white on black. Editing colors follow the foreground. */
+/* Color set 3: color set 1 inverted, black on white. */
 .ew-colorset-3 {
-	--background: oklch(0% 0 0);
-	--foreground: oklch(100% 0 0);
-	--muted: oklch(20% 0 0);
-	--stroke: oklch(32% 0 0);
-	--muted-foreground: oklch(72% 0 0);
+	--background: oklch(100% 0 0);
+	--foreground: oklch(0% 0 0);
+	--muted: oklch(98% 0 0);
+	--stroke: oklch(92% 0 0);
+	--muted-foreground: oklch(55% 0 0);
 	--accent: var(--foreground);
 	--accent-foreground: var(--background);
-	--editing: var(--foreground);
-	--editing-muted: oklch(from var(--editing) l c h / 0.25);
+	--editing: oklch(55.8% 0.185 282);
+	--editing-muted: oklch(from var(--editing) l c h / 0.1);
 	--editing-foreground: var(--background);
 }
 
@@ -131,9 +131,28 @@ and muted, so muted elements inside it, such as an eyebrow or inline code, stand
 	--muted: var(--ew-surface-muted);
 }
 
-:root {
-	/* Syntax palette from Zed's One Light theme. */
-	/* https://github.com/zed-industries/zed/blob/main/assets/themes/one/one.json */
+/* Syntax palettes from Zed's One themes: One Dark for the dark color set, One Light for the light ones.
+https://github.com/zed-industries/zed/blob/main/assets/themes/one/one.json */
+:root,
+.ew-colorset-1 {
+	--code-foreground: #acb2be;
+	--code-comment: #5d636f;
+	--code-keyword: #b477cf;
+	--code-string: #a1c181;
+	--code-number: #bf956a;
+	--code-constant: #dfc184;
+	--code-function: #73ade9;
+	--code-type: #6eb4bf;
+	--code-property: #d07277;
+	--code-attribute: #74ade8;
+	--code-punctuation: #b2b9c6;
+	--code-escape: #878e98;
+	--code-inserted: #98c379;
+	--code-deleted: #e06c75;
+}
+
+.ew-colorset-2,
+.ew-colorset-3 {
 	--code-foreground: #242529;
 	--code-comment: #a2a3a7;
 	--code-keyword: #a449ab;
@@ -148,7 +167,9 @@ and muted, so muted elements inside it, such as an eyebrow or inline code, stand
 	--code-escape: #7c7e86;
 	--code-inserted: #50a14f;
 	--code-deleted: #e45649;
+}
 
+:root {
 	/* Rounded corners for controls; reference pills and popovers derive their shape from this. */
 	--button-border-radius: 3rem;
 	/* Rounded corners for images. */

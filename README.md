@@ -88,24 +88,24 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 :root,
 .ew-colorset-1 {
 	/* Main page background color. */
-	--background: oklch(100% 0 0);
+	--background: oklch(0% 0 0);
 	/* Main text and foreground color. */
-	--foreground: oklch(0% 0 0);
+	--foreground: oklch(100% 0 0);
 	/* Subtle background for secondary surfaces and hover states. */
-	--muted: oklch(98% 0 0);
+	--muted: oklch(20% 0 0);
 	/* Color for borders, dividers, and other visual lines. */
-	--stroke: oklch(92% 0 0);
+	--stroke: oklch(32% 0 0);
 	/* Text color for secondary or de-emphasized content. */
-	--muted-foreground: oklch(55% 0 0);
+	--muted-foreground: oklch(72% 0 0);
 	/* Accent for primary actions and highlights: your choice, such as the foreground or a brand color. */
 	--accent: var(--foreground);
 	/* Text color used on the accent color. */
 	--accent-foreground: var(--background);
 
 	/* Primary accent for active editing controls, carets, and selections. */
-	--editing: oklch(55.8% 0.185 282);
+	--editing: var(--foreground);
 	/* Low-opacity version of the editing accent for passive highlights. */
-	--editing-muted: oklch(from var(--editing) l c h / 0.1);
+	--editing-muted: oklch(from var(--editing) l c h / 0.25);
 	/* Foreground color for content displayed on the editing accent. */
 	--editing-foreground: var(--background);
 }
