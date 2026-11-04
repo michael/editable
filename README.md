@@ -88,32 +88,32 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 :root,
 .ew-colorset-1 {
 	/* Main page background color. */
-	--background: oklch(0% 0 0);
+	--background: oklch(20% 0 0);
 	/* Main text and foreground color. */
-	--foreground: oklch(100% 0 0);
+	--foreground: oklch(96% 0 0);
 	/* Subtle background for secondary surfaces and hover states. */
-	--muted: oklch(20% 0 0);
+	--muted: oklch(18% 0 0);
 	/* Color for borders, dividers, and other visual lines. */
-	--stroke: oklch(32% 0 0);
+	--stroke: oklch(33% 0 0);
 	/* Text color for secondary or de-emphasized content. */
 	--muted-foreground: oklch(72% 0 0);
 	/* Accent for primary actions and highlights: your choice, such as the foreground or a brand color. */
-	--accent: var(--foreground);
+	--accent: var(--editing);
 	/* Text color used on the accent color. */
-	--accent-foreground: var(--background);
+	--accent-foreground: var(--editing-foreground);
 
-	/* Primary accent for active editing controls, carets, and selections. */
-	--editing: var(--foreground);
+	/* Primary accent for active editing controls, carets, and selections. A lighter purple on dark sets. */
+	--editing: oklch(70% 0.16 282);
 	/* Low-opacity version of the editing accent for passive highlights. */
 	--editing-muted: oklch(from var(--editing) l c h / 0.25);
 	/* Foreground color for content displayed on the editing accent. */
 	--editing-foreground: var(--background);
 }
 
-/* Color set 2: a light grey surface. Color set 3 is a contrasting surface. */
+/* Color set 2: a muted dark grey. Color set 3 is a contrasting light surface. */
 .ew-colorset-2 {
-	--background: oklch(98% 0 0);
-	--muted: oklch(100% 0 0);
+	--background: oklch(23% 0 0);
+	--muted: oklch(21% 0 0);
 	/* … and the other color tokens, as in color set 1 */
 }
 
@@ -402,7 +402,7 @@ nav {
 }
 
 nav_link { href, target, label: text }
-nav_button { layout: primary | secondary, href, target, label: text }   // type-switches with nav_link
+nav_button { layout: primary | primary-accent | secondary, href, target, label: text }   // type-switches with nav_link
 nav_media { href, target, media: image | video }
 
 footer {
@@ -519,7 +519,7 @@ accordion_item {
 feature { layout: image-right | image-left, href, target, media: image | video, body: [rich content] }
 
 button_group { buttons: [button] }
-button { layout: primary | secondary | link, href, target, label: text }
+button { layout: primary | primary-accent | secondary | link, href, target, label: text }
 ```
 
 **Marks and annotations** — both attach a separate node to a half-open range using the same shape. For text, offsets address character positions; for node arrays, they address child-node positions. `start_offset` is included and `end_offset` is excluded:

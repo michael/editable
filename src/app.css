@@ -45,51 +45,51 @@ another set, and everything inside follows its tokens. */
 :root,
 .ew-colorset-1 {
 	/* Main page background color. */
-	--background: oklch(0% 0 0);
+	--background: oklch(20% 0 0);
 	/* Main text and foreground color. */
-	--foreground: oklch(100% 0 0);
+	--foreground: oklch(96% 0 0);
 	/* Subtle background for secondary surfaces and hover states. */
-	--muted: oklch(20% 0 0);
+	--muted: oklch(18% 0 0);
 	/* Color for borders, dividers, and other visual lines. */
-	--stroke: oklch(32% 0 0);
+	--stroke: oklch(33% 0 0);
 	/* Text color for secondary or de-emphasized content. */
 	--muted-foreground: oklch(72% 0 0);
 	/* Accent for primary actions and highlights: your choice, such as the foreground or a brand color. */
-	--accent: var(--foreground);
+	--accent: var(--editing);
 	/* Text color used on the accent color. */
-	--accent-foreground: var(--background);
+	--accent-foreground: var(--editing-foreground);
 
-	/* Primary accent for active editing controls, carets, and selections. */
-	--editing: var(--foreground);
+	/* Primary accent for active editing controls, carets, and selections. A lighter purple on dark sets. */
+	--editing: oklch(70% 0.16 282);
 	/* Low-opacity version of the editing accent for passive highlights. */
 	--editing-muted: oklch(from var(--editing) l c h / 0.25);
 	/* Foreground color for content displayed on the editing accent. */
 	--editing-foreground: var(--background);
 }
 
-/* Color set 2: a light grey surface. Its muted surface is white, so boxes lift off it. */
+/* Color set 2: a muted dark grey, a shade lighter than the page. */
 .ew-colorset-2 {
-	--background: oklch(98% 0 0);
-	--foreground: oklch(0% 0 0);
-	--muted: oklch(100% 0 0);
-	--stroke: oklch(90% 0 0);
-	--muted-foreground: oklch(52% 0 0);
-	--accent: var(--foreground);
-	--accent-foreground: var(--background);
-	--editing: oklch(55.8% 0.185 282);
-	--editing-muted: oklch(from var(--editing) l c h / 0.1);
-	--editing-foreground: oklch(100% 0 0);
+	--background: oklch(23% 0 0);
+	--foreground: oklch(96% 0 0);
+	--muted: oklch(21% 0 0);
+	--stroke: oklch(37% 0 0);
+	--muted-foreground: oklch(72% 0 0);
+	--accent: var(--editing);
+	--accent-foreground: var(--editing-foreground);
+	--editing: oklch(70% 0.16 282);
+	--editing-muted: oklch(from var(--editing) l c h / 0.25);
+	--editing-foreground: oklch(20% 0 0);
 }
 
-/* Color set 3: color set 1 inverted, black on white. */
+/* Color set 3: color set 1 inverted, dark grey on light grey. */
 .ew-colorset-3 {
-	--background: oklch(100% 0 0);
-	--foreground: oklch(0% 0 0);
-	--muted: oklch(98% 0 0);
-	--stroke: oklch(92% 0 0);
-	--muted-foreground: oklch(55% 0 0);
-	--accent: var(--foreground);
-	--accent-foreground: var(--background);
+	--background: oklch(96% 0 0);
+	--foreground: oklch(40.5% 0 0);
+	--muted: oklch(94% 0 0);
+	--stroke: oklch(88% 0 0);
+	--muted-foreground: oklch(52% 0 0);
+	--accent: var(--editing);
+	--accent-foreground: var(--editing-foreground);
 	--editing: oklch(55.8% 0.185 282);
 	--editing-muted: oklch(from var(--editing) l c h / 0.1);
 	--editing-foreground: var(--background);
@@ -131,10 +131,11 @@ and muted, so muted elements inside it, such as an eyebrow or inline code, stand
 	--muted: var(--ew-surface-muted);
 }
 
-/* Syntax palettes from Zed's One themes: One Dark for the dark color set, One Light for the light ones.
+/* Syntax palettes from Zed's One themes: One Dark for the dark color sets, One Light for the light one.
 https://github.com/zed-industries/zed/blob/main/assets/themes/one/one.json */
 :root,
-.ew-colorset-1 {
+.ew-colorset-1,
+.ew-colorset-2 {
 	--code-foreground: #acb2be;
 	--code-comment: #5d636f;
 	--code-keyword: #b477cf;
@@ -151,7 +152,6 @@ https://github.com/zed-industries/zed/blob/main/assets/themes/one/one.json */
 	--code-deleted: #e06c75;
 }
 
-.ew-colorset-2,
 .ew-colorset-3 {
 	--code-foreground: #242529;
 	--code-comment: #a2a3a7;
@@ -240,8 +240,8 @@ content. The selectors skip the states where Svedit hides the caret. */
 	caret-color: var(--editing);
 }
 
-/* On accent fills, such as primary buttons and highlights, the editing color may match the fill.
-There the caret follows the text color and text selection uses the system colors. */
+/* On solid fills, such as primary buttons and highlights, the editing color may match the fill or
+lack contrast with it. There the caret follows the text color and text selection uses the system colors. */
 .svedit-canvas:not(.hide-selection, .node-caret, .property-selection) .ew-native-selection {
 	caret-color: auto;
 }
