@@ -97,7 +97,7 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 	--stroke: oklch(88.5% 0 0);
 	/* Text color for secondary or de-emphasized content. */
 	--muted-foreground: oklch(69.6% 0.001 106);
-	/* Accent for primary actions and highlights: your choice, such as the foreground or a brand color. */
+	/* Accent for accented actions and highlights: your choice, such as the foreground or a brand color. */
 	--accent: oklch(55.8% 0.185 282);
 	/* Text color used on the accent color. */
 	--accent-foreground: var(--background);
@@ -402,7 +402,7 @@ nav {
 }
 
 nav_link { href, target, label: text }
-nav_button { layout: primary | secondary, href, target, label: text }   // type-switches with nav_link
+nav_button { layout: primary | primary-accent | secondary, href, target, label: text }   // type-switches with nav_link
 nav_media { href, target, media: image | video }
 
 footer {
@@ -519,7 +519,7 @@ accordion_item {
 feature { layout: image-right | image-left, href, target, media: image | video, body: [rich content] }
 
 button_group { buttons: [button] }
-button { layout: primary | secondary | link, href, target, label: text }
+button { layout: primary | primary-accent | secondary | link, href, target, label: text }
 ```
 
 **Marks and annotations** — both attach a separate node to a half-open range using the same shape. For text, offsets address character positions; for node arrays, they address child-node positions. `start_offset` is included and `end_offset` is excluded:

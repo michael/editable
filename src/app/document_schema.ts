@@ -192,7 +192,11 @@ export const document_schema = define_document_schema({
 	nav_button: {
 		kind: 'block',
 		properties: {
-			layout: { type: 'string', values: ['primary', 'secondary'], default: 'primary' },
+			layout: {
+				type: 'string',
+				values: ['primary', 'primary-accent', 'secondary'],
+				default: 'primary'
+			},
 			href: { type: 'string' },
 			target: { type: 'string', default: '_self' },
 			label: {
@@ -220,7 +224,16 @@ export const document_schema = define_document_schema({
 		properties: {
 			layout: {
 				type: 'string',
-				values: ['primary', 'secondary', 'link', 'primary-small', 'secondary-small', 'link-small'],
+				values: [
+					'primary',
+					'primary-accent',
+					'secondary',
+					'link',
+					'primary-small',
+					'primary-accent-small',
+					'secondary-small',
+					'link-small'
+				],
 				default: 'primary'
 			},
 			href: { type: 'string' },

@@ -28,6 +28,19 @@
 		this={render_as_link ? 'a' : 'div'}
 		href={render_as_link ? node.href : undefined}
 		target={render_as_link && node.target !== '_self' ? node.target : undefined}
+		class="ew-button ew-native-selection inline-flex max-w-full items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--foreground) text-center font-normal wrap-anywhere text-(--background) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {button_size} {render_as_link
+			? 'cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--foreground),var(--background)_20%)] active:bg-[color-mix(in_srgb,var(--foreground),var(--background)_30%)]'
+			: ''}"
+	>
+		<TextProperty path={[...path, 'label']} placeholder="Button" />
+	</svelte:element>
+{/snippet}
+
+{#snippet primary_accent()}
+	<svelte:element
+		this={render_as_link ? 'a' : 'div'}
+		href={render_as_link ? node.href : undefined}
+		target={render_as_link && node.target !== '_self' ? node.target : undefined}
 		class="ew-button ew-native-selection inline-flex max-w-full items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) text-center font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {button_size} {render_as_link
 			? 'cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)]'
 			: ''}"
@@ -63,7 +76,9 @@
 {/snippet}
 
 <Node {path}>
-	{#if button_variant === 'secondary'}
+	{#if button_variant === 'primary-accent'}
+		{@render primary_accent()}
+	{:else if button_variant === 'secondary'}
 		{@render secondary()}
 	{:else if button_variant === 'link'}
 		{@render link()}

@@ -36,7 +36,7 @@
 			const items = node?.[item_property_name]?.nodes || [];
 			for (let index = 0; index < items.length; index++) {
 				const item = svedit.session.get([...path, item_property_name, index]);
-				if (item?.type === 'nav_button' && item.layout === 'primary') {
+				if (item?.type === 'nav_button' && ['primary', 'primary-accent'].includes(item.layout)) {
 					return [item.id];
 				}
 			}

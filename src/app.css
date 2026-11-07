@@ -54,7 +54,7 @@ another set, and everything inside follows its tokens. */
 	--stroke: oklch(88.5% 0 0);
 	/* Text color for secondary or de-emphasized content. */
 	--muted-foreground: oklch(69.6% 0.001 106);
-	/* Accent for primary actions and highlights: your choice, such as the foreground or a brand color. */
+	/* Accent for accented actions and highlights: your choice, such as the foreground or a brand color. */
 	--accent: oklch(55.8% 0.185 282);
 	/* Text color used on the accent color. */
 	--accent-foreground: var(--background);
@@ -242,8 +242,8 @@ content. The selectors skip the states where Svedit hides the caret. */
 	caret-color: var(--editing);
 }
 
-/* On accent fills, such as primary buttons and highlights, the editing color may match the fill.
-There the caret follows the text color and text selection uses the system colors. */
+/* On solid fills, such as primary buttons and highlights, the editing color may match the fill or
+lack contrast with it. There the caret follows the text color and text selection uses the system colors. */
 .svedit-canvas:not(.hide-selection, .node-caret, .property-selection) .ew-native-selection {
 	caret-color: auto;
 }
