@@ -259,21 +259,27 @@ lack contrast with it. There the caret follows the text color and text selection
 	content: none;
 }
 
-/* Selection frames sit outside the content and keep the page's editing color. An outer ring in the
-page background keeps them visible on any color set, even one in the editing color itself. */
-.svedit :is(.selected-node-overlay, .selected-property-overlay) {
-	box-shadow: 0 0 0 1.5px var(--background);
+/* Selection frames show the logo's corner marks instead of Svedit's outline, in the page's editing
+color over its light fill. The marks are a 4px border masked down to 8px corners. .editable outranks
+Svedit's own frame style. */
+.svedit.editable :is(.selected-node-overlay, .selected-property-overlay) {
+	outline: none;
+	color: var(--editing);
+}
+
+.svedit.editable :is(.selected-node-overlay, .selected-property-overlay)::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border: 4px solid;
+	mask: conic-gradient(at 8px 8px, #0000 75%, #000 0) 0 0 / calc(100% - 8px) calc(100% - 8px);
 }
 
 /* Dim custom selection frames when the editor canvas loses focus. */
 .svedit:not(:has(.svedit-canvas:focus-within))
 	:is(.selected-node-overlay, .selected-property-overlay) {
 	background: oklch(from var(--editing-muted) l 0 h / alpha);
-	outline-color: oklch(from var(--editing) l 0 h);
-}
-
-.svedit:not(:has(.svedit-canvas:focus-within)) .property-selection-overlay {
-	outline-color: oklch(from var(--editing) l 0 h);
+	color: oklch(from var(--editing) l 0 h);
 }
 
 /* Website fonts */

@@ -189,7 +189,7 @@
 		transform: translate(-50%, -50%);
 		pointer-events: none;
 		mix-blend-mode: difference;
-		border: 1px solid var(--editing);
+		border: 2px solid var(--editing);
 		border-radius: 50%;
 	}
 
@@ -200,7 +200,7 @@
 		left: 50%;
 		top: 50%;
 		width: 150%;
-		height: 1px;
+		height: 2px;
 		background: var(--editing);
 		transform: translate(-50%, -50%);
 	}
@@ -211,7 +211,7 @@
 		position: absolute;
 		left: 50%;
 		top: 50%;
-		width: 1px;
+		width: 2px;
 		height: 150%;
 		background: var(--editing);
 		transform: translate(-50%, -50%);
