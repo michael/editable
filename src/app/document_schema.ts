@@ -577,7 +577,11 @@ export const document_schema = define_document_schema({
 	titled_gallery: {
 		kind: 'block',
 		properties: {
-			layout: { type: 'string', values: ['cards', 'compact', 'carousel'], default: 'cards' },
+			layout: {
+				type: 'string',
+				values: ['cards', 'cards-2-columns', 'compact', 'carousel', 'carousel-2-columns'],
+				default: 'cards'
+			},
 			items: {
 				type: 'node_array',
 				node_types: ['titled_gallery_item']
@@ -604,7 +608,11 @@ export const document_schema = define_document_schema({
 	descriptive_gallery: {
 		kind: 'block',
 		properties: {
-			layout: { type: 'string', values: ['cards', 'compact', 'carousel'], default: 'cards' },
+			layout: {
+				type: 'string',
+				values: ['cards', 'cards-2-columns', 'compact', 'carousel', 'carousel-2-columns'],
+				default: 'cards'
+			},
 			items: {
 				type: 'node_array',
 				node_types: ['descriptive_gallery_item']

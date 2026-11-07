@@ -477,14 +477,16 @@ gallery { layout: mixed | portraits | squares | landscapes | compact-landscapes,
           gallery_items: [gallery_item] }
 gallery_item { href, target, media: image | video }
 
-titled_gallery { layout: cards | compact, items: [titled_gallery_item] }
+titled_gallery { layout: cards | cards-2-columns | compact | carousel | carousel-2-columns,
+                 items: [titled_gallery_item] }
 titled_gallery_item {
 	href, target
 	media: image | video
 	title: text          // single line; marks: emphasis, highlight
 }
 
-descriptive_gallery { layout: cards | compact, items: [descriptive_gallery_item] }
+descriptive_gallery { layout: cards | cards-2-columns | compact | carousel | carousel-2-columns,
+                      items: [descriptive_gallery_item] }
 descriptive_gallery_item {
 	href, target
 	media: image | video

@@ -12,6 +12,7 @@
 	let node: Nodes['descriptive_gallery_item'] = $derived(svedit.session.get(path));
 	let gallery = $derived(svedit.session.get(path.slice(0, -2)));
 	let layout = $derived(gallery?.layout || 'cards');
+	let is_carousel = $derived(['carousel', 'carousel-2-columns'].includes(layout));
 	let render_as_link = $derived(!svedit.editable && node.href);
 </script>
 
@@ -48,10 +49,7 @@
 	</svelte:element>
 {/snippet}
 
-<Node
-	class="ew-descriptive-gallery-item group min-w-0 {layout === 'carousel' ? 'snap-start' : ''}"
-	{path}
->
+<Node class="ew-descriptive-gallery-item group min-w-0 {is_carousel ? 'snap-start' : ''}" {path}>
 	{#if layout === 'compact'}
 		{@render compact()}
 	{:else}
