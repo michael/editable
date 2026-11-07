@@ -760,7 +760,7 @@
 
 				<!--
 				Use the typography utilities directly; their Tailwind definitions live in app.css.
-				Display sizes are one step smaller on phones and reach full size at lg. Headings are semibold,
+				Display sizes are one step smaller on phones and reach full size at sm. Headings are semibold,
 				so they stand apart from body text; leading tightens as they grow. Weight, line height, and
 				tracking belong to the utility.
 				Choose the heading element for the document hierarchy, independently of its visual size.
@@ -934,11 +934,11 @@
 				<div class="space-y-2">
 					<h2 id="card-heading" class="display-5">Card</h2>
 					<p class="body-sm text-(--muted-foreground)">
-						A 4:3 media area, semibold title, and optional description. Shared by gallery cards;
-						width and arrangement belong to the surrounding layout. Linked cards underline the title
-						and make the whole card clickable. Use a div and omit the underline for an unlinked
-						card. Keyboard focus uses a 2px editing-color outline with a 2px offset; scroll
-						containers use an inset outline to prevent clipping.
+						A 4:3 media area, a display-5 title like heading 4, and an optional description. Shared
+						by gallery cards; width and arrangement belong to the surrounding layout. Linked cards
+						underline the title and make the whole card clickable. Use a div and omit the underline
+						for an unlinked card. Keyboard focus uses a 2px editing-color outline with a 2px offset;
+						scroll containers use an inset outline to prevent clipping.
 					</p>
 				</div>
 				<div class="max-w-sm">
@@ -959,7 +959,7 @@
 						</div>
 						<div class="pt-4">
 							<h3
-								class="body-base font-semibold underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors group-hover/card:decoration-current group-active/card:decoration-current"
+								class="display-5 underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors group-hover/card:decoration-current group-active/card:decoration-current"
 							>
 								Card title
 							</h3>
