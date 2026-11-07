@@ -53,7 +53,7 @@ another set, and everything inside follows its tokens. */
 	/* Color for borders, dividers, and other visual lines. */
 	--stroke: oklch(88.5% 0 0);
 	/* Text color for secondary or de-emphasized content. */
-	--muted-foreground: oklch(69.6% 0.001 106);
+	--muted-foreground: oklch(55% 0.001 106);
 	/* Accent for accented actions and highlights: your choice, such as the foreground or a brand color. */
 	--accent: oklch(55.8% 0.185 282);
 	/* Text color used on the accent color. */
@@ -74,7 +74,7 @@ white. Text on the accent and editing colors stays white, as in color set 1. */
 	--foreground: oklch(40.5% 0 0);
 	--muted: oklch(100% 0 0);
 	--stroke: oklch(88.5% 0 0);
-	--muted-foreground: oklch(69.6% 0.001 106);
+	--muted-foreground: oklch(55% 0.001 106);
 	--accent: oklch(55.8% 0.185 282);
 	--accent-foreground: oklch(100% 0 0);
 	--editing: oklch(55.8% 0.185 282);
@@ -83,13 +83,14 @@ white. Text on the accent and editing colors stays white, as in color set 1. */
 }
 
 /* Color set 3: color set 1 inverted, white on its dark grey, for sections that stand out. Muted is a
-darker grey, and accent and editing turn a lighter purple to keep their contrast. */
+darker grey, muted foreground a lighter grey, and accent and editing turn a lighter purple to keep
+their contrast. */
 .ew-colorset-3 {
 	--background: oklch(40.5% 0 0);
 	--foreground: oklch(100% 0 0);
 	--muted: oklch(36% 0 0);
 	--stroke: oklch(52% 0 0);
-	--muted-foreground: oklch(69.6% 0.001 106);
+	--muted-foreground: oklch(79% 0.001 106);
 	--accent: oklch(75% 0.13 282);
 	--accent-foreground: var(--background);
 	--editing: oklch(75% 0.13 282);

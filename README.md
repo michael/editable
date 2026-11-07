@@ -96,7 +96,7 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 	/* Color for borders, dividers, and other visual lines. */
 	--stroke: oklch(88.5% 0 0);
 	/* Text color for secondary or de-emphasized content. */
-	--muted-foreground: oklch(69.6% 0.001 106);
+	--muted-foreground: oklch(55% 0.001 106);
 	/* Accent for accented actions and highlights: your choice, such as the foreground or a brand color. */
 	--accent: oklch(55.8% 0.185 282);
 	/* Text color used on the accent color. */
