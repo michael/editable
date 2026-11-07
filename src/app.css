@@ -332,7 +332,7 @@ Svedit's own frame style. */
 
 /* Defaults for each edge. Replace the utility with explicit classes for custom spacing. */
 @utility pt-block-generous {
-	@apply pt-24 lg:pt-32;
+	@apply pt-16 sm:pt-24 lg:pt-32;
 }
 
 @utility pt-block-compact {
@@ -340,7 +340,7 @@ Svedit's own frame style. */
 }
 
 @utility pb-block-generous {
-	@apply pb-24 lg:pb-32;
+	@apply pb-16 sm:pb-24 lg:pb-32;
 }
 
 @utility pb-block-compact {

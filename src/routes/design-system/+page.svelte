@@ -543,7 +543,12 @@
 							>
 							<tbody
 								><tr class="border-t border-(--stroke)"
-									><th scope="row" class="py-3 pr-6 text-left font-normal">Below 1024px</th><td
+									><th scope="row" class="py-3 pr-6 text-left font-normal">Below 640px</th><td
+										class="py-3 pr-6">4rem · 64px</td
+									><td class="py-3">1.5rem · 24px</td></tr
+								>
+								<tr class="border-t border-(--stroke)"
+									><th scope="row" class="py-3 pr-6 text-left font-normal">640px to 1023px</th><td
 										class="py-3 pr-6">6rem · 96px</td
 									><td class="py-3">1.5rem · 24px</td></tr
 								>
@@ -558,9 +563,9 @@
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Pixel equivalents assume the default 16px root font size. Adjacent padding adds up: two
 						compact edges create a 48px gap, 64px from 1024px, always wider than the gap between
-						elements inside a block. Two generous edges create a gap four times as wide: 192px, or
-						256px from 1024px. Only the rows of a plain prose grid sit further apart than two
-						compact edges: with nothing but whitespace between their items, they are 96px apart,
+						elements inside a block. Two generous edges create a gap of 128px on phones, 192px from
+						640px, and 256px from 1024px. Only the rows of a plain prose grid sit further apart than
+						two compact edges: with nothing but whitespace between their items, they are 96px apart,
 						128px from 1024px.
 					</p>
 				</div>
@@ -576,7 +581,7 @@
 						<div class="border border-(--stroke)">
 							<div>
 								<div
-									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-32"
+									class="flex h-16 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) sm:h-24 lg:h-32"
 								>
 									Generous
 								</div>
@@ -584,7 +589,7 @@
 									<p class="body-base">Independent content</p>
 								</div>
 								<div
-									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-32"
+									class="flex h-16 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) sm:h-24 lg:h-32"
 								>
 									Generous
 								</div>
@@ -596,7 +601,7 @@
 						<div class="divide-y divide-(--stroke) border border-(--stroke)">
 							<div>
 								<div
-									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-32"
+									class="flex h-16 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) sm:h-24 lg:h-32"
 								>
 									Generous
 								</div>
@@ -634,7 +639,7 @@
 									<p class="body-base">Last block</p>
 								</div>
 								<div
-									class="flex h-24 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) lg:h-32"
+									class="flex h-16 items-center justify-center bg-(--muted) text-xs leading-4 text-(--muted-foreground) sm:h-24 lg:h-32"
 								>
 									Generous
 								</div>
