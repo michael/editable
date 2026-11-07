@@ -33,7 +33,7 @@
 	<div class="pt-4">
 		<div
 			class={[
-				'body-base font-semibold',
+				'display-5',
 				href &&
 					'underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors',
 				render_as_link && 'group-hover/card:decoration-current group-active/card:decoration-current'

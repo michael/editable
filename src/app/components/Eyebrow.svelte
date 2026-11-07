@@ -1,26 +1,21 @@
 <script lang="ts">
-	import type { Nodes } from '#app/document_schema.js';
 	import type { DocumentPath } from 'svedit';
-	import { get_svedit_context } from '#app/svedit_context.js';
 	import { Node, TextProperty } from 'svedit';
 	import { reveal } from '#app/reveal.js';
 
-	const svedit = get_svedit_context();
 	let { path }: { path: DocumentPath } = $props();
-	let node: Nodes['eyebrow'] = $derived(svedit.session.get(path));
-	let layout = $derived(node.layout || 'regular');
 </script>
 
-<!-- Corner marks are a border masked down to its corners. They sit on the wrapper, because the
-text property uses its own pseudo-elements for the placeholder. -->
+<!-- The corner mark is a box with thick top and start borders, so only an L shows. It sits on the
+wrapper, because the text property uses its own pseudo-elements for the placeholder. -->
 <Node class="ew-eyebrow" {path}>
 	<div
-		class="relative inline-block bg-(--muted) px-3 py-1 before:pointer-events-none before:absolute before:inset-0 before:border before:border-(--accent) before:[mask:conic-gradient(at_5px_5px,#0000_75%,#000_0)_0_0/calc(100%-5px)_calc(100%-5px)]"
+		class="relative inline-block bg-(--muted) px-2.5 py-1 before:pointer-events-none before:absolute before:inset-s-0 before:top-0 before:size-2 before:border-s-4 before:border-t-4 before:border-(--accent)"
 		use:reveal
 	>
 		<TextProperty
 			tag="p"
-			class={`body-sm max-sm:text-xs ${layout === 'muted' ? 'text-(--muted-foreground)' : ''}`}
+			class="body-sm text-xs font-bold text-(--accent) uppercase"
 			path={[...path, 'content']}
 			placeholder="Eyebrow"
 		/>

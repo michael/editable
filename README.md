@@ -90,15 +90,15 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 	/* Main page background color. */
 	--background: oklch(100% 0 0);
 	/* Main text and foreground color. */
-	--foreground: oklch(0% 0 0);
+	--foreground: oklch(40.5% 0 0);
 	/* Subtle background for secondary surfaces and hover states. */
-	--muted: oklch(98% 0 0);
+	--muted: oklch(97.9% 0 0);
 	/* Color for borders, dividers, and other visual lines. */
-	--stroke: oklch(92% 0 0);
+	--stroke: oklch(88.5% 0 0);
 	/* Text color for secondary or de-emphasized content. */
-	--muted-foreground: oklch(55% 0 0);
-	/* Accent for primary actions and highlights: your choice, such as the foreground or a brand color. */
-	--accent: var(--foreground);
+	--muted-foreground: oklch(55% 0.001 106);
+	/* Accent for accented actions and highlights: your choice, such as the foreground or a brand color. */
+	--accent: oklch(55.8% 0.185 282);
 	/* Text color used on the accent color. */
 	--accent-foreground: var(--background);
 
@@ -110,9 +110,9 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 	--editing-foreground: var(--background);
 }
 
-/* Color set 2: a light grey surface. Color set 3 is a contrasting surface. */
+/* Color set 2: color set 1 with background and muted swapped, so muted boxes turn white. */
 .ew-colorset-2 {
-	--background: oklch(98% 0 0);
+	--background: oklch(97.9% 0 0);
 	--muted: oklch(100% 0 0);
 	/* … and the other color tokens, as in color set 1 */
 }
@@ -126,7 +126,7 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 
 /* Type scale — adjust any of these utilities to match your style. */
 @utility display-1 {
-	@apply font-sans text-5xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-6xl lg:text-7xl;
+	@apply font-sans text-5xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-6xl;
 }
 ```
 
@@ -402,7 +402,7 @@ nav {
 }
 
 nav_link { href, target, label: text }
-nav_button { layout: primary | secondary, href, target, label: text }   // type-switches with nav_link
+nav_button { layout: primary | primary-accent | secondary, href, target, label: text }   // type-switches with nav_link
 nav_media { href, target, media: image | video }
 
 footer {
@@ -477,14 +477,16 @@ gallery { layout: mixed | portraits | squares | landscapes | compact-landscapes,
           gallery_items: [gallery_item] }
 gallery_item { href, target, media: image | video }
 
-titled_gallery { layout: cards | compact, items: [titled_gallery_item] }
+titled_gallery { layout: cards | cards-2-columns | compact | carousel | carousel-2-columns,
+                 items: [titled_gallery_item] }
 titled_gallery_item {
 	href, target
 	media: image | video
 	title: text          // single line; marks: emphasis, highlight
 }
 
-descriptive_gallery { layout: cards | compact, items: [descriptive_gallery_item] }
+descriptive_gallery { layout: cards | cards-2-columns | compact | carousel | carousel-2-columns,
+                      items: [descriptive_gallery_item] }
 descriptive_gallery_item {
 	href, target
 	media: image | video
@@ -519,7 +521,7 @@ accordion_item {
 feature { layout: image-right | image-left, href, target, media: image | video, body: [rich content] }
 
 button_group { buttons: [button] }
-button { layout: primary | secondary | link, href, target, label: text }
+button { layout: primary | primary-accent | secondary | link, href, target, label: text }
 ```
 
 **Marks and annotations** — both attach a separate node to a half-open range using the same shape. For text, offsets address character positions; for node arrays, they address child-node positions. `start_offset` is included and `end_offset` is excluded:
