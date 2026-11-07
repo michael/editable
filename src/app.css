@@ -133,9 +133,11 @@ and muted, so muted elements inside it, such as an eyebrow or inline code, stand
 	--muted: var(--ew-surface-muted);
 }
 
-:root {
-	/* Syntax palette from Zed's One Light theme. */
-	/* https://github.com/zed-industries/zed/blob/main/assets/themes/one/one.json */
+/* Syntax palettes from Zed's One themes: One Light for the light color sets, One Dark for color set 3.
+https://github.com/zed-industries/zed/blob/main/assets/themes/one/one.json */
+:root,
+.ew-colorset-1,
+.ew-colorset-2 {
 	--code-foreground: #242529;
 	--code-comment: #a2a3a7;
 	--code-keyword: #a449ab;
@@ -150,7 +152,26 @@ and muted, so muted elements inside it, such as an eyebrow or inline code, stand
 	--code-escape: #7c7e86;
 	--code-inserted: #50a14f;
 	--code-deleted: #e45649;
+}
 
+.ew-colorset-3 {
+	--code-foreground: #acb2be;
+	--code-comment: #5d636f;
+	--code-keyword: #b477cf;
+	--code-string: #a1c181;
+	--code-number: #bf956a;
+	--code-constant: #dfc184;
+	--code-function: #73ade9;
+	--code-type: #6eb4bf;
+	--code-property: #d07277;
+	--code-attribute: #74ade8;
+	--code-punctuation: #b2b9c6;
+	--code-escape: #878e98;
+	--code-inserted: #98c379;
+	--code-deleted: #e06c75;
+}
+
+:root {
 	/* Rounded corners for controls; reference pills and popovers derive their shape from this. */
 	--button-border-radius: 3rem;
 	/* Rounded corners for images. */
