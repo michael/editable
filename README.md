@@ -88,32 +88,32 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 :root,
 .ew-colorset-1 {
 	/* Main page background color. */
-	--background: oklch(20% 0 0);
+	--background: oklch(100% 0 0);
 	/* Main text and foreground color. */
-	--foreground: oklch(96% 0 0);
+	--foreground: oklch(40.5% 0 0);
 	/* Subtle background for secondary surfaces and hover states. */
-	--muted: oklch(18% 0 0);
+	--muted: oklch(97.9% 0 0);
 	/* Color for borders, dividers, and other visual lines. */
-	--stroke: oklch(33% 0 0);
+	--stroke: oklch(88.5% 0 0);
 	/* Text color for secondary or de-emphasized content. */
-	--muted-foreground: oklch(72% 0 0);
-	/* Accent for primary actions and highlights: your choice, such as the foreground or a brand color. */
-	--accent: var(--editing);
+	--muted-foreground: oklch(69.6% 0.001 106);
+	/* Accent for accented actions and highlights: your choice, such as the foreground or a brand color. */
+	--accent: oklch(55.8% 0.185 282);
 	/* Text color used on the accent color. */
-	--accent-foreground: var(--editing-foreground);
+	--accent-foreground: var(--background);
 
-	/* Primary accent for active editing controls, carets, and selections. A lighter purple on dark sets. */
-	--editing: oklch(70% 0.16 282);
+	/* Primary accent for active editing controls, carets, and selections. */
+	--editing: oklch(55.8% 0.185 282);
 	/* Low-opacity version of the editing accent for passive highlights. */
-	--editing-muted: oklch(from var(--editing) l c h / 0.25);
+	--editing-muted: oklch(from var(--editing) l c h / 0.1);
 	/* Foreground color for content displayed on the editing accent. */
 	--editing-foreground: var(--background);
 }
 
-/* Color set 2: a muted dark grey. Color set 3 is a contrasting light surface. */
+/* Color set 2: color set 1 with background and muted swapped, so muted boxes turn white. */
 .ew-colorset-2 {
-	--background: oklch(23% 0 0);
-	--muted: oklch(21% 0 0);
+	--background: oklch(97.9% 0 0);
+	--muted: oklch(100% 0 0);
 	/* … and the other color tokens, as in color set 1 */
 }
 

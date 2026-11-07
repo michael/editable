@@ -156,9 +156,8 @@
 					<h3 class="body-sm font-semibold">Color sets</h3>
 					<p class="max-w-prose body-sm text-(--muted-foreground)">
 						Each color set assigns every color token, so everything inside it stays readable without
-						changes of its own, including the syntax colors of code. Color set 1 is the page;
-						sections switch to set 2 or 3. Editable text on a solid fill, such as a primary button
-						or a highlight, adds
+						changes of its own. Color set 1 is the page; sections switch to set 2 or 3. Editable
+						text on a solid fill, such as a primary button or a highlight, adds
 						<code
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>ew-native-selection</code
@@ -192,7 +191,7 @@
 						>
 							<p class="body-base">Color set 2</p>
 							<p class="body-sm text-(--muted-foreground)">
-								A muted dark grey, a shade lighter than the page.
+								Color set 1 with background and muted swapped, so muted boxes turn white.
 							</p>
 							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
 							<div class="flex flex-wrap gap-2">
@@ -215,7 +214,7 @@
 						>
 							<p class="body-base">Color set 3</p>
 							<p class="body-sm text-(--muted-foreground)">
-								A contrasting set for sections that stand out.
+								Color set 1 inverted, for sections that stand out.
 							</p>
 							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
 							<div class="flex flex-wrap gap-2">
@@ -831,15 +830,16 @@
 				</div>
 
 				<!--
-				An eyebrow labels the heading below it: body-sm, 12px on phones, on a muted box with accent
-				corner marks. The marks are a border masked down to its corners, on the wrapper's ::before.
+				An eyebrow labels the heading below it: bold 12px capitals in the accent color on a muted
+				box. The corner mark is the wrapper's ::before: a box with thick top and start
+				borders, so only an L shows.
 			-->
 				<div id="type-eyebrow" class="space-y-3">
 					<p class="text-sm text-(--muted-foreground)">eyebrow</p>
 					<div
-						class="relative inline-block bg-(--muted) px-3 py-1 before:pointer-events-none before:absolute before:inset-0 before:border before:border-(--accent) before:[mask:conic-gradient(at_5px_5px,#0000_75%,#000_0)_0_0/calc(100%-5px)_calc(100%-5px)]"
+						class="relative inline-block bg-(--muted) px-2.5 py-1 before:pointer-events-none before:absolute before:inset-s-0 before:top-0 before:size-2 before:border-s-4 before:border-t-4 before:border-(--accent)"
 					>
-						<p class="body-sm text-(--muted-foreground) max-sm:text-xs">Visual builder</p>
+						<p class="body-sm text-xs font-bold text-(--accent) uppercase">Visual builder</p>
 					</div>
 				</div>
 			</section>
@@ -1306,9 +1306,9 @@
 					<div class="ew-muted-surface rounded-(--image-border-radius) px-6 py-8 sm:px-8 sm:py-10">
 						<div class="flex flex-col items-center gap-5 text-center text-balance sm:gap-7">
 							<div
-								class="relative inline-block bg-(--muted) px-3 py-1 before:pointer-events-none before:absolute before:inset-0 before:border before:border-(--accent) before:[mask:conic-gradient(at_5px_5px,#0000_75%,#000_0)_0_0/calc(100%-5px)_calc(100%-5px)]"
+								class="relative inline-block bg-(--muted) px-2.5 py-1 before:pointer-events-none before:absolute before:inset-s-0 before:top-0 before:size-2 before:border-s-4 before:border-t-4 before:border-(--accent)"
 							>
-								<p class="body-sm text-(--muted-foreground) max-sm:text-xs">Personal</p>
+								<p class="body-sm text-xs font-bold text-(--accent) uppercase">Personal</p>
 							</div>
 							<h3 class="display-5">Make it your own</h3>
 							<p class="body-base">Start with the shared styles and adapt them to your site.</p>
