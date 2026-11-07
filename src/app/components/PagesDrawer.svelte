@@ -1206,13 +1206,13 @@ Updated: ${updated_at_label}`;
 	.draft-illustration {
 		width: 100%;
 		aspect-ratio: 1;
-		background: oklch(from var(--editing, oklch(55.8% 0.185 282)) 98.5% 0.012 h);
+		background: var(--editing-muted);
 		box-shadow: none;
 	}
 
 	.create-illustration {
-		background: oklch(from var(--editing, oklch(55.8% 0.185 282)) 98.5% 0.012 h);
-		border: 1px dashed oklch(from var(--editing, oklch(55.8% 0.185 282)) 80% 0.08 h / 0.45);
+		background: var(--editing-muted);
+		border: 1px dashed oklch(from var(--editing) l c h / 0.45);
 		box-shadow: none;
 	}
 
