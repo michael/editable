@@ -3,7 +3,11 @@
 	import { NodeArrayProperty } from 'svedit';
 	import { get_svedit_context } from '#app/svedit_context.js';
 
-	let { path }: { path: DocumentPath } = $props();
+	let { path, columns = 3 }: { path: DocumentPath; columns?: 2 | 3 } = $props();
+	// Wide screens show three cards, or two when columns is 2.
+	let xl_card_width = $derived(
+		columns === 3 ? 'xl:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-3.5rem)/3)]' : ''
+	);
 	const svedit = get_svedit_context();
 	const carousel_id = $props.id();
 	let can_go_previous = $state(false);
@@ -62,7 +66,7 @@
 		tabindex={svedit.editable ? undefined : 0}
 		class="[scrollbar-none] relative -my-1 {svedit.editable
 			? 'snap-none'
-			: 'snap-x snap-mandatory'} scroll-px-(--ew-carousel-inset) overflow-x-auto overscroll-x-contain [--ew-carousel-card-width:calc(var(--ew-carousel-content)*0.85)] [--ew-carousel-content:calc(min(100cqw,80rem)-2*var(--ew-carousel-gutter))] [--ew-carousel-gutter:1.25rem] [--ew-carousel-inset:max(var(--ew-carousel-gutter),calc((100cqw-80rem)/2+var(--ew-carousel-gutter)))] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing) sm:[--ew-carousel-gutter:1.75rem] md:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-1.75rem)/2)] xl:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-3.5rem)/3)] [&::-webkit-scrollbar]:hidden"
+			: 'snap-x snap-mandatory'} scroll-px-(--ew-carousel-inset) overflow-x-auto overscroll-x-contain [--ew-carousel-card-width:calc(var(--ew-carousel-content)*0.85)] [--ew-carousel-content:calc(min(100cqw,80rem)-2*var(--ew-carousel-gutter))] [--ew-carousel-gutter:1.25rem] [--ew-carousel-inset:max(var(--ew-carousel-gutter),calc((100cqw-80rem)/2+var(--ew-carousel-gutter)))] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing) sm:[--ew-carousel-gutter:1.75rem] md:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-1.75rem)/2)] {xl_card_width} [&::-webkit-scrollbar]:hidden"
 		{@attach track_carousel}
 	>
 		<!-- Keep gutters outside the node array so its trailing anchor ends at the last card. -->
