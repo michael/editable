@@ -47,15 +47,15 @@ another set, and everything inside follows its tokens. */
 	/* Main page background color. */
 	--background: oklch(100% 0 0);
 	/* Main text and foreground color. */
-	--foreground: oklch(0% 0 0);
+	--foreground: oklch(40.5% 0 0);
 	/* Subtle background for secondary surfaces and hover states. */
-	--muted: oklch(98% 0 0);
+	--muted: oklch(97.9% 0 0);
 	/* Color for borders, dividers, and other visual lines. */
-	--stroke: oklch(92% 0 0);
+	--stroke: oklch(88.5% 0 0);
 	/* Text color for secondary or de-emphasized content. */
-	--muted-foreground: oklch(55% 0 0);
+	--muted-foreground: oklch(69.6% 0.001 106);
 	/* Accent for primary actions and highlights: your choice, such as the foreground or a brand color. */
-	--accent: var(--foreground);
+	--accent: oklch(55.8% 0.185 282);
 	/* Text color used on the accent color. */
 	--accent-foreground: var(--background);
 
@@ -67,30 +67,32 @@ another set, and everything inside follows its tokens. */
 	--editing-foreground: var(--background);
 }
 
-/* Color set 2: a light grey surface. Its muted surface is white, so boxes lift off it. */
+/* Color set 2: color set 1 with background and muted swapped, so muted boxes, such as eyebrows, turn
+white. Text on the accent and editing colors stays white, as in color set 1. */
 .ew-colorset-2 {
-	--background: oklch(98% 0 0);
-	--foreground: oklch(0% 0 0);
+	--background: oklch(97.9% 0 0);
+	--foreground: oklch(40.5% 0 0);
 	--muted: oklch(100% 0 0);
-	--stroke: oklch(90% 0 0);
-	--muted-foreground: oklch(52% 0 0);
-	--accent: var(--foreground);
-	--accent-foreground: var(--background);
+	--stroke: oklch(88.5% 0 0);
+	--muted-foreground: oklch(69.6% 0.001 106);
+	--accent: oklch(55.8% 0.185 282);
+	--accent-foreground: oklch(100% 0 0);
 	--editing: oklch(55.8% 0.185 282);
 	--editing-muted: oklch(from var(--editing) l c h / 0.1);
 	--editing-foreground: oklch(100% 0 0);
 }
 
-/* Color set 3: color set 1 inverted, white on black. Editing colors follow the foreground. */
+/* Color set 3: color set 1 inverted, white on its dark grey, for sections that stand out. Muted is a
+darker grey, and accent and editing turn a lighter purple to keep their contrast. */
 .ew-colorset-3 {
-	--background: oklch(0% 0 0);
+	--background: oklch(40.5% 0 0);
 	--foreground: oklch(100% 0 0);
-	--muted: oklch(20% 0 0);
-	--stroke: oklch(32% 0 0);
-	--muted-foreground: oklch(72% 0 0);
-	--accent: var(--foreground);
+	--muted: oklch(36% 0 0);
+	--stroke: oklch(52% 0 0);
+	--muted-foreground: oklch(69.6% 0.001 106);
+	--accent: oklch(75% 0.13 282);
 	--accent-foreground: var(--background);
-	--editing: var(--foreground);
+	--editing: oklch(75% 0.13 282);
 	--editing-muted: oklch(from var(--editing) l c h / 0.25);
 	--editing-foreground: var(--background);
 }

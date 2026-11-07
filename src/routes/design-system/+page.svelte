@@ -188,7 +188,7 @@
 						>
 							<p class="body-base">Color set 2</p>
 							<p class="body-sm text-(--muted-foreground)">
-								Light grey. Its muted surface is white, so boxes lift off it.
+								Color set 1 with background and muted swapped, so muted boxes turn white.
 							</p>
 							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
 							<div class="flex flex-wrap gap-2">
@@ -207,7 +207,7 @@
 						>
 							<p class="body-base">Color set 3</p>
 							<p class="body-sm text-(--muted-foreground)">
-								A contrasting set for sections that stand out.
+								Color set 1 inverted, for sections that stand out.
 							</p>
 							<div class="bg-(--muted) px-3 py-2 body-sm">Muted surface</div>
 							<div class="flex flex-wrap gap-2">

@@ -90,15 +90,15 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 	/* Main page background color. */
 	--background: oklch(100% 0 0);
 	/* Main text and foreground color. */
-	--foreground: oklch(0% 0 0);
+	--foreground: oklch(40.5% 0 0);
 	/* Subtle background for secondary surfaces and hover states. */
-	--muted: oklch(98% 0 0);
+	--muted: oklch(97.9% 0 0);
 	/* Color for borders, dividers, and other visual lines. */
-	--stroke: oklch(92% 0 0);
+	--stroke: oklch(88.5% 0 0);
 	/* Text color for secondary or de-emphasized content. */
-	--muted-foreground: oklch(55% 0 0);
+	--muted-foreground: oklch(69.6% 0.001 106);
 	/* Accent for primary actions and highlights: your choice, such as the foreground or a brand color. */
-	--accent: var(--foreground);
+	--accent: oklch(55.8% 0.185 282);
 	/* Text color used on the accent color. */
 	--accent-foreground: var(--background);
 
@@ -110,9 +110,9 @@ Adjust the colors and fonts directly in `src/app.css`. Colors come in color sets
 	--editing-foreground: var(--background);
 }
 
-/* Color set 2: a light grey surface. Color set 3 is a contrasting surface. */
+/* Color set 2: color set 1 with background and muted swapped, so muted boxes turn white. */
 .ew-colorset-2 {
-	--background: oklch(98% 0 0);
+	--background: oklch(97.9% 0 0);
 	--muted: oklch(100% 0 0);
 	/* … and the other color tokens, as in color set 1 */
 }
