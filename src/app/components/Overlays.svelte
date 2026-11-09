@@ -145,7 +145,9 @@
 	function get_link_anchor_path(node, path) {
 		// These node wrappers are wider than their visible media frames, so their
 		// link UI anchors to the media property instead.
-		return ['supporting_media', 'feature'].includes(node.type) ? [...path, 'media'] : path;
+		return ['supporting_media', 'feature', 'double_feature_item'].includes(node.type)
+			? [...path, 'media']
+			: path;
 	}
 
 	function get_link_preview() {

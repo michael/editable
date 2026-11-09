@@ -385,8 +385,8 @@ page {
 	description: text    // no marks
 	image: image         // preview image for page metadata
 	body: [prose | prose_grid | figure | captioned_figure | gallery | feature |
-	       titled_gallery | descriptive_gallery | listing | descriptive_listing |
-	       accordion | code_block]
+	       double_feature | titled_gallery | descriptive_gallery | listing |
+	       descriptive_listing | accordion | code_block]
 	                     // supports section marks for visual grouping
 	banner: banner
 	nav: nav
@@ -518,7 +518,9 @@ accordion_item {
 	body: [rich content without headings]
 }
 
-feature { layout: image-right | image-left, href, target, media: image | video, body: [rich content] }
+feature { layout: image-right | image-left | outlined-image-right | outlined-image-left, href, target, media: image | video, body: [rich content] }
+double_feature { layout: plain | outlined, start: double_feature_item, end: double_feature_item }
+double_feature_item { href, target, media: image | video, body: [rich content] }
 
 button_group { buttons: [button] }
 button { layout: primary | primary-accent | secondary | link, href, target, label: text }
