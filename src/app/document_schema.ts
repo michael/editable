@@ -264,6 +264,8 @@ export const document_schema = define_document_schema({
 				values: [
 					'plain',
 					'plain-centered-text',
+					'outlined',
+					'outlined-centered-text',
 					'boxed',
 					'boxed-centered-text',
 					'boxed-accent',
@@ -580,7 +582,15 @@ export const document_schema = define_document_schema({
 		properties: {
 			layout: {
 				type: 'string',
-				values: ['cards', 'cards-2-columns', 'compact', 'carousel', 'carousel-2-columns'],
+				values: [
+					'cards',
+					'outlined',
+					'cards-2-columns',
+					'outlined-2-columns',
+					'compact',
+					'carousel',
+					'carousel-2-columns'
+				],
 				default: 'cards'
 			},
 			items: {
@@ -611,7 +621,15 @@ export const document_schema = define_document_schema({
 		properties: {
 			layout: {
 				type: 'string',
-				values: ['cards', 'cards-2-columns', 'compact', 'carousel', 'carousel-2-columns'],
+				values: [
+					'cards',
+					'outlined',
+					'cards-2-columns',
+					'outlined-2-columns',
+					'compact',
+					'carousel',
+					'carousel-2-columns'
+				],
 				default: 'cards'
 			},
 			items: {

@@ -8,7 +8,8 @@
 		description,
 		href = '',
 		target = '_self',
-		editable = false
+		editable = false,
+		outlined = false
 	}: {
 		media: Snippet;
 		title: Snippet;
@@ -16,21 +17,32 @@
 		href?: string;
 		target?: string;
 		editable?: boolean;
+		outlined?: boolean;
 	} = $props();
 	let render_as_link = $derived(!editable && !!href);
 </script>
 
+<!-- An outlined card frames its media and text, with the media running edge to edge above a
+divider. It fills its grid cell, so frames in a row share one height. -->
 <svelte:element
 	this={render_as_link ? 'a' : 'div'}
 	href={render_as_link ? href : undefined}
 	target={render_as_link && target !== '_self' ? target : undefined}
-	class="ew-card group/card block min-w-0 outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
+	class={[
+		'ew-card group/card block min-w-0 outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)',
+		outlined && 'h-full overflow-hidden rounded-(--image-border-radius) border border-(--stroke)'
+	]}
 	use:reveal
 >
-	<div class="aspect-4/3 overflow-hidden rounded-(--image-border-radius)">
+	<div
+		class={[
+			'aspect-4/3 overflow-hidden',
+			outlined ? 'border-b border-(--stroke)' : 'rounded-(--image-border-radius)'
+		]}
+	>
 		{@render media()}
 	</div>
-	<div class="pt-4">
+	<div class={outlined ? 'p-5 sm:p-6' : 'pt-4'}>
 		<div
 			class={[
 				'display-5',

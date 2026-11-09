@@ -12,10 +12,10 @@
 	let grid_cols_class = $derived(
 		item_count <= 1 ? 'lg:grid-cols-1' : item_count === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-3'
 	);
-	// Plain items have only whitespace between them, so they get twice the gaps. Boxed items keep
-	// the card gaps, so their edges line up with galleries.
+	// Plain items have only whitespace between them, so they get twice the gaps. Boxed and outlined
+	// items keep the card gaps, so their edges line up with galleries.
 	let gap_class = $derived(
-		node.layout?.startsWith('boxed')
+		node.layout?.startsWith('boxed') || node.layout?.startsWith('outlined')
 			? 'gap-x-5 gap-y-8 sm:gap-x-7 lg:gap-y-7'
 			: 'gap-x-14 gap-y-24 lg:gap-y-32'
 	);

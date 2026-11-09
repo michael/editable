@@ -36,7 +36,7 @@ the same height and the lines below the media meet. -->
 	</svelte:element>
 	<NodeArrayProperty
 		class="ew-double-feature-body flex flex-col gap-5 sm:gap-7 {outlined
-			? 'p-6 sm:p-10 lg:px-20 lg:py-14'
+			? 'p-6 sm:p-10 lg:p-14'
 			: 'pt-6 sm:pt-8'}"
 		path={[...path, 'body']}
 	/>

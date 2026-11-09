@@ -943,36 +943,71 @@
 						by gallery cards; width and arrangement belong to the surrounding layout. Linked cards
 						underline the title and make the whole card clickable. Use a div and omit the underline
 						for an unlinked card. Keyboard focus uses a 2px editing-color outline with a 2px offset;
-						scroll containers use an inset outline to prevent clipping.
+						scroll containers use an inset outline to prevent clipping. The outlined variant frames
+						media and text in one border.
 					</p>
 				</div>
-				<div class="max-w-sm">
-					<a
-						href="#card"
-						class="ew-card group/card block min-w-0 outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
-					>
-						<div class="aspect-4/3 overflow-hidden rounded-(--image-border-radius) bg-(--muted)">
-							<svg
-								class="h-full w-full text-(--stroke)"
-								viewBox="0 0 400 300"
-								fill="currentColor"
-								aria-hidden="true"
-							>
-								<circle cx="285" cy="85" r="28" />
-								<path d="M0 300V250L125 105L240 245L300 175L400 280V300Z" />
-							</svg>
-						</div>
-						<div class="pt-4">
-							<h3
-								class="display-5 underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors group-hover/card:decoration-current group-active/card:decoration-current"
-							>
-								Card title
-							</h3>
-							<p class="pt-1 body-base text-(--muted-foreground)">
-								An optional description adds context below the title.
-							</p>
-						</div>
-					</a>
+				<div class="grid max-w-3xl gap-10 sm:grid-cols-2 sm:gap-8">
+					<div id="card-default" class="min-w-0 space-y-4">
+						<h3 class="text-sm text-(--muted-foreground)">Default</h3>
+						<a
+							href="#card"
+							class="ew-card group/card block min-w-0 outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
+						>
+							<div class="aspect-4/3 overflow-hidden rounded-(--image-border-radius) bg-(--muted)">
+								<svg
+									class="h-full w-full text-(--stroke)"
+									viewBox="0 0 400 300"
+									fill="currentColor"
+									aria-hidden="true"
+								>
+									<circle cx="285" cy="85" r="28" />
+									<path d="M0 300V250L125 105L240 245L300 175L400 280V300Z" />
+								</svg>
+							</div>
+							<div class="pt-4">
+								<h4
+									class="display-5 underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors group-hover/card:decoration-current group-active/card:decoration-current"
+								>
+									Card title
+								</h4>
+								<p class="pt-1 body-base text-(--muted-foreground)">
+									An optional description adds context below the title.
+								</p>
+							</div>
+						</a>
+					</div>
+
+					<div id="card-outlined" class="min-w-0 space-y-4">
+						<h3 class="text-sm text-(--muted-foreground)">Outlined</h3>
+						<!-- A stroke border with the image radius frames media and text. The media runs edge to edge above a stroke divider, and the text sits in padding. In a grid, add h-full so frames in a row share one height. -->
+						<a
+							href="#card"
+							class="ew-card group/card block min-w-0 overflow-hidden rounded-(--image-border-radius) border border-(--stroke) outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
+						>
+							<div class="aspect-4/3 overflow-hidden border-b border-(--stroke) bg-(--muted)">
+								<svg
+									class="h-full w-full text-(--stroke)"
+									viewBox="0 0 400 300"
+									fill="currentColor"
+									aria-hidden="true"
+								>
+									<circle cx="285" cy="85" r="28" />
+									<path d="M0 300V250L125 105L240 245L300 175L400 280V300Z" />
+								</svg>
+							</div>
+							<div class="p-5 sm:p-6">
+								<h4
+									class="display-5 underline decoration-[color-mix(in_oklab,currentColor_30%,transparent)] decoration-[0.0625em] underline-offset-[0.15em] transition-colors group-hover/card:decoration-current group-active/card:decoration-current"
+								>
+									Card title
+								</h4>
+								<p class="pt-1 body-base text-(--muted-foreground)">
+									An optional description adds context below the title.
+								</p>
+							</div>
+						</a>
+					</div>
 				</div>
 			</section>
 
@@ -1304,10 +1339,11 @@
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>ew-accent-surface</code
 						>: they fill with the accent of their color set, and their children get matching tokens,
-						so every recipe inside stays readable.
+						so every recipe inside stays readable. Outlined boxes keep the background and draw a
+						stroke border, so their children need no surface class.
 					</p>
 				</div>
-				<div class="grid items-start gap-5 sm:grid-cols-2 sm:gap-7 lg:max-w-3xl">
+				<div class="grid items-start gap-5 sm:grid-cols-2 sm:gap-7 lg:max-w-5xl lg:grid-cols-3">
 					<div class="ew-muted-surface rounded-(--image-border-radius) px-6 py-8 sm:px-8 sm:py-10">
 						<div class="flex flex-col items-center gap-5 text-center text-balance sm:gap-7">
 							<div
@@ -1335,6 +1371,19 @@
 							href="#buttons"
 							class="ew-native-selection inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--foreground) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--background) transition-colors hover:bg-[color-mix(in_srgb,var(--foreground),var(--background)_20%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-[color-mix(in_srgb,var(--foreground),var(--background)_30%)]"
 							>Get started</a
+						>
+					</div>
+					<div
+						class="flex flex-col items-start gap-5 rounded-(--image-border-radius) border border-(--stroke) px-6 py-8 sm:gap-7 sm:px-8 sm:py-10"
+					>
+						<h3 class="display-5">Keep it light</h3>
+						<p class="body-base">
+							A stroke border on the page background, with every recipe inside.
+						</p>
+						<a
+							href="#buttons"
+							class="inline-flex min-h-11 max-w-full min-w-11 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) px-5 py-2 text-center text-base leading-6 font-normal wrap-anywhere text-(--foreground) transition-colors hover:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) active:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)]"
+							>Explore buttons</a
 						>
 					</div>
 				</div>
