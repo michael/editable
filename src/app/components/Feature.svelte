@@ -42,16 +42,18 @@
 	/>
 {/snippet}
 
+<!-- The columns use the card grid's gap, so the image lines up with two-column galleries. The text
+side pads out the rest of the wider gap that text columns get. -->
 {#snippet image_right()}
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				`grid grid-cols-1 gap-10 px-5 sm:px-7 md:grid-cols-2 lg:gap-x-14`,
+				`grid grid-cols-1 gap-x-5 gap-y-10 px-5 sm:gap-x-7 sm:px-7 md:grid-cols-2`,
 				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}
 		>
-			<div class="flex flex-col justify-center pb-0" use:reveal>
+			<div class="flex flex-col justify-center pb-0 md:pe-3 lg:pe-7" use:reveal>
 				<div class="max-w-2xl">{@render body()}</div>
 			</div>
 			<div use:reveal={{ delay: 200 }}>
@@ -65,7 +67,7 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				`grid grid-cols-1 gap-10 px-5 sm:px-7 md:grid-cols-2 lg:gap-x-14`,
+				`grid grid-cols-1 gap-x-5 gap-y-10 px-5 sm:gap-x-7 sm:px-7 md:grid-cols-2`,
 				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}
@@ -73,7 +75,7 @@
 			<div class="max-md:order-2" use:reveal={{ delay: 200 }}>
 				{@render image('3 / 4', true)}
 			</div>
-			<div class="flex flex-col justify-center pb-0 max-md:order-1" use:reveal>
+			<div class="flex flex-col justify-center pb-0 max-md:order-1 md:ps-3 lg:ps-7" use:reveal>
 				<div class="max-w-2xl">{@render body()}</div>
 			</div>
 		</div>
