@@ -1,5 +1,11 @@
 import { get_property_default } from 'svedit';
-import type { Session, DocumentNode, DocumentPath, PropertyDefinition } from 'svedit';
+import type {
+	Session,
+	DocumentNode,
+	DocumentPath,
+	NodeSelection,
+	PropertyDefinition
+} from 'svedit';
 
 /**
  * Build the full path from the document root to the current selection,
@@ -50,6 +56,23 @@ function get_node_array_entries(
 		if (node) entries.push({ node, node_array_path, node_index });
 	}
 	return entries;
+}
+
+/**
+ * Return a node selection of the closest node around the selection that sits in a
+ * node_array, or null at the top. Unlike Svedit's select_parent(), this passes over
+ * nodes held by node properties, which a node selection cannot point to.
+ */
+export function get_parent_selection(session: Session): NodeSelection | null {
+	const path = session.selection?.path;
+	const entry = path ? get_node_array_entries(session, path)[0] : null;
+	if (!entry) return null;
+	return {
+		type: 'node',
+		path: entry.node_array_path,
+		anchor_offset: entry.node_index,
+		focus_offset: entry.node_index + 1
+	};
 }
 
 /**

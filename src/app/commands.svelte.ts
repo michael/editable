@@ -5,6 +5,7 @@ import type { CommandContext, DocumentNode, DocumentPath, Transaction } from 'sv
 import {
 	get_closest_switchable_layout,
 	get_cycle_node_state,
+	get_parent_selection,
 	is_node_subtree_empty
 } from '#app/app_utils.js';
 
@@ -215,7 +216,7 @@ export class SelectParentCommand extends Command {
 				focus_offset: this.section.end_offset
 			};
 		} else {
-			session.select_parent();
+			session.selection = get_parent_selection(session);
 		}
 	}
 }
@@ -495,13 +496,17 @@ export class EditLinkCommand extends Command {
 	execute() {
 		if (this.is_enabled()) {
 			const { session } = this.context;
-			// Select the parent node if a property is selected (but not for text link marks)
+			// Select the node that owns the selected text or property (but not for text
+			// link marks). A node held by a node property cannot be node-selected, so it
+			// stays the link target as is.
+			const selection = session.selection;
 			const active_link = session.active_mark?.node.type === 'link';
 			if (
 				!active_link &&
-				(session.selection?.type === 'text' || session.selection?.type === 'property')
+				(selection?.type === 'text' || selection?.type === 'property') &&
+				typeof selection.path.at(-2) === 'number'
 			) {
-				session.select_parent();
+				session.selection = get_parent_selection(session);
 			}
 			// Wait for selection change to settle before showing prompt
 			setTimeout(() => {
@@ -528,7 +533,7 @@ export class DuplicateNodesCommand extends Command {
 		// A collapsed node cursor sits between nodes — there is nothing to copy.
 		if (selection.type === 'node') return !is_selection_collapsed(selection);
 
-		// Same condition select_parent() uses to decide whether a parent exists.
+		// Same condition SelectParentCommand uses to decide whether a parent exists.
 		return selection.path.length > 3;
 	}
 
@@ -537,9 +542,9 @@ export class DuplicateNodesCommand extends Command {
 		const { session } = this.context;
 
 		// Anything that is not already a node selection duplicates its closest
-		// parent node, which select_parent() selects as a single-node range.
+		// parent node, selected as a single-node range.
 		if (session.selection && session.selection.type !== 'node') {
-			session.select_parent();
+			session.selection = get_parent_selection(session);
 		}
 
 		const selection = session.selection;

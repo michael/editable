@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
 	get_closest_switchable_layout,
 	get_cycle_node_state,
+	get_parent_selection,
 	get_selection_node_ancestors
 } from '#app/app_utils.js';
-import type { Session } from 'svedit';
+import type { NodeSelection, Session } from 'svedit';
 
 describe('get_selection_node_ancestors', () => {
 	it('finds nodes reached through both node properties and node arrays', () => {
@@ -164,5 +165,62 @@ describe('get_selection_node_ancestors', () => {
 			node_array_path: ['page_1', 'body'],
 			node_index: 0
 		});
+	});
+});
+
+describe('get_parent_selection', () => {
+	it('selects the closest node_array entry, passing over node properties', () => {
+		const values = new Map<string, any>([
+			[JSON.stringify(['page_1', 'body', 0]), { id: 'pair_1', type: 'pair' }],
+			[
+				JSON.stringify(['page_1', 'body', 0, 'start', 'body', 1]),
+				{ id: 'paragraph_1', type: 'paragraph' }
+			]
+		]);
+		const node_arrays = new Set([
+			JSON.stringify(['page_1', 'body']),
+			JSON.stringify(['page_1', 'body', 0, 'start', 'body'])
+		]);
+		const session = {
+			selection: {
+				type: 'text',
+				path: ['page_1', 'body', 0, 'start', 'body', 1, 'content'],
+				anchor_offset: 0,
+				focus_offset: 0
+			},
+			get(path: any) {
+				return values.get(JSON.stringify(path));
+			},
+			inspect(path: any) {
+				return node_arrays.has(JSON.stringify(path)) ? { type: 'node_array' } : null;
+			}
+		} as unknown as Session;
+
+		const pair_selection: NodeSelection = {
+			type: 'node',
+			path: ['page_1', 'body'],
+			anchor_offset: 0,
+			focus_offset: 1
+		};
+		expect(get_parent_selection(session)).toEqual({
+			type: 'node',
+			path: ['page_1', 'body', 0, 'start', 'body'],
+			anchor_offset: 1,
+			focus_offset: 2
+		});
+
+		session.selection = {
+			type: 'node',
+			path: ['page_1', 'body', 0, 'start', 'body'],
+			anchor_offset: 1,
+			focus_offset: 2
+		};
+		expect(get_parent_selection(session)).toEqual(pair_selection);
+
+		session.selection = { type: 'property', path: ['page_1', 'body', 0, 'end', 'media'] };
+		expect(get_parent_selection(session)).toEqual(pair_selection);
+
+		session.selection = pair_selection;
+		expect(get_parent_selection(session)).toBeNull();
 	});
 });
