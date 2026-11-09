@@ -62,6 +62,9 @@ function get_node_array_entries(
  * Return a node selection of the closest node around the selection that sits in a
  * node_array, or null at the top. Unlike Svedit's select_parent(), this passes over
  * nodes held by node properties, which a node selection cannot point to.
+ *
+ * Svedit's main branch has the same fix. Once a release ships it, remove this and
+ * call session.select_parent() instead; keep the guard in EditLinkCommand.
  */
 export function get_parent_selection(session: Session): NodeSelection | null {
 	const path = session.selection?.path;
