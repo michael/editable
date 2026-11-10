@@ -30,7 +30,8 @@ divider. It fills its grid cell, so frames in a row share one height. -->
 	target={render_as_link && target !== '_self' ? target : undefined}
 	class={[
 		'ew-card group/card block min-w-0 outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)',
-		outlined && 'h-full overflow-hidden rounded-(--image-border-radius) border border-(--stroke)'
+		outlined &&
+			'h-full overflow-hidden rounded-(--image-border-radius) border border-(--stroke) bg-(--background)'
 	]}
 	use:reveal
 >

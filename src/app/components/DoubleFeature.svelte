@@ -24,7 +24,9 @@
 			<div
 				class={[
 					'grid grid-cols-1 md:grid-cols-2',
-					node.layout === 'outlined' ? 'border border-(--stroke)' : 'gap-x-5 gap-y-16 sm:gap-x-7'
+					node.layout === 'outlined'
+						? 'border border-(--stroke) bg-(--background)'
+						: 'gap-x-5 gap-y-16 sm:gap-x-7'
 				]}
 				use:reveal
 			>

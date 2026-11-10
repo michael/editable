@@ -94,7 +94,7 @@ side pads out the rest of the wider gap that text columns get. -->
 			<!-- The media half fills with the muted color, and its border divides the halves. Text comes
 			first on phones. -->
 			<div
-				class="grid grid-cols-1 overflow-hidden rounded-(--image-border-radius) border border-(--stroke) md:grid-cols-2"
+				class="grid grid-cols-1 overflow-hidden rounded-(--image-border-radius) border border-(--stroke) bg-(--background) md:grid-cols-2"
 				use:reveal
 			>
 				<div class="flex flex-col justify-center p-6 sm:p-10 lg:p-14">{@render body()}</div>

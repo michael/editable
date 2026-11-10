@@ -36,11 +36,15 @@
 
 {#snippet card()}
 	<!-- Boxes fill with the muted color, accent boxes with the accent of their color set; app.css gives
-	their children matching tokens. Outlined boxes keep the background and draw a stroke border. -->
+	their children matching tokens. Outlined boxes fill with the background and draw a stroke border. -->
 	<div
 		class={[
 			'h-full px-6 py-8 sm:px-8 sm:py-10',
-			outlined ? 'border border-(--stroke)' : accent ? 'ew-accent-surface' : 'ew-muted-surface'
+			outlined
+				? 'border border-(--stroke) bg-(--background)'
+				: accent
+					? 'ew-accent-surface'
+					: 'ew-muted-surface'
 		]}
 		style:border-radius="var(--image-border-radius)"
 	>

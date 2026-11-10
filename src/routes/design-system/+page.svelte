@@ -988,7 +988,7 @@
 						<!-- A stroke border with the image radius frames media and text. The media runs edge to edge above a stroke divider, and the text sits in padding. In a grid, add h-full so frames in a row share one height. -->
 						<a
 							href="#card"
-							class="ew-card group/card block min-w-0 overflow-hidden rounded-(--image-border-radius) border border-(--stroke) outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
+							class="ew-card group/card block min-w-0 overflow-hidden rounded-(--image-border-radius) border border-(--stroke) bg-(--background) outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
 						>
 							<div class="aspect-4/3 overflow-hidden border-b border-(--stroke) bg-(--muted)">
 								<svg
@@ -1344,8 +1344,8 @@
 							class="rounded border border-(--stroke) bg-(--muted) box-decoration-clone px-1 font-mono text-[0.9em] leading-4 font-normal wrap-anywhere subpixel-antialiased"
 							>ew-accent-surface</code
 						>: they fill with the accent of their color set, and their children get matching tokens,
-						so every recipe inside stays readable. Outlined boxes keep the background and draw a
-						stroke border, so their children need no surface class.
+						so every recipe inside stays readable. Outlined boxes fill with the background and draw
+						a stroke border, so their children need no surface class.
 					</p>
 				</div>
 				<div class="grid items-start gap-5 sm:grid-cols-2 sm:gap-7 lg:max-w-5xl lg:grid-cols-3">
@@ -1377,7 +1377,7 @@
 						>
 					</div>
 					<div
-						class="flex flex-col items-start gap-5 rounded-(--image-border-radius) border border-(--stroke) px-6 py-8 sm:gap-7 sm:px-8 sm:py-10"
+						class="flex flex-col items-start gap-5 rounded-(--image-border-radius) border border-(--stroke) bg-(--background) px-6 py-8 sm:gap-7 sm:px-8 sm:py-10"
 					>
 						<h3 class="display-5">Keep it light</h3>
 						<p class="body-base">
