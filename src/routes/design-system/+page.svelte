@@ -836,14 +836,11 @@
 
 				<!--
 				An eyebrow labels the heading below it: bold 12px capitals in the accent color on a muted
-				box. The corner mark is the wrapper's ::before: a box with thick top and start
-				borders, so only an L shows.
+				box.
 			-->
 				<div id="type-eyebrow" class="space-y-3">
 					<p class="text-sm text-(--muted-foreground)">eyebrow</p>
-					<div
-						class="relative inline-block bg-(--muted) px-2.5 py-1 before:pointer-events-none before:absolute before:inset-s-0 before:top-0 before:size-2 before:border-s-4 before:border-t-4 before:border-(--accent)"
-					>
+					<div class="inline-block bg-(--muted) px-2.5 py-1">
 						<p class="body-sm text-xs font-bold text-(--accent) uppercase">Visual builder</p>
 					</div>
 				</div>
@@ -1354,9 +1351,7 @@
 				<div class="grid items-start gap-5 sm:grid-cols-2 sm:gap-7 lg:max-w-5xl lg:grid-cols-3">
 					<div class="ew-muted-surface rounded-(--image-border-radius) px-6 py-8 sm:px-8 sm:py-10">
 						<div class="flex flex-col items-center gap-5 text-center text-balance sm:gap-7">
-							<div
-								class="relative inline-block bg-(--muted) px-2.5 py-1 before:pointer-events-none before:absolute before:inset-s-0 before:top-0 before:size-2 before:border-s-4 before:border-t-4 before:border-(--accent)"
-							>
+							<div class="inline-block bg-(--muted) px-2.5 py-1">
 								<p class="body-sm text-xs font-bold text-(--accent) uppercase">Personal</p>
 							</div>
 							<h3 class="display-5">Make it your own</h3>
