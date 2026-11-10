@@ -97,8 +97,9 @@
 
 {#snippet flush()}
 	<div class="mx-auto max-w-7xl">
-		<div class="figure px-5 py-0 sm:px-7">
-			{@render media_frame()}
+		<!-- Edge to edge on phones, like the wide layout. -->
+		<div class="figure py-0 sm:px-7">
+			{@render media_frame('sm:rounded-(--image-border-radius)')}
 		</div>
 	</div>
 {/snippet}
