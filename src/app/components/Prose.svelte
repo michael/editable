@@ -116,7 +116,7 @@
 	</div>
 {/snippet}
 
-<Node class="ew-prose layout-{layout} bg-(--background) text-(--foreground)" {path}>
+<Node class="ew-prose layout-{layout} text-(--foreground)" {path}>
 	{@const layouts = {
 		'narrow-left': narrow_left,
 		'narrow-center': narrow_center,

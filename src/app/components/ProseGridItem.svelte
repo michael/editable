@@ -54,7 +54,7 @@
 	</div>
 {/snippet}
 
-<Node class="ew-prose-grid-item bg-(--background) text-(--foreground)" {path}>
+<Node class="ew-prose-grid-item text-(--foreground)" {path}>
 	{#if boxed || outlined}
 		{@render card()}
 	{:else}

@@ -12,7 +12,7 @@
 	let padding_bottom_generous = $derived(!section || section.is_end);
 </script>
 
-<Node class="ew-double-feature bg-(--background) text-(--foreground)" {path}>
+<Node class="ew-double-feature text-(--foreground)" {path}>
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[

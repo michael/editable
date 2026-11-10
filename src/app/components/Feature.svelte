@@ -111,7 +111,7 @@ side pads out the rest of the wider gap that text columns get. -->
 	</div>
 {/snippet}
 
-<Node class="ew-feature bg-(--background) text-(--foreground)" {path}>
+<Node class="ew-feature text-(--foreground)" {path}>
 	{#if outlined}
 		{@render outlined_layout()}
 	{:else if feature_layout === 'image-left'}

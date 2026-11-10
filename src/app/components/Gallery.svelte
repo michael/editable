@@ -57,7 +57,7 @@
 </script>
 
 <Node {path}>
-	<div class="bg-(--background) text-(--foreground)">
+	<div class="text-(--foreground)">
 		<div class="mx-auto w-full max-w-7xl">
 			<div
 				class={[

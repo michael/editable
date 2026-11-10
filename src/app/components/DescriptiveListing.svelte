@@ -20,7 +20,7 @@
 					padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 				]}
 			>
-				<div class="max-w-4xl bg-(--background) px-5 text-(--foreground) sm:px-7">
+				<div class="max-w-4xl px-5 text-(--foreground) sm:px-7">
 					<NodeArrayProperty class="flex flex-col" path={[...path, 'items']} />
 				</div>
 			</div>
@@ -37,7 +37,7 @@
 					padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 				]}
 			>
-				<div class="mx-auto max-w-4xl bg-(--background) px-5 text-(--foreground) sm:px-7">
+				<div class="mx-auto max-w-4xl px-5 text-(--foreground) sm:px-7">
 					<NodeArrayProperty class="flex flex-col" path={[...path, 'items']} />
 				</div>
 			</div>
@@ -54,7 +54,7 @@
 					padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 				]}
 			>
-				<div class="ml-auto max-w-4xl bg-(--background) px-5 text-(--foreground) sm:px-7">
+				<div class="ml-auto max-w-4xl px-5 text-(--foreground) sm:px-7">
 					<NodeArrayProperty class="flex flex-col" path={[...path, 'items']} />
 				</div>
 			</div>
@@ -72,7 +72,7 @@
 					padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 				]}
 			>
-				<div class="bg-(--background) text-(--foreground)">
+				<div class="text-(--foreground)">
 					<NodeArrayProperty class="flex flex-col" path={[...path, 'items']} />
 				</div>
 			</div>
@@ -90,7 +90,7 @@
 					padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 				]}
 			>
-				<div class="bg-(--background) text-(--foreground)">
+				<div class="text-(--foreground)">
 					<NodeArrayProperty
 						class="grid grid-cols-1 gap-x-10 gap-y-0 lg:grid-cols-2 lg:gap-x-14 lg:[--row:1]"
 						path={[...path, 'items']}

@@ -149,7 +149,7 @@
 	</div>
 {/snippet}
 
-<Node class="ew-code-block bg-(--background) text-(--foreground)" {path}>
+<Node class="ew-code-block text-(--foreground)" {path}>
 	{@const layouts = {
 		'narrow-left': narrow_left,
 		'narrow-center': narrow_center,

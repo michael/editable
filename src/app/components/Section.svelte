@@ -13,8 +13,14 @@
 	const corner_class = 'absolute size-2 border-(--stroke) sm:size-3.5';
 </script>
 
-<!-- The color set reassigns every color token, so blocks inside follow it without changes of their own. -->
-<section class="ew-{node.colorset} bg-(--background) text-(--foreground)">
+<!-- The color set reassigns every color token, so blocks inside follow it without changes of their own.
+Color set 1 is the page's own, so only the others paint their background. -->
+<section
+	class={[
+		`ew-${node.colorset} text-(--foreground)`,
+		node.colorset !== 'colorset-1' && 'bg-(--background)'
+	]}
+>
 	{#if svedit.editable}
 		<div class="relative">
 			<div class="{bracket_class} top-1.5 sm:top-4" contenteditable="false" aria-hidden="true">

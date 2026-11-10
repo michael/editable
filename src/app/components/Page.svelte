@@ -183,7 +183,7 @@
 				<NodeArrayProperty class="body-node-array" path={[...path, 'body']} />
 			{/if}
 		</main>
-		<div class="bg-(--background) text-(--foreground)">
+		<div class="text-(--foreground)">
 			<Footer path={[...path, 'footer']} />
 		</div>
 		{#if svedit.editable}

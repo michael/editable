@@ -687,7 +687,7 @@
 	let padding_bottom_generous = $derived(!section || section.is_end);
 &lt;/script&gt;
 
-&lt;Node &#123;path&#125; class="bg-(--background) text-(--foreground)"&gt;
+&lt;Node &#123;path&#125; class="text-(--foreground)"&gt;
 	&lt;div class="mx-auto max-w-7xl"&gt;
 		&lt;div class=&#123;[
 			'px-5 sm:px-7',

@@ -185,7 +185,7 @@ The `Nodes['hero']` annotation types the node against the schema, so `hero.` aut
 `Node` wraps the output of a node component. It gives the rendered element its document identity and connects selection, visibility tracking, node-array marks and annotations, and editor positioning:
 
 ```svelte
-<Node tag="section" class="ew-hero bg-(--background) text-(--foreground)" {path}>
+<Node tag="section" class="ew-hero text-(--foreground)" {path}>
 	<!-- The Hero's ordinary Svelte layout -->
 </Node>
 ```
@@ -684,7 +684,7 @@ Create `src/app/components/Hero.svelte`. It reads the node at `path`, renders ea
 	</div>
 {/snippet}
 
-<Node class="ew-hero bg-(--background) text-(--foreground)" {path}>
+<Node class="ew-hero text-(--foreground)" {path}>
 	<div class="mx-auto max-w-7xl">
 		{#if layout === 'side-by-side'}
 			<div class="grid items-center gap-10 px-5 py-16 sm:px-7 md:grid-cols-2">
