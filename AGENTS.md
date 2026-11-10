@@ -45,7 +45,7 @@ Editable is minimalistic by design: less, but better.
 
 ## Design system
 
-- Inline formatting styles (emphasis, strong, link, code, and highlight) are mutually exclusive. Never nest them or apply multiple styles to the same text.
+- Inline formatting styles (emphasis, strong, strikethrough, link, code, and highlight) are mutually exclusive. Never nest them or apply multiple styles to the same text.
 
 - Consult the [design system source](src/routes/design-system/+page.svelte) before styling UI. With the development server running, the user can open [the design system in a browser](http://localhost:5173/design-system) to inspect typography, spacing, buttons, and editor pills, and inspect the source for their recipes. Shared tokens and typography utilities live in `src/app.css`. Follow the UI verification rules above for agent browser use.
 - Keep the design system focused on reusable primitives, such as typography, spacing, colors, controls, and cards. Higher-level compositions and behavior belong in application code and components: for example, document the reusable Card primitive in the design system, while galleries and carousels compose it in application components.

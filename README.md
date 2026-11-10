@@ -385,8 +385,8 @@ page {
 	description: text    // no marks
 	image: image         // preview image for page metadata
 	body: [prose | prose_grid | figure | captioned_figure | gallery | feature |
-	       titled_gallery | descriptive_gallery | listing | descriptive_listing |
-	       accordion | code_block]
+	       double_feature | titled_gallery | descriptive_gallery | listing |
+	       descriptive_listing | accordion | code_block]
 	                     // supports section marks for visual grouping
 	banner: banner
 	nav: nav
@@ -423,7 +423,8 @@ footer_link { href, target, label: text }
 
 prose { layout: narrow-left | narrow-center | narrow-right | narrow-centered-text |
                 wide-left | wide-centered-text, body: [rich content] }
-prose_grid { layout: plain | plain-centered-text | boxed | boxed-centered-text,
+prose_grid { layout: plain | plain-centered-text | outlined | outlined-centered-text | boxed |
+                     boxed-centered-text | boxed-accent | boxed-accent-centered-text,
              items: [prose_grid_item] }
 prose_grid_item { body: [rich content] }
 
@@ -431,11 +432,11 @@ prose_grid_item { body: [rich content] }
 paragraph, paragraph_sm, paragraph_lg, paragraph_xl,
 heading_1_xl, heading_1 … heading_4, eyebrow {
 	layout: regular | muted
-	content: text      // marks: strong, emphasis, code, highlight, link
+	content: text      // marks: strong, emphasis, strikethrough, code, highlight, link
 }
 
 list { layout: square | check | decimal | lower-alpha, list_items: [list_item] }
-list_item { content: text }                        // marks: strong, emphasis, code, highlight, link
+list_item { content: text }                        // marks: strong, emphasis, strikethrough, code, highlight, link
 
 code_block { layout: narrow-left | narrow-center | narrow-right | wide,
              language: plain | [language id], wrap_lines: boolean,
@@ -461,7 +462,7 @@ image, video {
 
 figure { layout: wide | narrow-left | narrow-center | narrow-right | flush | full-bleed,
          href, target, media: image | video }
-captioned_figure { href, target, media: image | video, caption: text }   // caption marks: strong, emphasis, code, highlight, link
+captioned_figure { href, target, media: image | video, caption: text }   // caption marks: strong, emphasis, strikethrough, code, highlight, link
 supporting_media {
 	href, target
 	media_max_width: integer      // 0 = no maximum
@@ -477,7 +478,8 @@ gallery { layout: mixed | portraits | squares | landscapes | compact-landscapes,
           gallery_items: [gallery_item] }
 gallery_item { href, target, media: image | video }
 
-titled_gallery { layout: cards | cards-2-columns | compact | carousel | carousel-2-columns,
+titled_gallery { layout: cards | outlined | cards-2-columns | outlined-2-columns | compact |
+                         carousel | carousel-2-columns,
                  items: [titled_gallery_item] }
 titled_gallery_item {
 	href, target
@@ -485,7 +487,8 @@ titled_gallery_item {
 	title: text          // single line; marks: emphasis, highlight
 }
 
-descriptive_gallery { layout: cards | cards-2-columns | compact | carousel | carousel-2-columns,
+descriptive_gallery { layout: cards | outlined | cards-2-columns | outlined-2-columns | compact |
+                              carousel | carousel-2-columns,
                       items: [descriptive_gallery_item] }
 descriptive_gallery_item {
 	href, target
@@ -518,7 +521,9 @@ accordion_item {
 	body: [rich content without headings]
 }
 
-feature { layout: image-right | image-left, href, target, media: image | video, body: [rich content] }
+feature { layout: image-right | image-left | outlined-image-right | outlined-image-left, href, target, media: image | video, body: [rich content] }
+double_feature { layout: plain | outlined, start: double_feature_item, end: double_feature_item }
+double_feature_item { href, target, media: image | video, body: [rich content] }
 
 button_group { buttons: [button] }
 button { layout: primary | primary-accent | secondary | link, href, target, label: text }
@@ -537,9 +542,9 @@ button { layout: primary | primary-accent | secondary | link, href, target, labe
 Marks are part of the rendered content: formatting such as emphasis and links for text, or grouping such as sections for node arrays. They are mutually exclusive within a property, so marked ranges cannot overlap. Editable defines these mark types:
 
 ```ts
-strong, emphasis, code, highlight   // no properties
-link { href, target }               // internal links use root-relative page URLs
-section { colorset }                // groups a range of page body blocks in a color set
+strong, emphasis, strikethrough, code, highlight   // no properties
+link { href, target }                              // internal links use root-relative page URLs
+section { colorset }                               // groups a range of page body blocks in a color set
 ```
 
 Annotations are metadata layered over content, such as comments, review markers, or application-specific labels. They may overlap marks and other annotations. Svedit preserves and transforms their ranges, but does not render them in place; your application interprets them through CSS classes, component props, or overlay UI.

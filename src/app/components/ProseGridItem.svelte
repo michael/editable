@@ -13,6 +13,7 @@
 	let layout = $derived(prose_grid_node.layout || 'plain');
 	let boxed = $derived(layout.startsWith('boxed'));
 	let accent = $derived(layout.startsWith('boxed-accent'));
+	let outlined = $derived(layout.startsWith('outlined'));
 	let centered = $derived(layout.endsWith('centered-text'));
 
 	setContext('prose', {
@@ -35,9 +36,12 @@
 
 {#snippet card()}
 	<!-- Boxes fill with the muted color, accent boxes with the accent of their color set; app.css gives
-	their children matching tokens. -->
+	their children matching tokens. Outlined boxes keep the background and draw a stroke border. -->
 	<div
-		class={['h-full px-6 py-8 sm:px-8 sm:py-10', accent ? 'ew-accent-surface' : 'ew-muted-surface']}
+		class={[
+			'h-full px-6 py-8 sm:px-8 sm:py-10',
+			outlined ? 'border border-(--stroke)' : accent ? 'ew-accent-surface' : 'ew-muted-surface'
+		]}
 		style:border-radius="var(--image-border-radius)"
 	>
 		<div class={[centered && 'text-center text-balance']}>
@@ -47,7 +51,7 @@
 {/snippet}
 
 <Node class="ew-prose-grid-item bg-(--background) text-(--foreground)" {path}>
-	{#if boxed}
+	{#if boxed || outlined}
 		{@render card()}
 	{:else}
 		{@render plain()}

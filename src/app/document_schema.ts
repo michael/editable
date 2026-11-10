@@ -18,7 +18,7 @@ export const MEDIA_DEFAULTS = {
 	object_fit: 'contain'
 };
 
-const ALL_MARKS = ['strong', 'emphasis', 'code', 'highlight', 'link'];
+const ALL_MARKS = ['strong', 'emphasis', 'strikethrough', 'code', 'highlight', 'link'];
 const MINIMAL_MARKS = ['emphasis', 'highlight'];
 const NO_MARKS = [];
 const TEXT_NODE_TYPES = [
@@ -72,6 +72,7 @@ export const document_schema = define_document_schema({
 					'captioned_figure',
 					'gallery',
 					'feature',
+					'double_feature',
 					'titled_gallery',
 					'descriptive_gallery',
 					'listing',
@@ -263,6 +264,8 @@ export const document_schema = define_document_schema({
 				values: [
 					'plain',
 					'plain-centered-text',
+					'outlined',
+					'outlined-centered-text',
 					'boxed',
 					'boxed-centered-text',
 					'boxed-accent',
@@ -579,7 +582,15 @@ export const document_schema = define_document_schema({
 		properties: {
 			layout: {
 				type: 'string',
-				values: ['cards', 'cards-2-columns', 'compact', 'carousel', 'carousel-2-columns'],
+				values: [
+					'cards',
+					'outlined',
+					'cards-2-columns',
+					'outlined-2-columns',
+					'compact',
+					'carousel',
+					'carousel-2-columns'
+				],
 				default: 'cards'
 			},
 			items: {
@@ -610,7 +621,15 @@ export const document_schema = define_document_schema({
 		properties: {
 			layout: {
 				type: 'string',
-				values: ['cards', 'cards-2-columns', 'compact', 'carousel', 'carousel-2-columns'],
+				values: [
+					'cards',
+					'outlined',
+					'cards-2-columns',
+					'outlined-2-columns',
+					'compact',
+					'carousel',
+					'carousel-2-columns'
+				],
 				default: 'cards'
 			},
 			items: {
@@ -740,7 +759,45 @@ export const document_schema = define_document_schema({
 	feature: {
 		kind: 'block',
 		properties: {
-			layout: { type: 'string', values: ['image-right', 'image-left'], default: 'image-right' },
+			layout: {
+				type: 'string',
+				values: ['image-right', 'image-left', 'outlined-image-right', 'outlined-image-left'],
+				default: 'image-right'
+			},
+			href: { type: 'string' },
+			target: { type: 'string', default: '_self' },
+			media: {
+				type: 'node',
+				node_types: ['image', 'video'],
+				default_node_type: 'image'
+			},
+			body: {
+				type: 'node_array',
+				node_types: RICH_CONTENT_NODE_TYPES,
+				default_node_type: 'paragraph'
+			}
+		}
+	},
+	// Exactly two features side by side, each with its media above its body.
+	double_feature: {
+		kind: 'block',
+		properties: {
+			layout: { type: 'string', values: ['plain', 'outlined'], default: 'plain' },
+			start: {
+				type: 'node',
+				node_types: ['double_feature_item'],
+				default_node_type: 'double_feature_item'
+			},
+			end: {
+				type: 'node',
+				node_types: ['double_feature_item'],
+				default_node_type: 'double_feature_item'
+			}
+		}
+	},
+	double_feature_item: {
+		kind: 'block',
+		properties: {
 			href: { type: 'string' },
 			target: { type: 'string', default: '_self' },
 			media: {
@@ -768,6 +825,10 @@ export const document_schema = define_document_schema({
 		properties: {}
 	},
 	emphasis: {
+		kind: 'mark',
+		properties: {}
+	},
+	strikethrough: {
 		kind: 'mark',
 		properties: {}
 	},

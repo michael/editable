@@ -31,7 +31,9 @@
 				<NodeArrayProperty
 					class={layout === 'compact'
 						? 'grid grid-cols-1 gap-x-10 gap-y-8 [--row:1] md:grid-cols-2 md:gap-y-7 lg:gap-x-14'
-						: `grid grid-cols-1 gap-x-5 gap-y-10 [--row:1] sm:gap-x-7 md:grid-cols-2 md:gap-y-20 ${layout === 'cards-2-columns' ? '' : 'xl:grid-cols-3'}`}
+						: layout.startsWith('outlined')
+							? `grid grid-cols-1 gap-5 [--row:1] sm:gap-7 md:grid-cols-2 ${layout === 'outlined-2-columns' ? '' : 'xl:grid-cols-3'}`
+							: `grid grid-cols-1 gap-x-5 gap-y-10 [--row:1] sm:gap-x-7 md:grid-cols-2 md:gap-y-20 ${layout === 'cards-2-columns' ? '' : 'xl:grid-cols-3'}`}
 					path={[...path, 'items']}
 				/>
 			{/if}

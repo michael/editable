@@ -86,12 +86,15 @@ import Figure from './components/Figure.svelte';
 import CaptionedFigure from './components/CaptionedFigure.svelte';
 import SupportingMedia from './components/SupportingMedia.svelte';
 import Feature from './components/Feature.svelte';
+import DoubleFeature from './components/DoubleFeature.svelte';
+import DoubleFeatureItem from './components/DoubleFeatureItem.svelte';
 import Button from './components/Button.svelte';
 import ButtonGroup from './components/ButtonGroup.svelte';
 import Image from './components/Image.svelte';
 import Video from './components/Video.svelte';
 import Strong from './components/Strong.svelte';
 import Emphasis from './components/Emphasis.svelte';
+import Strikethrough from './components/Strikethrough.svelte';
 import Code from './components/Code.svelte';
 import Highlight from './components/Highlight.svelte';
 import Link from './components/Link.svelte';
@@ -144,6 +147,34 @@ function insert_text_node(
 		anchor_offset: 0,
 		focus_offset: 0
 	});
+}
+
+/** Create a double feature item with an empty image, heading, and paragraph, and return its id. */
+function create_double_feature_item(tr: Transaction) {
+	const image = { id: nanoid(), type: 'image', ...MEDIA_DEFAULTS };
+	const heading = {
+		id: nanoid(),
+		type: 'heading_3',
+		content: { content: '', marks: [], annotations: [] }
+	};
+	const paragraph = {
+		id: nanoid(),
+		type: 'paragraph',
+		content: { content: '', marks: [], annotations: [] }
+	};
+	const item = {
+		id: nanoid(),
+		type: 'double_feature_item',
+		href: '',
+		target: '_self',
+		media: image.id,
+		body: { nodes: [heading.id, paragraph.id], marks: [], annotations: [] }
+	};
+	tr.create(image);
+	tr.create(heading);
+	tr.create(paragraph);
+	tr.create(item);
+	return item.id;
 }
 
 /**
@@ -220,6 +251,7 @@ export const document_config = {
 	mark_html_exporters: {
 		strong: (_node, content) => `<strong>${content}</strong>`,
 		emphasis: (_node, content) => `<em>${content}</em>`,
+		strikethrough: (_node, content) => `<s>${content}</s>`,
 		code: (_node, content) => `<code>${content}</code>`,
 		highlight: (_node, content) => `<mark>${content}</mark>`,
 		link: (node, content) => {
@@ -276,6 +308,8 @@ export const document_config = {
 		captioned_figure: CaptionedFigure,
 		supporting_media: SupportingMedia,
 		feature: Feature,
+		double_feature: DoubleFeature,
+		double_feature_item: DoubleFeatureItem,
 		gallery: Gallery,
 		gallery_item: GalleryItem,
 		titled_gallery: TitledGallery,
@@ -290,6 +324,7 @@ export const document_config = {
 		accordion_item: AccordionItem,
 		strong: Strong,
 		emphasis: Emphasis,
+		strikethrough: Strikethrough,
 		code: Code,
 		highlight: Highlight,
 		link: Link,
@@ -415,6 +450,7 @@ export const document_config = {
 			break_text_node: new BreakTextNodeCommand(structural_context),
 			toggle_strong: new ToggleMarkCommand('strong', context),
 			toggle_emphasis: new ToggleMarkCommand('emphasis', context),
+			toggle_strikethrough: new ToggleMarkCommand('strikethrough', context),
 			toggle_code: new ToggleMarkCommand('code', context),
 			toggle_highlight: new ToggleMarkCommand('highlight', context),
 			toggle_section: new ToggleMarkCommand('section', structural_context),
@@ -450,6 +486,7 @@ export const document_config = {
 			'alt+enter': [commands.edit_image],
 			'meta+b,ctrl+b': [commands.toggle_strong],
 			'meta+i,ctrl+i': [commands.toggle_emphasis],
+			'meta+shift+x,ctrl+shift+x': [commands.toggle_strikethrough],
 			'meta+shift+c,ctrl+shift+c': [commands.toggle_code],
 			'ctrl+shift+f': [commands.cycle_colorset],
 			'meta+u,ctrl+u': [commands.toggle_highlight],
@@ -687,6 +724,17 @@ export const document_config = {
 			});
 
 			tr.insert_nodes([new_feature_id]);
+		},
+		double_feature: function (tr) {
+			const new_double_feature = {
+				id: nanoid(),
+				type: 'double_feature',
+				layout: 'plain',
+				start: create_double_feature_item(tr),
+				end: create_double_feature_item(tr)
+			};
+			tr.create(new_double_feature);
+			tr.insert_nodes([new_double_feature.id]);
 		},
 		figure: function (tr, _content = { content: '', marks: [], annotations: [] }, layout = 'wide') {
 			const new_figure_id = tr.build('new_figure', {
