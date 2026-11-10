@@ -858,7 +858,7 @@
 				</div>
 
 				<!--
-				Based on Emphasis, Strong, Link, Code, and Highlight in src/app/components.
+				Based on Emphasis, Strong, Strikethrough, Link, Code, and Highlight in src/app/components.
 				Formatting inherits the surrounding size and color unless its meaning calls for a change.
 				Inline formatting styles are mutually exclusive: never nest or combine them on the same text.
 				Use semantic HTML and keep marks inline so sentences can wrap naturally.
@@ -879,6 +879,14 @@
 						<p class="max-w-prose body-base">
 							Keep the <strong class="font-[weight:bolder]">most important information</strong> easy to
 							find.
+						</p>
+					</div>
+
+					<div id="format-strikethrough" class="space-y-3">
+						<h3 class="text-sm text-(--muted-foreground)">Strikethrough · s</h3>
+						<!-- Marks text that no longer applies. Keep the surrounding color; the line scales with the font size like link underlines. -->
+						<p class="max-w-prose body-base">
+							Ships in <s class="line-through decoration-[0.0625em]">two weeks</s> three days.
 						</p>
 					</div>
 

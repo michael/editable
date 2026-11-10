@@ -18,7 +18,7 @@ export const MEDIA_DEFAULTS = {
 	object_fit: 'contain'
 };
 
-const ALL_MARKS = ['strong', 'emphasis', 'code', 'highlight', 'link'];
+const ALL_MARKS = ['strong', 'emphasis', 'strikethrough', 'code', 'highlight', 'link'];
 const MINIMAL_MARKS = ['emphasis', 'highlight'];
 const NO_MARKS = [];
 const TEXT_NODE_TYPES = [
@@ -825,6 +825,10 @@ export const document_schema = define_document_schema({
 		properties: {}
 	},
 	emphasis: {
+		kind: 'mark',
+		properties: {}
+	},
+	strikethrough: {
 		kind: 'mark',
 		properties: {}
 	},

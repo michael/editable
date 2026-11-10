@@ -432,11 +432,11 @@ prose_grid_item { body: [rich content] }
 paragraph, paragraph_sm, paragraph_lg, paragraph_xl,
 heading_1_xl, heading_1 … heading_4, eyebrow {
 	layout: regular | muted
-	content: text      // marks: strong, emphasis, code, highlight, link
+	content: text      // marks: strong, emphasis, strikethrough, code, highlight, link
 }
 
 list { layout: square | check | decimal | lower-alpha, list_items: [list_item] }
-list_item { content: text }                        // marks: strong, emphasis, code, highlight, link
+list_item { content: text }                        // marks: strong, emphasis, strikethrough, code, highlight, link
 
 code_block { layout: narrow-left | narrow-center | narrow-right | wide,
              language: plain | [language id], wrap_lines: boolean,
@@ -462,7 +462,7 @@ image, video {
 
 figure { layout: wide | narrow-left | narrow-center | narrow-right | flush | full-bleed,
          href, target, media: image | video }
-captioned_figure { href, target, media: image | video, caption: text }   // caption marks: strong, emphasis, code, highlight, link
+captioned_figure { href, target, media: image | video, caption: text }   // caption marks: strong, emphasis, strikethrough, code, highlight, link
 supporting_media {
 	href, target
 	media_max_width: integer      // 0 = no maximum
@@ -542,9 +542,9 @@ button { layout: primary | primary-accent | secondary | link, href, target, labe
 Marks are part of the rendered content: formatting such as emphasis and links for text, or grouping such as sections for node arrays. They are mutually exclusive within a property, so marked ranges cannot overlap. Editable defines these mark types:
 
 ```ts
-strong, emphasis, code, highlight   // no properties
-link { href, target }               // internal links use root-relative page URLs
-section { colorset }                // groups a range of page body blocks in a color set
+strong, emphasis, strikethrough, code, highlight   // no properties
+link { href, target }                              // internal links use root-relative page URLs
+section { colorset }                               // groups a range of page body blocks in a color set
 ```
 
 Annotations are metadata layered over content, such as comments, review markers, or application-specific labels. They may overlap marks and other annotations. Svedit preserves and transforms their ranges, but does not render them in place; your application interprets them through CSS classes, component props, or overlay UI.

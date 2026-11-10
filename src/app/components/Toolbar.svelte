@@ -674,6 +674,33 @@
 										</svg>
 									</button>
 
+									<!-- Strikethrough -->
+									<button
+										class="{tw_toolbar_btn} {session.commands.toggle_strikethrough?.disabled
+											? tw_toolbar_btn_disabled
+											: tw_toolbar_btn_hover}"
+										class:!text-(--editing)={session.commands.toggle_strikethrough?.active}
+										class:!bg-(--editing-muted)={session.commands.toggle_strikethrough?.active}
+										onmousedown={handle_btn_mousedown}
+										onclick={(e) => handle_btn_click(e, session.commands.toggle_strikethrough)}
+										aria-label="Strikethrough"
+										use:tooltip={{ label: 'Strikethrough', keys: ['⌘', '⇧', 'X'] }}
+									>
+										<svg
+											class="size-6"
+											viewBox="0 0 24 24"
+											fill="none"
+											xmlns="http://www.w3.org/2000/svg"
+											aria-hidden="true"
+										>
+											<path
+												d="M16.5 7.5C16.5 5.5 14.5 4.5 12 4.5C9.5 4.5 7.5 5.6 7.5 7.75C7.5 9.6 9.2 10.4 11 11M14 13.25C15.6 14 16.5 15 16.5 16.4C16.5 18.5 14.5 19.5 12 19.5C9.5 19.5 7.5 18.4 7.5 16.5M4.5 12H19.5"
+												stroke="currentColor"
+												stroke-linecap="round"
+											/>
+										</svg>
+									</button>
+
 									<!-- Code -->
 									<button
 										class="{tw_toolbar_btn} {session.commands.toggle_code?.disabled
