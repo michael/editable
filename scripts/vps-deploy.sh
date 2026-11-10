@@ -410,6 +410,57 @@ command -v caddy >/dev/null || {
 	apt-get install -y -qq caddy
 }
 
+# Kernel hardening against CVE-2026-98432, a use-after-free in the IPv4 TCP
+# handshake. Caddy, a Go program, listens with multipath TCP, which the known
+# exploit needs: turn MPTCP off and restart Caddy onto plain TCP listeners.
+if [ "$(sysctl -n net.mptcp.enabled 2>/dev/null || echo 0)" != 0 ]; then
+	echo "→ Disabling multipath TCP"
+	echo 'net.mptcp.enabled = 0' >/etc/sysctl.d/90-editable.conf
+	sysctl -q -p /etc/sysctl.d/90-editable.conf
+	systemctl restart caddy
+fi
+# The bug is reached through TCP packets with IP options, which real traffic
+# never carries. Drop them before routing, also on reboot.
+mkdir -p /etc/editable
+cat >/etc/editable/drop-ip-options.nft <<'NFT'
+add table ip editable
+delete table ip editable
+table ip editable {
+	chain prerouting {
+		type filter hook prerouting priority -300;
+		ip protocol tcp ip hdrlength != 5 drop
+	}
+}
+NFT
+cat >/etc/systemd/system/editable-nft.service <<'UNIT'
+[Unit]
+Description=Drop IPv4 TCP packets with IP options (CVE-2026-98432)
+Before=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /etc/editable/drop-ip-options.nft
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+command -v nft >/dev/null || apt-get install -y -qq nftables
+systemctl daemon-reload
+systemctl enable -q editable-nft.service
+systemctl restart editable-nft.service
+
+# Security updates, kernels included, install unattended; a kernel only takes
+# effect after a reboot.
+command -v unattended-upgrade >/dev/null || apt-get install -y -qq unattended-upgrades
+[ -f /etc/apt/apt.conf.d/20auto-upgrades ] || printf '%s\n' \
+	'APT::Periodic::Update-Package-Lists "1";' \
+	'APT::Periodic::Unattended-Upgrade "1";' >/etc/apt/apt.conf.d/20auto-upgrades
+if [ -f /var/run/reboot-required ]; then
+	echo "Warning: the server needs a reboot to run its updated kernel — ssh in and run: sudo reboot" >&2
+fi
+
 # 1 GB swap on small machines, so the running app never gets OOM-killed.
 total_kb=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
 if [ "$total_kb" -lt 2000000 ] && [ "$(swapon --noheadings | wc -l)" -eq 0 ]; then
