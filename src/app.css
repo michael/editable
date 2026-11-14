@@ -244,6 +244,12 @@ lack contrast with it. There the caret follows the text color and text selection
 	content: none;
 }
 
+/* Selection frames and gap markers follow nodes scrolled partly out of a carousel, so clip them
+instead of letting the page grow sideways. */
+html {
+	overflow-x: clip;
+}
+
 /* Selection frames show the logo's corner marks instead of Svedit's outline, in the page's editing
 color over its light fill. The marks are a 4px border masked down to 8px corners. .editable outranks
 Svedit's own frame style. */
