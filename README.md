@@ -841,6 +841,16 @@ fly deploy
 
 Without this step, the site may redirect to its `fly.dev` address and generate the wrong canonical and social metadata.
 
+### Add your license key
+
+Editable is free for non-commercial websites. A commercial website needs a [license](https://editable.website/#pricing) for its domain. Until a license key is set, editors see a short hint about licensing in edit mode. Set the key as a secret, or in `.env` to hide the hint locally:
+
+```sh
+fly secrets set LICENSE_KEY="EDITABLE_V2_…"
+```
+
+Editable does not check the key itself. To see whether a key is valid, paste it into [editable.website/verify-license](https://editable.website/verify-license).
+
 ### Cache assets with Cloudflare
 
 Cloudflare provides a free CDN and reduces bandwidth and file-serving work on your web server. Delegate your domain's nameservers to Cloudflare, and enable the proxy (orange cloud) for the DNS records that point to your site. Then add a **Cache Rule** for `/assets/`:

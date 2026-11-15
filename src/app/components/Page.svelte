@@ -217,6 +217,20 @@
 								</p>
 							{/if}
 						</div>
+						{#if page.data.license_hint}
+							<p
+								contenteditable="false"
+								class="mt-10 border border-(--stroke) bg-(--background) px-3 py-1 text-center text-sm leading-5 text-balance text-(--muted-foreground)"
+							>
+								Editable is free for non-commercial use, otherwise
+								<a
+									class="underline hover:text-(--foreground)"
+									href="https://editable.website/#pricing"
+									target="_blank"
+									rel="noopener">get a license</a
+								>.
+							</p>
+						{/if}
 					</div>
 				</div>
 			</div>

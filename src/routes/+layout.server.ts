@@ -1,5 +1,5 @@
 import { site, request_language } from '#app/server_site.js';
-import { VERCEL } from '$app/env/private';
+import { LICENSE_KEY, VERCEL } from '$app/env/private';
 import {
 	default_banner_document,
 	default_footer_document,
@@ -59,6 +59,8 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		has_backend,
 		user: locals.user,
 		is_editor: locals.is_editor,
+		// Commercial websites need a license; editors are reminded while no key is set.
+		license_hint: locals.is_editor && !LICENSE_KEY,
 		origin: site.origin,
 		site_base: site.base,
 		favicon: site_metadata.favicon,

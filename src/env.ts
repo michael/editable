@@ -72,6 +72,11 @@ export const variables = defineEnvVars({
 		description: 'Used to decide whether session cookies are marked secure.',
 		schema: optional((value) => value)
 	},
+	LICENSE_KEY: {
+		description:
+			'License key for a commercial website, from editable.website. Without one, editors see a hint about licensing in edit mode.',
+		schema: optional((value) => value)
+	},
 	DEMO_MODE: {
 		public: true,
 		description: 'Set to true or 1 to show the Edit button to unauthenticated visitors.',
