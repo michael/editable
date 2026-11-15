@@ -12,7 +12,7 @@ Permission is hereby granted to any person obtaining a copy of Editable and its 
 
 **Make it yours.** Subject to this license, a website operated under it may be modified and operated without additional usage limits. The Software may be provided only to the website owner, contractors, and hosting providers as necessary to develop or operate that website. It may not otherwise be sold, sublicensed, published, or redistributed as a standalone product. The website owner is responsible for those recipients’ compliance with this license.
 
-**Use it to publish a website.** Local evaluation and prototyping for other uses are permitted. A separate written agreement is required to operate the Software primarily as anything else, including SaaS, website builders, multi-customer platforms, business applications, presentations, digital signage, or kiosks.
+**Use it to publish a website.** Local evaluation and prototyping for other uses are permitted. A separate written agreement is required to redistribute the Software, or to operate it primarily as anything else, including SaaS, website builders, white-label products, multi-customer platforms, business applications, presentations, digital signage, or kiosks.
 
 **Do not bypass licensing.** Licensing notices and checks must not be removed, disabled, or circumvented.
 
