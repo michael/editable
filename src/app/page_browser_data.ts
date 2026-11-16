@@ -111,6 +111,8 @@ export async function build_page_browser_data(
 		])
 	);
 	// The home page also lists what the shared documents link to: banner and nav before its body, footer after.
+	// Its body links are teasers, so a page they share with another page goes under that page.
+	const weak_refs_by_root_id = new Map<string, Set<string>>();
 	const home_page_doc = home_page_id ? page_docs_by_id.get(home_page_id) : undefined;
 	if (home_page_doc) {
 		const [banner_refs, nav_refs, footer_refs] = shared_document_types.map((type) => {
@@ -124,6 +126,11 @@ export async function build_page_browser_data(
 			...home_body_refs,
 			...footer_refs
 		]);
+		const shared_refs = new Set([...banner_refs, ...nav_refs, ...footer_refs]);
+		weak_refs_by_root_id.set(
+			home_page_doc.document_id,
+			new Set(home_body_refs.filter((id) => !shared_refs.has(id)))
+		);
 	}
 	const referenced_page_ids = new Set([...refs_by_page_id.values()].flat());
 	const non_home_roots = summaries
@@ -139,7 +146,12 @@ export async function build_page_browser_data(
 		});
 	const root_ids = home_only ? [] : non_home_roots.map((summary) => summary.document_id);
 	if (home_page_id && summaries_by_id.has(home_page_id)) root_ids.unshift(home_page_id);
-	const page_forest = build_page_forest(root_ids, summaries_by_id, refs_by_page_id);
+	const page_forest = build_page_forest(
+		root_ids,
+		summaries_by_id,
+		refs_by_page_id,
+		weak_refs_by_root_id
+	);
 	const home_root = page_forest.find((node) => node.document_id === home_page_id);
 	if (home_root) home_root.title = 'Home';
 	return { home_page_id, current_document_id, page_forest };

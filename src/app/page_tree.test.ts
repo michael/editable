@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { build_page_forest } from './page_tree.js';
 import type { PageSummary, PageTreeNode } from './api.remote.js';
 
-function build_tree(root_ids: string[], links: Record<string, string[]>) {
+function build_tree(
+	root_ids: string[],
+	links: Record<string, string[]>,
+	weak_links: Record<string, string[]> = {}
+) {
 	const summaries = new Map<string, PageSummary>(
 		Object.keys(links).map((document_id) => [
 			document_id,
@@ -23,7 +27,8 @@ function build_tree(root_ids: string[], links: Record<string, string[]>) {
 	function outline(nodes: PageTreeNode[]): unknown {
 		return nodes.map((node) => [node.document_id, outline(node.children)]);
 	}
-	return outline(build_page_forest(root_ids, summaries, new Map(Object.entries(links))));
+	const weak = new Map(Object.entries(weak_links).map(([id, ids]) => [id, new Set(ids)]));
+	return outline(build_page_forest(root_ids, summaries, new Map(Object.entries(links)), weak));
 }
 
 describe('build_page_forest', () => {
@@ -61,17 +66,46 @@ describe('build_page_forest', () => {
 		]);
 	});
 
-	it('uses the shallowest parent across branches and roots', () => {
+	it("completes Home's tree before unlisted roots claim pages", () => {
 		expect(
 			build_tree(['home', 'other'], {
 				home: ['projects'],
 				projects: ['contact'],
-				other: ['contact'],
-				contact: []
+				other: ['contact', 'draft'],
+				contact: [],
+				draft: []
 			})
 		).toEqual([
-			['home', [['projects', []]]],
-			['other', [['contact', []]]]
+			['home', [['projects', [['contact', []]]]]],
+			['other', [['draft', []]]]
+		]);
+	});
+
+	it("places Home's weak links under any other page linking them, keeping Home's link order", () => {
+		expect(
+			build_tree(
+				['home', 'backup'],
+				{
+					home: ['blog', 'post', 'teaser', 'nested', 'imprint'],
+					blog: ['post'],
+					teaser: ['nested'],
+					post: [],
+					nested: [],
+					imprint: [],
+					backup: ['teaser']
+				},
+				{ home: ['post', 'teaser', 'nested'] }
+			)
+		).toEqual([
+			[
+				'home',
+				[
+					['blog', [['post', []]]],
+					['teaser', [['nested', []]]],
+					['imprint', []]
+				]
+			],
+			['backup', []]
 		]);
 	});
 
