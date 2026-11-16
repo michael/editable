@@ -122,11 +122,12 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 		'/de/about',
 		'/manual'
 	]);
+	// Only the page's own edits count, not those to the nav it shares with every page.
 	expect(entries.find((entry) => entry.path === '/about')?.lastmod).toBe(
-		'2026-10-02T00:00:00.000Z'
+		'2026-10-01T00:00:00.000Z'
 	);
 	expect(entries.find((entry) => entry.path === '/de/about')?.lastmod).toBe(
-		'2026-10-04T00:00:00.000Z'
+		'2026-10-03T00:00:00.000Z'
 	);
 	expect(entries.find((entry) => entry.path === '/about')?.alternates).toEqual(
 		entries.find((entry) => entry.path === '/de/about')?.alternates
@@ -136,7 +137,7 @@ it('publishes localized sitemap URLs with translation dates while excluding hidd
 	expect(disabled.some((entry) => entry.path === '/de/about')).toBe(false);
 	expect(disabled.find((entry) => entry.path === '/about')).toMatchObject({
 		alternates: [],
-		lastmod: '2026-10-02T00:00:00.000Z'
+		lastmod: '2026-10-01T00:00:00.000Z'
 	});
 });
 

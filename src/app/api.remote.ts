@@ -210,17 +210,13 @@ export const get_page_browser_data = query(v.string(), async (href) => {
 export const get_sitemap_entries = query(async () => {
 	const { languages } = site;
 	const { page_forest } = await build_page_browser_data('/', true);
-	const records = (await backend.list_documents()).map((record) => {
-		const root = record.data.nodes[record.document_id];
-		return {
-			document_id: record.document_id,
-			modified: record.updated_at ?? record.created_at ?? null,
-			banner: (root?.banner as string | null) ?? null,
-			nav: (root?.nav as string | null) ?? null,
-			footer: (root?.footer as string | null) ?? null
-		};
-	});
-	const records_by_id = new Map(records.map((record) => [record.document_id, record]));
+	// A page's own edits count; shared banner, nav, and footer edits would touch every page.
+	const modified_by_id = new Map(
+		(await backend.list_documents()).map((record) => [
+			record.document_id,
+			record.updated_at ?? record.created_at ?? null
+		])
+	);
 	const translations = await backend.list_translations();
 	const modified_by_language = new Map(
 		translations.map((row) => [JSON.stringify([row.document_id, row.language]), row.updated_at])
@@ -230,18 +226,13 @@ export const get_sitemap_entries = query(async () => {
 	for (const page of queue) {
 		queue.push(...page.children);
 		if (page.shadowed_by_markdown || page.shadowed_by_language) continue;
-		const record = records_by_id.get(page.document_id);
-		const ids = [page.document_id, record?.banner, record?.nav, record?.footer].filter(
-			(id): id is string => !!id
-		);
-		const original_dates = ids.map((id) => records_by_id.get(id)?.modified);
 		const alternates = language_alternates(page.page_href, languages);
 		for (const language of languages.length ? languages : ['']) {
 			entries.push({
 				path: language ? language_href(page.page_href, language, languages) : page.page_href,
 				lastmod: latest_modified([
-					...original_dates,
-					...ids.map((id) => modified_by_language.get(JSON.stringify([id, language])))
+					modified_by_id.get(page.document_id),
+					modified_by_language.get(JSON.stringify([page.document_id, language]))
 				]),
 				alternates
 			});
