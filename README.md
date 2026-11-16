@@ -474,7 +474,8 @@ supporting_media {
 **Collections and buttons**:
 
 ```ts
-gallery { layout: mixed | portraits | squares | landscapes | compact-landscapes,
+gallery { layout: mixed | alternating | portraits | squares-2-columns | squares-3-columns |
+                  squares | landscapes | compact-landscapes,
           gallery_items: [gallery_item] }
 gallery_item { href, target, media: image | video }
 

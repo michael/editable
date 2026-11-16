@@ -20,6 +20,17 @@
 				[&>:nth-child(6n+2_of_[data-type=node])]:col-span-3 [&>:nth-child(6n+2_of_[data-type=node])]:**:[.image-wrapper]:aspect-square [&>:nth-child(6n+3_of_[data-type=node])]:col-span-3
 				[&>:nth-child(6n+3_of_[data-type=node])]:**:[.image-wrapper]:aspect-square [&>:nth-child(6n+4_of_[data-type=node])]:col-span-2 [&>:nth-child(6n+4_of_[data-type=node])]:**:[.image-wrapper]:aspect-[4/6] [&>:nth-child(6n+5_of_[data-type=node])]:col-span-2 [&>:nth-child(6n+5_of_[data-type=node])]:**:[.image-wrapper]:aspect-[4/6] [&>:nth-child(6n+6_of_[data-type=node])]:col-span-2 [&>:nth-child(6n+6_of_[data-type=node])]:**:[.image-wrapper]:aspect-[4/6]
    		`,
+			// Rows alternate a square with a wide image spanning two columns. Wide images take their
+			// height from the square beside them, so both line up whatever the gap. A wide image left
+			// alone in the last row keeps an aspect ratio of its own.
+			alternating: `
+				[--row:1]
+				grid grid-cols-3
+				**:[.image-wrapper]:aspect-square
+				[&>:nth-child(4n+2_of_[data-type=node])]:col-span-2 [&>:nth-child(4n+2_of_[data-type=node])]:**:[.image-wrapper]:aspect-auto [&>:nth-child(4n+2_of_[data-type=node])]:**:[.image-wrapper]:h-full [&>:nth-child(4n+2_of_[data-type=node])]:**:[.image-wrapper]:[contain:size]
+				[&>:nth-child(4n+3_of_[data-type=node])]:col-span-2 [&>:nth-child(4n+3_of_[data-type=node])]:**:[.image-wrapper]:aspect-auto [&>:nth-child(4n+3_of_[data-type=node])]:**:[.image-wrapper]:h-full [&>:nth-child(4n+3_of_[data-type=node])]:**:[.image-wrapper]:[contain:size]
+				[&>:nth-child(4n+3_of_[data-type=node]):nth-last-child(1_of_[data-type=node])]:**:[.image-wrapper]:aspect-[2/1] [&>:nth-child(4n+3_of_[data-type=node]):nth-last-child(1_of_[data-type=node])]:**:[.image-wrapper]:[contain:none]
+			`,
 			portraits: `
 	     	[--row:1]
 				grid grid-cols-3

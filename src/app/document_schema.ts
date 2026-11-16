@@ -550,6 +550,7 @@ export const document_schema = define_document_schema({
 				type: 'string',
 				values: [
 					'mixed',
+					'alternating',
 					'portraits',
 					'squares-2-columns',
 					'squares-3-columns',
