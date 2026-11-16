@@ -2,7 +2,7 @@ Copyright © 2026 Michael Aufreiter. Licensed by Ken Experiences GmbH (the “Li
 
 Permission is hereby granted to any person obtaining a copy of Editable and its documentation (the “Software”) to use, copy, and modify the Software locally, free of charge. It may also be operated as a non-commercial website free of charge, and a purchased license permits its operation as one commercial website, subject to the following conditions.
 
-**Free for non-commercial websites.** A website is non-commercial when it serves no commercial purpose, such as a personal website, a website for friends or family, or the website of a non-profit organization. A website that sells goods or services, earns money from advertising or sponsorship, or promotes a business, including a freelancer’s own work, is commercial and requires a license.
+**Free for non-commercial websites.** Editable is free for every website that does not belong to a business: personal websites, websites for friends or family, and the websites of non-profit organizations, including non-profit educational and research institutions, and of government bodies. A website that belongs to a business, including a freelancer, a self-employed person, a for-profit school, or a company owned by the state, requires a license, as does any website that sells goods or services or earns money from advertising or sponsorship.
 
 **Pick the license that fits.** An Indie license covers the website of a business or person with less than €150,000 in combined revenue and funding over the preceding twelve months, measured when the license is purchased. A Business license covers a website of any size. Who builds the website does not matter: what counts is whose website it is.
 
