@@ -91,21 +91,27 @@ side pads out the rest of the wider gap that text columns get. -->
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}
 		>
-			<!-- The media half fills with the muted color, and its border divides the halves. Text comes
-			first on phones. -->
+			<!-- The media half stretches with the row, at least as tall as the media's aspect ratio, and
+			the media covers it edge to edge. Its border divides the halves. Text comes first on phones. -->
 			<div
 				class="grid grid-cols-1 overflow-hidden rounded-(--image-border-radius) border border-(--stroke) bg-(--background) md:grid-cols-2"
 				use:reveal
 			>
 				<div class="flex flex-col justify-center p-6 sm:p-10 lg:p-14">{@render body()}</div>
-				<div
+				<svelte:element
+					this={render_as_link ? 'a' : 'div'}
+					href={render_as_link ? node.href : undefined}
+					target={render_as_link && node.target !== '_self' ? node.target : undefined}
 					class={[
-						'border-t border-(--stroke) bg-(--muted) p-6 sm:p-8 md:border-t-0',
+						'relative block min-w-0 overflow-hidden border-t border-(--stroke) outline-2 outline-transparent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing) md:border-t-0',
 						feature_layout === 'image-left' ? 'md:order-first md:border-e' : 'md:border-s'
 					]}
 				>
-					{@render image('3 / 4', true)}
-				</div>
+					<div style:aspect-ratio={media_aspect_ratio ?? '3 / 4'}></div>
+					<div class="absolute inset-0">
+						<MediaProperty path={[...path, 'media']} />
+					</div>
+				</svelte:element>
 			</div>
 		</div>
 	</div>
