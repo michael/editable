@@ -8,7 +8,8 @@ import type { Document } from 'svedit';
  * Create an unsaved copy of an existing page for `/new?from=<slug>`.
  *
  * Every node belonging to the source page gets a fresh id, so the copy shares no
- * ids with the original once saved. The shared banner, nav, and footer are
+ * ids with the original once saved. The page title and description are cleared.
+ * The shared banner, nav, and footer are
  * referenced, not copied — they belong to their own documents — and are
  * re-pointed at the current shared documents rather than whatever the source
  * happened to reference.
@@ -44,6 +45,9 @@ export function create_duplicate_doc(
 		shared_roots
 	);
 
+	// A copy starts untitled, so it is not mistaken for the original.
+	nodes[root_id].title = { content: '', marks: [], annotations: [] };
+	nodes[root_id].description = { content: '', marks: [], annotations: [] };
 	nodes[root_id].banner = banner_document.document_id;
 	nodes[root_id].nav = nav_document.document_id;
 	nodes[root_id].footer = footer_document.document_id;
