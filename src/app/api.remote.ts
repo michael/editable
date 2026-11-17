@@ -7,7 +7,7 @@ import {
 	parse_internal_page_href,
 	resolve_hrefs
 } from './document_links.js';
-import { language_path, language_href, is_reserved_language_slug } from './languages.js';
+import { language_path, is_reserved_language_slug } from './languages.js';
 import { getRequestEvent, query, command } from '$app/server';
 import { save_translated_document, translated_document } from './server_translations.js';
 import { error } from '@sveltejs/kit';
@@ -16,29 +16,24 @@ import slugify from 'slugify';
 import { backend } from '#app/services.js';
 import { ConflictError } from '#lib/server/backend.js';
 import {
-	type DocumentData,
 	InvalidDocumentError,
 	VersionConflictError,
 	combine_page_document,
 	get_combined_document,
-	get_doc_from_db,
 	get_home_page_id_from_db,
 	get_optional_doc_from_db,
 	get_document_version,
 	is_home_page_document_id,
 	is_reserved_route_slug,
 	persist_document,
+	resolve_page,
 	document_refs_of,
-	shared_document_types,
 	with_asset_cleanup
 } from '#app/server_documents.js';
 
 import { build_page_browser_data } from '#app/page_browser_data.js';
-import type { SitemapEntry } from '#lib/server/sitemap.js';
-import { latest_modified } from '#lib/server/sitemap.js';
-import { language_alternates } from './seo.js';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
-import { is_reserved_markdown_slug, get_markdown_page_pathnames } from '#app/markdown/registry.js';
+import { is_reserved_markdown_slug } from '#app/markdown/registry.js';
 import { extract_page_metadata } from '#app/page_metadata.js';
 import type { PreviewMediaNode } from '#app/page_metadata.js';
 import type { DocumentNode } from 'svedit';
@@ -83,92 +78,28 @@ const delete_page_input_schema = v.object({
 	document_id: v.string()
 });
 
-/** Documents reach the editor with their links resolved for the site, in the main language. */
-function resolve_site_links(document: DocumentData): DocumentData {
-	return resolve_hrefs(document, site);
-}
-
 /**
- * Get a page document by slug, stitching in shared documents (banner, nav, footer).
+ * A page by slug, `/` for the home page, with the shared banner, nav and footer stitched in.
+ * On a multilingual site it comes in the requested language, or else the main one.
  */
-export const get_document = query(v.string(), async (slug) => {
-	const resolved = await backend.resolve_slug(slug);
-
-	if (!resolved) {
-		error(404, `Page not found for slug: ${slug}`);
+export const get_document = query(
+	v.object({ slug: v.string(), language: v.optional(v.string()) }),
+	async ({ slug, language }) => {
+		const page = await resolve_page(slug);
+		if (!page) error(404, `Page not found for slug: ${slug}`);
+		const { document_id, ...slugs } = page;
+		const translation = site.languages.length
+			? await translated_document(document_id, language)
+			: null;
+		const document = translation?.document ?? (await get_combined_document(document_id));
+		return {
+			...translation,
+			document: resolve_hrefs(document, site, translation?.language),
+			...slugs,
+			version: await get_document_version(document_id)
+		};
 	}
-
-	return {
-		document: resolve_site_links(await get_combined_document(resolved.document_id)),
-		version: await get_document_version(resolved.document_id),
-		slug: resolved.active_slug,
-		redirect_to_slug: resolved.is_active ? null : resolved.active_slug
-	};
-});
-
-/**
- * Get a page's own document for duplication, without the shared banner, nav and footer
- * stitched in. The caller rebuilds those references against the current shared
- * documents, so returning them here would only invite copying them by mistake.
- */
-export const get_page_document_for_duplicate = query(v.string(), async (slug) => {
-	require_editor(getRequestEvent().locals);
-
-	// The home page has no slug row by invariant, so it is addressed as `/` —
-	// the same way the page browser and `page_href` refer to it.
-	const document_id =
-		slug === '/'
-			? await get_home_page_id_from_db()
-			: ((await backend.resolve_slug(slug))?.document_id ?? null);
-
-	if (!document_id) {
-		error(404, `Page not found for slug: ${slug}`);
-	}
-
-	return {
-		document: resolve_site_links(await get_doc_from_db(document_id))
-	};
-});
-
-/**
- * Resolve the configured home page and return its stitched document.
- */
-export const get_home_document = query(v.void(), async () => {
-	const home_page_id = await get_home_page_id_from_db();
-
-	if (!home_page_id) {
-		throw new Error('Home page is not configured');
-	}
-
-	return {
-		document: resolve_site_links(await get_combined_document(home_page_id)),
-		version: await get_document_version(home_page_id),
-		slug: await backend.get_active_slug(home_page_id),
-		redirect_to_slug: null
-	};
-});
-
-/**
- * Derive site-level metadata (favicon) from the home page document.
- */
-/**
- * Return the current shared banner, nav and footer documents used for composing new pages.
- */
-export const get_shared_documents = query(v.void(), async () => {
-	const home_page_id = await get_home_page_id_from_db();
-	if (!home_page_id) throw new Error('Home page is not configured');
-
-	const home_page_node = (await get_doc_from_db(home_page_id)).nodes[home_page_id];
-	const [banner_document, nav_document, footer_document] = await Promise.all(
-		shared_document_types.map(async (type) => {
-			const shared_id = home_page_node?.[type];
-			if (typeof shared_id !== 'string')
-				throw new Error(`Home page ${type} document is not configured`);
-			return resolve_site_links(await get_doc_from_db(shared_id));
-		})
-	);
-	return { banner_document, nav_document, footer_document };
-});
+);
 
 export const log_in = command(log_in_input_schema, async (credentials) => {
 	return get_auth().log_in(getRequestEvent(), credentials);
@@ -191,44 +122,6 @@ export const get_page_browser_data = query(v.string(), async (href) => {
 	require_editor(event.locals);
 	const pathname = normalize_href(new URL(href).pathname, site);
 	return build_page_browser_data(language_path(pathname, site.languages).pathname);
-});
-
-/** Return public URLs and saved timestamps for pages reachable from Home. */
-export const get_sitemap_entries = query(async () => {
-	const { languages } = site;
-	const { page_forest } = await build_page_browser_data('/', true);
-	// A page's own edits count; shared banner, nav, and footer edits would touch every page.
-	const modified_by_id = new Map(
-		(await backend.list_documents()).map((record) => [
-			record.document_id,
-			record.updated_at ?? record.created_at ?? null
-		])
-	);
-	const translations = await backend.list_translations();
-	const modified_by_language = new Map(
-		translations.map((row) => [JSON.stringify([row.document_id, row.language]), row.updated_at])
-	);
-	const entries: SitemapEntry[] = [];
-	const queue = [...page_forest];
-	for (const page of queue) {
-		queue.push(...page.children);
-		if (page.shadowed_by_markdown || page.shadowed_by_language) continue;
-		const alternates = language_alternates(page.page_href, languages);
-		for (const language of languages.length ? languages : ['']) {
-			entries.push({
-				path: language ? language_href(page.page_href, language, languages) : page.page_href,
-				lastmod: latest_modified([
-					modified_by_id.get(page.document_id),
-					modified_by_language.get(JSON.stringify([page.document_id, language]))
-				]),
-				alternates
-			});
-		}
-	}
-	for (const path of get_markdown_page_pathnames()) {
-		if (!is_reserved_language_slug(path.slice(1), languages)) entries.push({ path, lastmod: null });
-	}
-	return entries;
 });
 
 /**
@@ -317,14 +210,6 @@ function rewrite_internal_page_hrefs(
 		}
 	}
 }
-
-export const get_translated_document = query(
-	v.object({ document_id: v.string(), language: v.string() }),
-	async (input) => {
-		const result = await translated_document(input.document_id, input.language);
-		return { ...result, document: resolve_hrefs(result.document, site, result.language) };
-	}
-);
 
 export const save_page_translation = command(
 	v.object({

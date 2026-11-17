@@ -55,22 +55,16 @@ export const load_page = async ({
 	}
 
 	try {
-		const { get_document, get_translated_document } = await import('#app/api.remote.js');
-		const result = await get_document(params.page_id);
+		const { get_document } = await import('#app/api.remote.js');
+		const page = await get_document({ slug: params.page_id ?? '', language });
 
-		if (result.redirect_to_slug) {
-			redirect(301, resolve_href(`/${result.redirect_to_slug}${url.search}`, site, language));
+		if (page.redirect_to_slug) {
+			redirect(301, resolve_href(`/${page.redirect_to_slug}${url.search}`, site, language));
 		}
 
 		return {
-			...(languages.length
-				? await get_translated_document({ document_id: result.document.document_id, language })
-				: { document: result.document }),
-			canonical_path: languages.length
-				? language_href(`/${result.slug}`, language, languages)
-				: null,
-			slug: result.slug,
-			version: result.version,
+			...page,
+			canonical_path: languages.length ? language_href(`/${page.slug}`, language, languages) : null,
 			can_edit: true
 		};
 	} catch (err) {
@@ -93,7 +87,7 @@ export async function get_shared_site_documents(language: string) {
 			footer_document: default_footer_document
 		};
 	}
-	const { get_shared_documents } = await import('#app/api.remote.js');
+	const { get_shared_documents } = await import('#app/server_documents.js');
 	const shared = await get_shared_documents();
 	if (!language) return shared;
 	const { translate_shared_document } = await import('#app/server_translations.js');
@@ -122,14 +116,11 @@ export const load_home = async ({ url }: { url: URL }) => {
 		};
 	}
 
-	const { get_home_document, get_translated_document } = await import('#app/api.remote.js');
-	const result = await get_home_document();
+	const { get_document } = await import('#app/api.remote.js');
 	const { languages } = site;
-	if (!languages.length) return result;
 	const language = request_language(url);
 	return {
-		...result,
-		canonical_path: language_href('/', language, languages),
-		...(await get_translated_document({ document_id: result.document.document_id, language }))
+		...(await get_document({ slug: '/', language })),
+		canonical_path: languages.length ? language_href('/', language, languages) : null
 	};
 };

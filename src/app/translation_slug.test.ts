@@ -44,13 +44,8 @@ vi.mock('./services.js', async () => {
 import * as services from './services.js';
 const { sqlite, backend } = services as unknown as typeof services & { sqlite: DatabaseSync };
 import { default_site } from './server_site.js';
-import {
-	update_page_slug,
-	delete_page,
-	save_page,
-	get_page_browser_data,
-	get_sitemap_entries
-} from './api.remote.js';
+import { update_page_slug, delete_page, save_page, get_page_browser_data } from './api.remote.js';
+import { get_sitemap_entries } from './page_browser_data.js';
 import { warn_about_language_slug_collisions } from './server_language_slugs.js';
 import { document_refs_of, slug_targets } from './server_documents.js';
 import { apply_migrations } from './migrations.js';
