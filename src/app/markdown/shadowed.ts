@@ -1,7 +1,4 @@
 // Detection of database pages whose slug is occupied by a markdown page.
-//
-// Kept out of registry.js so that module stays database-free — the markdown
-// route imports it at module load, including in static/Vercel mode.
 
 import { backend } from '#app/services.js';
 import { is_reserved_markdown_slug } from './registry.js';

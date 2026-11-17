@@ -600,6 +600,10 @@ export const MAX_VIDEO_FILESIZE = 100 * 1000 * 1000; // hard ceiling in bytes (1
 
 Automatic processing accepts inputs up to 2 GiB (about 2.15 GB); transcoding requires a known duration and one video track. Browser codec support determines which files can be processed, and even unchanged videos need decoding support for their poster. Audio is preserved or converted; unsupported audio causes an error rather than being silently dropped. Compatible transparent WebM is kept unchanged within the size limit; oversized transparent video needs manual optimization.
 
+### Other files
+
+Uploads take images and videos only. To offer other downloads, such as a PDF or a zip, add the file to `static/` in your repo and link to its path, like `/downloads/price-list.pdf`. Turn on **Open in new tab** for such links: in the same tab, the site treats the path as a page and shows "Page not found".
+
 ## Create a custom node type
 
 Define a node schema and wire it up with a custom component.
