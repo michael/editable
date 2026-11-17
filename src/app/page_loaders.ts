@@ -91,11 +91,12 @@ export async function get_shared_site_documents(language: string) {
 	const shared = await get_shared_documents();
 	if (!language) return shared;
 	const { translate_shared_document } = await import('#app/server_translations.js');
-	return {
-		banner_document: await translate_shared_document(shared.banner_document, language),
-		nav_document: await translate_shared_document(shared.nav_document, language),
-		footer_document: await translate_shared_document(shared.footer_document, language)
-	};
+	const [banner_document, nav_document, footer_document] = await Promise.all(
+		[shared.banner_document, shared.nav_document, shared.footer_document].map((document) =>
+			translate_shared_document(document, language)
+		)
+	);
+	return { banner_document, nav_document, footer_document };
 }
 
 /** The site's metadata, such as its favicon, from the home page or, on static builds, the default site. */
