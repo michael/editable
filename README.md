@@ -1,4 +1,4 @@
-# The Editable manual
+# The Editable Manual
 
 Editable lets you build and edit a Svelte website without adding a separate CMS. Editors work directly on the page, while the content model, components, layouts, and styling remain in the codebase you own. Use the included defaults and adapt the colors and fonts to deploy a beautiful site within minutes — or customize the entire layout and model your own content types. This manual explains how to build and run a site with Editable.
 
