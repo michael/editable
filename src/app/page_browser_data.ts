@@ -1,9 +1,11 @@
 import type { DocumentNode } from 'svedit';
 import { backend } from '#app/services.js';
 import { get_home_page_id_from_db, shared_document_types } from '#app/server_documents.js';
-import { is_reserved_language_slug } from '#app/languages.js';
+import { is_reserved_language_slug, language_href } from '#app/languages.js';
+import { language_alternates } from '#app/seo.js';
+import { latest_modified, type SitemapEntry } from '#lib/server/sitemap.js';
 import { site } from '#app/server_site.js';
-import { is_reserved_markdown_slug } from '#app/markdown/registry.js';
+import { is_reserved_markdown_slug, get_markdown_page_pathnames } from '#app/markdown/registry.js';
 import { extract_page_metadata } from '#app/page_metadata.js';
 import type { PreviewMediaNode } from '#app/page_metadata.js';
 import { build_page_forest } from '#app/page_tree.js';
@@ -143,4 +145,42 @@ export async function build_page_browser_data(
 	const home_root = page_forest.find((node) => node.document_id === home_page_id);
 	if (home_root) home_root.title = 'Home';
 	return { home_page_id, current_document_id, page_forest };
+}
+
+/** Return public URLs and saved timestamps for pages reachable from Home. */
+export async function get_sitemap_entries() {
+	const { languages } = site;
+	const { page_forest } = await build_page_browser_data('/', true);
+	// A page's own edits count; shared banner, nav, and footer edits would touch every page.
+	const modified_by_id = new Map(
+		(await backend.list_documents()).map((record) => [
+			record.document_id,
+			record.updated_at ?? record.created_at ?? null
+		])
+	);
+	const translations = await backend.list_translations();
+	const modified_by_language = new Map(
+		translations.map((row) => [JSON.stringify([row.document_id, row.language]), row.updated_at])
+	);
+	const entries: SitemapEntry[] = [];
+	const queue = [...page_forest];
+	for (const page of queue) {
+		queue.push(...page.children);
+		if (page.shadowed_by_markdown || page.shadowed_by_language) continue;
+		const alternates = language_alternates(page.page_href, languages);
+		for (const language of languages.length ? languages : ['']) {
+			entries.push({
+				path: language ? language_href(page.page_href, language, languages) : page.page_href,
+				lastmod: latest_modified([
+					modified_by_id.get(page.document_id),
+					modified_by_language.get(JSON.stringify([page.document_id, language]))
+				]),
+				alternates
+			});
+		}
+	}
+	for (const path of get_markdown_page_pathnames()) {
+		if (!is_reserved_language_slug(path.slice(1), languages)) entries.push({ path, lastmod: null });
+	}
+	return entries;
 }

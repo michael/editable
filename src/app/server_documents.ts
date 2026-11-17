@@ -11,7 +11,7 @@ import { document_schema } from '#app/document_schema.js';
 import { collect_node_ids_in_order, get_attached_ranges } from '#lib/document_graph.js';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
 import { clean_translations } from './server_translations.js';
-import { assert_safe_hrefs, parse_internal_page_href } from './document_links.js';
+import { assert_safe_hrefs, parse_internal_page_href, resolve_hrefs } from './document_links.js';
 import { RESERVED_ROUTE_SLUGS } from './config.js';
 import { site } from './server_site.js';
 import { ConflictError, type SlugRecord } from '#lib/server/backend.js';
@@ -74,6 +74,39 @@ export async function get_doc_from_db(document_id: string): Promise<DocumentData
 
 export function get_home_page_id_from_db(): Promise<string | null> {
 	return backend.get_setting('home_page_id');
+}
+
+/** The page at a slug, addressing the home page as `/`, as the page browser and `page_href` do. */
+export async function resolve_page(slug: string) {
+	if (slug === '/') {
+		// The home page has no slug row by invariant.
+		const document_id = await get_home_page_id_from_db();
+		return document_id ? { document_id, slug: null, redirect_to_slug: null } : null;
+	}
+	const resolved = await backend.resolve_slug(slug);
+	if (!resolved) return null;
+	return {
+		document_id: resolved.document_id,
+		slug: resolved.active_slug,
+		redirect_to_slug: resolved.is_active ? null : resolved.active_slug
+	};
+}
+
+/** The site's banner, nav, and footer documents, with links resolved for the site. */
+export async function get_shared_documents() {
+	const home_page_id = await get_home_page_id_from_db();
+	if (!home_page_id) throw new Error('Home page is not configured');
+
+	const home_page_node = (await get_doc_from_db(home_page_id)).nodes[home_page_id];
+	const [banner_document, nav_document, footer_document] = await Promise.all(
+		shared_document_types.map(async (type) => {
+			const shared_id = home_page_node?.[type];
+			if (typeof shared_id !== 'string')
+				throw new Error(`Home page ${type} document is not configured`);
+			return resolve_hrefs(await get_doc_from_db(shared_id), site);
+		})
+	);
+	return { banner_document, nav_document, footer_document };
 }
 
 export async function is_home_page_document_id(document_id: string): Promise<boolean> {

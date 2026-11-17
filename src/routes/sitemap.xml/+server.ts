@@ -8,7 +8,7 @@ export const GET: RequestHandler = async () => {
 	// Static demo deployments have no database-backed page tree.
 	if (VERCEL) error(404, 'Sitemap unavailable');
 
-	const { get_sitemap_entries } = await import('#app/api.remote.js');
+	const { get_sitemap_entries } = await import('#app/page_browser_data.js');
 	const entries = await get_sitemap_entries();
 	const body = new TextEncoder().encode(render_sitemap(entries, site));
 	// Crawlers get a complete, sized response they may cache briefly.

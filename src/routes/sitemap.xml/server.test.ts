@@ -5,7 +5,7 @@ vi.mock('$app/env/private', () => ({
 	LANGUAGES: 'en',
 	VERCEL: undefined
 }));
-vi.mock('#app/api.remote.js', () => ({
+vi.mock('#app/page_browser_data.js', () => ({
 	get_sitemap_entries: async () => [{ path: '/über', lastmod: null }]
 }));
 

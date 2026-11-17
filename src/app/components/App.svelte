@@ -26,8 +26,6 @@
 		set_page_delete_dialog
 	} from '#app/page_delete_dialog_context.svelte.js';
 
-	import { default_site_document } from '#app/default_site.js';
-
 	let {
 		document: doc,
 		slug = null,
@@ -45,7 +43,7 @@
 		canonical_path = null,
 		children
 	}: {
-		document?: any;
+		document: any;
 		slug?: string | null;
 		has_backend?: boolean;
 		is_new?: boolean;
@@ -64,12 +62,7 @@
 		children?: Snippet;
 	} = $props();
 
-	// Backend availability and document editability are independent: read-only
-	// documents (e.g. markdown pages) arrive with can_edit false but must still
-	// render their own content, even without a backend.
-	let initial_doc = $derived(doc ?? default_site_document);
-
-	let initial_doc_json = $derived(JSON.stringify(initial_doc));
+	let initial_doc_json = $derived(JSON.stringify(doc));
 
 	let app_el = $state<HTMLElement>();
 	let svedit_ref = $state<{ focus_canvas: () => void }>();
@@ -840,7 +833,7 @@
 		const current_session = session;
 		return untrack(() => current_session.doc);
 	});
-	let loaded_document_id = $derived(initial_doc.document_id);
+	let loaded_document_id = $derived(doc.document_id);
 
 	$effect(() => {
 		loaded_document_id;
