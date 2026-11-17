@@ -16,6 +16,20 @@
 	const carousel_id = $props.id();
 	let can_go_previous = $state(false);
 	let can_go_next = $state(false);
+	// Compact strips fade out toward more items: clear up to the page gutter, where the arrow starts,
+	// then up to full opacity 5rem further in, so content under the arrow stays faint. Editing skips
+	// the fade so selections at the edges stay visible.
+	let edge_fade = $derived(
+		!is_compact || svedit.editable
+			? ''
+			: can_go_previous && can_go_next
+				? 'mask-[linear-gradient(to_right,transparent_var(--ew-carousel-gutter),black_calc(var(--ew-carousel-gutter)+5rem),black_calc(100%-var(--ew-carousel-gutter)-5rem),transparent_calc(100%-var(--ew-carousel-gutter)))]'
+				: can_go_next
+					? 'mask-[linear-gradient(to_right,black_calc(100%-var(--ew-carousel-gutter)-5rem),transparent_calc(100%-var(--ew-carousel-gutter)))]'
+					: can_go_previous
+						? 'mask-[linear-gradient(to_right,transparent_var(--ew-carousel-gutter),black_calc(var(--ew-carousel-gutter)+5rem))]'
+						: ''
+	);
 	let viewport: HTMLDivElement | undefined;
 
 	function track_carousel(element: HTMLDivElement) {
@@ -80,10 +94,13 @@
 {/snippet}
 
 <div class="@container w-full">
-	<!-- The geometry lives on a wrapper inside the container, so cqw measures the container and both
-	the scroller and the overlay arrows can use the page-aligned inset. -->
+	<!-- The geometry lives on a wrapper inside the container, so cqw measures the container. Card
+	carousels scroll across the full width with page-aligned gutters; compact ones stay within the
+	page width, so their gutter is the whole inset. -->
 	<div
-		class="relative [--ew-carousel-content:calc(min(100cqw,80rem)-2*var(--ew-carousel-gutter))] [--ew-carousel-gutter:1.25rem] [--ew-carousel-inset:max(var(--ew-carousel-gutter),calc((100cqw-80rem)/2+var(--ew-carousel-gutter)))] sm:[--ew-carousel-gutter:1.75rem] {card_width}"
+		class="relative [--ew-carousel-gutter:1.25rem] sm:[--ew-carousel-gutter:1.75rem] {card_width} {is_compact
+			? 'mx-auto max-w-7xl [--ew-carousel-inset:var(--ew-carousel-gutter)]'
+			: '[--ew-carousel-content:calc(min(100cqw,80rem)-2*var(--ew-carousel-gutter))] [--ew-carousel-inset:max(var(--ew-carousel-gutter),calc((100cqw-80rem)/2+var(--ew-carousel-gutter)))]'}"
 	>
 		<!-- Editing uses free scrolling so selection and node gap updates do not trigger snapping. -->
 		<!-- Full-width scrolling with page-aligned gutters inside leaves room for edge gaps. -->
@@ -98,7 +115,7 @@
 			tabindex={svedit.editable ? undefined : 0}
 			class="[scrollbar-none] relative -my-1 {svedit.editable
 				? 'snap-none'
-				: 'snap-x snap-mandatory'} scroll-px-(--ew-carousel-inset) overflow-x-auto overscroll-x-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing) [&::-webkit-scrollbar]:hidden"
+				: 'snap-x snap-mandatory'} scroll-px-(--ew-carousel-inset) overflow-x-auto overscroll-x-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing) {edge_fade} [&::-webkit-scrollbar]:hidden"
 			{@attach track_carousel}
 		>
 			<!-- Keep gutters outside the node array so its trailing anchor ends at the last card. -->
@@ -109,22 +126,22 @@
 				/>
 			</div>
 		</div>
-		<!-- Compact carousels overlay their arrows on the content edges, only toward more items, so
-		they never take layout space. -->
+		<!-- Compact carousels overlay their arrows inside the page gutter, aligned with the content,
+		only toward more items, so they never take layout space. -->
 		{#if is_compact}
 			<div contenteditable="false">
 				{#if can_go_previous}
 					{@render arrow(
 						-1,
 						true,
-						'absolute top-1/2 left-(--ew-carousel-inset) size-9 -translate-x-1/2 -translate-y-1/2 shadow-sm'
+						'absolute top-1/2 left-(--ew-carousel-gutter) size-9 -translate-y-1/2 shadow-sm'
 					)}
 				{/if}
 				{#if can_go_next}
 					{@render arrow(
 						1,
 						true,
-						'absolute top-1/2 right-(--ew-carousel-inset) size-9 translate-x-1/2 -translate-y-1/2 shadow-sm'
+						'absolute top-1/2 right-(--ew-carousel-gutter) size-9 -translate-y-1/2 shadow-sm'
 					)}
 				{/if}
 			</div>
