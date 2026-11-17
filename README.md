@@ -480,7 +480,7 @@ gallery { layout: mixed | alternating | portraits | squares-2-columns | squares-
 gallery_item { href, target, media: image | video }
 
 titled_gallery { layout: cards | outlined | cards-2-columns | outlined-2-columns | compact |
-                         carousel | carousel-2-columns,
+                         carousel | carousel-2-columns | carousel-compact,
                  items: [titled_gallery_item] }
 titled_gallery_item {
 	href, target
@@ -489,7 +489,7 @@ titled_gallery_item {
 }
 
 descriptive_gallery { layout: cards | outlined | cards-2-columns | outlined-2-columns | compact |
-                              carousel | carousel-2-columns,
+                              carousel | carousel-2-columns | carousel-compact,
                       items: [descriptive_gallery_item] }
 descriptive_gallery_item {
 	href, target

@@ -591,7 +591,8 @@ export const document_schema = define_document_schema({
 					'outlined-2-columns',
 					'compact',
 					'carousel',
-					'carousel-2-columns'
+					'carousel-2-columns',
+					'carousel-compact'
 				],
 				default: 'cards'
 			},
@@ -630,7 +631,8 @@ export const document_schema = define_document_schema({
 					'outlined-2-columns',
 					'compact',
 					'carousel',
-					'carousel-2-columns'
+					'carousel-2-columns',
+					'carousel-compact'
 				],
 				default: 'cards'
 			},

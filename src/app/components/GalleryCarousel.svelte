@@ -3,10 +3,14 @@
 	import { NodeArrayProperty } from 'svedit';
 	import { get_svedit_context } from '#app/svedit_context.js';
 
-	let { path, columns = 3 }: { path: DocumentPath; columns?: 2 | 3 } = $props();
-	// Wide screens show three cards, or two when columns is 2.
-	let xl_card_width = $derived(
-		columns === 3 ? 'xl:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-3.5rem)/3)]' : ''
+	let { path, layout = 'carousel' }: { path: DocumentPath; layout?: string } = $props();
+	let is_compact = $derived(layout === 'carousel-compact');
+	// Cards take most of the width on phones, two from md, and three on wide screens unless the
+	// layout asks for two. Compact tiles keep a fixed width and scroll only when they overflow.
+	let card_width = $derived(
+		is_compact
+			? '[--ew-carousel-card-width:8rem] sm:[--ew-carousel-card-width:9rem]'
+			: `[--ew-carousel-card-width:calc(var(--ew-carousel-content)*0.85)] md:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-1.75rem)/2)] ${layout === 'carousel-2-columns' ? '' : 'xl:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-3.5rem)/3)]'}`
 	);
 	const svedit = get_svedit_context();
 	const carousel_id = $props.id();
@@ -52,71 +56,84 @@
 	}
 </script>
 
-<div class="@container w-full">
-	<!-- Editing uses free scrolling so selection and node gap updates do not trigger snapping. -->
-	<!-- Full-width scrolling with page-aligned gutters inside leaves room for edge gaps. -->
-	<!-- Keep node gap positioning local to the scrolling container, as in Nav. -->
-	<!-- Keep editing focus on Svedit's canvas so it can process text selections. -->
-	<!-- svelte-ignore a11y_no_noninteractive_tabindex (Scrollable region needs keyboard access in viewing mode.) -->
-	<div
-		id={carousel_id}
-		role="region"
-		aria-label="Gallery"
-		aria-roledescription="carousel"
-		tabindex={svedit.editable ? undefined : 0}
-		class="[scrollbar-none] relative -my-1 {svedit.editable
-			? 'snap-none'
-			: 'snap-x snap-mandatory'} scroll-px-(--ew-carousel-inset) overflow-x-auto overscroll-x-contain [--ew-carousel-card-width:calc(var(--ew-carousel-content)*0.85)] [--ew-carousel-content:calc(min(100cqw,80rem)-2*var(--ew-carousel-gutter))] [--ew-carousel-gutter:1.25rem] [--ew-carousel-inset:max(var(--ew-carousel-gutter),calc((100cqw-80rem)/2+var(--ew-carousel-gutter)))] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing) sm:[--ew-carousel-gutter:1.75rem] md:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-1.75rem)/2)] {xl_card_width} [&::-webkit-scrollbar]:hidden"
-		{@attach track_carousel}
+{#snippet arrow(direction: -1 | 1, can_go: boolean, position = '')}
+	<button
+		type="button"
+		aria-label={direction < 0 ? 'Previous gallery item' : 'Next gallery item'}
+		aria-controls={carousel_id}
+		disabled={!can_go}
+		onclick={() => scroll_carousel(direction)}
+		class="inline-flex shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] enabled:active:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)] disabled:cursor-default disabled:opacity-40 {position ||
+			'size-11'}"
 	>
-		<!-- Keep gutters outside the node array so its trailing anchor ends at the last card. -->
-		<div class="ew-carousel-track w-max min-w-full px-(--ew-carousel-inset) py-1">
-			<NodeArrayProperty
-				class="grid auto-cols-(--ew-carousel-card-width) grid-flow-col gap-5 [--row:1] sm:gap-7"
-				{path}
-			/>
+		<svg
+			class="size-5 rtl:rotate-180"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			aria-hidden="true"><path d={direction < 0 ? 'm14 7-5 5 5 5' : 'm10 7 5 5-5 5'} /></svg
+		>
+	</button>
+{/snippet}
+
+<div class="@container w-full">
+	<!-- The geometry lives on a wrapper inside the container, so cqw measures the container and both
+	the scroller and the overlay arrows can use the page-aligned inset. -->
+	<div
+		class="relative [--ew-carousel-content:calc(min(100cqw,80rem)-2*var(--ew-carousel-gutter))] [--ew-carousel-gutter:1.25rem] [--ew-carousel-inset:max(var(--ew-carousel-gutter),calc((100cqw-80rem)/2+var(--ew-carousel-gutter)))] sm:[--ew-carousel-gutter:1.75rem] {card_width}"
+	>
+		<!-- Editing uses free scrolling so selection and node gap updates do not trigger snapping. -->
+		<!-- Full-width scrolling with page-aligned gutters inside leaves room for edge gaps. -->
+		<!-- Keep node gap positioning local to the scrolling container, as in Nav. -->
+		<!-- Keep editing focus on Svedit's canvas so it can process text selections. -->
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex (Scrollable region needs keyboard access in viewing mode.) -->
+		<div
+			id={carousel_id}
+			role="region"
+			aria-label="Gallery"
+			aria-roledescription="carousel"
+			tabindex={svedit.editable ? undefined : 0}
+			class="[scrollbar-none] relative -my-1 {svedit.editable
+				? 'snap-none'
+				: 'snap-x snap-mandatory'} scroll-px-(--ew-carousel-inset) overflow-x-auto overscroll-x-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing) [&::-webkit-scrollbar]:hidden"
+			{@attach track_carousel}
+		>
+			<!-- Keep gutters outside the node array so its trailing anchor ends at the last card. -->
+			<div class="ew-carousel-track w-max min-w-full px-(--ew-carousel-inset) py-1">
+				<NodeArrayProperty
+					class="grid auto-cols-(--ew-carousel-card-width) grid-flow-col gap-5 [--row:1] sm:gap-7"
+					{path}
+				/>
+			</div>
 		</div>
+		<!-- Compact carousels overlay their arrows on the content edges, only toward more items, so
+		they never take layout space. -->
+		{#if is_compact}
+			<div contenteditable="false">
+				{#if can_go_previous}
+					{@render arrow(
+						-1,
+						true,
+						'absolute top-1/2 left-(--ew-carousel-inset) size-9 -translate-x-1/2 -translate-y-1/2 shadow-sm'
+					)}
+				{/if}
+				{#if can_go_next}
+					{@render arrow(
+						1,
+						true,
+						'absolute top-1/2 right-(--ew-carousel-inset) size-9 translate-x-1/2 -translate-y-1/2 shadow-sm'
+					)}
+				{/if}
+			</div>
+		{/if}
 	</div>
-	{#if can_go_previous || can_go_next}
+	{#if !is_compact && (can_go_previous || can_go_next)}
 		<div class="mx-auto flex max-w-7xl justify-end gap-3 px-5 pt-5 sm:px-7" contenteditable="false">
-			<button
-				type="button"
-				aria-label="Previous gallery item"
-				aria-controls={carousel_id}
-				disabled={!can_go_previous}
-				onclick={() => scroll_carousel(-1)}
-				class="inline-flex size-11 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] enabled:active:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)] disabled:cursor-default disabled:opacity-40"
-			>
-				<svg
-					class="size-5 rtl:rotate-180"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					aria-hidden="true"><path d="m14 7-5 5 5 5" /></svg
-				>
-			</button>
-			<button
-				type="button"
-				aria-label="Next gallery item"
-				aria-controls={carousel_id}
-				disabled={!can_go_next}
-				onclick={() => scroll_carousel(1)}
-				class="inline-flex size-11 shrink-0 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] enabled:active:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)] disabled:cursor-default disabled:opacity-40"
-			>
-				<svg
-					class="size-5 rtl:rotate-180"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					aria-hidden="true"><path d="m10 7 5 5-5 5" /></svg
-				>
-			</button>
+			{@render arrow(-1, can_go_previous)}
+			{@render arrow(1, can_go_next)}
 		</div>
 	{/if}
 </div>

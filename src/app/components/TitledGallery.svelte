@@ -8,7 +8,7 @@
 	const svedit = get_svedit_context();
 	let node: Nodes['titled_gallery'] = $derived(svedit.session.get(path));
 	let layout = $derived(node.layout || 'cards');
-	let is_carousel = $derived(['carousel', 'carousel-2-columns'].includes(layout));
+	let is_carousel = $derived(layout.startsWith('carousel'));
 	let padding_top_generous = $derived(!section || section.is_start);
 	let padding_bottom_generous = $derived(!section || section.is_end);
 </script>
@@ -23,10 +23,7 @@
 			]}
 		>
 			{#if is_carousel}
-				<GalleryCarousel
-					path={[...path, 'items']}
-					columns={layout === 'carousel-2-columns' ? 2 : 3}
-				/>
+				<GalleryCarousel path={[...path, 'items']} {layout} />
 			{:else}
 				<NodeArrayProperty
 					class={layout === 'compact'
