@@ -534,6 +534,11 @@ export const document_schema = define_document_schema({
 	captioned_figure: {
 		kind: 'block',
 		properties: {
+			layout: {
+				type: 'string',
+				values: ['caption-below', 'caption-right', 'caption-left'],
+				default: 'caption-below'
+			},
 			href: { type: 'string' },
 			target: { type: 'string', default: '_self' },
 			media: {
@@ -544,7 +549,7 @@ export const document_schema = define_document_schema({
 			caption: {
 				type: 'text',
 				mark_types: ALL_MARKS,
-				allow_newlines: false
+				allow_newlines: true
 			}
 		}
 	},

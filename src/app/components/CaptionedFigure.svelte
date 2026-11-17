@@ -11,6 +11,7 @@
 	let media_node = $derived(svedit.session.get([...path, 'media']));
 	let render_as_link = $derived(!svedit.editable && node.href);
 	let link_label = $derived(media_link_label(media_node.alt, node.href, node.caption?.content));
+	let layout = $derived(node.layout || 'caption-below');
 	let padding_top_generous = $derived(!section || section.is_start);
 	let padding_bottom_generous = $derived(!section || section.is_end);
 </script>
@@ -24,25 +25,36 @@
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}
 		>
-			<svelte:element
-				this={render_as_link ? 'a' : 'div'}
-				href={render_as_link ? node.href : undefined}
-				target={render_as_link && node.target !== '_self' ? node.target : undefined}
-				aria-label={render_as_link ? link_label : undefined}
-				class="block overflow-hidden outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)"
-				style:border-radius="var(--image-border-radius)"
-				style:aspect-ratio={media_node.width && media_node.height
-					? `${media_node.width} / ${media_node.height}`
-					: '2 / 1'}
+			<!-- Side captions take the third column next to the media from md, aligned to its bottom edge.
+			A left caption aligns to the media, so its ragged edge faces outward. -->
+			<div
+				class={['grid gap-3', layout !== 'caption-below' && 'md:grid-cols-3 md:items-end md:gap-7']}
 			>
-				<MediaProperty path={[...path, 'media']} />
-			</svelte:element>
-			<TextProperty
-				tag="figcaption"
-				class="mt-3 text-sm leading-6 text-(--muted-foreground) sm:text-base"
-				path={[...path, 'caption']}
-				placeholder="Caption"
-			/>
+				<svelte:element
+					this={render_as_link ? 'a' : 'div'}
+					href={render_as_link ? node.href : undefined}
+					target={render_as_link && node.target !== '_self' ? node.target : undefined}
+					aria-label={render_as_link ? link_label : undefined}
+					class={[
+						'block overflow-hidden outline-2 outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing)',
+						layout !== 'caption-below' && 'md:col-span-2'
+					]}
+					style:border-radius="var(--image-border-radius)"
+					style:aspect-ratio={media_node.width && media_node.height
+						? `${media_node.width} / ${media_node.height}`
+						: '2 / 1'}
+				>
+					<MediaProperty path={[...path, 'media']} />
+				</svelte:element>
+				<TextProperty
+					tag="figcaption"
+					class="text-sm leading-6 text-(--muted-foreground) sm:text-base {layout === 'caption-left'
+						? 'md:order-first md:text-end'
+						: ''}"
+					path={[...path, 'caption']}
+					placeholder="Caption"
+				/>
+			</div>
 		</div>
 	</div>
 </Node>

@@ -462,7 +462,7 @@ image, video {
 
 figure { layout: wide | narrow-left | narrow-center | narrow-right | flush | full-bleed,
          href, target, media: image | video }
-captioned_figure { href, target, media: image | video, caption: text }   // caption marks: strong, emphasis, strikethrough, code, highlight, link
+captioned_figure { layout: caption-below | caption-right | caption-left, href, target, media: image | video, caption: text }   // caption marks: strong, emphasis, strikethrough, code, highlight, link
 supporting_media {
 	href, target
 	media_max_width: integer      // 0 = no maximum

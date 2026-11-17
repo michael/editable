@@ -805,7 +805,7 @@ export const document_config = {
 		captioned_figure: function (
 			tr,
 			_content = { content: '', marks: [], annotations: [] },
-			_layout = 'default'
+			layout = 'caption-below'
 		) {
 			const new_captioned_figure_id = tr.build('new_captioned_figure', {
 				image_one: {
@@ -816,6 +816,7 @@ export const document_config = {
 				new_captioned_figure: {
 					id: 'new_captioned_figure',
 					type: 'captioned_figure',
+					layout,
 					href: '',
 					target: '_self',
 					media: 'image_one',
