@@ -532,8 +532,9 @@ feature { layout: image-right | image-left | outlined-image-right | outlined-ima
 double_feature { layout: plain | outlined, start: double_feature_item, end: double_feature_item }
 double_feature_item { href, target, media: image | video, body: [rich content] }
 
-button_group { buttons: [button] }
-button { layout: primary | primary-accent | secondary | link, href, target, label: text }
+button_group { buttons: [button | media_button] }
+button { layout: primary | primary-accent | secondary | link (each also -small), href, target, label: text }
+media_button { layout: regular | small, href, target, media: image | video }   // e.g. social media icons
 ```
 
 **Marks and annotations** — both attach a separate node to a half-open range using the same shape. For text, offsets address character positions; for node arrays, they address child-node positions. `start_offset` is included and `end_offset` is excluded:

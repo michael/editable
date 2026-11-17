@@ -92,6 +92,7 @@ import DoubleFeature from './components/DoubleFeature.svelte';
 import DoubleFeatureItem from './components/DoubleFeatureItem.svelte';
 import Button from './components/Button.svelte';
 import ButtonGroup from './components/ButtonGroup.svelte';
+import MediaButton from './components/MediaButton.svelte';
 import Image from './components/Image.svelte';
 import Video from './components/Video.svelte';
 import Strong from './components/Strong.svelte';
@@ -149,6 +150,47 @@ function insert_text_node(
 		anchor_offset: 0,
 		focus_offset: 0
 	});
+}
+
+/** Nodes for a button group with a primary, a secondary, and a media button, rooted at 'new_button_group'. */
+function button_group_nodes() {
+	const label = { content: '', marks: [], annotations: [] };
+	return {
+		primary_button: {
+			id: 'primary_button',
+			type: 'button',
+			layout: 'primary',
+			href: '',
+			target: '_self',
+			label
+		},
+		secondary_button: {
+			id: 'secondary_button',
+			type: 'button',
+			layout: 'secondary',
+			href: '',
+			target: '_self',
+			label: { ...label }
+		},
+		media_button_media: { id: 'media_button_media', type: 'image', ...MEDIA_DEFAULTS },
+		media_button: {
+			id: 'media_button',
+			type: 'media_button',
+			layout: 'regular',
+			href: '',
+			target: '_self',
+			media: 'media_button_media'
+		},
+		new_button_group: {
+			id: 'new_button_group',
+			type: 'button_group',
+			buttons: {
+				nodes: ['primary_button', 'secondary_button', 'media_button'],
+				marks: [],
+				annotations: []
+			}
+		}
+	};
 }
 
 /** Create a double feature item with an empty image, heading, and paragraph, and return its id. */
@@ -288,6 +330,7 @@ export const document_config = {
 		footer_link: FooterLink,
 		button: Button,
 		button_group: ButtonGroup,
+		media_button: MediaButton,
 		prose: Prose,
 		prose_grid: ProseGrid,
 		prose_grid_item: ProseGridItem,
@@ -516,26 +559,26 @@ export const document_config = {
 	// intended behavior.
 	inserters: {
 		prose: function (tr) {
-			const new_heading = {
-				id: nanoid(),
-				type: 'heading_2',
-				content: { content: '', marks: [], annotations: [] }
-			};
-			tr.create(new_heading);
-			const new_paragraph = {
-				id: nanoid(),
-				type: 'paragraph',
-				content: { content: '', marks: [], annotations: [] }
-			};
-			tr.create(new_paragraph);
-			const new_prose = {
-				id: nanoid(),
-				type: 'prose',
-				layout: 'narrow-left',
-				body: { nodes: [new_heading.id, new_paragraph.id], marks: [], annotations: [] }
-			};
-			tr.create(new_prose);
-			tr.insert_nodes([new_prose.id]);
+			const new_prose_id = tr.build('new_prose', {
+				...button_group_nodes(),
+				heading: {
+					id: 'heading',
+					type: 'heading_2',
+					content: { content: '', marks: [], annotations: [] }
+				},
+				paragraph: {
+					id: 'paragraph',
+					type: 'paragraph',
+					content: { content: '', marks: [], annotations: [] }
+				},
+				new_prose: {
+					id: 'new_prose',
+					type: 'prose',
+					layout: 'narrow-left',
+					body: { nodes: ['heading', 'paragraph', 'new_button_group'], marks: [], annotations: [] }
+				}
+			});
+			tr.insert_nodes([new_prose_id]);
 		},
 		prose_grid_item: function (tr) {
 			const new_heading = {
@@ -870,31 +913,31 @@ export const document_config = {
 			tr.insert_nodes([new_button_id]);
 			select_inserted_text_property(tr);
 		},
-		button_group: function (tr) {
-			const new_button_group_id = tr.build('new_button_group', {
-				primary_button: {
-					id: 'primary_button',
-					type: 'button',
-					layout: 'primary',
+		media_button: function (
+			tr,
+			_content = { content: '', marks: [], annotations: [] },
+			layout = 'regular'
+		) {
+			const new_media_button_id = tr.build('new_media_button', {
+				media_button_media: {
+					id: 'media_button_media',
+					type: 'image',
+					...MEDIA_DEFAULTS
+				},
+				new_media_button: {
+					id: 'new_media_button',
+					type: 'media_button',
+					layout,
 					href: '',
 					target: '_self',
-					label: { content: '', marks: [], annotations: [] }
-				},
-				secondary_button: {
-					id: 'secondary_button',
-					type: 'button',
-					layout: 'secondary',
-					href: '',
-					target: '_self',
-					label: { content: '', marks: [], annotations: [] }
-				},
-				new_button_group: {
-					id: 'new_button_group',
-					type: 'button_group',
-					buttons: { nodes: ['primary_button', 'secondary_button'], marks: [], annotations: [] }
+					media: 'media_button_media'
 				}
 			});
 
+			tr.insert_nodes([new_media_button_id]);
+		},
+		button_group: function (tr) {
+			const new_button_group_id = tr.build('new_button_group', button_group_nodes());
 			tr.insert_nodes([new_button_group_id]);
 		},
 		footer_link: function (
