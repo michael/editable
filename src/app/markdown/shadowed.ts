@@ -6,13 +6,13 @@
 import { backend } from '#app/services.js';
 import { is_reserved_markdown_slug } from './registry.js';
 
-export type ShadowedPage = {
+type ShadowedPage = {
 	slug: string;
 	document_id: string;
 };
 
 /** Pages that exist in the database but whose URL a markdown page serves. */
-export async function find_shadowed_pages(): Promise<ShadowedPage[]> {
+async function find_shadowed_pages(): Promise<ShadowedPage[]> {
 	const pages = new Set((await backend.list_documents('page')).map((record) => record.document_id));
 	const rows = (await backend.list_slugs())
 		.filter((record) => record.is_active && pages.has(record.document_id))

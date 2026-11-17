@@ -8,7 +8,7 @@ import {
 	referenced_asset_ids
 } from './server_asset_refs.js';
 import { document_schema } from '#app/document_schema.js';
-import { collect_node_ids_in_order } from '#lib/document_graph.js';
+import { collect_node_ids_in_order, get_attached_ranges } from '#lib/document_graph.js';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
 import { clean_translations } from './server_translations.js';
 import { assert_safe_hrefs, parse_internal_page_href } from './document_links.js';
@@ -34,17 +34,11 @@ export class VersionConflictError extends Error {
 	}
 }
 
-export function get_attached_ranges(
-	value: { marks?: Attachment[]; annotations?: Attachment[] } | null | undefined
-): Attachment[] {
-	return [...(value?.marks ?? []), ...(value?.annotations ?? [])];
-}
-
 /**
  * Collect all node ids reachable from a root node by walking node/node_array
  * properties and mark/annotation references.
  */
-export function collect_node_ids(
+function collect_node_ids(
 	root_id: string,
 	nodes: Record<string, DocumentNode>,
 	exclude_roots?: Set<string>
@@ -203,10 +197,7 @@ export async function with_asset_cleanup<T>(write: () => Promise<T>): Promise<T>
  * mark/annotation range. Page references to shared documents are separate
  * document roots and do not count as ownership.
  */
-export function validate_single_ownership(
-	document_id: string,
-	nodes: Record<string, DocumentNode>
-) {
+function validate_single_ownership(document_id: string, nodes: Record<string, DocumentNode>) {
 	const page_node = nodes[document_id];
 	const roots = [document_id, ...shared_document_types.map((type) => page_node[type])].filter(
 		(id): id is string => typeof id === 'string'

@@ -135,7 +135,7 @@
 				current_page_forest,
 				normalize_search_text(search_query)
 			);
-			const current_visible_results = get_visible_results(current_filtered_page_forest);
+			const current_visible_results = flatten_page_forest_results(current_filtered_page_forest);
 
 			initialized_selection_version = page_browser?.version ?? 0;
 
@@ -500,77 +500,17 @@ Updated: ${updated_at_label}`;
 		return parts;
 	}
 
+	/** Keep matching pages with all their children, and the ancestors of matches. */
 	function filter_page_forest_node(node, normalized_query) {
-		if (!node) return null;
-
-		if (!normalized_query) {
-			return {
-				...node,
-				match_kind: 'none',
-				children: (node.children ?? []).map((child) =>
-					filter_page_forest_node(child, normalized_query)
-				)
-			};
-		}
-
-		const self_matches = item_matches_search(node, normalized_query);
-
-		if (self_matches) {
-			return {
-				...node,
-				match_kind: 'direct',
-				children: (node.children ?? []).map((child) => ({
-					...child,
-					match_kind: 'descendant_context',
-					children: mark_descendant_context(child.children ?? [])
-				}))
-			};
-		}
-
-		const filtered_children = [];
-		for (const child of node.children ?? []) {
-			const filtered_child = filter_page_forest_node(child, normalized_query);
-			if (filtered_child) {
-				filtered_children.push(filtered_child);
-			}
-		}
-
-		if (filtered_children.length > 0) {
-			return {
-				...node,
-				match_kind: 'ancestor_context',
-				children: filtered_children
-			};
-		}
-
-		return null;
+		if (!normalized_query || item_matches_search(node, normalized_query)) return node;
+		const children = filter_page_forest(node.children, normalized_query);
+		return children.length > 0 ? { ...node, children } : null;
 	}
 
 	function filter_page_forest(nodes, normalized_query) {
-		if (!normalized_query) {
-			return (nodes ?? []).map((node) => filter_page_forest_node(node, normalized_query));
-		}
-
-		const filtered_nodes = [];
-		for (const node of nodes ?? []) {
-			const filtered_node = filter_page_forest_node(node, normalized_query);
-			if (filtered_node) {
-				filtered_nodes.push(filtered_node);
-			}
-		}
-		return filtered_nodes;
-	}
-
-	function mark_descendant_context(children) {
-		return children.map((child) => ({
-			...child,
-			match_kind: 'descendant_context',
-			children: mark_descendant_context(child.children ?? [])
-		}));
-	}
-
-	function get_match_kind_class(_match_kind) {
-		return '';
+		return (nodes ?? [])
+			.map((node) => filter_page_forest_node(node, normalized_query))
+			.filter(Boolean);
 	}
 
 	function flatten_page_forest_results(nodes) {
@@ -585,10 +525,6 @@ Updated: ${updated_at_label}`;
 		}
 
 		return results;
-	}
-
-	function get_visible_results(filtered_page_forest) {
-		return flatten_page_forest_results(filtered_page_forest);
 	}
 
 	function get_visible_result_index(document_id, visible_results) {
@@ -635,7 +571,7 @@ Updated: ${updated_at_label}`;
 	let normalized_search_query = $derived(normalize_search_text(search_query));
 	let page_forest = $derived(browser_data?.page_forest ?? []);
 	let filtered_page_forest = $derived(filter_page_forest(page_forest, normalized_search_query));
-	let visible_results = $derived(get_visible_results(filtered_page_forest));
+	let visible_results = $derived(flatten_page_forest_results(filtered_page_forest));
 	let page_count = $derived(get_page_forest_count(page_forest));
 	let is_picker_mode = $derived(page_browser.state.mode === 'select');
 
@@ -720,7 +656,7 @@ Updated: ${updated_at_label}`;
 							</div>
 
 							<a
-								class={`tree-row ${get_match_kind_class(node.match_kind)}`}
+								class="tree-row"
 								class:tree-row-root={node_is_root}
 								class:tree-row-keyboard-selected={visible_results[selected_result_index]
 									?.document_id === node.document_id}
@@ -787,7 +723,7 @@ Updated: ${updated_at_label}`;
 							{#if !is_picker_mode}
 								<button
 									type="button"
-									class="item-actions-btn tree-actions-btn"
+									class="item-actions-btn"
 									style={`anchor-name: ${get_menu_anchor_name(node.document_id)};`}
 									aria-label={`Page actions for ${node.title}`}
 									onclick={(event) =>
@@ -846,7 +782,7 @@ Updated: ${updated_at_label}`;
 
 <dialog
 	bind:this={menu_ref}
-	class="page-actions-dialog focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
+	class="m-0 h-screen max-h-none w-screen max-w-none overflow-visible border-0 bg-transparent p-0 backdrop:bg-transparent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 	oncancel={handle_menu_cancel}
 	onclick={handle_menu_click}
 	onkeydown={handle_menu_keydown}
@@ -859,7 +795,7 @@ Updated: ${updated_at_label}`;
 			<button
 				bind:this={menu_item_refs[0]}
 				type="button"
-				class="menu-item flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
+				class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
 				onclick={open_in_new_tab}
 				onfocus={() => {
 					menu_selected_index = 0;
@@ -870,9 +806,7 @@ Updated: ${updated_at_label}`;
 			<button
 				bind:this={menu_item_refs[1]}
 				type="button"
-				class="menu-item flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11 {menu_item.is_home_page
-					? 'menu-item-disabled'
-					: ''} transition-colors"
+				class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11"
 				onclick={open_page_url_dialog}
 				onfocus={() => {
 					menu_selected_index = 1;
@@ -884,8 +818,8 @@ Updated: ${updated_at_label}`;
 			<button
 				bind:this={menu_item_refs[2]}
 				type="button"
-				class="menu-item flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11 {menu_item.is_home_page
-					? 'menu-item-disabled'
+				class="flex min-h-10 w-full items-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2.5 text-start text-sm leading-5 font-normal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:text-(--muted-foreground) pointer-coarse:min-h-11 {menu_item.is_home_page
+					? ''
 					: 'menu-item-danger'} transition-colors"
 				onclick={open_confirm}
 				onfocus={() => {
@@ -901,21 +835,23 @@ Updated: ${updated_at_label}`;
 
 <dialog
 	bind:this={unlisted_info_ref}
-	class="confirm-dialog focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
+	class="m-0 h-screen max-h-none w-screen max-w-none overflow-visible border-0 bg-transparent p-0 backdrop:bg-(--foreground)/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 	oncancel={handle_unlisted_info_cancel}
 	onclick={handle_unlisted_info_click}
 >
 	{#if unlisted_info_item}
-		<div class="confirm-panel unlisted-info-panel">
-			<h3 class="confirm-title">Unlisted page</h3>
-			<p class="confirm-message">
+		<div
+			class="fixed top-1/2 left-1/2 flex max-h-[calc(100dvh-2.5rem)] w-[min(24rem,calc(100vw-2.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-4 text-(--foreground)"
+		>
+			<h3 class="m-0 text-base font-medium">Unlisted page</h3>
+			<p class="m-0 text-sm leading-6 text-(--muted-foreground)">
 				Unlisted pages are not discoverable from the homepage (and for Google), but can be accessed
 				by anyone who has the link.
 			</p>
-			<div class="confirm-actions">
+			<div class="flex justify-end gap-3">
 				<button
 					type="button"
-					class="confirm-btn inline-flex min-h-9 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+					class="inline-flex min-h-9 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 					onclick={close_unlisted_info}
 				>
 					Got it
@@ -927,18 +863,20 @@ Updated: ${updated_at_label}`;
 
 <dialog
 	bind:this={shadowed_info_ref}
-	class="confirm-dialog focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
+	class="m-0 h-screen max-h-none w-screen max-w-none overflow-visible border-0 bg-transparent p-0 backdrop:bg-(--foreground)/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 	oncancel={handle_shadowed_info_cancel}
 	onclick={handle_shadowed_info_click}
 >
 	{#if shadowed_info_item}
-		<div class="confirm-panel unlisted-info-panel">
-			<h3 class="confirm-title">
+		<div
+			class="fixed top-1/2 left-1/2 flex max-h-[calc(100dvh-2.5rem)] w-[min(24rem,calc(100vw-2.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-4 text-(--foreground)"
+		>
+			<h3 class="m-0 text-base font-medium">
 				URL taken by {shadowed_info_item.shadowed_by_language
 					? 'a language homepage'
 					: 'a markdown page'}
 			</h3>
-			<p class="confirm-message">
+			<p class="m-0 text-sm leading-6 text-(--muted-foreground)">
 				{#if shadowed_info_item.shadowed_by_language}
 					The homepage for language <code>{shadowed_info_item.slug}</code> is served at
 					<code>/{shadowed_info_item.slug}</code>, so this page cannot be reached at its current
@@ -950,10 +888,10 @@ Updated: ${updated_at_label}`;
 					ask a developer to remove that markdown page.
 				{/if}
 			</p>
-			<div class="confirm-actions">
+			<div class="flex justify-end gap-3">
 				<button
 					type="button"
-					class="confirm-btn inline-flex min-h-9 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+					class="inline-flex min-h-9 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 					onclick={close_shadowed_info}
 				>
 					Got it
@@ -1139,7 +1077,6 @@ Updated: ${updated_at_label}`;
 		outline-color: var(--editing);
 	}
 
-	.draft-card-keyboard-selected,
 	.tree-row-keyboard-selected {
 		outline: none;
 		background: transparent;
@@ -1203,19 +1140,6 @@ Updated: ${updated_at_label}`;
 		overflow: hidden;
 	}
 
-	.draft-illustration {
-		width: 100%;
-		aspect-ratio: 1;
-		background: var(--editing-muted);
-		box-shadow: none;
-	}
-
-	.create-illustration {
-		background: var(--editing-muted);
-		border: 1px dashed oklch(from var(--editing) l c h / 0.45);
-		box-shadow: none;
-	}
-
 	.tree-illustration {
 		width: 2.25rem;
 		aspect-ratio: 1;
@@ -1242,21 +1166,6 @@ Updated: ${updated_at_label}`;
 		display: grid;
 		place-items: center;
 		border-radius: inherit;
-	}
-
-	.plus-glyph {
-		font-size: 2rem;
-		line-height: 1;
-		font-weight: 300;
-		color: var(--editing, oklch(55.8% 0.185 282));
-	}
-
-	.draft-title {
-		font-size: 0.72rem;
-		font-weight: 500;
-		line-height: 1.18;
-		color: inherit;
-		text-align: center;
 	}
 
 	.match-highlight {
@@ -1357,10 +1266,6 @@ Updated: ${updated_at_label}`;
 		background: var(--stroke);
 	}
 
-	.tree-leaf-dot {
-		display: none;
-	}
-
 	.tree-label {
 		min-width: 0;
 		flex: 1 1 auto;
@@ -1380,17 +1285,6 @@ Updated: ${updated_at_label}`;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-	}
-
-	.page-slug-label {
-		font-family:
-			ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono',
-			'Courier New', monospace;
-		font-size: 0.68rem;
-		font-weight: 500;
-		line-height: 1.1;
-		letter-spacing: 0.01em;
-		color: color-mix(in oklch, currentColor 52%, transparent);
 	}
 
 	.unlisted-badge {
@@ -1440,27 +1334,6 @@ Updated: ${updated_at_label}`;
 		gap: 0;
 	}
 
-	.page-actions-dialog,
-	.confirm-dialog {
-		margin: 0;
-		padding: 0;
-		border: 0;
-		background: transparent;
-		max-width: none;
-		max-height: none;
-		width: 100vw;
-		height: 100vh;
-		overflow: visible;
-	}
-
-	.page-actions-dialog::backdrop {
-		background: transparent;
-	}
-
-	.confirm-dialog::backdrop {
-		background: color-mix(in oklch, var(--foreground) 10%, transparent);
-	}
-
 	.menu-panel {
 		position: fixed;
 		z-index: 40;
@@ -1483,52 +1356,7 @@ Updated: ${updated_at_label}`;
 		color: color-mix(in oklch, red 65%, var(--foreground));
 	}
 
-	.confirm-panel {
-		position: fixed;
-		inset: 50% auto auto 50%;
-		transform: translate(-50%, -50%);
-		width: min(28rem, calc(100vw - 2.5rem));
-		max-height: calc(100dvh - 2.5rem);
-		overflow-y: auto;
-		padding: 1rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		border: 1px solid var(--stroke);
-		border-radius: min(1rem, var(--button-border-radius));
-		background: var(--background);
-		color: var(--foreground);
-		box-shadow: none;
-	}
-
-	.unlisted-info-panel {
-		width: min(24rem, calc(100vw - 2.5rem));
-	}
-
-	.confirm-title {
-		margin: 0;
-		font-size: 1rem;
-		font-weight: 500;
-	}
-
-	.confirm-message {
-		margin: 0;
-		font-size: 0.875rem;
-		line-height: 1.5rem;
-		color: var(--muted-foreground);
-	}
-
-	.confirm-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 0.75rem;
-	}
-
 	@media (max-width: 640px) {
-		.draft-title {
-			font-size: 0.68rem;
-		}
-
 		.search-input-shell {
 			gap: 0.5rem;
 			padding: 0 0.72rem;

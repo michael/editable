@@ -28,19 +28,7 @@ export type PageSummary = {
 	updated_at: string | null;
 };
 
-export type PageTreeNode = {
-	document_id: string;
-	title: string;
-	description: string | null;
-	preview_media_node: PreviewMediaNode | null;
-	page_href: string;
-	slug: string;
-	shadowed_by_markdown: boolean;
-	shadowed_by_language: boolean;
-	created_at: string | null;
-	updated_at: string | null;
-	children: PageTreeNode[];
-};
+export type PageTreeNode = PageSummary & { children: PageTreeNode[] };
 
 async function list_page_documents(): Promise<PageDocumentRecord[]> {
 	return (await backend.list_documents('page')).map((record) => ({
@@ -70,8 +58,8 @@ function summarize_page_document(
 		shadowed_by_language: active_slug
 			? is_reserved_language_slug(active_slug, site.languages)
 			: false,
-		created_at: page_doc.created_at ?? null,
-		updated_at: page_doc.updated_at ?? null
+		created_at: page_doc.created_at,
+		updated_at: page_doc.updated_at
 	};
 }
 

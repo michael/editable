@@ -2,9 +2,13 @@
 	import type { Nodes } from '#app/document_schema.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { Node, NodeArrayProperty } from 'svedit';
+	import type { DocumentPath, NodeArrayAttachmentContext } from 'svedit';
 	import GalleryCarousel from './GalleryCarousel.svelte';
 
-	let { path, mark: section = null } = $props();
+	let {
+		path,
+		mark: section = null
+	}: { path: DocumentPath; mark?: NodeArrayAttachmentContext | null } = $props();
 	const svedit = get_svedit_context();
 	let node: Nodes['descriptive_gallery'] = $derived(svedit.session.get(path));
 	let layout = $derived(node.layout || 'cards-3-columns');

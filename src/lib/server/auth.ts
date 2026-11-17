@@ -43,7 +43,7 @@ const LOGIN_THROTTLE_KEY = 'admin';
 /**
  * Constant-time password comparison over SHA-256 digests.
  */
-export function passwords_match(a: string, b: string): boolean {
+function passwords_match(a: string, b: string): boolean {
 	const digest = (s: string) => crypto.createHash('sha256').update(s).digest();
 	return crypto.timingSafeEqual(digest(a), digest(b));
 }
@@ -84,7 +84,7 @@ export async function reset_login_throttle(records: AuthRecords, key = LOGIN_THR
 	await records.save_login_throttle({ key, failed_count: 0, locked_until: 0 });
 }
 
-export function get_required_admin_password(): string {
+function get_required_admin_password(): string {
 	const admin_password = ADMIN_PASSWORD;
 	if (!admin_password) {
 		throw new Error('ADMIN_PASSWORD must be set');

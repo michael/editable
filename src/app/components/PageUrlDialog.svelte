@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { refreshAll } from '$app/navigation';
 	import { get_app_context } from '#app/app_context.js';
-	import { page } from '$app/state';
+	import { site } from '#app/client_site.js';
 	import { get_page_browser } from '#app/page_browser_context.svelte.js';
 	import { get_page_url_dialog } from '#app/page_url_dialog_context.svelte.js';
 
@@ -80,21 +80,23 @@
 
 <dialog
 	bind:this={dialog_ref}
-	class="confirm-dialog focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
+	class="m-0 h-screen max-h-none w-screen max-w-none overflow-visible border-0 bg-transparent p-0 backdrop:bg-(--foreground)/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 	oncancel={handle_cancel}
 	onclick={handle_click}
 >
 	{#if target}
 		<form
-			class="confirm-panel"
+			class="fixed top-1/2 left-1/2 flex max-h-[calc(100dvh-2.5rem)] w-[min(28rem,calc(100vw-2.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-[min(1rem,var(--button-border-radius))] border border-(--stroke) bg-(--background) p-4 text-(--foreground)"
 			onsubmit={(event) => {
 				event.preventDefault();
 				void save();
 			}}
 		>
-			<h3 class="confirm-title">Edit URL</h3>
-			<div class="page-url-field">
-				<span class="page-url-prefix">{app.origin || 'example.com'}{page.data.site_base}/</span>
+			<h3 class="m-0 text-base font-medium">Edit URL</h3>
+			<div class="flex flex-wrap items-center gap-2">
+				<span class="text-sm wrap-anywhere text-(--muted-foreground)"
+					>{app.origin || 'example.com'}{site.base}/</span
+				>
 				<input
 					type="text"
 					bind:value={page_url_value}
@@ -104,12 +106,14 @@
 				/>
 			</div>
 			{#if page_url_error}
-				<p class="confirm-error" role="alert">{page_url_error}</p>
+				<p class="m-0 text-sm text-[color-mix(in_oklch,red_65%,var(--foreground))]" role="alert">
+					{page_url_error}
+				</p>
 			{/if}
-			<div class="confirm-actions">
+			<div class="flex justify-end gap-3">
 				<button
 					type="button"
-					class="confirm-btn inline-flex min-h-9 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+					class="inline-flex min-h-9 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 					onclick={close}
 					disabled={saving}
 				>
@@ -117,7 +121,7 @@
 				</button>
 				<button
 					type="submit"
-					class="confirm-btn inline-flex min-h-9 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
+					class="inline-flex min-h-9 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent px-3 py-2 text-sm leading-5 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"
 					disabled={saving}
 				>
 					{saving ? 'Saving…' : 'Save'}
@@ -126,70 +130,3 @@
 		</form>
 	{/if}
 </dialog>
-
-<style>
-	.confirm-dialog {
-		margin: 0;
-		padding: 0;
-		border: 0;
-		background: transparent;
-		max-width: none;
-		max-height: none;
-		width: 100vw;
-		height: 100vh;
-		overflow: visible;
-	}
-
-	.confirm-dialog::backdrop {
-		background: color-mix(in oklch, var(--foreground) 10%, transparent);
-	}
-
-	.confirm-panel {
-		position: fixed;
-		inset: 50% auto auto 50%;
-		transform: translate(-50%, -50%);
-		width: min(28rem, calc(100vw - 2.5rem));
-		max-height: calc(100dvh - 2.5rem);
-		overflow-y: auto;
-		padding: 1rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		border: 1px solid var(--stroke);
-		border-radius: min(1rem, var(--button-border-radius));
-		background: var(--background);
-		color: var(--foreground);
-		box-shadow: none;
-	}
-
-	.confirm-title {
-		margin: 0;
-		font-size: 1rem;
-		font-weight: 500;
-	}
-
-	.confirm-error {
-		margin: 0;
-		font-size: 0.88rem;
-		color: color-mix(in oklch, red 65%, var(--foreground));
-	}
-
-	.confirm-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 0.75rem;
-	}
-
-	.page-url-field {
-		display: flex;
-		align-items: center;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-	}
-
-	.page-url-prefix {
-		font-size: 0.875rem;
-		color: var(--muted-foreground);
-		overflow-wrap: anywhere;
-	}
-</style>

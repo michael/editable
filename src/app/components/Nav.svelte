@@ -13,35 +13,23 @@
 	const svedit = get_svedit_context();
 	let node: Nodes['nav'] = $derived(svedit.session.get(path));
 	let middle_item_ids = $derived(node.middle_items.nodes);
-	let mobile_nav_media_path = $derived(find_mobile_nav_media_path());
-	let mobile_nav_cta_path = $derived(find_mobile_nav_cta_path());
+	let mobile_nav_media_path = $derived(find_nav_item_path((item) => item.type === 'nav_media'));
+	let mobile_nav_cta_path = $derived(
+		find_nav_item_path(
+			(item) => item.type === 'nav_button' && ['primary', 'primary-accent'].includes(item.layout)
+		)
+	);
 	let mobile_nav_open = $state(false);
 
-	function find_mobile_nav_media_path() {
+	/** The path of the first nav item that passes the test, searching start to end. */
+	function find_nav_item_path(test) {
 		for (const item_property_name of ['start_items', 'middle_items', 'end_items']) {
 			const items = node?.[item_property_name]?.nodes || [];
 			for (let index = 0; index < items.length; index++) {
 				const item = svedit.session.get([...path, item_property_name, index]);
-				if (item?.type === 'nav_media') {
-					return [item.id];
-				}
+				if (item && test(item)) return [item.id];
 			}
 		}
-
-		return null;
-	}
-
-	function find_mobile_nav_cta_path() {
-		for (const item_property_name of ['start_items', 'middle_items', 'end_items']) {
-			const items = node?.[item_property_name]?.nodes || [];
-			for (let index = 0; index < items.length; index++) {
-				const item = svedit.session.get([...path, item_property_name, index]);
-				if (item?.type === 'nav_button' && ['primary', 'primary-accent'].includes(item.layout)) {
-					return [item.id];
-				}
-			}
-		}
-
 		return null;
 	}
 
@@ -79,29 +67,30 @@
 {/snippet}
 
 <Node {path}>
-	<!-- Desktop nav (visible also during mobile editing) -->
+	<!-- Desktop nav (visible also during mobile editing). The side columns keep their content width, so
+	a full nav scrolls sideways instead of wrapping or overlapping. -->
 	<div
 		class="relative mx-auto max-w-7xl overflow-x-auto overflow-y-hidden focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing)"
 		class:max-lg:hidden={!svedit.editable}
 	>
 		<div
-			class="grid min-h-17 grid-cols-[max-content_max-content_max-content] items-center gap-x-12 px-5 py-4 text-sm sm:px-7 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-x-6"
+			class="grid min-h-17 min-w-max grid-cols-[max-content_max-content_max-content] items-center gap-x-12 px-5 py-4 text-sm sm:px-7 lg:grid-cols-[minmax(max-content,1fr)_auto_minmax(max-content,1fr)] lg:gap-x-6"
 		>
 			<NodeArrayProperty
 				tag="div"
-				class="flex flex-wrap items-center gap-2 [--row:1] *:min-w-max max-lg:flex-nowrap [&>.empty-node-placeholder]:min-h-9"
+				class="flex items-center gap-2 [--row:1] *:min-w-max [&>.empty-node-placeholder]:min-h-9"
 				path={[...path, 'start_items']}
 			/>
 			<NodeArrayProperty
 				tag="nav"
-				class="flex w-max flex-wrap items-center gap-x-6 gap-y-1 [--row:1] *:min-w-max max-lg:flex-nowrap [&>.empty-node-placeholder]:min-h-9"
+				class="flex w-max items-center gap-x-6 [--row:1] *:min-w-max [&>.empty-node-placeholder]:min-h-9"
 				path={[...path, 'middle_items']}
 			/>
 			<div class="flex items-center justify-end gap-2">
 				<LanguageSwitcher />
 				<NodeArrayProperty
 					tag="div"
-					class="flex flex-wrap items-center justify-end gap-2 [--row:1] *:min-w-max max-lg:flex-nowrap [&>.empty-node-placeholder]:min-h-9"
+					class="flex items-center justify-end gap-2 [--row:1] *:min-w-max [&>.empty-node-placeholder]:min-h-9"
 					path={[...path, 'end_items']}
 				/>
 			</div>

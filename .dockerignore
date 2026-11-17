@@ -8,7 +8,7 @@
 .env*
 Dockerfile
 fly.toml
-vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
 /data-backups
 /.pnpm-store
 /.vercel

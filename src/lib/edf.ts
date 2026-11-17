@@ -24,6 +24,7 @@
  * mean two things (see assert_unambiguous_schema).
  */
 import type { Attachment, Document, DocumentNode, NodeSchema, PropertyDefinition } from 'svedit';
+import { get_attached_ranges } from './document_graph.js';
 
 type Schema = Record<string, NodeSchema>;
 type Ranges = { marks?: Attachment[]; annotations?: Attachment[] };
@@ -186,10 +187,6 @@ function parse_xml(source: string): XmlElement {
 // ---------------------------------------------------------------------------
 // Shared helpers
 
-function ranges_of(value: Ranges | null | undefined): Attachment[] {
-	return [...(value?.marks ?? []), ...(value?.annotations ?? [])];
-}
-
 /**
  * Visit a range of positions, emitting plain stretches and wrappers for the
  * ranges inside them. Ranges may nest but not partially overlap.
@@ -280,7 +277,7 @@ const checked_schemas = new WeakSet<Schema>();
  * that is also a child node type or a property name where both can appear,
  * or a type allowed both as a mark and an annotation on the same property.
  */
-export function assert_unambiguous_schema(schema: Schema) {
+function assert_unambiguous_schema(schema: Schema) {
 	if (checked_schemas.has(schema)) return;
 	for (const [type, type_schema] of Object.entries(schema)) {
 		for (const [name, definition] of Object.entries<PropertyDefinition>(type_schema.properties)) {
@@ -359,7 +356,7 @@ export function serialize_edf(document: Document, schema: Schema, options: Seria
 		walk_ranges(
 			0,
 			chars.length,
-			ranges_of(value),
+			get_attached_ranges(value),
 			(start, end) => (out += escape_text(chars.slice(start, end).join(''))),
 			(range, inner) => {
 				const mark = range_node(range, `${node.id}.${name}`);
@@ -383,7 +380,7 @@ export function serialize_edf(document: Document, schema: Schema, options: Seria
 		walk_ranges(
 			0,
 			value.nodes.length,
-			ranges_of(value),
+			get_attached_ranges(value),
 			(start, end) => {
 				for (const id of value.nodes.slice(start, end)) {
 					const child = nodes[id];

@@ -2,12 +2,16 @@
 	import type { Nodes } from '#app/document_schema.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { Node, TextProperty } from 'svedit';
+	import type { DocumentPath, NodeArrayAttachmentContext } from 'svedit';
 	import { lazy_highlight_editable_code as highlight_editable_code } from '#lib/lazy_highlight_editable_code.js';
 	import { highlight_code } from '#lib/code_highlighting.js';
 	import { tooltip } from '#app/tooltip.js';
 
 	const svedit = get_svedit_context();
-	let { path, mark: section = null } = $props();
+	let {
+		path,
+		mark: section = null
+	}: { path: DocumentPath; mark?: NodeArrayAttachmentContext | null } = $props();
 	let node: Nodes['code_block'] = $derived(svedit.session.get(path));
 	let layout = $derived(node.layout || 'narrow-left');
 	let padding_top_generous = $derived(!section || section.is_start);

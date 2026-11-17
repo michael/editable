@@ -14,10 +14,6 @@
 
 	let media_node = $derived(svedit.session.get(path));
 	let controls_ref = $state(null);
-	// Panning control — disable only when the media exactly fills the container
-	// with no room to move: cover at scale 1.0 with matching aspect ratios.
-	// All other cases (contain, scale > 1, mismatched ratios) allow panning.
-	let can_pan = $state(false);
 	let container_width = $state(0);
 	let container_height = $state(0);
 
@@ -46,30 +42,14 @@
 		return () => ro.disconnect();
 	});
 
-	// Derive can_pan from media props + observed container dimensions
-	$effect(() => {
-		const _scale = media_node.scale;
-		const _width = media_node.width;
-		const _height = media_node.height;
-		const cw = container_width;
-		const ch = container_height;
-
-		if (!controls_ref || !_width || !_height || cw === 0 || ch === 0) {
-			can_pan = false;
-			return;
-		}
-
-		if (_scale !== 1.0) {
-			can_pan = true;
-			return;
-		}
-
-		// At scale 1.0, panning is only useful if aspect ratios differ:
-		// - cover: image overflows on one axis, focal point picks visible area
-		// - contain: image has empty space, focal point positions it in the frame
-		const container_ratio = cw / ch;
-		const media_ratio = _width / _height;
-		can_pan = Math.abs(media_ratio - container_ratio) > 0.01;
+	// At scale 1, panning only helps when the aspect ratios differ: a covered
+	// image overflows on one axis, a contained one leaves space to position it in.
+	let can_pan = $derived.by(() => {
+		const { scale, width, height } = media_node;
+		if (!controls_ref || !width || !height || container_width === 0 || container_height === 0)
+			return false;
+		if (scale !== 1.0) return true;
+		return Math.abs(width / height - container_width / container_height) > 0.01;
 	});
 
 	function apply_pan_delta(client_x, client_y) {

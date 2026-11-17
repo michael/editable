@@ -1,12 +1,19 @@
-import { default_site_document } from '#app/default_site.js';
+import {
+	default_banner_document,
+	default_footer_document,
+	default_nav_document,
+	default_site_document
+} from '#app/default_site.js';
 import { site, request_language } from '#app/server_site.js';
 import { language_href } from '#app/languages.js';
+import { resolve_href, resolve_hrefs } from '#app/document_links.js';
 import { error, redirect } from '@sveltejs/kit';
 import { dev } from '$app/env';
 import { VERCEL } from '$app/env/private';
 import { get_markdown_page } from '#app/markdown/registry.js';
 import { convert_markdown } from '#app/markdown/convert.js';
 import { compose_markdown_document } from '#app/markdown/compose.js';
+import { extract_site_metadata } from '#app/page_metadata.js';
 import type { Document } from 'svedit';
 
 export const load_page = async ({
@@ -31,12 +38,11 @@ export const load_page = async ({
 			const shared_documents = await get_shared_site_documents(language);
 			const page_doc = convert_markdown(markdown_page.markdown, markdown_page);
 			document = compose_markdown_document(page_doc, shared_documents);
-			const { resolve_hrefs } = await import('#app/document_links.js');
 			document = resolve_hrefs(document, site, language);
 		} catch (err) {
 			// Log the detailed error (with filesystem paths) server-side only.
 			console.error(`Failed to render markdown page ${markdown_page.pathname}:`, err);
-			throw error(500, dev && err instanceof Error ? err.message : 'Failed to render page');
+			error(500, dev && err instanceof Error ? err.message : 'Failed to render page');
 		}
 
 		return {
@@ -53,8 +59,7 @@ export const load_page = async ({
 		const result = await get_document(params.page_id);
 
 		if (result.redirect_to_slug) {
-			const { resolve_href } = await import('#app/document_links.js');
-			throw redirect(301, resolve_href(`/${result.redirect_to_slug}${url.search}`, site, language));
+			redirect(301, resolve_href(`/${result.redirect_to_slug}${url.search}`, site, language));
 		}
 
 		return {
@@ -72,18 +77,16 @@ export const load_page = async ({
 		if (err && typeof err === 'object' && 'status' in err) {
 			throw err;
 		}
-		throw error(404, 'Page not found');
+		error(404, 'Page not found');
 	}
 };
 
 /**
- * Shared banner/nav/footer documents for composing markdown pages: the live
- * database documents when a backend exists, the default site documents on static builds.
+ * The site's banner, nav, and footer documents in the given language: the
+ * backend's documents when there is one, the default site documents on static builds.
  */
-async function get_shared_site_documents(language: string) {
+export async function get_shared_site_documents(language: string) {
 	if (VERCEL) {
-		const { default_banner_document, default_nav_document, default_footer_document } =
-			await import('#app/default_site.js');
 		return {
 			banner_document: default_banner_document,
 			nav_document: default_nav_document,
@@ -99,6 +102,16 @@ async function get_shared_site_documents(language: string) {
 		nav_document: await translate_shared_document(shared.nav_document, language),
 		footer_document: await translate_shared_document(shared.footer_document, language)
 	};
+}
+
+/** The site's metadata, such as its favicon, from the home page or, on static builds, the default site. */
+export async function get_site_metadata() {
+	if (VERCEL) return extract_site_metadata(default_site_document);
+	const { get_doc_from_db, get_home_page_id_from_db } = await import('#app/server_documents.js');
+	const home_page_id = await get_home_page_id_from_db();
+	return home_page_id
+		? extract_site_metadata(await get_doc_from_db(home_page_id))
+		: { favicon: null };
 }
 
 export const load_home = async ({ url }: { url: URL }) => {

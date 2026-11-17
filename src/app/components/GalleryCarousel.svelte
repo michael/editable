@@ -113,7 +113,7 @@
 			aria-label="Gallery"
 			aria-roledescription="carousel"
 			tabindex={svedit.editable ? undefined : 0}
-			class="[scrollbar-none] relative -my-1 {svedit.editable
+			class="relative -my-1 scrollbar-none {svedit.editable
 				? 'snap-none'
 				: 'snap-x snap-mandatory'} scroll-px-(--ew-carousel-inset) overflow-x-auto overscroll-x-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--editing) {edge_fade} [&::-webkit-scrollbar]:hidden"
 			{@attach track_carousel}

@@ -83,7 +83,7 @@
 	>
 		<div
 			style:anchor-name={`--toc-${toc_id}`}
-			class="group relative max-w-[calc(100vw-2.5rem)] min-w-0 rounded-(--button-border-radius) border border-(--stroke) bg-(--background) p-1 text-sm leading-5 text-(--foreground)"
+			class="relative max-w-[calc(100vw-2.5rem)] min-w-0 rounded-(--button-border-radius) border border-(--stroke) bg-(--background) p-1 text-sm leading-5 text-(--foreground)"
 		>
 			<button
 				type="button"

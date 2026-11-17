@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { error } from '@sveltejs/kit';
-import { site } from './server_site.js';
+import { site, site_url } from './server_site.js';
 import { require_editor } from '#lib/server/auth.js';
 import { backend } from './services.js';
 import type { OAuthGrantRecord, OAuthTokenRecord } from '#lib/server/backend.js';
@@ -13,10 +13,9 @@ const CODE_TTL_SECONDS = 10 * 60;
 const UPLOAD_TOKEN_TTL_SECONDS = 30 * 60;
 
 type TokenKind = 'code' | 'access' | 'refresh' | 'upload';
-type Grant = OAuthGrantRecord;
-export type OAuthClient = { client_id: string; client_name: string; redirect_uris: string[] };
+type OAuthClient = { client_id: string; client_name: string; redirect_uris: string[] };
 
-export class OAuthError extends Error {
+class OAuthError extends Error {
 	constructor(
 		public code: string,
 		message: string,
@@ -31,10 +30,7 @@ const new_secret = () => randomBytes(32).toString('base64url');
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 
 // Each site is its own authorization server at its origin and base path, read per request.
-export const issuer = () => {
-	const { origin, base } = site;
-	return `${new URL(origin).origin}${base}`;
-};
+export const issuer = site_url;
 export const mcp_resource = () => `${issuer()}/mcp`;
 // RFC 9728 puts a resource's metadata at the host root with the resource's path appended.
 export const resource_metadata_url = () => {
@@ -128,7 +124,10 @@ async function insert_token(grant_id: string, kind: TokenKind, expires_at: numbe
 }
 
 /** The unexpired grant an unexpired token of the given kind belongs to. */
-async function grant_of(record: OAuthTokenRecord | null, kind: TokenKind): Promise<Grant | null> {
+async function grant_of(
+	record: OAuthTokenRecord | null,
+	kind: TokenKind
+): Promise<OAuthGrantRecord | null> {
 	const time = now();
 	if (!record || record.kind !== kind || record.expires_at <= time) return null;
 	const grant = await backend.get_oauth_grant(record.grant_id);
@@ -156,7 +155,7 @@ export async function approve_client(input: {
 	return insert_token(grant_id, 'code', time + CODE_TTL_SECONDS);
 }
 
-async function issue_tokens(grant: Grant) {
+async function issue_tokens(grant: OAuthGrantRecord) {
 	const access_expires_at = Math.min(now() + ACCESS_TOKEN_TTL_SECONDS, grant.expires_at);
 	return {
 		access_token: await insert_token(grant.grant_id, 'access', access_expires_at),

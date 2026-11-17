@@ -20,18 +20,7 @@
 #     locally) so it can be undone, validates before and after, and swaps the
 #     DB at boot with no live connection open.
 #
-# Usage
-#   ./scripts/data.sh pull                        # remote -> local
-#   ./scripts/data.sh push [--yes]                # local  -> remote
-#   ./scripts/data.sh restore <name> [--remote]   # restore local or remote from a backup
-#   ./scripts/data.sh restore-cloud [--at <ts>]   # roll remote back via the backup bucket (PITR)
-#   ./scripts/data.sh pull-cloud [--at <ts>]      # rebuild local data/ from the backup bucket
-#   ./scripts/data.sh backups [--remote]          # list local or remote backups
-#   ./scripts/data.sh backup [--remote]           # take a local or remote backup
-#   ./scripts/data.sh cloud-snapshots             # list restore points in the backup bucket
-#   ./scripts/data.sh verify [--remote]           # check local or remote database + assets
-#   ./scripts/data.sh reset                       # reset local database to fresh demo content
-#   ./scripts/data.sh help                        # print the command reference
+# Usage: ./scripts/data.sh help (or pnpm data:help) prints the command reference.
 #
 # Fly driver: the target app is read from fly.toml (app = '...'), same as the
 # fly CLI. Override with -a <app> or the FLY_APP environment variable (-a wins).
@@ -787,7 +776,7 @@ Data commands (via pnpm; arguments are forwarded directly):
   pnpm data:backups [--remote]              list local or remote snapshots
   pnpm data:restore <name> [--remote] [--yes] restore a local or remote snapshot
   pnpm data:cloud-snapshots                 list restore points in the backup bucket
-  pnpm data:restore-cloud [--at <ts>]       roll the live site back to a point in time
+  pnpm data:restore-cloud [--at <ts>] [--yes] roll the live site back to a point in time
   pnpm data:pull-cloud [--at <ts>]          rebuild local data/ from the backup bucket
   pnpm data:translations [--remote]         list stored languages (local by default)
   pnpm data:purge-translations <lang> [--remote] [--yes]

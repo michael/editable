@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Deploy an Editable site to a VPS — see VPS_DEPLOY_SPEC.md for the design.
+# Deploy an Editable site to a VPS — see README.md → Deploy to a VPS.
 #
 # One command takes a fresh Ubuntu server (amd64, ssh key access) to a running,
 # TLS-terminated site; the same command run again ships a code update. The
@@ -178,6 +178,11 @@ rssh_retry() {
 	return "$rc"
 }
 
+# Wait up to 30 seconds for the app to answer on the server.
+wait_healthy() {
+	rssh_retry 'for i in $(seq 30); do curl -fs -o /dev/null http://127.0.0.1:3000 && exit 0; sleep 1; done; exit 1'
+}
+
 # ---- phase 1: preflight ------------------------------------------------------
 
 if [ "$ACTION" = "deploy" ]; then
@@ -314,7 +319,7 @@ restart_with_env() {
 	rssh "$SUDO tee $SRV/.env >/dev/null && $SUDO chmod 600 $SRV/.env" <"$TMP/env"
 	info "Restarting the app with the new environment"
 	rssh_retry "cd $SRV && $SUDO docker compose --env-file .env --env-file .deploy_env up -d"
-	rssh_retry 'for i in $(seq 30); do curl -fs -o /dev/null http://127.0.0.1:3000 && exit 0; sleep 1; done; exit 1' ||
+	wait_healthy ||
 		die "the app did not come back healthy — inspect with: ssh $TARGET '$SUDO docker logs $CONTAINER'"
 }
 
@@ -495,7 +500,7 @@ rssh_retry "cd $SRV && $SUDO docker compose --env-file .env --env-file .deploy_e
 # ---- phase 6: verify ---------------------------------------------------------
 
 info "Waiting for the app to respond"
-if ! rssh_retry 'for i in $(seq 30); do curl -fs -o /dev/null http://127.0.0.1:3000 && exit 0; sleep 1; done; exit 1'; then
+if ! wait_healthy; then
 	echo "--- container logs -----------------------------------------------------" >&2
 	rssh_retry "$SUDO docker logs --tail 50 $CONTAINER" >&2 || true
 	die "the app did not become healthy — the failing container is left running for inspection"

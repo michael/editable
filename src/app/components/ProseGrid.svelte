@@ -2,9 +2,13 @@
 	import type { Nodes } from '#app/document_schema.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { Node, NodeArrayProperty } from 'svedit';
+	import type { DocumentPath, NodeArrayAttachmentContext } from 'svedit';
 
 	const svedit = get_svedit_context();
-	let { path, mark: section = null } = $props();
+	let {
+		path,
+		mark: section = null
+	}: { path: DocumentPath; mark?: NodeArrayAttachmentContext | null } = $props();
 	let node: Nodes['prose_grid'] = $derived(svedit.session.get(path));
 	let item_count = $derived(node.items?.nodes.length || 0);
 	let padding_top_generous = $derived(!section || section.is_start);

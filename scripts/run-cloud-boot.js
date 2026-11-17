@@ -24,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 // Mark this process (and every child spawned below) as the deployed runtime.
 // The automatic bucket writes — asset mirror, daily snapshot — only activate
 // under this flag, so dev servers and local previews can never write to the
-// bucket, even with credentials present (see backup_enabled in s3.js).
+// bucket, even with credentials present (see backup_enabled in src/lib/server/s3.ts).
 process.env.EDITABLE_DEPLOYED = '1';
 
 const DATA_DIR = process.env.DATA_DIR || '/data';
