@@ -1197,7 +1197,7 @@ Editable's own migrations use the `editable` namespace; `custom` migrations belo
 
 Publish your website in multiple languages.
 
-`LANGUAGES` names your site's language as a BCP 47 tag, such as `de`, which its pages declare to browsers, screen readers, and search engines. Every site with a backend sets it. To translate, list several tags in `.env` or your deployment environment, the original language first; each tag is a separate content variant:
+`LANGUAGES` names your site's language as a BCP 47 tag, such as `de`, which its pages declare to browsers, screen readers, and search engines. Every site sets it. To translate, list several tags in `.env` or your deployment environment, the original language first; each tag is a separate content variant:
 
 ```dotenv
 LANGUAGES="en,de"

@@ -55,7 +55,6 @@ const edf_rules = [
 	'Image and video src values must be uploaded assets: reuse src, width, height, and mime_type from existing media, or add an image with prepare_image_upload. Videos cannot be uploaded through MCP.'
 ];
 
-// Backend-only modules are imported lazily so the static deployment does not evaluate database code.
 const tools = [
 	define_tool({
 		name: 'get_schema',

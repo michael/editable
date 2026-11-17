@@ -32,7 +32,7 @@ export function get_markdown_page(pathname: string): MarkdownSource | null {
 	return registry.get(pathname) ?? null;
 }
 
-/** Configured Markdown paths for static builds. */
+/** Configured Markdown paths, for the sitemap and language slug checks. */
 export function get_markdown_page_pathnames(): string[] {
 	return [...registry.keys()];
 }
