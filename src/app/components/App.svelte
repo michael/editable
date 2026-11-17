@@ -628,7 +628,9 @@
 				}
 
 				this.context.editable = false;
+				saved_session = session;
 				await refreshAll();
+				saved_session = null;
 
 				// Display "saved" message only if saving took longer than 3 seconds
 				if (Date.now() - save_start > 3000) {
@@ -810,13 +812,30 @@
 	});
 	key_mapper.push_scope(app_key_map);
 
+	// The session just saved, so the reload after a save keeps it, and with it the undo history.
+	let saved_session: AppSession | null = null;
 	let session = $derived.by(() => {
 		// Equal load data must not reset the editor; language changes still reset history.
 		language;
 		const doc_json = initial_doc_json;
 		// Session construction reads reactive internals. Only load data belongs in this dependency list.
-		return untrack(() => create_session(JSON.parse(doc_json), app));
+		return untrack(() => {
+			const kept = saved_session;
+			saved_session = null;
+			const loaded = create_session(JSON.parse(doc_json), app);
+			return kept && document_key(kept) === document_key(loaded) ? kept : loaded;
+		});
 	});
+
+	// Compares documents regardless of key order, which a stored and reloaded document need not keep.
+	function document_key(session: AppSession) {
+		return JSON.stringify(session.to_json(), (_key, value) =>
+			value && typeof value === 'object' && !Array.isArray(value)
+				? Object.fromEntries(Object.entries(value).sort(([a], [b]) => (a < b ? -1 : 1)))
+				: value
+		);
+	}
+
 	// The doc is immutable, so a new reference means an edit since loading or the last save.
 	let saved_doc = $derived.by(() => {
 		const current_session = session;
