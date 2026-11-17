@@ -21,7 +21,6 @@
 
 	let page_preview = $derived.by(async () => {
 		const href = internal_page_href;
-		if (!app.has_backend) return null;
 		if (!href) return null;
 
 		const api_module = await import('#app/api.remote.js');

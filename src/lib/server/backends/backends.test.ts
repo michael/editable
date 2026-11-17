@@ -13,8 +13,7 @@ vi.mock('$app/env/private', () => ({
 	ADMIN_PASSWORD: 'secret',
 	NODE_ENV: 'test',
 	ORIGIN: 'https://example.com',
-	LANGUAGES: 'en',
-	VERCEL: ''
+	LANGUAGES: 'en'
 }));
 
 const dirs: string[] = [];

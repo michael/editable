@@ -1,19 +1,14 @@
 /// <reference types="vitest/config" />
-import adapter_node from '@sveltejs/adapter-node';
-import adapter_static from '@sveltejs/adapter-static';
+import adapter from '@sveltejs/adapter-node';
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
-
-const adapter = process.env.VERCEL ? adapter_static({ strict: false }) : adapter_node();
-const prerender = process.env.VERCEL ? { crawl: false } : undefined;
 
 export default defineConfig({
 	plugins: [
 		tailwindcss(),
 		sveltekit({
-			adapter,
-			prerender,
+			adapter: adapter(),
 			// OAuth clients post token requests as forms without an Origin header,
 			// which SvelteKit's origin check would reject. The admin cookie is
 			// SameSite=Lax, so cross-site form posts cannot carry it anyway.

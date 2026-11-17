@@ -10,7 +10,6 @@ export type AppContext = {
 	switch_language: (language: string) => Promise<void>;
 	/** Optional body for read-only routes using the shared site layout. */
 	readonly page_content?: Snippet;
-	readonly has_backend: boolean;
 	readonly can_edit: boolean;
 	readonly is_demo_mode: boolean;
 	readonly is_signed_in: boolean;

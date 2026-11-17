@@ -7,7 +7,7 @@ afterEach(() => {
 });
 
 it('uses the site a host sets for the request, and the deployment’s own otherwise', async () => {
-	const env = { ORIGIN: 'https://example.com', LANGUAGES: 'en,de', VERCEL: undefined };
+	const env = { ORIGIN: 'https://example.com', LANGUAGES: 'en,de' };
 	vi.doMock('$app/env/private', () => env);
 	const hosted = {
 		origin: 'https://host.example',
@@ -35,13 +35,12 @@ it('uses the site a host sets for the request, and the deployment’s own otherw
 });
 
 it.each([
-	{ LANGUAGES: 'en', VERCEL: undefined, expected: [], main: 'en' },
+	{ LANGUAGES: 'en', expected: [], main: 'en' },
 	// A single language is the site's own, without translations.
-	{ LANGUAGES: 'de', VERCEL: undefined, expected: [], main: 'de' },
-	{ LANGUAGES: 'en,de', VERCEL: undefined, expected: ['en', 'de'], main: 'en' },
-	{ LANGUAGES: 'not_a_language', VERCEL: '1', expected: [], main: 'en' }
+	{ LANGUAGES: 'de', expected: [], main: 'de' },
+	{ LANGUAGES: 'en,de', expected: ['en', 'de'], main: 'en' }
 ])(
-	'enables languages only when configured on a backend ($LANGUAGES, $VERCEL)',
+	'enables languages only when several are configured ($LANGUAGES)',
 	async ({ expected, main, ...env }) => {
 		vi.doMock('$app/env/private', () => ({ ORIGIN: '', ...env }));
 		const { default_site, request_language } = await import('./server_site.js');
@@ -58,8 +57,8 @@ it.each([
 	}
 );
 
-it('refuses a site with a backend but without LANGUAGES', async () => {
-	vi.doMock('$app/env/private', () => ({ ORIGIN: '', LANGUAGES: '', VERCEL: undefined }));
+it('refuses a site without LANGUAGES', async () => {
+	vi.doMock('$app/env/private', () => ({ ORIGIN: '', LANGUAGES: '' }));
 	await expect(import('./server_site.js')).rejects.toThrow(
 		"LANGUAGES must name the site's language"
 	);

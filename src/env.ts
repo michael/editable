@@ -1,23 +1,18 @@
 import { defineEnvVars } from '@sveltejs/kit/env';
 import { building } from '$app/env';
 
-// In no-backend (VERCEL=1) mode there is no database, no login and no writing,
-// so neither secret is needed. A validator only receives its own value, but this
-// file is evaluated when the server starts and can read the environment directly.
-const has_backend = () => !globalThis.process?.env?.VERCEL;
-
 // Variables are validated twice: once while the app is built, and again when it
 // starts. Deploys build without secrets — the Dockerfile runs `pnpm build` long
 // before the server's .env exists — so required variables are only enforced at
 // startup, never during the build.
-function required_with_backend(hint: string) {
+function required(hint: string) {
 	return {
 		'~standard': {
 			version: 1 as const,
 			vendor: 'editable',
 			types: undefined as unknown as { input: string | undefined; output: string },
 			validate: (value: unknown) => {
-				if (!building && has_backend() && !value) {
+				if (!building && !value) {
 					return { issues: [{ message: `Value is missing. ${hint}` }] };
 				}
 
@@ -48,25 +43,19 @@ const where =
 export const variables = defineEnvVars({
 	LANGUAGES: {
 		description:
-			"The site's language (de), or for experimental translations comma-separated language tags, original first (en,de). Required whenever the backend is enabled.",
-		schema: required_with_backend(
+			"The site's language (de), or for experimental translations comma-separated language tags, original first (en,de).",
+		schema: required(
 			'Set the site\'s language, such as LANGUAGES="en", or several for translations, original first: in .env locally, under [env] in fly.toml on Fly, or in the server .env on a VPS.'
 		)
 	},
 	ADMIN_PASSWORD: {
-		description:
-			'Password for the admin login. Required whenever the backend is enabled — the app refuses to start without it. Unused in VERCEL=1 mode.',
-		schema: required_with_backend(where)
+		description: 'Password for the admin login. The app refuses to start without it.',
+		schema: required(where)
 	},
 	ORIGIN: {
 		description:
-			'Public origin of the deployment, e.g. https://my-site.example.com. Used for canonical and social metadata. Required whenever the backend is enabled.',
-		schema: required_with_backend(where)
-	},
-	VERCEL: {
-		description:
-			'Set by Vercel. Its absence is what puts the app in backend mode, so it must stay optional.',
-		schema: optional((value) => value)
+			'Public origin of the deployment, e.g. https://my-site.example.com. Used for canonical and social metadata.',
+		schema: required(where)
 	},
 	NODE_ENV: {
 		description: 'Used to decide whether session cookies are marked secure.',

@@ -29,7 +29,6 @@
 	let {
 		document: doc,
 		slug = null,
-		has_backend = false,
 		is_new = false,
 		user = null,
 		is_editor = false,
@@ -45,7 +44,6 @@
 	}: {
 		document: any;
 		slug?: string | null;
-		has_backend?: boolean;
 		is_new?: boolean;
 		/** Whoever is signed in, or null. */
 		user?: Record<string, unknown> | null;
@@ -219,9 +217,6 @@
 		switch_language,
 		get page_content() {
 			return can_edit ? undefined : children;
-		},
-		get has_backend() {
-			return has_backend;
 		},
 		get can_edit() {
 			return can_edit;
@@ -448,7 +443,7 @@
 				);
 			}
 
-			if (!has_backend || is_editor) {
+			if (is_editor) {
 				enter_edit_mode();
 				return;
 			}
@@ -473,7 +468,6 @@
 			}
 
 			const saved_doc_json =
-				has_backend &&
 				!is_editor &&
 				edit_for_fun_saved_doc?.document_id === loaded_document_id &&
 				edit_for_fun_saved_doc.language === language
@@ -495,8 +489,8 @@
 			const doc_json = session.to_json();
 			if (dev) console.log('Saved', doc_json);
 
-			if (!has_backend || !is_editor_mode) {
-				if (has_backend && !is_editor) {
+			if (!is_editor_mode) {
+				if (!is_editor) {
 					edit_for_fun_saved_doc = {
 						document_id: loaded_document_id,
 						language,
@@ -659,7 +653,7 @@
 
 	class LogoutCommand extends Command {
 		is_enabled() {
-			return has_backend && !!user && !editable;
+			return !!user && !editable;
 		}
 
 		async execute() {
@@ -695,7 +689,7 @@
 
 	class BrowsePagesCommand extends Command {
 		is_enabled() {
-			return has_backend && is_editor && !this.context.editable;
+			return is_editor && !this.context.editable;
 		}
 
 		execute() {
@@ -705,7 +699,7 @@
 
 	class NewPageCommand extends Command {
 		is_enabled() {
-			return has_backend && is_editor && !this.context.editable;
+			return is_editor && !this.context.editable;
 		}
 
 		execute() {
@@ -718,7 +712,7 @@
 
 	class DuplicatePageCommand extends Command {
 		is_enabled() {
-			return has_backend && is_editor && can_edit && !editable && !!duplicate_source;
+			return is_editor && can_edit && !editable && !!duplicate_source;
 		}
 
 		execute() {
@@ -730,7 +724,7 @@
 
 	class EditPageUrlCommand extends Command {
 		is_enabled() {
-			return has_backend && is_editor && can_edit && !editable && !is_home_page;
+			return is_editor && can_edit && !editable && !is_home_page;
 		}
 
 		execute() {
@@ -744,7 +738,7 @@
 
 	class PageMenuCommand extends Command {
 		is_enabled() {
-			return has_backend && !!user && !editable;
+			return !!user && !editable;
 		}
 
 		execute() {
@@ -863,18 +857,16 @@
 
 	<Svedit {session} bind:editable bind:this={svedit_ref} path={[session.doc.document_id]} />
 
-	{#if has_backend}
-		<SaveProgressModal
-			visible={save_progress_visible}
-			message={save_progress_message}
-			done={save_progress_done}
-			progress={save_progress_percent}
-		/>
-		<SaveConflictDialog
-			open={save_conflict_open}
-			onreload={reload_after_conflict}
-			onoverwrite={overwrite_after_conflict}
-			onclose={() => (save_conflict_open = false)}
-		/>
-	{/if}
+	<SaveProgressModal
+		visible={save_progress_visible}
+		message={save_progress_message}
+		done={save_progress_done}
+		progress={save_progress_percent}
+	/>
+	<SaveConflictDialog
+		open={save_conflict_open}
+		onreload={reload_after_conflict}
+		onoverwrite={overwrite_after_conflict}
+		onclose={() => (save_conflict_open = false)}
+	/>
 </div>

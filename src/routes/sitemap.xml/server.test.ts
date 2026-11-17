@@ -2,8 +2,7 @@ import { expect, it, vi } from 'vitest';
 
 vi.mock('$app/env/private', () => ({
 	ORIGIN: 'https://example.com',
-	LANGUAGES: 'en',
-	VERCEL: undefined
+	LANGUAGES: 'en'
 }));
 vi.mock('#app/page_browser_data.js', () => ({
 	get_sitemap_entries: async () => [{ path: '/über', lastmod: null }]

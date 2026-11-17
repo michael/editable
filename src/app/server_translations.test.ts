@@ -7,8 +7,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 vi.mock('$app/env/private', () => ({
 	LANGUAGES: 'en,de,fr',
-	ORIGIN: 'https://example.com',
-	VERCEL: undefined
+	ORIGIN: 'https://example.com'
 }));
 vi.mock('./services.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');

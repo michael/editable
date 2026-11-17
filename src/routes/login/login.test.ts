@@ -1,6 +1,5 @@
 import { expect, it, vi } from 'vitest';
 
-vi.mock('$app/env/private', () => ({ VERCEL: '' }));
 vi.mock('#app/server_site.js', () => ({
 	site: { origin: 'https://example.com', base: '', languages: [] }
 }));

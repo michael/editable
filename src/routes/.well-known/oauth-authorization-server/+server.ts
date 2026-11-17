@@ -1,10 +1,7 @@
-import { error } from '@sveltejs/kit';
-import { VERCEL } from '$app/env/private';
+import { authorization_server_metadata, oauth_json } from '#app/server_oauth.js';
 import type { RequestHandler } from './$types';
 
 // RFC 8414 authorization server metadata.
 export const GET: RequestHandler = async () => {
-	if (VERCEL) error(404, 'Not found');
-	const { oauth_json, authorization_server_metadata } = await import('#app/server_oauth.js');
 	return oauth_json(authorization_server_metadata());
 };

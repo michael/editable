@@ -485,14 +485,3 @@ for (const node of page_nodes_list) {
 	}
 }
 export const default_page_document = { document_id: home_page_id, nodes: page_nodes };
-
-// Merged default site document for static deployment (VERCEL=1)
-export const default_site_document = {
-	document_id: default_page_document.document_id,
-	nodes: {
-		...default_page_document.nodes,
-		...default_banner_document.nodes,
-		...default_nav_document.nodes,
-		...default_footer_document.nodes
-	}
-};

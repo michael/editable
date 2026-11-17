@@ -1,6 +1,6 @@
 import { getRequestEvent } from '$app/server';
 import { building } from '$app/env';
-import { LANGUAGES, ORIGIN, VERCEL } from '$app/env/private';
+import { LANGUAGES, ORIGIN } from '$app/env/private';
 import { language_path, main_language, parse_languages } from './languages.js';
 import { normalize_href } from './document_links.js';
 import type { Backend } from '#lib/server/backend.js';
@@ -26,14 +26,12 @@ export type Site = {
 	auth?: Auth;
 };
 
-// No database dependencies: safe to import from static/no-backend routes.
 export const default_site: Site = {
 	origin: ORIGIN,
 	base: '',
-	languages: VERCEL ? [] : parse_languages(LANGUAGES),
-	// Static builds have no backend and need no LANGUAGES. Builds run without the
-	// environment, like env.ts, and render nothing with a backend, so they skip it too.
-	main_language: VERCEL || building ? 'en' : main_language(LANGUAGES)
+	languages: parse_languages(LANGUAGES),
+	// Builds run without the environment, like env.ts, and render nothing, so they skip LANGUAGES.
+	main_language: building ? 'en' : main_language(LANGUAGES)
 };
 
 /** The current request's site; outside a request, such as at startup, the deployment's own. */

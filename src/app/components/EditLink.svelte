@@ -52,7 +52,7 @@
 		selected_page?: InternalLinkPreview
 	): Promise<InternalLinkPreview | null> {
 		if (selected_page) return selected_page;
-		if (!app.has_backend || !is_internal_page_link(href_input_value)) return null;
+		if (!is_internal_page_link(href_input_value)) return null;
 
 		try {
 			const api_module = await import('#app/api.remote.js');
@@ -223,7 +223,7 @@
 					onkeydown={handle_keydown}
 					onpaste={handle_paste}
 				/>
-				{#if app.has_backend && app.is_editor}
+				{#if app.is_editor}
 					<button
 						type="button"
 						class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent p-0 text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"

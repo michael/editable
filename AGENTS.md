@@ -18,8 +18,6 @@ Editable is minimalistic by design: less, but better.
 
 ## Important constraints
 
-- For code running from `/` in no-backend/Vercel mode, do not add top-level imports of backend-only modules such as `#app/api.remote.js` or anything that imports a backend from `#lib/server/backends/`.
-- In home-route server files, import backend-only code lazily inside the `has_backend` guard so static deployments do not evaluate database code at module load time.
 - Files using Svelte runes (`$state`, `$derived`, `$effect`, etc.) must use the `.svelte.js` or `.svelte.ts` extension.
 - Use sentence case for documentation headings and comments. Names keep their capitals everywhere, including mid-heading: Editable, Svedit, and titles of works such as The Editable Manual. Generic references stay lowercase, even when they point at a named thing: "see the manual", "buy a license".
 - Read the site's origin, base path, and languages through `site` from `#app/server_site.js` on the server and `#app/client_site.js` in the browser, never from `ORIGIN` or `LANGUAGES` directly: a host serving several sites sets them per request. Documents reach the browser with internal links already under the base, so components render `node.href` as is. Links the browser makes up itself, such as asset URLs and navigation targets, go through `resolve_href(href, site)` from `#app/document_links.js`; absolute URLs use `absolute_page_url(path, site)`. Stored links never include the base.
