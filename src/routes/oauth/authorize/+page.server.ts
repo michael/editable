@@ -1,20 +1,25 @@
-import { error, fail, redirect } from '@sveltejs/kit';
-import { VERCEL } from '$app/env/private';
+import { fail, redirect } from '@sveltejs/kit';
 import { site } from '#app/server_site.js';
+import {
+	approve_client,
+	find_client,
+	is_own_resource,
+	issuer,
+	mcp_resource
+} from '#app/server_oauth.js';
 import type { Actions, PageServerLoad } from './$types';
 
 /** Validate an authorization request. */
 async function validate_request(params: URLSearchParams) {
-	const oauth = await import('#app/server_oauth.js');
 	const code_challenge = params.get('code_challenge') ?? '';
 	if (params.get('response_type') !== 'code')
 		return { error: 'Only response_type=code is supported.' } as const;
 	if (params.get('code_challenge_method') !== 'S256' || !/^[\w-]{43}$/.test(code_challenge))
 		return { error: 'A PKCE code challenge with method S256 is required.' } as const;
-	if (!oauth.is_own_resource(params.get('resource')))
-		return { error: `Access can only be granted to ${oauth.mcp_resource()}.` } as const;
+	if (!is_own_resource(params.get('resource')))
+		return { error: `Access can only be granted to ${mcp_resource()}.` } as const;
 
-	const client = oauth.find_client(params.get('client_id') ?? '');
+	const client = find_client(params.get('client_id') ?? '');
 	if (!client)
 		return {
 			error: 'The app could not be identified. Start connecting again from the app.'
@@ -27,7 +32,6 @@ async function validate_request(params: URLSearchParams) {
 }
 
 export const load: PageServerLoad = async ({ url, locals }) => {
-	if (VERCEL) error(404, 'Not found');
 	if (!locals.is_editor) return { step: 'login' as const };
 
 	const request = await validate_request(url.searchParams);
@@ -53,7 +57,6 @@ export const actions: Actions = {
 
 		const target = new URL(validated.redirect_uri);
 		if ((await request.formData()).get('decision') === 'allow') {
-			const { approve_client, issuer } = await import('#app/server_oauth.js');
 			const code = await approve_client({
 				client_id: validated.client.client_id,
 				redirect_uri: validated.redirect_uri,

@@ -1,15 +1,17 @@
-import { error } from '@sveltejs/kit';
-import { VERCEL } from '$app/env/private';
+import {
+	assert_small_body,
+	exchange_token,
+	oauth_error_response,
+	oauth_json
+} from '#app/server_oauth.js';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
-	if (VERCEL) error(404, 'Not found');
-	const oauth = await import('#app/server_oauth.js');
 	try {
-		oauth.assert_small_body(request);
+		assert_small_body(request);
 		const params = new URLSearchParams(await request.text());
-		return oauth.oauth_json(await oauth.exchange_token(params));
+		return oauth_json(await exchange_token(params));
 	} catch (err) {
-		return oauth.oauth_error_response(err);
+		return oauth_error_response(err);
 	}
 };

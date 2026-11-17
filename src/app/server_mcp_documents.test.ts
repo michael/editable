@@ -3,8 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 
 vi.mock('$app/env/private', () => ({
 	LANGUAGES: 'en,de',
-	ORIGIN: 'https://example.com',
-	VERCEL: undefined
+	ORIGIN: 'https://example.com'
 }));
 vi.mock('#lib/server/db_snapshot.js', () => ({ snapshot_if_stale: vi.fn() }));
 vi.mock('./services.js', async () => {

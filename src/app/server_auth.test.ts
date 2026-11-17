@@ -6,8 +6,7 @@ vi.mock('$app/env/private', () => ({
 	ADMIN_PASSWORD: 'secret',
 	NODE_ENV: 'test',
 	ORIGIN: 'https://example.com',
-	LANGUAGES: 'en',
-	VERCEL: ''
+	LANGUAGES: 'en'
 }));
 vi.mock('$app/server', () => ({ getRequestEvent: () => ({ locals: request.locals }) }));
 vi.mock('./services.js', async () => {

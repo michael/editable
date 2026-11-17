@@ -86,17 +86,17 @@
 
 	let cancel_command = $derived(app_commands.cancel_editing ?? null);
 	let cancel_button_label = $derived(cancel_command?.label || 'Cancel');
-	let can_browse_pages = $derived(app.has_backend && app.is_editor && !editable);
-	let can_create_pages = $derived(app.has_backend && app.is_editor);
-	let can_manage_current_page = $derived(app.has_backend && app.is_editor && app.can_edit);
+	let can_browse_pages = $derived(app.is_editor && !editable);
+	let can_create_pages = $derived(app.is_editor);
+	let can_manage_current_page = $derived(app.is_editor && app.can_edit);
 	// Anyone signed in gets the menu, to log out; editors also find the page actions there.
-	let can_logout = $derived(app.has_backend && app.is_signed_in && !editable);
+	let can_logout = $derived(app.is_signed_in && !editable);
 	let page_menu_label = $derived(app.is_editor ? 'Page actions' : 'Account');
 	// Buttons and menu entries an app adds for people signed in, such as links to its own pages.
 	let ToolbarItems = $derived(session.config.system_components?.toolbar_items);
 	let MenuItems = $derived(session.config.system_components?.menu_items);
 	let can_edit_document = $derived(
-		(app.is_demo_mode || !app.has_backend || app.is_editor) && !app_commands.edit_document.disabled
+		(app.is_demo_mode || app.is_editor) && !app_commands.edit_document.disabled
 	);
 	let can_show_read_toolbar = $derived(
 		can_create_pages ||
@@ -210,7 +210,7 @@
 	}
 
 	function handle_edit_document_click() {
-		if (app.is_demo_mode && app.has_backend && !app.is_editor) {
+		if (app.is_demo_mode && !app.is_editor) {
 			app.edit_for_fun();
 			return;
 		}

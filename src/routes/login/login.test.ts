@@ -1,6 +1,7 @@
 import { expect, it, vi } from 'vitest';
 
-vi.mock('$app/env/private', () => ({ VERCEL: '' }));
+// The real module checks the environment, which tests do not set.
+vi.mock('$app/env/private', () => ({ ADMIN_PASSWORD: '', NODE_ENV: 'test' }));
 vi.mock('#app/server_site.js', () => ({
 	site: { origin: 'https://example.com', base: '', languages: [] }
 }));

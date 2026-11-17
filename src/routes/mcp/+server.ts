@@ -1,7 +1,14 @@
-import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { toJsonSchema } from '@valibot/to-json-schema';
-import { VERCEL } from '$app/env/private';
+import { document_schema } from '#app/document_schema.js';
+import { build_page_browser_data } from '#app/page_browser_data.js';
+import {
+	create_mcp_page,
+	read_mcp_document,
+	write_mcp_document
+} from '#app/server_mcp_documents.js';
+import { prepare_image_upload } from '#app/server_mcp_images.js';
+import { resource_metadata_url, verify_access_token } from '#app/server_oauth.js';
 import { site_url } from '#app/server_site.js';
 import type { RequestHandler } from './$types';
 import { version } from '../../../package.json' with { type: 'json' };
@@ -48,7 +55,6 @@ const edf_rules = [
 	'Image and video src values must be uploaded assets: reuse src, width, height, and mime_type from existing media, or add an image with prepare_image_upload. Videos cannot be uploaded through MCP.'
 ];
 
-// Backend-only modules are imported lazily so the static deployment does not evaluate database code.
 const tools = [
 	define_tool({
 		name: 'get_schema',
@@ -57,7 +63,6 @@ const tools = [
 		input: v.strictObject({}),
 		annotations: { readOnlyHint: true },
 		handler: async () => {
-			const { document_schema } = await import('#app/document_schema.js');
 			return { edf: edf_rules, node_types: document_schema };
 		}
 	}),
@@ -68,7 +73,6 @@ const tools = [
 		input: v.strictObject({}),
 		annotations: { readOnlyHint: true },
 		handler: async () => {
-			const { build_page_browser_data } = await import('#app/page_browser_data.js');
 			return build_page_browser_data('/');
 		}
 	}),
@@ -90,7 +94,6 @@ const tools = [
 		}),
 		annotations: { readOnlyHint: true },
 		handler: async ({ document, language }) => {
-			const { read_mcp_document } = await import('#app/server_mcp_documents.js');
 			return read_mcp_document(document, language);
 		}
 	}),
@@ -109,7 +112,6 @@ const tools = [
 		}),
 		annotations: { readOnlyHint: false, destructiveHint: false },
 		handler: async ({ edf, slug }) => {
-			const { create_mcp_page } = await import('#app/server_mcp_documents.js');
 			return create_mcp_page({ edf, slug });
 		}
 	}),
@@ -120,7 +122,6 @@ const tools = [
 		input: v.strictObject({}),
 		annotations: { readOnlyHint: true },
 		handler: async (_args, { grant_id }) => {
-			const { prepare_image_upload } = await import('#app/server_mcp_images.js');
 			return prepare_image_upload(site_url(), grant_id);
 		}
 	}),
@@ -140,7 +141,6 @@ const tools = [
 		}),
 		annotations: { readOnlyHint: false, destructiveHint: true },
 		handler: async ({ edf, expected_version, language }) => {
-			const { write_mcp_document } = await import('#app/server_mcp_documents.js');
 			return write_mcp_document({ edf, expected_version, language });
 		}
 	})
@@ -261,9 +261,7 @@ async function handle_method(message: any, protocol: Protocol, context: ToolCont
 }
 
 export const POST: RequestHandler = async ({ request }) => {
-	if (VERCEL) error(404, 'Not found');
 	// Access tokens come from the OAuth flow; the 401 challenge points clients to its metadata.
-	const { resource_metadata_url, verify_access_token } = await import('#app/server_oauth.js');
 	const token = /^Bearer (\S+)$/i.exec(request.headers.get('authorization') ?? '')?.[1];
 	const grant = token ? await verify_access_token(token) : null;
 	if (!grant) {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { log_out, save_page, save_page_translation } from '#app/api.remote.js';
 	import { setContext, untrack, type Snippet } from 'svelte';
 	import { dev } from '$app/env';
 	import { DEMO_MODE } from '$app/env/public';
@@ -29,7 +30,6 @@
 	let {
 		document: doc,
 		slug = null,
-		has_backend = false,
 		is_new = false,
 		user = null,
 		is_editor = false,
@@ -45,7 +45,6 @@
 	}: {
 		document: any;
 		slug?: string | null;
-		has_backend?: boolean;
 		is_new?: boolean;
 		/** Whoever is signed in, or null. */
 		user?: Record<string, unknown> | null;
@@ -219,9 +218,6 @@
 		switch_language,
 		get page_content() {
 			return can_edit ? undefined : children;
-		},
-		get has_backend() {
-			return has_backend;
 		},
 		get can_edit() {
 			return can_edit;
@@ -448,7 +444,7 @@
 				);
 			}
 
-			if (!has_backend || is_editor) {
+			if (is_editor) {
 				enter_edit_mode();
 				return;
 			}
@@ -473,7 +469,6 @@
 			}
 
 			const saved_doc_json =
-				has_backend &&
 				!is_editor &&
 				edit_for_fun_saved_doc?.document_id === loaded_document_id &&
 				edit_for_fun_saved_doc.language === language
@@ -495,8 +490,8 @@
 			const doc_json = session.to_json();
 			if (dev) console.log('Saved', doc_json);
 
-			if (!has_backend || !is_editor_mode) {
-				if (has_backend && !is_editor) {
+			if (!is_editor_mode) {
+				if (!is_editor) {
 					edit_for_fun_saved_doc = {
 						document_id: loaded_document_id,
 						language,
@@ -511,12 +506,7 @@
 
 			const save_start = Date.now();
 
-			const [api_module, asset_upload_module] = await Promise.all([
-				import('#app/api.remote.js'),
-				import('#app/asset_upload.js')
-			]);
-
-			const save_page: any = api_module.save_page;
+			const asset_upload_module = await import('#app/asset_upload.js');
 
 			const {
 				collect_blob_urls,
@@ -570,7 +560,7 @@
 					slug?: string;
 					created?: boolean;
 				} = translation_mode
-					? await api_module.save_page_translation({ ...doc_json, language, translation_revision })
+					? await save_page_translation({ ...doc_json, language, translation_revision })
 					: await save_page({
 							...doc_json,
 							create: is_new,
@@ -659,13 +649,12 @@
 
 	class LogoutCommand extends Command {
 		is_enabled() {
-			return has_backend && !!user && !editable;
+			return !!user && !editable;
 		}
 
 		async execute() {
 			try {
-				const api_module = await import('#app/api.remote.js');
-				await api_module.log_out();
+				await log_out();
 				editable = false;
 				page_browser.close?.();
 				await refreshAll();
@@ -695,7 +684,7 @@
 
 	class BrowsePagesCommand extends Command {
 		is_enabled() {
-			return has_backend && is_editor && !this.context.editable;
+			return is_editor && !this.context.editable;
 		}
 
 		execute() {
@@ -705,7 +694,7 @@
 
 	class NewPageCommand extends Command {
 		is_enabled() {
-			return has_backend && is_editor && !this.context.editable;
+			return is_editor && !this.context.editable;
 		}
 
 		execute() {
@@ -718,7 +707,7 @@
 
 	class DuplicatePageCommand extends Command {
 		is_enabled() {
-			return has_backend && is_editor && can_edit && !editable && !!duplicate_source;
+			return is_editor && can_edit && !editable && !!duplicate_source;
 		}
 
 		execute() {
@@ -730,7 +719,7 @@
 
 	class EditPageUrlCommand extends Command {
 		is_enabled() {
-			return has_backend && is_editor && can_edit && !editable && !is_home_page;
+			return is_editor && can_edit && !editable && !is_home_page;
 		}
 
 		execute() {
@@ -744,7 +733,7 @@
 
 	class PageMenuCommand extends Command {
 		is_enabled() {
-			return has_backend && !!user && !editable;
+			return !!user && !editable;
 		}
 
 		execute() {
@@ -863,18 +852,16 @@
 
 	<Svedit {session} bind:editable bind:this={svedit_ref} path={[session.doc.document_id]} />
 
-	{#if has_backend}
-		<SaveProgressModal
-			visible={save_progress_visible}
-			message={save_progress_message}
-			done={save_progress_done}
-			progress={save_progress_percent}
-		/>
-		<SaveConflictDialog
-			open={save_conflict_open}
-			onreload={reload_after_conflict}
-			onoverwrite={overwrite_after_conflict}
-			onclose={() => (save_conflict_open = false)}
-		/>
-	{/if}
+	<SaveProgressModal
+		visible={save_progress_visible}
+		message={save_progress_message}
+		done={save_progress_done}
+		progress={save_progress_percent}
+	/>
+	<SaveConflictDialog
+		open={save_conflict_open}
+		onreload={reload_after_conflict}
+		onoverwrite={overwrite_after_conflict}
+		onclose={() => (save_conflict_open = false)}
+	/>
 </div>

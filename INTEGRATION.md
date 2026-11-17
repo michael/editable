@@ -237,7 +237,7 @@ export const load: PageServerLoad = async (event) => ({
 ```
 
 - **`PageShell` is a page whose body is yours.** It renders everything a content page has around its body: the banner, the sticky nav, the footer, the toolbar for people signed in, and the login drawer. Its children take the body's place, inside `<main>`.
-- **The shell comes with every request.** The root layout builds it from the site's shared banner, nav, and footer, already in the visitor's language, and from the defaults on a static deployment, so the route loads nothing for it. The error page and the design system are built this way too.
+- **The shell comes with every request.** The root layout builds it from the site's shared banner, nav, and footer, already in the visitor's language, so the route loads nothing for it. The error page and the design system are built this way too.
 - **`title` and `description`** become the page's `<title>` and its description in search results and link previews.
 - **`require_user(event)`** from `src/app/server_auth.ts` returns the signed-in user, and sends anyone else to `/login`, which returns to the page afterwards. A page anyone may see leaves it out and reads `locals.user`.
 - **⌘ E leaves the page alone;** there is nothing for the editor to edit.

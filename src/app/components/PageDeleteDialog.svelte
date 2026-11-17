@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { delete_page } from '#app/api.remote.js';
 	import { goto, refreshAll } from '$app/navigation';
 	import { site } from '#app/client_site.js';
 	import { resolve_href } from '#app/document_links.js';
@@ -63,8 +64,7 @@
 		delete_error = '';
 
 		try {
-			const api_module = await import('#app/api.remote.js');
-			await api_module.delete_page({ document_id: current.document_id });
+			await delete_page({ document_id: current.document_id });
 
 			current.on_deleted?.();
 			close();

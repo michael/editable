@@ -1,4 +1,5 @@
 <script module lang="ts">
+	import { log_in } from '#app/api.remote.js';
 	/** What a login dialog receives, including one set as system_components.auth_dialog. */
 	export type AuthDialogProps = {
 		/** Offers editing without logging in; without it the dialog goes straight to login. */
@@ -92,8 +93,7 @@
 		error = '';
 
 		try {
-			const api_module = await import('#app/api.remote.js');
-			const result = await api_module.log_in({ password });
+			const result = await log_in({ password });
 
 			if (result && result.ok === false && 'message' in result) {
 				show_login_error(result.message || 'Login failed.');

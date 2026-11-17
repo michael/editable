@@ -4,16 +4,25 @@ import { fill_document_defaults, type Document } from 'svedit';
 import { document_schema } from './document_schema.js';
 import {
 	default_page_document,
-	default_site_document,
 	default_banner_document,
 	default_nav_document,
 	default_footer_document
 } from './default_site.js';
 
+// The home page with the banner, nav, and footer stitched in, as pages reach the editor.
+const default_site_document = {
+	document_id: default_page_document.document_id,
+	nodes: {
+		...default_page_document.nodes,
+		...default_banner_document.nodes,
+		...default_nav_document.nodes,
+		...default_footer_document.nodes
+	}
+};
+
 vi.mock('$app/env/private', () => ({
 	LANGUAGES: 'en,de',
 	ORIGIN: 'https://example.com',
-	VERCEL: undefined,
 	ADMIN_PASSWORD: 'test',
 	NODE_ENV: 'test'
 }));

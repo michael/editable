@@ -1,14 +1,9 @@
-import { VERCEL } from '$app/env/private';
 import { site } from '#app/server_site.js';
-import { error } from '@sveltejs/kit';
 import { render_sitemap } from '#lib/server/sitemap.js';
+import { get_sitemap_entries } from '#app/page_browser_data.js';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
-	// Static demo deployments have no database-backed page tree.
-	if (VERCEL) error(404, 'Sitemap unavailable');
-
-	const { get_sitemap_entries } = await import('#app/page_browser_data.js');
 	const entries = await get_sitemap_entries();
 	const body = new TextEncoder().encode(render_sitemap(entries, site));
 	// Crawlers get a complete, sized response they may cache briefly.

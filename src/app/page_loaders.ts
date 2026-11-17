@@ -1,15 +1,15 @@
-import {
-	default_banner_document,
-	default_footer_document,
-	default_nav_document,
-	default_site_document
-} from '#app/default_site.js';
 import { site, request_language } from '#app/server_site.js';
 import { language_href } from '#app/languages.js';
 import { resolve_href, resolve_hrefs } from '#app/document_links.js';
 import { error, redirect } from '@sveltejs/kit';
 import { dev } from '$app/env';
-import { VERCEL } from '$app/env/private';
+import { get_document } from '#app/api.remote.js';
+import {
+	get_doc_from_db,
+	get_home_page_id_from_db,
+	get_shared_documents
+} from '#app/server_documents.js';
+import { translate_shared_document } from '#app/server_translations.js';
 import { get_markdown_page } from '#app/markdown/registry.js';
 import { convert_markdown } from '#app/markdown/convert.js';
 import { compose_markdown_document } from '#app/markdown/compose.js';
@@ -55,7 +55,6 @@ export const load_page = async ({
 	}
 
 	try {
-		const { get_document } = await import('#app/api.remote.js');
 		const page = await get_document({ slug: params.page_id ?? '', language });
 
 		if (page.redirect_to_slug) {
@@ -75,22 +74,10 @@ export const load_page = async ({
 	}
 };
 
-/**
- * The site's banner, nav, and footer documents in the given language: the
- * backend's documents when there is one, the default site documents on static builds.
- */
+/** The site's banner, nav, and footer documents in the given language. */
 export async function get_shared_site_documents(language: string) {
-	if (VERCEL) {
-		return {
-			banner_document: default_banner_document,
-			nav_document: default_nav_document,
-			footer_document: default_footer_document
-		};
-	}
-	const { get_shared_documents } = await import('#app/server_documents.js');
 	const shared = await get_shared_documents();
 	if (!language) return shared;
-	const { translate_shared_document } = await import('#app/server_translations.js');
 	const [banner_document, nav_document, footer_document] = await Promise.all(
 		[shared.banner_document, shared.nav_document, shared.footer_document].map((document) =>
 			translate_shared_document(document, language)
@@ -99,10 +86,8 @@ export async function get_shared_site_documents(language: string) {
 	return { banner_document, nav_document, footer_document };
 }
 
-/** The site's metadata, such as its favicon, from the home page or, on static builds, the default site. */
+/** The site's metadata, such as its favicon, from the home page. */
 export async function get_site_metadata() {
-	if (VERCEL) return extract_site_metadata(default_site_document);
-	const { get_doc_from_db, get_home_page_id_from_db } = await import('#app/server_documents.js');
 	const home_page_id = await get_home_page_id_from_db();
 	return home_page_id
 		? extract_site_metadata(await get_doc_from_db(home_page_id))
@@ -110,14 +95,6 @@ export async function get_site_metadata() {
 }
 
 export const load_home = async ({ url }: { url: URL }) => {
-	if (VERCEL) {
-		return {
-			document: default_site_document,
-			slug: null
-		};
-	}
-
-	const { get_document } = await import('#app/api.remote.js');
 	const { languages } = site;
 	const language = request_language(url);
 	return {

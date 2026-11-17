@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { Session, type Document } from 'svedit';
-import { default_site_document } from './default_site.js';
+import {
+	default_banner_document,
+	default_footer_document,
+	default_nav_document,
+	default_page_document
+} from './default_site.js';
 import { document_schema, MEDIA_DEFAULTS } from './document_schema.js';
 import {
 	delete_media,
@@ -11,6 +16,17 @@ import {
 } from './media.js';
 import { document_structure, normalized_payload, property_payload } from './translations.js';
 import { replace_translation } from './test_helpers/translations.js';
+
+// The home page with the banner, nav, and footer stitched in, as pages reach the editor.
+const default_site_document = {
+	document_id: default_page_document.document_id,
+	nodes: {
+		...default_page_document.nodes,
+		...default_banner_document.nodes,
+		...default_nav_document.nodes,
+		...default_footer_document.nodes
+	}
+};
 
 function media_document() {
 	const doc: Document = structuredClone(default_site_document);

@@ -1,12 +1,8 @@
 import { site, request_language } from '#app/server_site.js';
-import { LICENSE_KEY, VERCEL } from '$app/env/private';
+import { LICENSE_KEY } from '$app/env/private';
 import { get_shared_site_documents, get_site_metadata } from '#app/page_loaders.js';
 import { page_shell } from '#app/page_shell.js';
 import type { LayoutServerLoad } from './$types';
-
-// Static hosts resolve directory indexes reliably, while Node deployments keep
-// the existing no-trailing-slash URLs for database-backed routes.
-export const trailingSlash = VERCEL ? 'always' : 'never';
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const language = request_language(url);
@@ -19,7 +15,6 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 	return {
 		languages: site.languages,
 		language,
-		has_backend: !VERCEL,
 		user: locals.user,
 		is_editor: locals.is_editor,
 		// Commercial websites need a license; editors are reminded while no key is set.

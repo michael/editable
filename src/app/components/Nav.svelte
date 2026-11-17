@@ -22,7 +22,9 @@
 	let mobile_nav_open = $state(false);
 
 	/** The path of the first nav item that passes the test, searching start to end. */
-	function find_nav_item_path(test) {
+	function find_nav_item_path(
+		test: (item: Nodes['nav_media' | 'nav_link' | 'nav_button']) => boolean
+	) {
 		for (const item_property_name of ['start_items', 'middle_items', 'end_items']) {
 			const items = node?.[item_property_name]?.nodes || [];
 			for (let index = 0; index < items.length; index++) {

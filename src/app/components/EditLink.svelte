@@ -3,7 +3,7 @@
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { get_app_context } from '#app/app_context.js';
 	import { MEDIA_DEFAULTS } from '#app/document_schema.js';
-	import type { InternalLinkPreview } from '#app/api.remote.js';
+	import { get_internal_link_preview, type InternalLinkPreview } from '#app/api.remote.js';
 	import type { DocumentNode, DocumentPath, Transaction } from 'svedit';
 	import { serialize_path } from 'svedit';
 	import { get_page_browser } from '#app/page_browser_context.svelte.js';
@@ -52,11 +52,10 @@
 		selected_page?: InternalLinkPreview
 	): Promise<InternalLinkPreview | null> {
 		if (selected_page) return selected_page;
-		if (!app.has_backend || !is_internal_page_link(href_input_value)) return null;
+		if (!is_internal_page_link(href_input_value)) return null;
 
 		try {
-			const api_module = await import('#app/api.remote.js');
-			return await api_module.get_internal_link_preview(href_input_value);
+			return await get_internal_link_preview(href_input_value);
 		} catch {
 			return null;
 		}
@@ -223,7 +222,7 @@
 					onkeydown={handle_keydown}
 					onpaste={handle_paste}
 				/>
-				{#if app.has_backend && app.is_editor}
+				{#if app.is_editor}
 					<button
 						type="button"
 						class="inline-flex size-9 shrink-0 items-center justify-center rounded-[max(0px,calc(min(1rem,var(--button-border-radius))-0.25rem-1px))] border-0 bg-transparent p-0 text-(--foreground) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) enabled:cursor-pointer enabled:hover:bg-(--muted) enabled:active:bg-(--foreground)/10 disabled:cursor-default disabled:opacity-40"

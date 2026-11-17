@@ -19,7 +19,7 @@ export function parse_languages(value: string | undefined): string[] {
 	return languages.length > 1 ? languages : [];
 }
 
-/** The language a site is written in: the first in LANGUAGES, which every site with a backend sets. */
+/** The language a site is written in: the first in LANGUAGES, which every site sets. */
 export function main_language(value: string | undefined): string {
 	const [language] = language_tags(value);
 	if (!language)
