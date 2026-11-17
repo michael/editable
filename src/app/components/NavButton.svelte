@@ -16,7 +16,7 @@
 		this={render_as_link ? 'a' : 'div'}
 		href={render_as_link ? node.href : undefined}
 		target={render_as_link && node.target !== '_self' ? node.target : undefined}
-		class="ew-native-selection inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--foreground) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--background) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {render_as_link
+		class="ew-button ew-native-selection inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--foreground) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--background) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {render_as_link
 			? 'cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--foreground),var(--background)_20%)] active:bg-[color-mix(in_srgb,var(--foreground),var(--background)_30%)]'
 			: ''}"
 	>
@@ -29,7 +29,7 @@
 		this={render_as_link ? 'a' : 'div'}
 		href={render_as_link ? node.href : undefined}
 		target={render_as_link && node.target !== '_self' ? node.target : undefined}
-		class="ew-native-selection inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {render_as_link
+		class="ew-button ew-native-selection inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {render_as_link
 			? 'cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)]'
 			: ''}"
 	>
@@ -42,7 +42,7 @@
 		this={render_as_link ? 'a' : 'div'}
 		href={render_as_link ? node.href : undefined}
 		target={render_as_link && node.target !== '_self' ? node.target : undefined}
-		class="inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {render_as_link
+		class="ew-button inline-flex min-h-9 max-w-full min-w-9 items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) px-4 py-1.5 text-center text-sm leading-5 font-normal wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {render_as_link
 			? 'cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] active:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)]'
 			: ''}"
 	>

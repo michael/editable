@@ -238,9 +238,10 @@ lack contrast with it. There the caret follows the text color and text selection
 	color: HighlightText;
 }
 
-/* Placeholders such as "Paragraph" guide editing only, so visitors never see them. */
-.svedit-canvas[contenteditable='false'] [placeholder].text.empty::before,
-.svedit-canvas[contenteditable='false'] [placeholder].text.empty::after {
+/* Placeholders such as "Paragraph" guide editing only, so visitors never see them. Button labels
+keep theirs, so an unlabeled button still reads as a button. */
+.svedit-canvas[contenteditable='false'] :not(.ew-button) > [placeholder].text.empty::before,
+.svedit-canvas[contenteditable='false'] :not(.ew-button) > [placeholder].text.empty::after {
 	content: none;
 }
 
