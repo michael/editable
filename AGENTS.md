@@ -32,7 +32,7 @@ Editable is minimalistic by design: less, but better.
 - Prefer Tailwind classes and minimize custom CSS. For CSS custom properties, use Tailwind's arbitrary-value utilities, such as `text-(--editing)` and `border-(--editing)`, where applicable.
 - Stick with Tailwind's default theme values when one matches: use `leading-tight` rather than `leading-[1.25]`. Reach for an arbitrary value only when no default fits.
 
-- Prefix all project-defined CSS classes with `ew-`, including component, state, and custom utility classes. Standard Tailwind classes and classes required by third-party libraries retain their original names.
+- Prefix project-defined CSS classes with `ew-`, including component, state, and other custom utility classes such as `ew-bg-checkerboard`. Design-system utilities that extend Tailwind's scales are named like Tailwind utilities, without the prefix: typography such as `display-2` and `body-lg`, and block spacing such as `pt-block-compact`. Standard Tailwind classes and classes required by third-party libraries retain their original names.
 
 ## Commits
 
