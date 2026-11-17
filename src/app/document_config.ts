@@ -1052,7 +1052,7 @@ export const document_config = {
 			const titled_gallery = {
 				id: nanoid(),
 				type: 'titled_gallery',
-				layout: 'cards',
+				layout: 'cards-3-columns',
 				items: { nodes: items, marks: [], annotations: [] }
 			};
 			tr.create(titled_gallery);
@@ -1111,7 +1111,7 @@ export const document_config = {
 			const descriptive_gallery = {
 				id: nanoid(),
 				type: 'descriptive_gallery',
-				layout: 'cards',
+				layout: 'cards-3-columns',
 				items: { nodes: items, marks: [], annotations: [] }
 			};
 			tr.create(descriptive_gallery);

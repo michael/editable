@@ -585,15 +585,16 @@ export const document_schema = define_document_schema({
 			layout: {
 				type: 'string',
 				values: [
-					'cards',
-					'outlined',
+					'cards-3-columns',
+					'outlined-3-columns',
 					'cards-2-columns',
 					'outlined-2-columns',
 					'compact',
-					'carousel',
-					'carousel-2-columns'
+					'carousel-3-columns',
+					'carousel-2-columns',
+					'carousel-compact'
 				],
-				default: 'cards'
+				default: 'cards-3-columns'
 			},
 			items: {
 				type: 'node_array',
@@ -624,15 +625,16 @@ export const document_schema = define_document_schema({
 			layout: {
 				type: 'string',
 				values: [
-					'cards',
-					'outlined',
+					'cards-3-columns',
+					'outlined-3-columns',
 					'cards-2-columns',
 					'outlined-2-columns',
 					'compact',
-					'carousel',
-					'carousel-2-columns'
+					'carousel-3-columns',
+					'carousel-2-columns',
+					'carousel-compact'
 				],
-				default: 'cards'
+				default: 'cards-3-columns'
 			},
 			items: {
 				type: 'node_array',
