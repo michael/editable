@@ -386,7 +386,7 @@ page {
 	image: image         // preview image for page metadata
 	body: [prose | prose_grid | figure | captioned_figure | gallery | feature |
 	       double_feature | titled_gallery | descriptive_gallery | listing |
-	       descriptive_listing | accordion | code_block]
+	       descriptive_listing | tabs | accordion | code_block]
 	                     // supports section marks for visual grouping
 	banner: banner
 	nav: nav
@@ -513,6 +513,12 @@ descriptive_listing_item {
 	title: text          // single line; marks: emphasis, highlight
 	description: text    // marks: emphasis, highlight
 	meta: text           // single line, optional; marks: emphasis, highlight
+}
+
+tabs { items: [tab] }  // the tab linking to the current page is highlighted
+tab {
+	href, target
+	label: text          // single line
 }
 
 accordion { layout: narrow-left | narrow-center | narrow-right | full-width | two-columns,

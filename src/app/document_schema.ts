@@ -77,6 +77,7 @@ export const document_schema = define_document_schema({
 					'descriptive_gallery',
 					'listing',
 					'descriptive_listing',
+					'tabs',
 					'accordion',
 					'code_block'
 				],
@@ -688,6 +689,29 @@ export const document_schema = define_document_schema({
 			meta: {
 				type: 'text',
 				mark_types: MINIMAL_MARKS,
+				allow_newlines: false
+			}
+		}
+	},
+	// Links to sibling pages, such as blog categories, with the current page's tab highlighted.
+	tabs: {
+		kind: 'block',
+		properties: {
+			items: {
+				type: 'node_array',
+				node_types: ['tab'],
+				default_node_type: 'tab'
+			}
+		}
+	},
+	tab: {
+		kind: 'block',
+		properties: {
+			href: { type: 'string' },
+			target: { type: 'string', default: '_self' },
+			label: {
+				type: 'text',
+				mark_types: [],
 				allow_newlines: false
 			}
 		}

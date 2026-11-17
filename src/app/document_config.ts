@@ -78,6 +78,8 @@ import TitledGallery from './components/TitledGallery.svelte';
 import TitledGalleryItem from './components/TitledGalleryItem.svelte';
 import Listing from './components/Listing.svelte';
 import ListingItem from './components/ListingItem.svelte';
+import Tabs from './components/Tabs.svelte';
+import Tab from './components/Tab.svelte';
 import DescriptiveListing from './components/DescriptiveListing.svelte';
 import DescriptiveListingItem from './components/DescriptiveListingItem.svelte';
 import Accordion from './components/Accordion.svelte';
@@ -318,6 +320,8 @@ export const document_config = {
 		descriptive_gallery_item: DescriptiveGalleryItem,
 		listing: Listing,
 		listing_item: ListingItem,
+		tabs: Tabs,
+		tab: Tab,
 		descriptive_listing: DescriptiveListing,
 		descriptive_listing_item: DescriptiveListingItem,
 		accordion: Accordion,
@@ -1183,6 +1187,42 @@ export const document_config = {
 				anchor_offset: tr.selection.focus_offset,
 				focus_offset: tr.selection.focus_offset
 			});
+		},
+
+		tabs: function (tr) {
+			const items = [];
+			for (let i = 0; i < 3; i++) {
+				const tab = {
+					id: nanoid(),
+					type: 'tab',
+					href: '',
+					target: '_self',
+					label: { content: '', marks: [], annotations: [] }
+				};
+				tr.create(tab);
+				items.push(tab.id);
+			}
+
+			const tabs = {
+				id: nanoid(),
+				type: 'tabs',
+				items: { nodes: items, marks: [], annotations: [] }
+			};
+			tr.create(tabs);
+			tr.insert_nodes([tabs.id]);
+		},
+
+		tab: function (tr) {
+			const tab = {
+				id: nanoid(),
+				type: 'tab',
+				href: '',
+				target: '_self',
+				label: { content: '', marks: [], annotations: [] }
+			};
+			tr.create(tab);
+			tr.insert_nodes([tab.id]);
+			select_inserted_text_property(tr);
 		},
 
 		descriptive_listing: function (tr) {
