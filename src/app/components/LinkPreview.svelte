@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { get_internal_link_preview } from '#app/api.remote.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { get_app_context } from '#app/app_context.js';
 	import { site } from '#app/client_site.js';
@@ -23,8 +24,7 @@
 		const href = internal_page_href;
 		if (!href) return null;
 
-		const api_module = await import('#app/api.remote.js');
-		return await api_module.get_internal_link_preview(href);
+		return await get_internal_link_preview(href);
 	});
 
 	function handle_edit() {

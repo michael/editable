@@ -3,7 +3,7 @@
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { get_app_context } from '#app/app_context.js';
 	import { MEDIA_DEFAULTS } from '#app/document_schema.js';
-	import type { InternalLinkPreview } from '#app/api.remote.js';
+	import { get_internal_link_preview, type InternalLinkPreview } from '#app/api.remote.js';
 	import type { DocumentNode, DocumentPath, Transaction } from 'svedit';
 	import { serialize_path } from 'svedit';
 	import { get_page_browser } from '#app/page_browser_context.svelte.js';
@@ -55,8 +55,7 @@
 		if (!is_internal_page_link(href_input_value)) return null;
 
 		try {
-			const api_module = await import('#app/api.remote.js');
-			return await api_module.get_internal_link_preview(href_input_value);
+			return await get_internal_link_preview(href_input_value);
 		} catch {
 			return null;
 		}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { update_page_slug } from '#app/api.remote.js';
 	import { refreshAll } from '$app/navigation';
 	import { get_app_context } from '#app/app_context.js';
 	import { site } from '#app/client_site.js';
@@ -55,8 +56,7 @@
 		page_url_error = '';
 
 		try {
-			const api_module = await import('#app/api.remote.js');
-			const result = await api_module.update_page_slug({
+			const result = await update_page_slug({
 				document_id: current.document_id,
 				slug: page_url_value
 			});
