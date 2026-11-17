@@ -107,8 +107,11 @@ export async function get_shared_site_documents(language: string) {
 /** The site's metadata, such as its favicon, from the home page or, on static builds, the default site. */
 export async function get_site_metadata() {
 	if (VERCEL) return extract_site_metadata(default_site_document);
-	const { get_site_metadata } = await import('#app/api.remote.js');
-	return get_site_metadata();
+	const { get_doc_from_db, get_home_page_id_from_db } = await import('#app/server_documents.js');
+	const home_page_id = await get_home_page_id_from_db();
+	return home_page_id
+		? extract_site_metadata(await get_doc_from_db(home_page_id))
+		: { favicon: null };
 }
 
 export const load_home = async ({ url }: { url: URL }) => {

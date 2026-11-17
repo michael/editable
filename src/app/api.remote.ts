@@ -39,7 +39,7 @@ import { latest_modified } from '#lib/server/sitemap.js';
 import { language_alternates } from './seo.js';
 import { snapshot_if_stale } from '#lib/server/db_snapshot.js';
 import { is_reserved_markdown_slug, get_markdown_page_pathnames } from '#app/markdown/registry.js';
-import { extract_page_metadata, extract_site_metadata } from '#app/page_metadata.js';
+import { extract_page_metadata } from '#app/page_metadata.js';
 import type { PreviewMediaNode } from '#app/page_metadata.js';
 import type { DocumentNode } from 'svedit';
 import { require_editor } from '#lib/server/auth.js';
@@ -151,16 +151,6 @@ export const get_home_document = query(v.void(), async () => {
 /**
  * Derive site-level metadata (favicon) from the home page document.
  */
-export const get_site_metadata = query(v.void(), async () => {
-	const home_page_id = await get_home_page_id_from_db();
-
-	if (!home_page_id) {
-		return { favicon: null };
-	}
-
-	return extract_site_metadata(await get_doc_from_db(home_page_id));
-});
-
 /**
  * Return the current shared banner, nav and footer documents used for composing new pages.
  */
