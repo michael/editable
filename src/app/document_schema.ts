@@ -247,12 +247,30 @@ export const document_schema = define_document_schema({
 			}
 		}
 	},
+	// A linked image sized like a button, such as a social media icon or an app store badge.
+	media_button: {
+		kind: 'block',
+		properties: {
+			layout: {
+				type: 'string',
+				values: ['regular', 'small'],
+				default: 'regular'
+			},
+			href: { type: 'string' },
+			target: { type: 'string', default: '_self' },
+			media: {
+				type: 'node',
+				node_types: ['image', 'video'],
+				default_node_type: 'image'
+			}
+		}
+	},
 	button_group: {
 		kind: 'block',
 		properties: {
 			buttons: {
 				type: 'node_array',
-				node_types: ['button'],
+				node_types: ['button', 'media_button'],
 				default_node_type: 'button'
 			}
 		}
