@@ -72,3 +72,6 @@ export function request_language(url: URL) {
 	if (!site.languages.length) return '';
 	return language_path(normalize_href(url.pathname, site), site.languages).language;
 }
+
+/** The site's public URL: its origin plus the path it is served under. */
+export const site_url = () => `${new URL(site.origin).origin}${site.base}`;

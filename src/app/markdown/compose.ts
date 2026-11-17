@@ -4,6 +4,7 @@
 
 import { fill_document_defaults, validate_document } from 'svedit';
 import { document_schema } from '#app/document_schema.js';
+import { assert_shared_documents, type SharedDocuments } from '#app/page_shell.js';
 import type { Document } from 'svedit';
 
 /**
@@ -12,25 +13,12 @@ import type { Document } from 'svedit';
  */
 export function compose_markdown_document(
 	page_doc: Document,
-	shared_documents: {
-		banner_document: Document;
-		nav_document: Document;
-		footer_document: Document;
-	}
+	shared_documents: SharedDocuments
 ): Document {
-	const banner_document = shared_documents?.banner_document;
-	const nav_document = shared_documents?.nav_document;
-	const footer_document = shared_documents?.footer_document;
-
-	if (!banner_document?.document_id || !banner_document?.nodes) {
-		throw new Error('Missing banner document for markdown page composition.');
-	}
-	if (!nav_document?.document_id || !nav_document?.nodes) {
-		throw new Error('Missing nav document for markdown page composition.');
-	}
-	if (!footer_document?.document_id || !footer_document?.nodes) {
-		throw new Error('Missing footer document for markdown page composition.');
-	}
+	const { banner_document, nav_document, footer_document } = assert_shared_documents(
+		shared_documents,
+		'markdown page composition'
+	);
 
 	const shared_nodes = {
 		...structuredClone(banner_document.nodes),

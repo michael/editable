@@ -1,33 +1,8 @@
 import nanoid from '#app/nanoid.js';
 import { MEDIA_DEFAULTS, document_schema } from '#app/document_schema.js';
 import { clone_subtree_with_new_ids } from '#lib/document_graph.js';
+import { assert_shared_documents, type SharedDocuments } from '#app/page_shell.js';
 import type { Document } from 'svedit';
-
-type SharedDocuments = {
-	banner_document: Document;
-	nav_document: Document;
-	footer_document: Document;
-};
-
-function get_shared_roots(shared_documents: SharedDocuments) {
-	const banner_document = shared_documents?.banner_document;
-	const nav_document = shared_documents?.nav_document;
-	const footer_document = shared_documents?.footer_document;
-
-	if (!banner_document?.document_id || !banner_document?.nodes) {
-		throw new Error('Missing banner document for new page creation');
-	}
-
-	if (!nav_document?.document_id || !nav_document?.nodes) {
-		throw new Error('Missing nav document for new page creation');
-	}
-
-	if (!footer_document?.document_id || !footer_document?.nodes) {
-		throw new Error('Missing footer document for new page creation');
-	}
-
-	return { banner_document, nav_document, footer_document };
-}
 
 /**
  * Create an unsaved copy of an existing page for `/new?from=<slug>`.
@@ -42,7 +17,10 @@ export function create_duplicate_doc(
 	source_document: Document,
 	shared_documents: SharedDocuments
 ): Document {
-	const { banner_document, nav_document, footer_document } = get_shared_roots(shared_documents);
+	const { banner_document, nav_document, footer_document } = assert_shared_documents(
+		shared_documents,
+		'new page creation'
+	);
 
 	if (!source_document?.document_id || !source_document?.nodes) {
 		throw new Error('Missing source document for page duplication');
@@ -99,7 +77,10 @@ export function create_empty_doc(shared_documents: SharedDocuments): Document {
 	const heading_id = nanoid();
 	const paragraph_id = nanoid();
 
-	const { banner_document, nav_document, footer_document } = get_shared_roots(shared_documents);
+	const { banner_document, nav_document, footer_document } = assert_shared_documents(
+		shared_documents,
+		'new page creation'
+	);
 
 	return {
 		document_id: page_id,

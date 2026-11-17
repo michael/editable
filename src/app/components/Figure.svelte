@@ -3,10 +3,14 @@
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { media_link_label } from '#app/media_link_label.js';
 	import { Node } from 'svedit';
+	import type { DocumentPath, NodeArrayAttachmentContext } from 'svedit';
 	import MediaProperty from './MediaProperty.svelte';
 
 	const svedit = get_svedit_context();
-	let { path, mark: section = null } = $props();
+	let {
+		path,
+		mark: section = null
+	}: { path: DocumentPath; mark?: NodeArrayAttachmentContext | null } = $props();
 	let node: Nodes['figure'] = $derived(svedit.session.get(path));
 	let media_node = $derived(svedit.session.get([...path, 'media']));
 	let render_as_link = $derived(!svedit.editable && node.href);
@@ -37,7 +41,7 @@
 		<div
 			class={[
 				// No gutter or corner radius on phones, so the media runs edge to edge.
-				`figure sm:px-7`,
+				`sm:px-7`,
 				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}
@@ -51,7 +55,6 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				'figure',
 				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}
@@ -67,7 +70,6 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				'figure',
 				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}
@@ -83,7 +85,6 @@
 	<div class="mx-auto max-w-7xl">
 		<div
 			class={[
-				'figure',
 				padding_top_generous ? 'pt-block-generous' : 'pt-block-compact',
 				padding_bottom_generous ? 'pb-block-generous' : 'pb-block-compact'
 			]}
@@ -98,7 +99,7 @@
 {#snippet flush()}
 	<div class="mx-auto max-w-7xl">
 		<!-- Edge to edge on phones, like the wide layout. -->
-		<div class="figure py-0 sm:px-7">
+		<div class="sm:px-7">
 			{@render media_frame('sm:rounded-(--image-border-radius)')}
 		</div>
 	</div>
@@ -106,7 +107,7 @@
 
 {#snippet full_bleed()}
 	<div class="w-full">
-		<div class="figure">
+		<div>
 			{@render media_frame('')}
 		</div>
 	</div>

@@ -20,7 +20,6 @@ export type AppContext = {
 	readonly slug: string | null;
 	readonly is_new: boolean;
 	auth_dialog_open: boolean;
-	close_auth_dialog: () => void;
 	edit_for_fun: () => void;
 	handle_auth_success: () => Promise<void>;
 };

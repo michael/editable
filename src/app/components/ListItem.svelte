@@ -13,8 +13,6 @@
 
 	function get_marker(index, layout) {
 		switch (layout) {
-			case 'square':
-				return '▪';
 			case 'decimal':
 				return `${String(index).padStart(2, '0')}.`;
 			case 'lower-alpha':

@@ -8,6 +8,17 @@ export type SharedDocuments = {
 	footer_document: Document;
 };
 
+/** Throw unless the banner, nav, and footer documents are all present. */
+export function assert_shared_documents(shared_documents: SharedDocuments, purpose: string) {
+	for (const name of ['banner', 'nav', 'footer'] as const) {
+		const doc = shared_documents?.[`${name}_document`];
+		if (!doc?.document_id || !doc?.nodes) {
+			throw new Error(`Missing ${name} document for ${purpose}.`);
+		}
+	}
+	return shared_documents;
+}
+
 /**
  * The shell of a page: the site's banner, nav, and footer around an empty
  * body. The layout builds it for every request, in the request's language,

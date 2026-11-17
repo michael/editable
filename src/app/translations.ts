@@ -1,14 +1,15 @@
 import { is_media_property } from './media.js';
 import nanoid from './nanoid.js';
 import { document_schema } from './document_schema.js';
+import { get_attached_ranges } from '#lib/document_graph.js';
 import type { Attachment, Document, DocumentNode, NodeSchema, Text } from 'svedit';
 
 const schema: Record<string, NodeSchema> = document_schema;
-export type TextTranslationPayload = Text & { nodes: Record<string, DocumentNode> };
-export type MediaTranslationPayload = { node_id: string; nodes: Record<string, DocumentNode> };
+type TextTranslationPayload = Text & { nodes: Record<string, DocumentNode> };
+type MediaTranslationPayload = { node_id: string; nodes: Record<string, DocumentNode> };
 export type TranslationPayload = TextTranslationPayload | MediaTranslationPayload;
 export type TranslationMap = Record<string, Record<string, TranslationPayload>>;
-export type TranslationIdGenerator = (id: string, attempt: number) => string;
+type TranslationIdGenerator = (id: string, attempt: number) => string;
 
 export function translation_properties(doc: Document) {
 	return Object.values(doc.nodes).flatMap((node) =>
@@ -42,8 +43,7 @@ function referenced_ids(doc: Document) {
 			if (property.type === 'node' && typeof value === 'string') ids.add(value);
 			if (property.type === 'node_array') for (const id of value?.nodes ?? []) ids.add(id);
 			if (property.type === 'text' || property.type === 'node_array') {
-				for (const range of [...(value?.marks ?? []), ...(value?.annotations ?? [])])
-					ids.add(range.node_id);
+				for (const range of get_attached_ranges(value)) ids.add(range.node_id);
 			}
 		}
 	}

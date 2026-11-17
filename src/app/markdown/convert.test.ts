@@ -170,6 +170,10 @@ describe('convert_markdown', () => {
 		expect(() => convert('[x](getting-started.md)')).toThrow(/configured pathname/);
 	});
 
+	it('rejects relative links', () => {
+		expect(() => convert('[x](src/app/config.ts)')).toThrow(/Relative links/);
+	});
+
 	it('rejects nested inline formatting', () => {
 		expect(() => convert('**bold with [link](/x)**')).toThrow(/Nested inline formatting/);
 		expect(() => convert('*emphasis with **strong***')).toThrow(/Nested inline formatting/);

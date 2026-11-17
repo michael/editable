@@ -2,7 +2,11 @@
 	import type { Nodes } from '#app/document_schema.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { Node, NodeArrayProperty } from 'svedit';
-	let { path, mark: section = null } = $props();
+	import type { DocumentPath, NodeArrayAttachmentContext } from 'svedit';
+	let {
+		path,
+		mark: section = null
+	}: { path: DocumentPath; mark?: NodeArrayAttachmentContext | null } = $props();
 
 	const svedit = get_svedit_context();
 	let node: Nodes['gallery'] = $derived(svedit.session.get(path));

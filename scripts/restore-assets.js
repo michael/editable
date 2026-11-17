@@ -1,6 +1,6 @@
 // Download the assets referenced by a database from the backup bucket.
 // Restores only the working set: originals the database references, plus
-// their width variants. Unreferenced history stays in the bucket. Skips
+// their variants (image widths, video posters). Unreferenced history stays in the bucket. Skips
 // files already on disk, so it is resumable and cheap to re-run.
 //
 // Fails (exit 1) if any referenced original is still missing afterwards —

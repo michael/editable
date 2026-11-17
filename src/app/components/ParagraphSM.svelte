@@ -17,7 +17,7 @@
 			tag="p"
 			class={`body-sm ${layout === 'muted' ? 'text-(--muted-foreground)' : ''}`}
 			path={[...path, 'content']}
-			placeholder="Small Paragraph"
+			placeholder="Small paragraph"
 		/>
 	</div>
 </Node>

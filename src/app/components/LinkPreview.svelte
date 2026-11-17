@@ -1,11 +1,8 @@
 <script lang="ts">
-	import { parse_internal_page_href } from '#app/document_links.js';
 	import { get_svedit_context } from '#app/svedit_context.js';
 	import { get_app_context } from '#app/app_context.js';
 	import { site } from '#app/client_site.js';
-	import { normalize_href } from '#app/document_links.js';
-	import { resolve } from '$app/paths';
-	import type { PathnameWithSearchOrHash } from '$app/types';
+	import { normalize_href, parse_internal_page_href } from '#app/document_links.js';
 	import { serialize_path } from 'svedit';
 	import { tooltip } from '#app/tooltip.js';
 	import Media from './Media.svelte';
@@ -42,13 +39,6 @@
 		svedit.session.commands?.remove_link?.execute();
 	}
 
-	function get_preview_href(href: unknown) {
-		if (typeof href !== 'string') return '';
-		if (!href.startsWith('/') || href.startsWith('//')) return href;
-		if (href === '/') return resolve('/');
-		return resolve(href.slice(1) as PathnameWithSearchOrHash);
-	}
-
 	function get_preview_label(href: unknown) {
 		if (typeof href !== 'string') return '';
 		return href.replace(/^https?:\/\//, '');
@@ -63,7 +53,7 @@
 			{#if internal_page_href}
 				{#if resolved_page_preview}
 					<a
-						href={get_preview_href(internal_page_href)}
+						href={internal_page_href}
 						target="_blank"
 						rel="noopener noreferrer"
 						use:tooltip={{ label: 'Open link in new tab' }}
@@ -87,7 +77,7 @@
 					</a>
 				{:else}
 					<a
-						href={get_preview_href(internal_page_href)}
+						href={internal_page_href}
 						target="_blank"
 						rel="noopener noreferrer"
 						use:tooltip={{ label: 'Open link in new tab' }}
@@ -98,7 +88,7 @@
 				{/if}
 			{:else}
 				<a
-					href={get_preview_href(node.href)}
+					href={node.href}
 					target="_blank"
 					rel="noopener noreferrer"
 					use:tooltip={{ label: 'Open link in new tab' }}

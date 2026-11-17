@@ -76,7 +76,7 @@ export async function highlight_code(content: string, language: string) {
 	return segments;
 }
 
-export const code_token_classes: Record<string, string> = {
+const code_token_classes: Record<string, string> = {
 	foreground: 'text-(--code-foreground)',
 	comment: 'text-(--code-comment)',
 	deleted: 'text-(--code-deleted)',

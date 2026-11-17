@@ -65,7 +65,7 @@ export async function translated_document(document_id: string, requested?: strin
 		language && language !== languages[0]
 			? await backend.list_translations({
 					document_ids: docs.map((doc) => doc.document_id),
-					language: language
+					language
 				})
 			: [];
 	const document = overlay_document(compose(docs), docs, rows);
