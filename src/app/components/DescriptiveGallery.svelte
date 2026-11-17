@@ -7,7 +7,7 @@
 	let { path, mark: section = null } = $props();
 	const svedit = get_svedit_context();
 	let node: Nodes['descriptive_gallery'] = $derived(svedit.session.get(path));
-	let layout = $derived(node.layout || 'cards');
+	let layout = $derived(node.layout || 'cards-3-columns');
 	let is_carousel = $derived(layout.startsWith('carousel'));
 	let padding_top_generous = $derived(!section || section.is_start);
 	let padding_bottom_generous = $derived(!section || section.is_end);
@@ -29,8 +29,8 @@
 					class={layout === 'compact'
 						? 'grid grid-cols-1 gap-x-10 gap-y-8 [--row:1] md:grid-cols-2 md:gap-y-7 lg:gap-x-14'
 						: layout.startsWith('outlined')
-							? `grid grid-cols-1 gap-5 [--row:1] sm:gap-7 md:grid-cols-2 ${layout === 'outlined-2-columns' ? '' : 'xl:grid-cols-3'}`
-							: `grid grid-cols-1 gap-x-5 gap-y-10 [--row:1] sm:gap-x-7 md:grid-cols-2 md:gap-y-20 ${layout === 'cards-2-columns' ? '' : 'xl:grid-cols-3'}`}
+							? `grid grid-cols-1 gap-5 [--row:1] sm:gap-7 md:grid-cols-2 ${layout === 'outlined-3-columns' ? 'xl:grid-cols-3' : ''}`
+							: `grid grid-cols-1 gap-x-5 gap-y-10 [--row:1] sm:gap-x-7 md:grid-cols-2 md:gap-y-20 ${layout === 'cards-3-columns' ? 'xl:grid-cols-3' : ''}`}
 					path={[...path, 'items']}
 				/>
 			{/if}

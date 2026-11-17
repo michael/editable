@@ -11,7 +11,7 @@
 	let { path }: { path: DocumentPath } = $props();
 	let node: Nodes['titled_gallery_item'] = $derived(svedit.session.get(path));
 	let gallery = $derived(svedit.session.get(path.slice(0, -2)));
-	let layout = $derived(gallery?.layout || 'cards');
+	let layout = $derived(gallery?.layout || 'cards-3-columns');
 	let is_carousel = $derived(layout.startsWith('carousel'));
 	let render_as_link = $derived(!svedit.editable && node.href);
 </script>

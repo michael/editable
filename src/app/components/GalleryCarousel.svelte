@@ -3,14 +3,14 @@
 	import { NodeArrayProperty } from 'svedit';
 	import { get_svedit_context } from '#app/svedit_context.js';
 
-	let { path, layout = 'carousel' }: { path: DocumentPath; layout?: string } = $props();
+	let { path, layout = 'carousel-3-columns' }: { path: DocumentPath; layout?: string } = $props();
 	let is_compact = $derived(layout === 'carousel-compact');
-	// Cards take most of the width on phones, two from md, and three on wide screens unless the
-	// layout asks for two. Compact tiles keep a fixed width and scroll only when they overflow.
+	// Cards take most of the width on phones, two from md, and three on wide screens in
+	// the 3-column layout. Compact tiles keep a fixed width and scroll only when they overflow.
 	let card_width = $derived(
 		is_compact
 			? '[--ew-carousel-card-width:8rem] sm:[--ew-carousel-card-width:9rem]'
-			: `[--ew-carousel-card-width:calc(var(--ew-carousel-content)*0.85)] md:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-1.75rem)/2)] ${layout === 'carousel-2-columns' ? '' : 'xl:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-3.5rem)/3)]'}`
+			: `[--ew-carousel-card-width:calc(var(--ew-carousel-content)*0.85)] md:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-1.75rem)/2)] ${layout === 'carousel-3-columns' ? 'xl:[--ew-carousel-card-width:calc((var(--ew-carousel-content)-3.5rem)/3)]' : ''}`
 	);
 	const svedit = get_svedit_context();
 	const carousel_id = $props.id();
