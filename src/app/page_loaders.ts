@@ -13,6 +13,7 @@ import { VERCEL } from '$app/env/private';
 import { get_markdown_page } from '#app/markdown/registry.js';
 import { convert_markdown } from '#app/markdown/convert.js';
 import { compose_markdown_document } from '#app/markdown/compose.js';
+import { extract_site_metadata } from '#app/page_metadata.js';
 import type { Document } from 'svedit';
 
 export const load_page = async ({
@@ -101,6 +102,13 @@ export async function get_shared_site_documents(language: string) {
 		nav_document: await translate_shared_document(shared.nav_document, language),
 		footer_document: await translate_shared_document(shared.footer_document, language)
 	};
+}
+
+/** The site's metadata, such as its favicon, from the home page or, on static builds, the default site. */
+export async function get_site_metadata() {
+	if (VERCEL) return extract_site_metadata(default_site_document);
+	const { get_site_metadata } = await import('#app/api.remote.js');
+	return get_site_metadata();
 }
 
 export const load_home = async ({ url }: { url: URL }) => {
