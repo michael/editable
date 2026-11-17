@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { MARKDOWN_SOURCES } from '#app/content_config.js';
 import { build_registry, get_markdown_page, is_reserved_markdown_slug } from './registry.js';
 import { convert_markdown } from './convert.js';
+import readme_md from '../../../README.md?raw';
 
 describe('build_registry', () => {
 	it('builds an empty registry from an empty mapping', () => {
@@ -52,5 +53,10 @@ describe('configured pages', () => {
 	// a .md file, would otherwise first fail on the deployed site.
 	it('convert without errors', () => {
 		for (const source of MARKDOWN_SOURCES) convert_markdown(source.markdown, source);
+	});
+
+	// The README is served as the manual on the Editable website.
+	it('include the README', () => {
+		convert_markdown(readme_md, { source: 'README.md', pathname: '/manual' });
 	});
 });

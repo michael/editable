@@ -13,12 +13,9 @@
 // - `pathname`: absolute single-segment URL the page is served at
 // - `toc` (optional): generate a table of contents from the file's headings
 //
-// With no entries, the site behaves exactly as if this feature did not exist.
-// Do not import this module from client code. Use `#app/config.js` for universal
-// constants instead.
-import readme_md from '../../README.md?raw';
+// With no entries, the default, the site behaves exactly as if this feature
+// did not exist. Do not import this module from client code. Use
+// `#app/config.js` for universal constants instead.
+import type { MarkdownSource } from '#lib/server/markdown/config.js';
 
-export const MARKDOWN_SOURCES = [
-	// The developer manual is the repository README.
-	{ markdown: readme_md, source: 'README.md', pathname: '/manual', toc: true }
-];
+export const MARKDOWN_SOURCES: MarkdownSource[] = [];

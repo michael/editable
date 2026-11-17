@@ -1299,7 +1299,7 @@ export const MARKDOWN_SOURCES = [
 - `pathname` — absolute single-segment URL the page is served at (nested paths are not supported yet)
 - `toc` (optional) — generate a table of contents from the file's headings
 
-With `MARKDOWN_SOURCES = []` the feature is inert. A configured pathname wins over a database page with the same slug, and is reserved: a page you create called "Manual" gets the slug `manual-2` when `/manual` is a markdown page, and typing `manual` into the Page URL dialog is rejected. Configuration errors — unknown fields, duplicate pathnames, missing content — fail the dev server or production build immediately.
+By default, `MARKDOWN_SOURCES` is empty and the feature is inert. A configured pathname wins over a database page with the same slug, and is reserved: a page you create called "Manual" gets the slug `manual-2` when `/manual` is a markdown page, and typing `manual` into the Page URL dialog is rejected. Configuration errors — unknown fields, duplicate pathnames, missing content — fail the dev server or production build immediately.
 
 Mapping a pathname that an existing page already occupies is the one case the reservation cannot prevent. That page becomes _shadowed_: the markdown page serves the URL, the page keeps its slug and reappears the moment the markdown entry is removed. Shadowed pages are listed in a startup warning and carry a `URL TAKEN` badge in the page browser, where you can give them a different Page URL.
 

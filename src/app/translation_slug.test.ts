@@ -64,6 +64,11 @@ import * as markdown_registry from './markdown/registry.js';
 const { languages } = default_site;
 
 it('publishes localized sitemap URLs with translation dates while excluding hidden pages and redirects', async () => {
+	// A Markdown page at /manual shadows the database page with that slug.
+	vi.spyOn(markdown_registry, 'get_markdown_page_pathnames').mockReturnValue(['/manual']);
+	vi.spyOn(markdown_registry, 'is_reserved_markdown_slug').mockImplementation(
+		(slug) => slug === 'manual'
+	);
 	const insert_doc = sqlite.prepare(
 		'INSERT INTO documents (document_id, type, data, updated_at) VALUES (?, ?, ?, ?)'
 	);
