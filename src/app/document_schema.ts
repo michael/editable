@@ -253,7 +253,7 @@ export const document_schema = define_document_schema({
 		properties: {
 			layout: {
 				type: 'string',
-				values: ['regular', 'small'],
+				values: ['regular', 'small', 'tiny'],
 				default: 'regular'
 			},
 			href: { type: 'string' },
@@ -268,6 +268,12 @@ export const document_schema = define_document_schema({
 	button_group: {
 		kind: 'block',
 		properties: {
+			// Spacing between buttons
+			layout: {
+				type: 'string',
+				values: ['tight', 'regular', 'loose'],
+				default: 'regular'
+			},
 			buttons: {
 				type: 'node_array',
 				node_types: ['button', 'media_button'],

@@ -184,6 +184,7 @@ function button_group_nodes() {
 		new_button_group: {
 			id: 'new_button_group',
 			type: 'button_group',
+			layout: 'regular',
 			buttons: {
 				nodes: ['primary_button', 'secondary_button', 'media_button'],
 				marks: [],

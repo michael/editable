@@ -11,11 +11,11 @@
 	let { path }: { path: DocumentPath } = $props();
 	let node: Nodes['media_button'] = $derived(svedit.session.get(path));
 	let media_node = $derived(svedit.session.get([...path, 'media']));
-	// Media keeps its own aspect ratio at the height of a regular or small button.
+	// Media keeps its own aspect ratio at the button height: regular 44px, small 36px, tiny 24px.
 	let aspect_ratio = $derived(
 		media_node.width > 0 && media_node.height > 0 ? media_node.width / media_node.height : 1
 	);
-	let height = $derived(node.layout === 'small' ? 9 : 11);
+	let height = $derived(node.layout === 'tiny' ? 6 : node.layout === 'small' ? 9 : 11);
 	let render_as_link = $derived(!svedit.editable && node.href);
 	let link_label = $derived(media_link_label(media_node.alt, node.href));
 </script>
