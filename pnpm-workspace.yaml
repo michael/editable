@@ -10,6 +10,8 @@ minimumReleaseAgeExclude:
   - '@types/node@26.6.4'
   - globals@17.13.0
   - vite@8.3.2
+  - svelte@5.58.0
+  - esrap@2.4.2
 
 # Tailwind pins a parser that warns about the standard ::highlight() selector.
 overrides:
