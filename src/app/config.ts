@@ -55,6 +55,7 @@ export const RESERVED_ROUTE_SLUGS = new Set([
 	'login',
 	'mcp',
 	'new',
+	'new-site',
 	'oauth'
 ]);
 
