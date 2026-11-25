@@ -1233,6 +1233,20 @@ Then run `/mcp` inside Claude Code to authenticate. In claude.ai, add the same U
 
 The client registers itself with your site and opens a browser window where you log in as admin and allow the connection. The consent page names the app and the address it receives access at, so only allow connections you started yourself. An approval lasts 48 hours, and logging out of Editable ends every connection right away. The site stores no registrations: each client's id carries its own, so a connection still works after you restore or replace the site's data. The token endpoint accepts form posts from any origin, as OAuth requires, so `vite.config.ts` disables SvelteKit's cross-site form check; the admin cookie's `SameSite=Lax` setting protects the login and consent forms instead. Call `list_pages` to confirm the connection. After updating Editable, start a new session in your MCP client so it sees the current tools.
 
+### Edit your local site
+
+For your local site, an agent with a shell needs no connection at all: `pnpm content` reads and writes the site in this folder's `data`, whichever dev server is running, or none. It runs the same checks as the tools below.
+
+```sh
+pnpm content pages
+pnpm content read / home.xml          # prints the version write needs
+pnpm content write home.xml --version <version>
+pnpm content create about.xml --slug about
+pnpm content image house.webp house-w*.webp --alt "The house in spring"
+```
+
+`image` stores an image the agent encoded as the editor would: a WebP original with its resized variants, or an SVG with `--width` and `--height`. It checks the files and prints the `<image/>` element to use in a document. Run `pnpm content --help` for every command and the encoding rules.
+
 ### Tools
 
 - `get_schema` returns the EDF rules and every node type with its properties, allowed child types, and defaults.

@@ -4,6 +4,7 @@ import { document_schema } from '#app/document_schema.js';
 import { build_page_browser_data } from '#app/page_browser_data.js';
 import {
 	create_mcp_page,
+	edf_rules,
 	read_mcp_document,
 	write_mcp_document
 } from '#app/server_mcp_documents.js';
@@ -40,20 +41,6 @@ type Tool<TInput extends ToolInput = ToolInput> = {
 function define_tool<TInput extends ToolInput>(tool: Tool<TInput>): Tool {
 	return tool as unknown as Tool;
 }
-
-/** How documents are written in EDF, the XML form read_document returns and write_document and create_page take. */
-const edf_rules = [
-	'EDF is XML. Each node is an element named by its type with an id attribute; ids match /^[A-Za-z_][A-Za-z0-9_-]*$/ and are unique. Leave the id off new nodes to have one assigned.',
-	'Properties of type string, integer, number, and boolean are attributes. read_document writes every value; keep them. On a new node you may leave an attribute out to get its default. When values is listed, use one of them.',
-	'Properties of type node and node_array are child elements named after the property, containing node elements of the listed node_types (exactly one for a node property). An element includes its content in this document; a document contains all of its nodes.',
-	'Properties of type text are child elements named after the property containing the text. Nodes of kind "text" hold their content directly: <paragraph id="p1">Hello</paragraph>. Text is literal: whitespace and line breaks inside a text element are stored as written, so never indent or wrap text content. Line breaks are only allowed where allow_newlines is true.',
-	'Marks are inline elements named by the mark type, with an id and the mark’s properties as attributes: <strong id="s1">bold</strong>, <link id="l1" href="/about">about</link>. mark_types lists what each property allows. Marks do not nest. In a node_array, a mark such as <section id="s2"> wraps the consecutive child elements it spans.',
-	'Ids are identity. Keep the id of every node and mark you keep, including when you move it or edit its text. A node or mark you add, or one that replaces another, gets no id. Never reuse an id for something else.',
-	'Escape & < > as &amp; &lt; &gt; in text and attribute values.',
-	'Every node has exactly one parent; to reuse content, copy it under a new id.',
-	'A node property written as an attribute is a reference to another document, not content of this one. Only a page does this, for its banner, nav, and footer: <page id="about" banner="banner_1" nav="nav_1" footer="footer_1">. They are documents of their own, shared by every page: read and write them with their id, never inside a page.',
-	'Image and video src values must be uploaded assets: reuse src, width, height, and mime_type from existing media, or add an image with prepare_image_upload. Videos cannot be uploaded through MCP.'
-];
 
 const tools = [
 	define_tool({
