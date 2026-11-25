@@ -23,42 +23,26 @@
 	);
 </script>
 
-{#snippet primary()}
+<!-- Filled buttons have two layers. The outer element is the click and hover target and never moves;
+the inner face draws the button. While viewing, the face ignores the pointer and takes its hover
+styles from the outer element with group-hover/button:, so effects that move or resize it, such as
+a lift on hover, can't end the hover that started them. -->
+{#snippet face(fill: string, hover: string)}
 	<svelte:element
 		this={render_as_link ? 'a' : 'div'}
 		href={render_as_link ? node.href : undefined}
 		target={render_as_link && node.target !== '_self' ? node.target : undefined}
-		class="ew-button ew-native-selection inline-flex max-w-full items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--foreground) text-center font-normal wrap-anywhere text-(--background) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {button_size} {render_as_link
-			? 'cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--foreground),var(--background)_20%)] active:bg-[color-mix(in_srgb,var(--foreground),var(--background)_30%)]'
+		class="group/button inline-flex max-w-full rounded-(--button-border-radius) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {render_as_link
+			? 'cursor-pointer'
 			: ''}"
 	>
-		<TextProperty path={[...path, 'label']} placeholder="Button" />
-	</svelte:element>
-{/snippet}
-
-{#snippet primary_accent()}
-	<svelte:element
-		this={render_as_link ? 'a' : 'div'}
-		href={render_as_link ? node.href : undefined}
-		target={render_as_link && node.target !== '_self' ? node.target : undefined}
-		class="ew-button ew-native-selection inline-flex max-w-full items-center justify-center rounded-(--button-border-radius) border border-transparent bg-(--accent) text-center font-normal wrap-anywhere text-(--accent-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {button_size} {render_as_link
-			? 'cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] active:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)]'
-			: ''}"
-	>
-		<TextProperty path={[...path, 'label']} placeholder="Button" />
-	</svelte:element>
-{/snippet}
-
-{#snippet secondary()}
-	<svelte:element
-		this={render_as_link ? 'a' : 'div'}
-		href={render_as_link ? node.href : undefined}
-		target={render_as_link && node.target !== '_self' ? node.target : undefined}
-		class="ew-button inline-flex max-w-full items-center justify-center rounded-(--button-border-radius) border border-(--stroke) bg-(--muted) text-center font-normal wrap-anywhere text-(--foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--editing) {button_size} {render_as_link
-			? 'cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] active:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)]'
-			: ''}"
-	>
-		<TextProperty path={[...path, 'label']} placeholder="Button" />
+		<span
+			class="ew-button inline-flex max-w-full items-center justify-center rounded-(--button-border-radius) border text-center font-normal wrap-anywhere {fill} {button_size} {render_as_link
+				? `pointer-events-none transition-colors ${hover}`
+				: ''}"
+		>
+			<TextProperty path={[...path, 'label']} placeholder="Button" />
+		</span>
 	</svelte:element>
 {/snippet}
 
@@ -77,12 +61,21 @@
 
 <Node {path}>
 	{#if button_variant === 'primary-accent'}
-		{@render primary_accent()}
+		{@render face(
+			'ew-native-selection border-transparent bg-(--accent) text-(--accent-foreground)',
+			'group-hover/button:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_20%)] group-active/button:bg-[color-mix(in_srgb,var(--accent),var(--accent-foreground)_30%)]'
+		)}
 	{:else if button_variant === 'secondary'}
-		{@render secondary()}
+		{@render face(
+			'border-(--stroke) bg-(--muted) text-(--foreground)',
+			'group-hover/button:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_5%)] group-active/button:bg-[color-mix(in_srgb,var(--muted),var(--foreground)_10%)]'
+		)}
 	{:else if button_variant === 'link'}
 		{@render link()}
 	{:else}
-		{@render primary()}
+		{@render face(
+			'ew-native-selection border-transparent bg-(--foreground) text-(--background)',
+			'group-hover/button:bg-[color-mix(in_srgb,var(--foreground),var(--background)_20%)] group-active/button:bg-[color-mix(in_srgb,var(--foreground),var(--background)_30%)]'
+		)}
 	{/if}
 </Node>
