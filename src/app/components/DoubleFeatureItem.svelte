@@ -14,12 +14,12 @@
 	let render_as_link = $derived(!svedit.editable && node.href);
 </script>
 
-<!-- In the outlined layout, the end feature draws the dashed line between the two: beside the start
+<!-- In the outlined layout, the end feature draws the line between the two: beside the start
 feature, or below it on phones. The media frame has a fixed aspect ratio, so both bodies start at
 the same height and the lines below the media meet. -->
 <Node
 	class="ew-double-feature-item min-w-0 {outlined && is_end
-		? 'border-dashed border-(--stroke) max-md:border-t md:border-s'
+		? 'border-(--stroke) max-md:border-t md:border-s'
 		: ''}"
 	{path}
 >
